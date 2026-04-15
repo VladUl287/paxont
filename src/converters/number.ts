@@ -26,6 +26,10 @@ for (let i = 1; i <= 308; i++) {
     POW10[i] = POW10[i - 1] * 10n
 }
 
+const buffer = new ArrayBuffer(8)
+const uint32 = new Uint32Array(buffer)
+const uint64 = new BigUint64Array(buffer)
+
 const MAX_FAST_DIGITS = 15
 export function parseNumberF64(bytes: Uint8Array, start: number, end: number): number {
     const length = end - start
@@ -203,12 +207,17 @@ export function parseNumberF64(bytes: Uint8Array, start: number, end: number): n
         const b5 = bytes[i + 4]
 
         if (isDigit(b1) && isDigit(b2) && isDigit(b3) && isDigit(b4) && isDigit(b5)) {
-            tempNum = tempNum * 10000 +
+            tempNum = tempNum * 100000 +
                 (((((b1 & 0x0F) * 10 + (b2 & 0x0F)) * 10 + (b3 & 0x0F)) * 10 + (b4 & 0x0F)) * 10 + (b5 & 0x0F))
             tempDigits += 5
 
             if (tempDigits >= 15) {
-                mantissa = mantissa * POW10[tempDigits] + BigInt(tempNum)
+                const high = Math.floor(tempNum / 0x100000000)
+                const low = tempNum >>> 0
+                uint32[0] = low
+                uint32[1] = high
+                mantissa = mantissa * POW10[tempDigits] + uint64[0]
+
                 tempDigits = 0
                 tempNum = 0
             }
@@ -222,12 +231,6 @@ export function parseNumberF64(bytes: Uint8Array, start: number, end: number): n
         break
     }
 
-    if (tempDigits > 0) {
-        mantissa = mantissa * POW10[tempDigits] + BigInt(tempNum)
-        tempDigits = 0
-        tempNum = 0
-    }
-
     while (i < end) {
         const byte = bytes[i]
 
@@ -237,8 +240,14 @@ export function parseNumberF64(bytes: Uint8Array, start: number, end: number): n
 
                 tempNum = tempNum * 10 + digit
                 tempDigits++
-                if (tempDigits >= 8) {
-                    mantissa = mantissa * 100000000n + BigInt(tempNum | 0)
+
+                if (tempDigits >= 15) {
+                    const high = Math.floor(tempNum / 0x100000000)
+                    const low = tempNum >>> 0
+                    uint32[0] = low
+                    uint32[1] = high
+                    mantissa = mantissa * POW10[tempDigits] + uint64[0]
+
                     tempDigits = 0
                     tempNum = 0
                 }
@@ -286,7 +295,11 @@ export function parseNumberF64(bytes: Uint8Array, start: number, end: number): n
     }
 
     if (tempDigits > 0) {
-        mantissa = mantissa * POW10[tempDigits] + BigInt(tempNum | 0)
+        const high = Math.floor(tempNum / 0x100000000)
+        const low = tempNum >>> 0
+        uint32[0] = low
+        uint32[1] = high
+        mantissa = mantissa * POW10[tempDigits] + uint64[0]
     }
 
     const positiveExponent = Math.max(0, scale)
