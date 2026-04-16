@@ -75,7 +75,6 @@ export function parseNumberF64(bytes: Uint8Array, start: number, end: number, di
                 mantissa = mantissa * 100000 +
                     ((((b1 & 0x0F) * 10 + (b2 & 0x0F)) * 10 + (b3 & 0x0F)) * 10 + (b4 & 0x0F))
 
-                digitsCount += 4
                 scale += 4
                 i += 4
                 continue
@@ -97,7 +96,6 @@ export function parseNumberF64(bytes: Uint8Array, start: number, end: number, di
                     }
 
                     state |= STATE_NONZERO
-                    digitsCount++
                 }
                 else if (state & STATE_DECIMAL) {
                     scale--
