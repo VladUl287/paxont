@@ -72,7 +72,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number, end: number, di
             const b4 = bytes[i + 3]
 
             if (isDigit(b1) && isDigit(b2) && isDigit(b3) && isDigit(b4)) {
-                mantissa = mantissa * 100000 +
+                mantissa = mantissa * 10000 +
                     ((((b1 & 0x0F) * 10 + (b2 & 0x0F)) * 10 + (b3 & 0x0F)) * 10 + (b4 & 0x0F))
 
                 scale += 4
