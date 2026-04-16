@@ -1,8 +1,8 @@
 import { convertNumber } from "./converters/number"
 import { convertObject } from "./converters/object"
 import { convertString } from "./converters/string"
-import { Converter, ConvertMeta, ConvertResult, ConvertState } from "./converters/types"
-import { Metadata, TypeName } from "./metadata/metadata"
+import { ConvertMeta, ConvertResult, ConvertState } from "./converters/types"
+import { Metadata } from "./metadata/metadata"
 import { JsonOptions } from "./options/types"
 import { mergerOptions } from "./options"
 import { createCache } from "./cache/cache"
@@ -25,12 +25,12 @@ const defaultOptions: JsonOptions = Object.freeze({
 
 const optionsCache = createCache<any, JsonOptions>()
 
-export function deserialize<T>(json: Uint8Array<ArrayBuffer>, metadata: Metadata, options?: JsonOptions): T {
-    options = optionsCache.getOrAdd(options, (key) => mergerOptions(defaultOptions, key))
+export function deserialize<T>(json: Uint8Array<ArrayBuffer>, metadata: Metadata, options?: Partial<JsonOptions>): T {
+    const opts = optionsCache.getOrAdd(options, (key) => mergerOptions(defaultOptions, key))
 
     const result = convert({
         bytes: json,
-        options: options,
+        options: opts,
         convert: convert
     }, metadata, 0, 0)
 
