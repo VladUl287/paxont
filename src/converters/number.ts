@@ -526,14 +526,14 @@ function assembleFloatingPointBits(
             }
         }
         else if (normalMantissaShift > 0) {
-            mantissa = mantissa << BigInt(normalMantissaShift);
+            mantissa = mantissa << BigInt(normalMantissaShift)
         }
     }
 
     mantissa = mantissa & format.denormalMantissaMask
 
-    const normalizedMantissa = 1 + Number(mantissa) / Math.pow(2, 52)
-    return normalizedMantissa * Math.pow(2, exponent)
+    const N = 4503599627370496 // 2^52
+    return (1 + Number(mantissa) / N) * (2 ** exponent)
 }
 
 function countSignificantBits1(value: number): number {
