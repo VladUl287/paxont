@@ -1,6 +1,6 @@
 import { JsonCodes } from "../utils/constants"
 import { Metadata } from "../metadata/metadata"
-import { ConvertMeta, ConvertResult, ConvertState } from "./types"
+import { ConvertMeta, ConvertResult, ConvertState, isError } from "./types"
 import { skipWhitespace } from "./utils"
 import { equals } from "../utils/array"
 
@@ -17,7 +17,7 @@ export function convertObject(
 
     const meta = (metadata as Metadata).value as Metadata[]
     const [fields, i] = toFields(ctx, meta, index, depth)
-    const result = (metadata as Metadata).creator(fields)
+    const result = (metadata as Metadata).creator!(fields)
 
     index = i
 
@@ -43,11 +43,11 @@ function toFields(ctx: ConvertState, fields: Metadata[], index: number, depth: n
             throw new Error(`not start of property ${index}`)
         index++
 
-        const equal = equals(field.name.bytes, bytes, index, 0)
+        const equal = equals(field.name!.bytes, bytes, index, 0)
         if (!equal)
             throw new Error(`not correct property ${field.name}`)
 
-        index += field.name.bytes.length + 1
+        index += field.name!.bytes.length + 1
 
         if (bytes[index] !== JsonCodes.COLON)
             throw new Error(`not end of property`)
@@ -56,6 +56,8 @@ function toFields(ctx: ConvertState, fields: Metadata[], index: number, depth: n
         index = skipWhitespace(bytes, index)
 
         const parseResult = ctx.convert(ctx, field, index, depth)
+        if(isError(parseResult))
+            break
 
         index = parseResult.nextIndex
 

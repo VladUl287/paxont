@@ -16,7 +16,7 @@ const floatSlowPathNum = encoder.encode("1.123456789123456789123456789")
 suite
     .add('integerFastpath', () => parseNumberF64(integerFastpath, 0, integerFastpath.length, integerFastpath.length))
     .add('integerFastpathDecoder', () => Number(decoder.decode(integerFastpath)))
-    .add('floatFastpath', () => parseNumberF64(floatFastpath, 0, floatFastpath.length, floatFastpath.length))
+    .add('floatFastpath', () => parseNumberF64(floatFastpath, 0, floatFastpath.length, floatFastpath.length - 1))
     .add('floatFastpathDecoder', () => Number(decoder.decode(floatFastpath)))
     .add('integerMidpath', () => parseNumberF64(integerMidpath, 0, integerMidpath.length, integerMidpath.length))
     .add('integerMidpathDecoder', () => Number(decoder.decode(integerMidpath)))

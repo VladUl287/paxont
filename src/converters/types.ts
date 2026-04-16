@@ -11,8 +11,21 @@ export type ConvertMeta = Metadata | Metadata[]
 
 export type Converter<T> = (ctx: ConvertState, meta: ConvertMeta, index: number, depth: number) => ConvertResult<T>
 
-export type ConvertResult<T> = {
-    readonly value?: T
-    readonly nextIndex?: number
-    readonly error?: string
+type Success<T> = {
+    readonly value: T
+    readonly nextIndex: number
+}
+
+type Error = {
+    readonly error: string
+}
+
+export type ConvertResult<T> = Success<T> | Error
+
+export function isError<T>(result: ConvertResult<T>): result is Error {
+    return 'error' in result && result.error !== undefined
+}
+
+export function isSuccess<T>(result: ConvertResult<T>): result is Success<T> {
+    return 'value' in result && 'nextIndex' in result
 }

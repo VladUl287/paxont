@@ -1,7 +1,7 @@
 import { convertNumber } from "./converters/number"
 import { convertObject } from "./converters/object"
 import { convertString } from "./converters/string"
-import { ConvertMeta, ConvertResult, ConvertState } from "./converters/types"
+import { ConvertMeta, ConvertResult, ConvertState, isSuccess } from "./converters/types"
 import { Metadata } from "./metadata/metadata"
 import { JsonOptions } from "./options/types"
 import { mergerOptions } from "./options"
@@ -34,7 +34,10 @@ export function deserialize<T>(json: Uint8Array<ArrayBuffer>, metadata: Metadata
         convert: convert
     }, metadata, 0, 0)
 
-    return result.value as T
+    if (isSuccess(result))
+        return result.value as T
+
+    return undefined as T
 }
 
 function convert<T>(ctx: ConvertState, meta: ConvertMeta, index: number, depth: number): ConvertResult<T> {
