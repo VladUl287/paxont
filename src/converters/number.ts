@@ -157,7 +157,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number, end: number, di
         }
     }
 
-    return Number(decoder.decode(bytes))
+    return Number(decoder.decode(bytes.subarray(start, end)))
 
     // let i = start
 
