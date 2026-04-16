@@ -446,7 +446,7 @@ function convertBigIntegerToFloatingPointBits(
     hasNonZeroFractionalPart: boolean,
     denormalMantissaBits: number,
 ): number {
-    const baseExponent = denormalMantissaBits;
+    const baseExponent = denormalMantissaBits
 
     if (integerBitsOfPrecision <= 64) {
         const initialMantissa = value & ((1n << 64n) - 1n)
@@ -460,7 +460,9 @@ function convertBigIntegerToFloatingPointBits(
     }
 
     const shiftAmount = integerBitsOfPrecision - 64
-    const mantissa = (value >> BigInt(shiftAmount)) & ((1n << 64n) - 1n)
+    let mantissa = (value >> BigInt(shiftAmount))
+    if (shiftAmount < 0)
+        mantissa &= ((1n << 64n) - 1n)
     const exponent = baseExponent + shiftAmount
 
     const lowerBitsMask = (1n << BigInt(shiftAmount)) - 1n
