@@ -321,12 +321,9 @@ function numberToFloatingPointBitsSlow(
     fractionalDigitsPresent: number,
     format: FloatFormatInfo
 ): number {
-    const {
-        normalMantissaBits, zeroBits, denormalMantissaBits,
-        overflowDecimalExponent
-    } = format
+    const { normalMantissaBits, denormalMantissaBits, overflowDecimalExponent } = format
 
-    const requiredBitsOfPrecision = normalMantissaBits + 1;
+    const requiredBitsOfPrecision = normalMantissaBits + 1
 
     const integerDigitsMissing = positiveExponent - integerDigitsPresent
 
@@ -563,19 +560,54 @@ function rightShiftWithRounding(
     return result
 }
 
+function bitLengthBinary(n: bigint) {
+    let high = 64
+    while ((1n << BigInt(high)) <= n) high *= 2
+
+    let low = high / 2;
+    while (low < high) {
+        const mid = (low + high) >> 1
+        if ((1n << BigInt(mid)) <= n) {
+            low = mid + 1
+            continue
+        }
+        high = mid
+    }
+    return low
+}
+
+function bitLengthDigits(n: bigint, digits: number) {
+    const LOG2_10 = 1 / Math.LOG10E //3.321928094887362
+    let bits = Math.floor(digits * LOG2_10)
+
+    const temp = 1n << BigInt(bits)
+    if (temp <= n) {
+        while ((1n << BigInt(bits)) <= n) bits++
+        return bits
+    }
+
+    while ((1n << BigInt(bits - 1)) > n) bits--
+    return bits
+}
+
 function bitLength(value: bigint): number {
-    if (value === 0n) return 0
+    const MASK64 = 0xFFFFFFFFFFFFFFFFn
+    if (value <= MASK64)
+        return 64 - Math.clz32(Number(value >> 32n)) - (value > 0xFFFFFFFFn ? 0 : 32)
 
     let bits = 0
     let temp = value
 
-    while (temp > 0xFFFFFFFFn) {
-        temp >>= 32n
-        bits += 32
+    while (temp > MASK64) {
+        temp >>= 64n
+        bits += 64
     }
 
-    const lastChunk = Number(temp)
-    return bits + (32 - Math.clz32(lastChunk))
+    const last = Number(temp)
+    if (last <= 0xFFFFFFFF) {
+        return bits + (32 - Math.clz32(last))
+    }
+    return bits + (64 - Math.clz32(last >>> 0))
 }
 
 interface FloatFormatInfo {
