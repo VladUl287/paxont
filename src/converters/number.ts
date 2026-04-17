@@ -89,7 +89,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number, end: number, di
                 if (byte !== ZERO || (state & STATE_NONZERO)) {
                     mantissa = mantissa * 10 + (byte & 0x0F)
 
-                    numberOfTrailingZeros += byte === ZERO ? 1 : 0
+                    numberOfTrailingZeros = byte === ZERO ? numberOfTrailingZeros + 1 : 0
 
                     if ((state & STATE_DECIMAL) === 0) {
                         scale++
