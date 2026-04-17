@@ -39,6 +39,8 @@ const buffer = new ArrayBuffer(8)
 const conversionU32 = new Uint32Array(buffer)
 const conversionU64 = new BigUint64Array(buffer)
 
+const isLittleEndian = new Uint8Array(new Uint32Array([1]).buffer)[0] === 1
+
 export function parseNumberF64(bytes: Uint8Array, start: number, end: number, digitsCount: number): number {
     if (digitsCount > MAX_DIGITS_COUNT)
         throw new Error(`value exceed max digits count: ${MAX_DIGITS_COUNT}`)
@@ -179,10 +181,23 @@ export function parseNumberF64(bytes: Uint8Array, start: number, end: number, di
         const tmp = ((chunk + 0x76767676) | chunk) & 0x80808080
 
         if (tmp === 0) {
-            const high = (chunk >> 8) & 0x00FF00FF
-            const low = chunk & 0x00FF00FF
-            const result = (low * 10) + high
-            const whole = ((result & 0xFFFF) * 100) + (result >>> 16)
+            let whole = 0
+            
+            if (isLittleEndian) {
+                const result =
+                    ((chunk & 0x00FF00FF) * 10) +
+                    ((chunk >> 8) & 0x00FF00FF)
+                whole = ((result & 0xFFFF) * 100) + (result >>> 16)
+            }
+            else {
+                const high =
+                    ((chunk >> 24) & 0xFF) * 10 +
+                    ((chunk >> 16) & 0xFF)
+                const low =
+                    ((chunk >> 8) & 0xFF) * 10 +
+                    ((chunk & 0xFF))
+                whole = high * 100 + low
+            }
 
             tempNum = tempNum * 10000 + whole
             tempDigits += 4
