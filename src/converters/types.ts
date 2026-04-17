@@ -9,6 +9,8 @@ export type ConvertState = {
 
 export type ConvertMeta = Metadata | Metadata[]
 
+export const isMultiMeta = (meta: ConvertMeta): meta is Metadata[] => Array.isArray(meta)
+
 export type Converter<T> = (ctx: ConvertState, meta: ConvertMeta, index: number, depth: number) => ConvertResult<T>
 
 type Success<T> = {

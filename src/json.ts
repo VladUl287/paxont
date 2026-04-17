@@ -1,7 +1,7 @@
 import { convertNumber } from "./converters/number"
 import { convertObject } from "./converters/object"
 import { convertString } from "./converters/string"
-import { ConvertMeta, ConvertResult, ConvertState, isSuccess } from "./converters/types"
+import { ConvertMeta, ConvertResult, ConvertState, isMultiMeta, isSuccess } from "./converters/types"
 import { Metadata } from "./metadata/metadata"
 import { JsonOptions } from "./options/types"
 import { mergerOptions } from "./options"
@@ -40,15 +40,16 @@ export function deserialize<T>(json: Uint8Array<ArrayBuffer>, metadata: Metadata
     return undefined as T
 }
 
-function convert<T>(ctx: ConvertState, meta: ConvertMeta, index: number, depth: number): ConvertResult<T> {
-    const options = ctx.options
+function convert(ctx: ConvertState, metadata: ConvertMeta, index: number, depth: number): ConvertResult<unknown> {
+    if (isMultiMeta(metadata))
+        throw new Error('invalid metadata value')
 
-    if (depth > options.maxDepth)
-        throw new Error(`Max depth hit ${options.maxDepth}`)
+    if (depth > ctx.options.maxDepth)
+        throw new Error(`max depth hit ${ctx.options.maxDepth}`)
 
-    const converter = options.converters[(meta as Metadata).type]
+    const converter = ctx.options.converters[metadata.type]
     if (!converter)
-        throw new Error(`Converter not found for type ${(meta as Metadata).type}`)
+        throw new Error(`converter not found for type ${metadata.type}`)
 
-    return converter(ctx, meta, index, depth + 1) as ConvertResult<T>
+    return converter(ctx, metadata, index, depth + 1)
 }
