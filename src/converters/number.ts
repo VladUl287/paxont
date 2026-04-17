@@ -175,19 +175,15 @@ export function parseNumberF64(bytes: Uint8Array, start: number, end: number, di
     let alignedLength = ((end - start) & ~3) / 4
     let j = 0
     while (j < alignedLength) {
-        let chunk = mantissaU32[j]
-
-        const tmp = ((chunk + 0x46464646) | (chunk - 0x30303030)) & 0x80808080
+        const chunk = mantissaU32[j] - 0x30303030
+        const tmp = ((chunk + 0x76767676) | chunk) & 0x80808080
 
         if (tmp === 0) {
-            chunk -= 0x30303030
-
             const high = (chunk >> 8) & 0x00FF00FF
             const low = chunk & 0x00FF00FF
-
             const result = (low * 10) + high
-
             const whole = ((result & 0xFFFF) * 100) + (result >>> 16)
+
             tempNum = tempNum * 10000 + whole
             tempDigits += 4
 
