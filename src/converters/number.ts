@@ -524,7 +524,9 @@ function assembleFloatingPointBits(
     }
     else {
         if (normalMantissaShift < 0) {
-            mantissa = rightShiftWithRounding(mantissa, -normalMantissaShift, hasZeroTail);
+
+            // mantissa = rightShiftWithRounding(mantissa, -normalMantissaShift, hasZeroTail)
+            mantissa = rightShiftWithRounding64(mantissa, -normalMantissaShift, hasZeroTail)
 
             if (mantissa > format.normalMantissaMask) {
                 mantissa = mantissa >> 1n
@@ -569,6 +571,47 @@ function rightShiftWithRounding(
         return result + 1n
 
     return result
+}
+
+function rightShiftWithRounding64(
+    value: bigint,
+    shift: number,
+    hasZeroTail: boolean
+): bigint {
+    if (shift === 0) return value
+
+    conversionU64[0] = value
+
+    const low = conversionU32[0]
+    const high = conversionU32[1]
+
+    const resultHigh = (high >>> shift) >>> 0
+    const highBits = (high & ((1 << shift) - 1)) << (32 - shift)
+    const resultLow = ((low >>> shift) | highBits) >>> 0
+
+    const lastBitMask = 1 << (shift - 1)
+    const lastBit = (low & lastBitMask) !== 0
+
+    const lowerBitsMask = lastBitMask - 1
+    const hasLowerBits = (low & lowerBitsMask) !== 0
+
+    if (lastBit && (hasLowerBits || hasZeroTail || ((resultLow & 1) !== 0))) {
+        // let newLow = (resultLow + 1) >>> 0
+        // let newHigh = resultHigh
+        // if (newLow === 0) {
+        //     newHigh = (newHigh + 1) >>> 0
+        // }
+        // conversionU32[0] = newLow
+        // conversionU32[1] = newHigh
+
+        conversionU32[0] = resultLow
+        conversionU32[1] = resultHigh
+        return conversionU64[0] + 1n
+    }
+
+    conversionU32[0] = resultLow
+    conversionU32[1] = resultHigh
+    return conversionU64[0]
 }
 
 function bitLength(value: bigint): number {
