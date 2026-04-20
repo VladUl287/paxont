@@ -306,8 +306,6 @@ export function parseNumberF64(bytes: Uint8Array, start: number, end: number, di
         mantissa = mantissa * POW10[tempDigits] + conversionU64[0]
     }
 
-    return mantissa as any
-
     const positiveExponent = Math.max(0, scale)
     const integerDigitsPresent = Math.min(positiveExponent, digitsCount)
     const fractionalDigitsPresent = digitsCount - integerDigitsPresent
