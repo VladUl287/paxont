@@ -464,12 +464,17 @@ function convertBigIntegerToFloatingPointBits(
     }
 
     const shiftAmount = integerBitsOfPrecision - 64
-    let mantissa = (value >> BigInt(shiftAmount))
-    if (shiftAmount < 0)
-        mantissa &= ((1n << 64n) - 1n)
+
+    let mantissa
+    if (shiftAmount >= 0) {
+        mantissa = value >> BigInt(shiftAmount | 0)
+    }
+    else {
+        mantissa = (value << BigInt((-shiftAmount) | 0)) & ((1n << 64n) - 1n)
+    }
     const exponent = baseExponent + shiftAmount
 
-    const lowerBitsMask = (1n << BigInt(shiftAmount)) - 1n
+    const lowerBitsMask = (1n << BigInt(shiftAmount | 0)) - 1n
     const hasZeroTail = !hasNonZeroFractionalPart && ((value & lowerBitsMask) === 0n)
 
     return assembleFloatingPointBits(
