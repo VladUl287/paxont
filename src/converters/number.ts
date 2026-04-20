@@ -566,36 +566,6 @@ function rightShiftWithRounding(
     return result
 }
 
-function bitLengthBinary(n: bigint) {
-    let high = 64
-    while ((1n << BigInt(high)) <= n) high *= 2
-
-    let low = high / 2;
-    while (low < high) {
-        const mid = (low + high) >> 1
-        if ((1n << BigInt(mid)) <= n) {
-            low = mid + 1
-            continue
-        }
-        high = mid
-    }
-    return low
-}
-
-function bitLengthDigits(n: bigint, digits: number) {
-    const LOG2_10 = 1 / Math.LOG10E //3.321928094887362
-    let bits = Math.floor(digits * LOG2_10)
-
-    const temp = 1n << BigInt(bits)
-    if (temp <= n) {
-        while ((1n << BigInt(bits)) <= n) bits++
-        return bits
-    }
-
-    while ((1n << BigInt(bits - 1)) > n) bits--
-    return bits
-}
-
 function bitLength(value: bigint): number {
     const MASK64 = 0xFFFFFFFFFFFFFFFFn
     if (value <= MASK64)
