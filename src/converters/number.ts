@@ -182,7 +182,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number, end: number, di
 
         if (tmp === 0) {
             let whole = 0
-            
+
             if (isLittleEndian) {
                 const result =
                     ((chunk & 0x00FF00FF) * 10) +
@@ -199,18 +199,30 @@ export function parseNumberF64(bytes: Uint8Array, start: number, end: number, di
                 whole = high * 100 + low
             }
 
-            tempNum = tempNum * 10000 + whole
             tempDigits += 4
 
-            if (tempDigits >= 12) {
-                const high = Math.floor(tempNum / 0x100000000)
-                const low = tempNum >>> 0
-                conversionU32[0] = low
-                conversionU32[1] = high
-                mantissa = mantissa * POW10[tempDigits] + conversionU64[0]
+            if (tempDigits === 16) {
+                const low = conversionU32[0]
+                const high = conversionU32[1]
+                const newLow = low * 10000 + whole
+                const carry = Math.floor(newLow / 0x100000000)
+                conversionU32[0] = newLow >>> 0
+                conversionU32[1] = high * 10000 + carry
 
+                mantissa = mantissa * POW10[tempDigits] + conversionU64[0]
                 tempDigits = 0
-                tempNum = 0
+            }
+            else {
+                tempNum = tempNum * 10000 + whole
+
+                if (tempDigits === 12) {
+                    const high = Math.floor(tempNum / 0x100000000)
+                    const low = tempNum >>> 0
+                    conversionU32[0] = low
+                    conversionU32[1] = high
+
+                    tempNum = 0
+                }
             }
 
             scale += 4
@@ -285,12 +297,16 @@ export function parseNumberF64(bytes: Uint8Array, start: number, end: number, di
     }
 
     if (tempDigits > 0) {
-        const high = Math.floor(tempNum / 0x100000000)
-        const low = tempNum >>> 0
-        conversionU32[0] = low
-        conversionU32[1] = high
+        if (tempNum > 0) {
+            const high = Math.floor(tempNum / 0x100000000)
+            const low = tempNum >>> 0
+            conversionU32[0] = low
+            conversionU32[1] = high
+        }
         mantissa = mantissa * POW10[tempDigits] + conversionU64[0]
     }
+
+    return mantissa as any
 
     const positiveExponent = Math.max(0, scale)
     const integerDigitsPresent = Math.min(positiveExponent, digitsCount)
