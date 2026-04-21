@@ -29,6 +29,10 @@ for (let i = 1; i <= 308; i++) {
     POS_POW10[i] = POS_POW10[i - 1] * 10
     POW10[i] = POW10[i - 1] * 10n
 }
+const POW2 = new Array(2046) // indices from -1022 to 1023
+for (let exp = -1022; exp <= 1023; exp++) {
+    POW2[exp + 1022] = Math.pow(2, exp)
+}
 
 const MAX_SAFE_DIGITS = 15
 const MAX_DIGITS_COUNT = 128
@@ -467,10 +471,10 @@ function convertBigIntegerToFloatingPointBits(
 
     let mantissa
     if (shiftAmount >= 0) {
-        mantissa = value >> BigInt(shiftAmount | 0)
+        mantissa = value >> BigInt(shiftAmount)
     }
     else {
-        mantissa = (value << BigInt((-shiftAmount) | 0)) & ((1n << 64n) - 1n)
+        mantissa = (value << BigInt((-shiftAmount))) & ((1n << 64n) - 1n)
     }
     const exponent = baseExponent + shiftAmount
 
@@ -524,7 +528,6 @@ function assembleFloatingPointBits(
     }
     else {
         if (normalMantissaShift < 0) {
-
             // mantissa = rightShiftWithRounding(mantissa, -normalMantissaShift, hasZeroTail)
             mantissa = rightShiftWithRounding64(mantissa, -normalMantissaShift, hasZeroTail)
 
@@ -544,7 +547,8 @@ function assembleFloatingPointBits(
     mantissa = mantissa & format.denormalMantissaMask
 
     const N = 4503599627370496 // 2^52
-    return (1 + Number(mantissa) / N) * (2 ** exponent)
+    const expIdx = Math.min(Math.max(exponent, -1022), 1023) + 1022
+    return (1 + Number(mantissa) / N) * POW2[expIdx]
 }
 
 function countSignificantBits1(value: number): number {
