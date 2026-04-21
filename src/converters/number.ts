@@ -528,8 +528,7 @@ function assembleFloatingPointBits(
     }
     else {
         if (normalMantissaShift < 0) {
-            // mantissa = rightShiftWithRounding(mantissa, -normalMantissaShift, hasZeroTail)
-            mantissa = rightShiftWithRounding64(mantissa, -normalMantissaShift, hasZeroTail)
+            mantissa = rightShiftWithRounding64(mantissa, conversionU32, conversionU64, -normalMantissaShift, hasZeroTail)
 
             if (mantissa > format.normalMantissaMask) {
                 mantissa = mantissa >> 1n
@@ -544,11 +543,25 @@ function assembleFloatingPointBits(
         }
     }
 
-    mantissa = mantissa & format.denormalMantissaMask
+    const maskValue = 2 ** 52 - 1  // 9007199254740991
+    const combined = combineInt53(conversionU32[1], conversionU32[0])
+    const mantissa52bits = combined % (maskValue + 1)
 
     const N = 4503599627370496 // 2^52
     const expIdx = Math.min(Math.max(exponent, -1022), 1023) + 1022
-    return (1 + Number(mantissa) / N) * POW2[expIdx]
+    return (1 + mantissa52bits / N) * POW2[expIdx]
+
+    // mantissa = mantissa & format.denormalMantissaMask
+
+    // const N = 4503599627370496 // 2^52
+    // const expIdx = Math.min(Math.max(exponent, -1022), 1023) + 1022
+    // return (1 + Number(mantissa) / N) * POW2[expIdx]
+}
+
+function combineInt53(high21: number, low32: number) {
+    high21 = Number(high21) & 0x1FFFFF
+    low32 = Number(low32) >>> 0
+    return (high21 * 0x100000000) + low32
 }
 
 function countSignificantBits1(value: number): number {
@@ -579,10 +592,12 @@ function rightShiftWithRounding(
 
 function rightShiftWithRounding64(
     value: bigint,
+    conversionU32: Uint32Array,
+    conversionU64: BigUint64Array,
     shift: number,
     hasZeroTail: boolean
 ): bigint {
-    if (shift === 0) return value
+    if (shift === 0) return 0n
 
     conversionU64[0] = value
 
@@ -600,8 +615,16 @@ function rightShiftWithRounding64(
     const hasLowerBits = (low & lowerBitsMask) !== 0
 
     if (lastBit && (hasLowerBits || hasZeroTail || ((resultLow & 1) !== 0))) {
-        conversionU32[0] = resultLow
-        conversionU32[1] = resultHigh
+        let newLow = (resultLow + 1) >>> 0
+        let newHigh = resultHigh
+        if (newLow === 0) {
+            newHigh = (newHigh + 1) >>> 0
+        }
+        conversionU32[0] = newLow
+        conversionU32[1] = newHigh
+
+        // conversionU32[0] = resultLow
+        // conversionU32[1] = resultHigh
         return conversionU64[0] + 1n
     }
 
