@@ -29,7 +29,7 @@ function convert(ctx: ConvertState, metadata: ConvertMeta, index: number, depth:
     if (depth > ctx.options.maxDepth)
         throw new Error(`max depth hit ${ctx.options.maxDepth}`)
 
-    const converter = ctx.options.converters[metadata.type]
+    const converter = ctx.options.getConverter(metadata.type)
     if (!converter)
         throw new Error(`converter not found for type ${metadata.type}`)
 
