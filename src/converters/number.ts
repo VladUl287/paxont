@@ -596,14 +596,6 @@ function rightShiftWithRounding64(
     const hasLowerBits = (low & lowerBitsMask) !== 0
 
     if (lastBit && (hasLowerBits || hasZeroTail || ((resultLow & 1) !== 0))) {
-        // let newLow = (resultLow + 1) >>> 0
-        // let newHigh = resultHigh
-        // if (newLow === 0) {
-        //     newHigh = (newHigh + 1) >>> 0
-        // }
-        // conversionU32[0] = newLow
-        // conversionU32[1] = newHigh
-
         conversionU32[0] = resultLow
         conversionU32[1] = resultHigh
         return conversionU64[0] + 1n
