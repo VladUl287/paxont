@@ -448,6 +448,14 @@ function divRem(dividend: any, divisor: any) {
     return [quotient, remainder];
 }
 
+const MASK64 = ((1n << 64n) - 1n)
+const SHIFT_BIGINTS = new Array(129)
+const MASK_BIGINTS = new Array(129)
+for (let i = 1; i <= 127; i++) {
+    SHIFT_BIGINTS[i] = BigInt(i)
+    MASK_BIGINTS[i] = (1n << BigInt(i)) - 1n
+}
+
 function convertBigIntegerToFloatingPointBits(
     value: bigint,
     integerBitsOfPrecision: number,
@@ -471,15 +479,28 @@ function convertBigIntegerToFloatingPointBits(
 
     let mantissa
     if (shiftAmount >= 0) {
-        mantissa = value >> BigInt(shiftAmount)
+        mantissa = value >> SHIFT_BIGINTS[shiftAmount]
     }
     else {
-        mantissa = (value << BigInt((-shiftAmount))) & ((1n << 64n) - 1n)
+        mantissa = (value << SHIFT_BIGINTS[shiftAmount + 127]) & MASK64
     }
     const exponent = baseExponent + shiftAmount
 
-    const lowerBitsMask = (1n << BigInt(shiftAmount | 0)) - 1n
-    const hasZeroTail = !hasNonZeroFractionalPart && ((value & lowerBitsMask) === 0n)
+    const hasZeroTail = !hasNonZeroFractionalPart && ((value & MASK_BIGINTS[shiftAmount]) === 0n)
+
+    // const shiftAmount = integerBitsOfPrecision - 64
+
+    // let mantissa
+    // if (shiftAmount >= 0) {
+    //     mantissa = value >> BigInt(shiftAmount)
+    // }
+    // else {
+    //     mantissa = (value << BigInt((-shiftAmount))) & ((1n << 64n) - 1n)
+    // }
+    // const exponent = baseExponent + shiftAmount
+
+    // const lowerBitsMask = (1n << BigInt(shiftAmount)) - 1n
+    // const hasZeroTail = !hasNonZeroFractionalPart && ((value & lowerBitsMask) === 0n)
 
     return assembleFloatingPointBits(
         mantissa,
