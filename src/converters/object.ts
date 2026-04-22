@@ -31,7 +31,7 @@ export function convertObject(
             throw new Error(`not start of property ${index}`)
         index++
 
-        const equal = equals(metaField.name!.bytes, bytes, index, 0)
+        const equal = equals(metaField.name!.bytes, bytes, 0, index)
         if (!equal)
             throw new Error(`not correct property ${metaField.name}`)
 
