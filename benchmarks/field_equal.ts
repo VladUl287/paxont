@@ -10,9 +10,11 @@ const big = encoder.encode("1123456789123456789123456789123456789900719925474099
 const bigCopy = new Uint8Array([...big])
 
 const codegenEqualityMid = createNameEquality(mid)
-const codegenEqualityBig = createNameEquality(big)
 const codegenEqualityTwoArrays = createNameEqualityTwoLoops(mid)
+const codegenPackEqMid = genEqualityPack(mid)
+const codegenEqualityBig = createNameEquality(big)
 const codegenEqualityTwoArraysBig = createNameEqualityTwoLoops(big)
+const codegenPackEq = genEqualityPack(big)
 
 suite(
     'field_equal',
@@ -20,10 +22,12 @@ suite(
     add('loop', () => equals(mid, midCopy, 0, 0)),
     add('codegen', () => codegenEqualityMid(mid, 0)),
     add('codegen_two_arrays', () => codegenEqualityTwoArrays(mid, midCopy, 0, 0)),
+    add('codegen_pack', () => codegenPackEqMid(mid, 0)),
 
     add('loop_big', () => equals(big, bigCopy, 0, 0)),
     add('codegen_big', () => codegenEqualityBig(big, 0)),
     add('codegen_two_arrays_big', () => codegenEqualityTwoArraysBig(big, bigCopy, 0, 0)),
+    add('codegen_pack_big', () => codegenPackEq(big, 0)),
 
     cycle(),
     complete(),
@@ -35,4 +39,29 @@ export function createNameEqualityTwoLoops(bytes: Uint8Array): any {
         .join(' && ')
 
     return new Function('bytes', 'bytes2', 'i', 'i2', 'return ' + conditions)
+}
+
+export function genEqualityPack(bytes: Uint8Array) {
+    let chunks = []
+
+    let i = 0
+    for (; i < bytes.length - 4; i += 4) {
+        const a = bytes[i]
+        const b = bytes[i + 1]
+        const c = bytes[i + 2]
+        const d = bytes[i + 3]
+
+        const packValue = a << 0 | b << 8 | c << 16 | d << 24
+
+        chunks.push(`((bytes[i+${i}]<<0 | bytes[i+${i + 1}]<<8 | bytes[i+${i + 2}]<<16 | bytes[i+${i + 3}]<<24) === ${packValue})`)
+    }
+
+    chunks.push(
+        '(' + [...bytes]
+            .slice(i)
+            .map((v, j) => `bytes[i+${i + j}]===${v}`)
+            .join(' && ') + ')'
+    )
+
+    return new Function('bytes', 'i', 'return ' + chunks.join(' && '))
 }
