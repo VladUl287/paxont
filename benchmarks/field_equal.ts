@@ -15,6 +15,8 @@ const codegenPackEqMid = genEqualityPack(mid)
 const codegenEqualityBig = createNameEquality(big)
 const codegenEqualityTwoArraysBig = createNameEqualityTwoLoops(big)
 const codegenPackEq = genEqualityPack(big)
+const codegenIntepret = genUnsafeInterpet(big)
+const codegenIntepretMid = genUnsafeInterpet(mid)
 
 suite(
     'field_equal',
@@ -23,11 +25,13 @@ suite(
     add('codegen', () => codegenEqualityMid(mid, 0)),
     add('codegen_two_arrays', () => codegenEqualityTwoArrays(mid, midCopy, 0, 0)),
     add('codegen_pack', () => codegenPackEqMid(mid, 0)),
+    add('codegen_interpret', () => codegenIntepretMid(mid, 0)),
 
     add('loop_big', () => equals(big, bigCopy, 0, 0)),
     add('codegen_big', () => codegenEqualityBig(big, 0)),
     add('codegen_two_arrays_big', () => codegenEqualityTwoArraysBig(big, bigCopy, 0, 0)),
     add('codegen_pack_big', () => codegenPackEq(big, 0)),
+    add('codegen_interpret_big', () => codegenIntepret(big, 0)),
 
     cycle(),
     complete(),
@@ -64,4 +68,21 @@ export function genEqualityPack(bytes: Uint8Array) {
     )
 
     return new Function('bytes', 'i', 'return ' + chunks.join(' && '))
+}
+
+export function genUnsafeInterpet(bytes: Uint8Array) {
+    let body = `
+        const alignedLength = (bytes.length & ~3) / 4
+        const conversionU32 = new Uint32Array(bytes.buffer, i, alignedLength)
+    `
+
+    const alignedLength = (bytes.length & ~3) / 4
+    const conversionU32 = [...new Uint32Array(bytes.buffer, 0, alignedLength)]
+    const condition = conversionU32
+        .map((v, i) => `conversionU32[${i}] === ${v}`)
+        .join(' && ')
+
+    body += condition
+
+    return new Function('bytes', 'i', body)
 }
