@@ -1,6 +1,4 @@
 import { add, complete, cycle, suite } from 'benny'
-import { TreeFieldMatcher } from '../src/metadata/metadata'
-import { hash } from 'object-code';
 
 const encoder = new TextEncoder()
 
@@ -94,82 +92,24 @@ const keys = Object.keys(small_unique_object).map(c => {
     return encoder.encode(c)
 })
 
-const keysHashes = Object.keys(small_unique_object).map((c) => hash(c))
-const keysHashesMaps = new Map(keysHashes.map((c, i) => [c, i]))
-
-const treeFieldMatcher = new TreeFieldMatcher(keys)
-
-const jumpTable = generateJumpTableMatcher(keys)
 const binaryTree = generateBinaryTreeMatcher(keys)
 const switchMathcer = generateNestedSwitchMatcher(keys)
 const switchMathcerLength = generateOptimizedSwitchMatcher(keys)
 const ternaryMathcer = generateTernaryMatcher(keys)
-const uint8matcher = generateUint8Matcher(keys)
 
 let keyToSearch = keys[5]
-let keyToSearch2 = new TextDecoder().decode(keyToSearch)
 
 suite(
     'field_index_resolve',
 
-    add('treeFieldMatcher', () => treeFieldMatcher.matchField(keyToSearch, 0)),
-    add('hash', () => keysHashesMaps.get(hash(keyToSearch2))),
-    add('jumptable', () => jumpTable(keyToSearch)),
     add('binarytree', () => binaryTree(keyToSearch)),
     add('switchMathcer', () => switchMathcer(keyToSearch)),
     add('switchMathcerLength', () => switchMathcerLength(keyToSearch)),
     add('ternaryMathcer', () => ternaryMathcer(keyToSearch)),
-    add('uint8matcher', () => uint8matcher(keyToSearch)),
 
     cycle(),
     complete(),
 )
-
-export function generateJumpTableMatcher(predefinedArrays: Uint8Array[]) {
-    const buildNestedMap = (arrays: [Uint8Array, number][], depth = 0) => {
-        const map = new Map()
-        for (let i = 0; i < arrays.length; i++) {
-            const [arr, j] = arrays[i]
-
-            if (depth === arr.length) {
-                map.set('__end__', j)
-                continue
-            }
-
-            const val = arr[depth]
-            if (!map.has(val)) map.set(val, [])
-            map.get(val).push([arr, j])
-        }
-
-        const result: any = {}
-        for (const [key, value] of map) {
-            if (key === '__end__') {
-                result.end = value
-            } else if (Array.isArray(value)) {
-                result[key] = buildNestedMap(value, depth + 1)
-            }
-        }
-        return result
-    }
-
-    const jumpTable = buildNestedMap(predefinedArrays.map((c, i) => [c, i]))
-
-    const functionBody = `
-        const table = ${JSON.stringify(jumpTable)};        
-        return (arr) => {
-            let node = table;
-            for (let i = 0; i < arr.length; i++) {
-                const val = arr[i];
-                node = node[val];
-                if (!node) return null;
-                if (node.end !== undefined) return node.end;
-            }
-            return node?.end !== undefined ? node.end : null;
-        }
-    `;
-
-    return new Function(functionBody)();
-}
 
 export function generateBinaryTreeMatcher(predefinedArrays: Uint8Array[]) {
     const buildTree = (arrays: [Uint8Array, number][], depth = 0): any => {
@@ -395,36 +335,3 @@ export function generateTernaryMatcher(predefinedArrays: Uint8Array[]) {
     return new Function('arr', functionBody);
 }
 
-export function generateUint8Matcher(predefinedArrays: Uint8Array[]) {
-    const byLength = new Map();
-    for (let i = 0; i < predefinedArrays.length; i++) {
-        const arr = predefinedArrays[i];
-        const len = arr.length;
-        if (!byLength.has(len)) byLength.set(len, []);
-        byLength.get(len).push({ index: i, arr });
-    }
-
-    const lengthChecks = []
-    for (const [length, items] of byLength) {
-        const comparisons = items.map((item: any) => {
-            const byteChecks = [];
-            for (let i = 0; i < item.arr.length; i++) {
-                byteChecks.push(`arr[${i}] === ${item.arr[i]}`);
-            }
-            return `if (${byteChecks.join(' && ')}) return ${item.index};`;
-        }).join('\n            ');
-
-        lengthChecks.push(`
-            if (arr.length === ${length}) {
-                ${comparisons}
-            }
-        `);
-    }
-
-    const functionBody = `
-        ${lengthChecks.join('\n        ')}
-        return -1;
-    `;
-
-    return new Function('arr', functionBody);
-}
