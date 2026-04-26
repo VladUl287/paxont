@@ -5,5 +5,8 @@
     "jest": "^30.3.0",
     "tinybench": "^6.0.0",
     "ts-jest": "^29.4.6"
+  },
+  "dependencies": {
+    "object-code": "^2.0.0"
   }
 }

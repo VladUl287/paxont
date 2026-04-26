@@ -18,6 +18,7 @@ export type Metadata = {
         value: string,
         bytes: Uint8Array<ArrayBuffer>
     }
+    readonly fieldIndexResolver?: TreeFieldMatcher
     readonly value?: Metadata | Metadata[]
     readonly defaultValue?: unknown
     readonly creator?: (props: any[]) => object
@@ -49,6 +50,25 @@ export function createObjectBuilder(propertyNames: [string, any][]): (props: [st
     return new Function("props", body) as (props: any[]) => object
 }
 
+export function createNameEquality(bytes: Uint8Array): any {
+    const conditions = [...bytes]
+        .map((v, i) => `bytes[i+${i}]===${v}`)
+        .join(' && ')
+
+    return new Function('bytes', 'i', 'return ' + conditions)
+}
+
+function distinct<T>(arr: Array<T>): Array<T> {
+    const set = new Set()
+    return arr.filter((v) => {
+        if (set.has(v))
+            return false
+
+        set.add(v)
+        return true
+    })
+}
+
 const encoder = new TextEncoder()
 export function toMetadata(object: unknown): Metadata {
     const value = toValue(object)
@@ -60,6 +80,9 @@ export function toMetadata(object: unknown): Metadata {
         defaultValue: object,
         type: getType(object),
         value: toValue(object),
+        fieldIndexResolver: new TreeFieldMatcher(
+            Object.keys(object as any).map(c => encoder.encode(c))
+        ),
         creator: creator
     }
 
@@ -85,5 +108,53 @@ export function toMetadata(object: unknown): Metadata {
                     defaultValue: object[key]
                 }
             })
+    }
+}
+
+export class TreeFieldMatcher {
+    fieldTree
+
+    constructor(fields: Uint8Array[]) {
+        this.fieldTree = this.buildTree(fields)
+    }
+
+    buildTree(fields: Uint8Array[]) {
+        const root: any = {}
+
+        for (let i = 0; i < fields.length; i++) {
+            let current = root
+
+            const name = fields[i]
+            for (let i = 0; i < name.length; i++) {
+                const char = name[i]
+                current[char] ??= {}
+                current = current[char]
+            }
+
+            current['__FIELD__'] = i
+        }
+
+        return root
+    }
+
+    matchField(uint8array: Uint8Array, offset: number) {
+        let current = this.fieldTree
+        let pos = offset
+
+        while (pos < uint8array.length && current) {
+            const byte = uint8array[pos]
+
+            if (current[byte]) {
+                current = current[byte]
+                pos++
+
+                if (uint8array[pos] === 34 && current['__FIELD__'] !== undefined)
+                    return current['__FIELD__']
+            } else {
+                break
+            }
+        }
+
+        return null
     }
 }
