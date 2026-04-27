@@ -111,6 +111,7 @@ suite(
 
 //TODO: use pack only for 0-255 values due to collisions possibility
 //TODO: split small fields and big fields on differents switches in case if all values in range 0-255
+//TODO: add pack with 3 and 2 symbols also
 export function generateNestedSwitchMatcherPack(predefinedArrays: Uint8Array[]) {
     const buildSwitchTree = (arrays: Uint8Array[], indices: number[], depth = 0) => {
         const maxDepth = Math.max(...arrays.map(arr => arr.length));
@@ -204,7 +205,7 @@ export function generateNestedSwitchMatcherPack(predefinedArrays: Uint8Array[]) 
         ${buildSwitchTree(predefinedArrays, indices, 0)}
         return -1;
     `;
-    
+
     return new Function('arr', functionBody);
 }
 
