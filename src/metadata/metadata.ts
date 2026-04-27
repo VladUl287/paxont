@@ -49,25 +49,6 @@ export function createObjectBuilder(propertyNames: [string, any][]): (props: [st
     return new Function("props", body) as (props: any[]) => object
 }
 
-export function createNameEquality(bytes: Uint8Array): any {
-    const conditions = [...bytes]
-        .map((v, i) => `bytes[i+${i}]===${v}`)
-        .join(' && ')
-
-    return new Function('bytes', 'i', 'return ' + conditions)
-}
-
-function distinct<T>(arr: Array<T>): Array<T> {
-    const set = new Set()
-    return arr.filter((v) => {
-        if (set.has(v))
-            return false
-
-        set.add(v)
-        return true
-    })
-}
-
 const encoder = new TextEncoder()
 export function toMetadata(object: unknown): Metadata {
     const value = toValue(object)
