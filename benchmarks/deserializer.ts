@@ -1,8 +1,9 @@
 import { Bench } from 'tinybench'
 import { toMetadata } from '../src/metadata/metadata'
 import { deserialize } from '../src/json'
+import { add, complete, cycle, suite } from 'benny'
 
-const suite = new Bench({ name: 'deserialization', warmupIterations: 200 })
+const suiteTiny = new Bench({ name: 'deserialization', warmupIterations: 200 })
 
 const obj = {
     id: 343543534,
@@ -27,11 +28,29 @@ const value = JSON.stringify(obj, null, 4)
 const valueBytes = new TextEncoder().encode(value)
 const metadata = toMetadata(obj)
 
-suite
+suiteTiny
     .add('deserialize', () => deserialize(valueBytes, metadata))
     .add('JSON.parse', () => JSON.parse(value))
 
-suite.run().then(() => {
-    console.log(suite.name)
-    console.table(suite.table())
+suiteTiny.run().then(() => {
+    console.log(suiteTiny.name)
+    console.table(suiteTiny.table())
 })
+
+suite(
+    'deserialization',
+
+    add('deserialize', () => deserialize(valueBytes, metadata)),
+    add('JSON.parse', () => JSON.parse(value)),
+
+    cycle((result) => {
+        const nanoseconds = (1 / result.ops) * 1e9
+        console.log(
+            `${result.name}: ` +
+            `${result.ops.toLocaleString()} ops/s, ` +
+            `${nanoseconds.toFixed(2)} ns/op`
+        )
+    }),
+
+    complete(),
+)
