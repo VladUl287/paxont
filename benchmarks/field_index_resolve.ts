@@ -88,12 +88,13 @@ const big_unique_object = {
     "deprecated": false
 }
 
-const keys = Object.keys(small_unique_object).map(c => {
+const keys = Object.keys(big_unique_object).map(c => {
     return encoder.encode(c)
 })
 
 const switchMathcer = generateNestedSwitchMatcher(keys)
 const switchMathcerLength = generateOptimizedSwitchMatcher(keys)
+const switchMathcerPack = generateOptimizedSwitchMatcher(keys)
 
 let keyToSearch = keys[5]
 
@@ -101,11 +102,112 @@ suite(
     'field_index_resolve',
 
     add('switchMathcer', () => switchMathcer(keyToSearch)),
+    add('switchMathcerPack', () => switchMathcerPack(keyToSearch)),
     add('switchMathcerLength', () => switchMathcerLength(keyToSearch)),
 
     cycle(),
     complete(),
 )
+
+//TODO: use pack only for 0-255 values due to collisions possibility
+//TODO: split small fields and big fields on differents switches in case if all values in range 0-255
+export function generateNestedSwitchMatcherPack(predefinedArrays: Uint8Array[]) {
+    const buildSwitchTree = (arrays: Uint8Array[], indices: number[], depth = 0) => {
+        const maxDepth = Math.max(...arrays.map(arr => arr.length));
+
+        if (arrays.length === 0) return 'return -1;'
+
+        if (arrays.length === 1 && depth >= arrays[0].length) {
+            return `return ${indices[0]};`
+        }
+
+        if (depth >= maxDepth) {
+            if (arrays.length === 1) {
+                return `return ${indices[0]};`
+            }
+            return 'return -1;'
+        }
+
+        const canPack4 = arrays.every(c => (c.length - depth) >= 4)
+
+        if (canPack4) {
+            const packedMap = new Map()
+
+            for (let i = 0; i < arrays.length; i++) {
+                const arr = arrays[i]
+                const idx = indices[i]
+
+                if (depth + 3 < arr.length) {
+                    const packed = (arr[depth] << 0) |
+                        (arr[depth + 1] << 8) |
+                        (arr[depth + 2] << 16) |
+                        (arr[depth + 3] << 24);
+
+                    if (!packedMap.has(packed)) packedMap.set(packed, { arrays: [], indices: [] });
+                    packedMap.get(packed).arrays.push(arr);
+                    packedMap.get(packed).indices.push(idx);
+                } else if (depth < arr.length) {
+                    const val = arr[depth];
+                    if (!packedMap.has(val)) packedMap.set(val, { arrays: [], indices: [] });
+                    packedMap.get(val).arrays.push(arr);
+                    packedMap.get(val).indices.push(idx);
+                }
+            }
+
+            let switchCode = `switch((arr[${depth}] << 0 | arr[${depth + 1}] << 8 | arr[${depth + 2}] << 16 | arr[${depth + 3}] << 24) >>> 0) {\n`;
+
+            for (const [packed, { arrays: matchingArrays, indices: matchingIndices }] of packedMap) {
+                switchCode += `    case ${packed}: {\n`;
+                const nested = buildSwitchTree(matchingArrays, matchingIndices, depth + 4)
+                switchCode += `        ${nested}\n`
+                switchCode += `    }\n`
+            }
+
+            switchCode += `    default: return -1;\n`
+            switchCode += `}\n`
+            return switchCode
+
+        } else {
+            const valueMap = new Map()
+
+            for (let i = 0; i < arrays.length; i++) {
+                const arr = arrays[i];
+                const idx = indices[i];
+
+                if (depth < arr.length) {
+                    const val = arr[depth]
+                    if (!valueMap.has(val)) valueMap.set(val, { arrays: [], indices: [] })
+                    valueMap.get(val).arrays.push(arr)
+                    valueMap.get(val).indices.push(idx)
+                }
+            }
+
+            let switchCode = `switch(arr[${depth}]) {\n`;
+
+            for (const [val, { arrays: matchingArrays, indices: matchingIndices }] of valueMap) {
+                switchCode += `    case ${val}: {\n`;
+                const nested = buildSwitchTree(matchingArrays, matchingIndices, depth + 1)
+                switchCode += `        ${nested}\n`;
+                switchCode += `    }\n`;
+            }
+
+            switchCode += `    default: return -1;\n`;
+            switchCode += `}\n`;
+
+            return switchCode;
+        }
+    };
+
+    const indices = predefinedArrays.map((_, i) => i);
+
+    const functionBody = `
+        ${buildSwitchTree(predefinedArrays, indices, 0)}
+        return -1;
+    `;
+    
+    return new Function('arr', functionBody);
+}
+
 
 export function generateNestedSwitchMatcher(predefinedArrays: Uint8Array[]) {
     const buildSwitchTree = (arrays: Uint8Array[], indices: number[], depth = 0) => {
@@ -238,8 +340,6 @@ export function generateOptimizedSwitchMatcher(predefinedArrays: Uint8Array[]) {
             default: return -1;
         }
     `
-
-                console.log(functionBody)
 
     return new Function('arr', functionBody);
 }
