@@ -1,6 +1,7 @@
 //TODO: use pack only for 0-255 values due to collisions possibility
 //TODO: split small fields and big fields on differents switches in case if all values in range 0-255
 //TODO: add pack with 3 and 2 symbols also
+//TODO: use one (default: return -1) value if applyable
 export function generateSwitchMatcherPack(fields: Uint8Array[]) {
     const buildSwitchTree = (arrays: Uint8Array[], indices: number[], depth = 0) => {
         const maxDepth = Math.max(...arrays.map(arr => arr.length));
@@ -44,7 +45,7 @@ export function generateSwitchMatcherPack(fields: Uint8Array[]) {
                 }
             }
 
-            let switchCode = `switch((arr[${depth}] << 0 | arr[${depth + 1}] << 8 | arr[${depth + 2}] << 16 | arr[${depth + 3}] << 24) >>> 0) {\n`;
+            let switchCode = `switch((arr[i+${depth}] << 0 | arr[i+${depth + 1}] << 8 | arr[i+${depth + 2}] << 16 | arr[i+${depth + 3}] << 24) >>> 0) {\n`;
 
             for (const [packed, { arrays: matchingArrays, indices: matchingIndices }] of packedMap) {
                 switchCode += `    case ${packed}: {\n`;
@@ -59,6 +60,7 @@ export function generateSwitchMatcherPack(fields: Uint8Array[]) {
 
         } else {
             const valueMap = new Map()
+            let defaultValue: number = -1
 
             for (let i = 0; i < arrays.length; i++) {
                 const arr = arrays[i];
@@ -70,9 +72,12 @@ export function generateSwitchMatcherPack(fields: Uint8Array[]) {
                     valueMap.get(val).arrays.push(arr)
                     valueMap.get(val).indices.push(idx)
                 }
+                else {
+                    defaultValue = idx
+                }
             }
 
-            let switchCode = `switch(arr[${depth}]) {\n`;
+            let switchCode = `switch(arr[i+${depth}]) {\n`;
 
             for (const [val, { arrays: matchingArrays, indices: matchingIndices }] of valueMap) {
                 switchCode += `    case ${val}: {\n`;
@@ -81,7 +86,7 @@ export function generateSwitchMatcherPack(fields: Uint8Array[]) {
                 switchCode += `    }\n`;
             }
 
-            switchCode += `    default: return -1;\n`;
+            switchCode += `    default: return ${defaultValue};\n`;
             switchCode += `}\n`;
 
             return switchCode;
@@ -93,9 +98,9 @@ export function generateSwitchMatcherPack(fields: Uint8Array[]) {
     const functionBody = `
         ${buildSwitchTree(fields, indices, 0)}
         return -1;
-    `;
-
-    return new Function('arr', functionBody);
+    `
+    
+    return new Function('arr', 'i', functionBody);
 }
 
 export function generateSwitchMatcher(predefinedArrays: Uint8Array[]) {
@@ -116,6 +121,7 @@ export function generateSwitchMatcher(predefinedArrays: Uint8Array[]) {
         }
 
         const valueMap = new Map();
+        let defaultValue: number = -1
 
         for (let i = 0; i < arrays.length; i++) {
             const arr = arrays[i];
@@ -126,7 +132,9 @@ export function generateSwitchMatcher(predefinedArrays: Uint8Array[]) {
                 if (!valueMap.has(val)) valueMap.set(val, { arrays: [], indices: [] });
                 valueMap.get(val).arrays.push(arr);
                 valueMap.get(val).indices.push(idx);
-            } else {
+            }
+            else {
+                defaultValue = idx
             }
         }
 
@@ -139,7 +147,7 @@ export function generateSwitchMatcher(predefinedArrays: Uint8Array[]) {
             switchCode += `    }\n`;
         }
 
-        switchCode += `    default: return -1;\n`;
+        switchCode += `    default: return ${defaultValue};\n`;
         switchCode += `}\n`;
 
         return switchCode;

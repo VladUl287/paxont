@@ -103,7 +103,7 @@ suite(
     'field_index_resolve',
 
     add('switchMathcer', () => switchMathcer(keyToSearch)),
-    add('switchMathcerPack', () => switchMathcerPack(keyToSearch)),
+    add('switchMathcerPack', () => switchMathcerPack(keyToSearch, 0)),
     add('switchMathcerLength', () => switchMathcerLength(keyToSearch)),
 
     cycle(),
