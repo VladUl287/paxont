@@ -18,6 +18,8 @@ export function convertObject(
 
     index++
 
+    const getFieldIndex = metadata.getFieldIndex!
+
     const metaFields = metadata.value
     if (!metaFields || isSingleMeta(metaFields))
         throw new Error('invalid metadata value for object')
@@ -31,9 +33,14 @@ export function convertObject(
             throw new Error(`not start of property ${index}`)
         index++
 
-        const equal = equals(metaField.name!.bytes, bytes, 0, index)
-        if (!equal)
+        const equal = getFieldIndex(bytes, index)
+        if (equal === -1)
             throw new Error(`not correct property ${metaField.name}`)
+        
+        // const equal = metaField.name!.equal(bytes, index)
+        // const equal = equals(metaField.name!.bytes, bytes, 0, index)
+        // if (!equal)
+        //     throw new Error(`not correct property ${metaField.name}`)
 
         index += metaField.name!.bytes.length + 1
 

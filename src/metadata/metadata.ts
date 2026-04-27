@@ -1,3 +1,5 @@
+import { generateSwitchMatcherPack } from "../code_gen/field"
+
 export type TypeName =
     | "string"
     | "number"
@@ -17,10 +19,12 @@ export type Metadata = {
     readonly name?: {
         value: string,
         bytes: Uint8Array<ArrayBuffer>
+        equal: (bytes: Uint8Array, i: number) => boolean
     }
     readonly value?: Metadata | Metadata[]
     readonly defaultValue?: unknown
     readonly creator?: (props: any[]) => object
+    readonly getFieldIndex?: (field: Uint8Array, index: number) => number
 }
 
 function getType(value: unknown): TypeName {
@@ -60,7 +64,11 @@ export function toMetadata(object: unknown): Metadata {
         defaultValue: object,
         type: getType(object),
         value: toValue(object),
-        creator: creator
+        creator: creator,
+        getFieldIndex: generateSwitchMatcherPack(
+            Object.keys(object as any).map(c => encoder.encode(c)), {
+            pack: true
+        }) as any
     }
 
     function toValue(object: any): Metadata | Metadata[] | undefined {
@@ -78,7 +86,8 @@ export function toMetadata(object: unknown): Metadata {
                 return {
                     name: {
                         value: key,
-                        bytes: encoder.encode(key)
+                        bytes: encoder.encode(key),
+                        equal: createNameEquality(encoder.encode(key))
                     },
                     type: getType(object[key]),
                     value: toValue(object[key]),
@@ -86,4 +95,12 @@ export function toMetadata(object: unknown): Metadata {
                 }
             })
     }
+}
+
+export function createNameEquality(bytes: Uint8Array): any {
+    const conditions = [...bytes]
+        .map((v, i) => `bytes[i+${i}]===${v}`)
+        .join(' && ')
+
+    return new Function('bytes', 'i', 'return ' + conditions)
 }
