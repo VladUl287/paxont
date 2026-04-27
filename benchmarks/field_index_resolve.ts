@@ -93,18 +93,50 @@ const keys = Object.keys(big_unique_object).map(c => {
     return encoder.encode(c)
 })
 
-const switchMathcer = generateSwitchMatcher(keys)
+const switchMathcer = generateSwitchMatcher(keys, { pack: false })
+const switchMathcerPack = generateSwitchMatcher(keys, { pack: false })
+const switchMathcerWithPack = generateSwitchMatcher(keys, { pack: true })
+const switchMathcerPackWithPack = generateSwitchMatcherPack(keys, { pack: true })
 const switchMathcerLength = generateSwitchMatcherLength(keys)
-const switchMathcerPack = generateSwitchMatcherPack(keys)
-
-let keyToSearch = keys[5]
 
 suite(
     'field_index_resolve',
 
-    add('switchMathcer', () => switchMathcer(keyToSearch, 0)),
-    add('switchMathcerPack', () => switchMathcerPack(keyToSearch, 0)),
-    add('switchMathcerLength', () => switchMathcerLength(keyToSearch, 0)),
+    add('switchMathcer', () => {
+        let result = 0
+        for (let i = 0; i < keys.length; i++) {
+            result += switchMathcer(keys[i], 0)
+        }
+        return result
+    }),
+    add('switchMathcerPack', () => {
+        let result = 0
+        for (let i = 0; i < keys.length; i++) {
+            result += switchMathcerPack(keys[i], 0)
+        }
+        return result
+    }),
+    add('switchMathcerWithPack', () => {
+        let result = 0
+        for (let i = 0; i < keys.length; i++) {
+            result += switchMathcerWithPack(keys[i], 0)
+        }
+        return result
+    }),
+    add('switchMathcerPackWithPack', () => {
+        let result = 0
+        for (let i = 0; i < keys.length; i++) {
+            result += switchMathcerPackWithPack(keys[i], 0)
+        }
+        return result
+    }),
+    add('switchMathcerLength', () => {
+        let result = 0
+        for (let i = 0; i < keys.length; i++) {
+            result += switchMathcerLength(keys[i], 0)
+        }
+        return result
+    }),
 
     cycle(),
     complete(),
