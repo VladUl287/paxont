@@ -1,8 +1,12 @@
+export type MatchOptions = {
+    pack: boolean
+}
+
 //TODO: use pack only for 0-255 values due to collisions possibility
 //TODO: split small fields and big fields on differents switches in case if all values in range 0-255
 //TODO: add pack with 3 and 2 symbols also
 //TODO: use one (default: return -1) value if applyable
-export function generateSwitchMatcherPack(fields: Uint8Array[]) {
+export function generateSwitchMatcherPack(fields: Uint8Array[], options: MatchOptions) {
     const buildSwitchTree = (arrays: Uint8Array[], indices: number[], depth = 0) => {
         const maxDepth = Math.max(...arrays.map(arr => arr.length));
 
@@ -19,7 +23,7 @@ export function generateSwitchMatcherPack(fields: Uint8Array[]) {
             return 'return -1;'
         }
 
-        if (arrays.length === 1) {
+        if (options.pack && arrays.length === 1) {
             let chunks = []
 
             let bytes = arrays[0]
@@ -46,6 +50,7 @@ export function generateSwitchMatcherPack(fields: Uint8Array[]) {
         }
 
         const canPack4 = arrays.every(c => (c.length - depth) >= 4)
+        const canPack3 = arrays.every(c => (c.length - depth) >= 3)
 
         if (canPack4) {
             const packedMap = new Map()
@@ -83,7 +88,43 @@ export function generateSwitchMatcherPack(fields: Uint8Array[]) {
             switchCode += `    default: return -1;\n`
             switchCode += `}\n`
             return switchCode
-        } else {
+        }
+        else if (canPack3) {
+            const packedMap = new Map()
+
+            for (let i = 0; i < arrays.length; i++) {
+                const arr = arrays[i]
+                const idx = indices[i]
+
+                if (depth + 2 < arr.length) {
+                    const packed = (arr[depth] << 0) | (arr[depth + 1] << 8) | (arr[depth + 2] << 16)
+
+                    if (!packedMap.has(packed)) packedMap.set(packed, { arrays: [], indices: [] })
+                    packedMap.get(packed).arrays.push(arr)
+                    packedMap.get(packed).indices.push(idx)
+                }
+                else if (depth < arr.length) {
+                    const val = arr[depth]
+                    if (!packedMap.has(val)) packedMap.set(val, { arrays: [], indices: [] })
+                    packedMap.get(val).arrays.push(arr)
+                    packedMap.get(val).indices.push(idx)
+                }
+            }
+
+            let switchCode = `switch((arr[i+${depth}] << 0 | arr[i+${depth + 1}] << 8 | arr[i+${depth + 2}] << 16) >>> 0) {\n`
+
+            for (const [packed, { arrays: matchingArrays, indices: matchingIndices }] of packedMap) {
+                switchCode += `    case ${packed}: {\n`;
+                const nested = buildSwitchTree(matchingArrays, matchingIndices, depth + 4)
+                switchCode += `        ${nested}\n`
+                switchCode += `    }\n`
+            }
+
+            switchCode += `    default: return -1;\n`
+            switchCode += `}\n`
+            return switchCode
+        }
+        else {
             const valueMap = new Map()
             let defaultValue: number = -1
 
@@ -124,11 +165,13 @@ export function generateSwitchMatcherPack(fields: Uint8Array[]) {
         ${buildSwitchTree(fields, indices, 0)}
         return -1;
     `
-    
+
+    // console.log(functionBody)
+
     return new Function('arr', 'i', functionBody);
 }
 
-export function generateSwitchMatcher(predefinedArrays: Uint8Array[]) {
+export function generateSwitchMatcher(predefinedArrays: Uint8Array[], options: MatchOptions) {
     const buildSwitchTree = (arrays: Uint8Array[], indices: number[], depth = 0) => {
         const maxDepth = Math.max(...arrays.map(arr => arr.length));
 
@@ -145,7 +188,7 @@ export function generateSwitchMatcher(predefinedArrays: Uint8Array[]) {
             return 'return -1;';
         }
 
-        if (arrays.length === 1) {
+        if (options.pack && arrays.length === 1) {
             let chunks = []
 
             let bytes = arrays[0]
