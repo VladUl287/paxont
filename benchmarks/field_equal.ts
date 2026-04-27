@@ -32,7 +32,15 @@ suite(
     add('codegen_pack_big', () => codegenPackEq(big, 0)),
     add('codegen_interpret_big', () => codegenIntepret(big, 0)),
 
-    cycle(),
+    // cycle(),
+    cycle((result) => {
+        const nanoseconds = (1 / result.ops) * 1e9
+        console.log(
+            `${result.name}: ` +
+            `${result.ops.toLocaleString()} ops/s, ` +
+            `${nanoseconds.toFixed(2)} ns/op`
+        )
+    }),
     complete(),
 )
 

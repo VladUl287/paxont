@@ -138,6 +138,14 @@ suite(
         return result
     }),
 
-    cycle(),
+    // cycle(),
+    cycle((result) => {
+        const nanoseconds = (1 / result.ops) * 1e9
+        console.log(
+            `${result.name}: ` +
+            `${result.ops.toLocaleString()} ops/s, ` +
+            `${nanoseconds.toFixed(2)} ns/op`
+        )
+    }),
     complete(),
 )
