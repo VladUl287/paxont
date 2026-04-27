@@ -33,10 +33,10 @@ export function convertObject(
             throw new Error(`not start of property ${index}`)
         index++
 
-        const equal = getFieldIndex(bytes, index)
-        if (equal === -1)
+        const fieldIndex = getFieldIndex(bytes, index)
+        if (fieldIndex === -1)
             throw new Error(`not correct property ${metaField.name}`)
-        
+
         // const equal = metaField.name!.equal(bytes, index)
         // const equal = equals(metaField.name!.bytes, bytes, 0, index)
         // if (!equal)
@@ -60,7 +60,7 @@ export function convertObject(
             index++
         }
 
-        fields[i] = parseResult.value
+        fields[fieldIndex] = parseResult.value
     }
 
     if (!metadata.creator)
