@@ -102,9 +102,9 @@ let keyToSearch = keys[5]
 suite(
     'field_index_resolve',
 
-    add('switchMathcer', () => switchMathcer(keyToSearch)),
+    add('switchMathcer', () => switchMathcer(keyToSearch, 0)),
     add('switchMathcerPack', () => switchMathcerPack(keyToSearch, 0)),
-    add('switchMathcerLength', () => switchMathcerLength(keyToSearch)),
+    add('switchMathcerLength', () => switchMathcerLength(keyToSearch, 0)),
 
     cycle(),
     complete(),

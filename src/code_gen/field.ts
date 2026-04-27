@@ -99,7 +99,7 @@ export function generateSwitchMatcherPack(fields: Uint8Array[]) {
         ${buildSwitchTree(fields, indices, 0)}
         return -1;
     `
-    
+
     return new Function('arr', 'i', functionBody);
 }
 
@@ -138,7 +138,7 @@ export function generateSwitchMatcher(predefinedArrays: Uint8Array[]) {
             }
         }
 
-        let switchCode = `switch(arr[${depth}]) {\n`;
+        let switchCode = `switch(arr[i+${depth}]) {\n`;
 
         for (const [val, { arrays: matchingArrays, indices: matchingIndices }] of valueMap) {
             switchCode += `    case ${val}: {\n`;
@@ -160,7 +160,7 @@ export function generateSwitchMatcher(predefinedArrays: Uint8Array[]) {
         return -1;
     `;
 
-    return new Function('arr', functionBody);
+    return new Function('arr', 'i', functionBody);
 }
 
 export function generateSwitchMatcherLength(predefinedArrays: Uint8Array[]) {
@@ -198,7 +198,7 @@ export function generateSwitchMatcherLength(predefinedArrays: Uint8Array[]) {
         const values = Array.from(valueMap.keys()).sort((a, b) => a - b);
 
         if (isSequential && values.length > 3 && values[values.length - 1] - values[0] === values.length - 1) {
-            let code = `${indent}const val = arr[${depth}];\n`;
+            let code = `${indent}const val = arr[i+${depth}];\n`;
             code += `${indent}if (val >= ${values[0]} && val <= ${values[values.length - 1]}) {\n`;
             code += `${indent}    switch(val) {\n`;
             for (const val of values) {
@@ -213,7 +213,7 @@ export function generateSwitchMatcherLength(predefinedArrays: Uint8Array[]) {
             return code;
         }
 
-        let code = `${indent}switch(arr[${depth}]) {\n`;
+        let code = `${indent}switch(arr[i+${depth}]) {\n`;
 
         for (const val of values) {
             code += `${indent}    case ${val}: {\n`;
@@ -238,5 +238,5 @@ export function generateSwitchMatcherLength(predefinedArrays: Uint8Array[]) {
         }
     `
 
-    return new Function('arr', functionBody);
+    return new Function('arr', 'i', functionBody);
 }
