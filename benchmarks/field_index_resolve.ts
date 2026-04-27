@@ -92,67 +92,20 @@ const keys = Object.keys(small_unique_object).map(c => {
     return encoder.encode(c)
 })
 
-const binaryTree = generateBinaryTreeMatcher(keys)
 const switchMathcer = generateNestedSwitchMatcher(keys)
 const switchMathcerLength = generateOptimizedSwitchMatcher(keys)
-const ternaryMathcer = generateTernaryMatcher(keys)
 
 let keyToSearch = keys[5]
 
 suite(
     'field_index_resolve',
 
-    add('binarytree', () => binaryTree(keyToSearch)),
     add('switchMathcer', () => switchMathcer(keyToSearch)),
     add('switchMathcerLength', () => switchMathcerLength(keyToSearch)),
-    add('ternaryMathcer', () => ternaryMathcer(keyToSearch)),
 
     cycle(),
     complete(),
 )
-
-export function generateBinaryTreeMatcher(predefinedArrays: Uint8Array[]) {
-    const buildTree = (arrays: [Uint8Array, number][], depth = 0): any => {
-        if (arrays.length === 0) return 'null'
-        if (arrays.length === 1) {
-            return JSON.stringify(arrays[0][1])
-        }
-
-        const groups = new Map()
-        for (const [arr, j] of arrays) {
-            if (depth >= arr.length) {
-                if (!groups.has('__end__')) groups.set('__end__', [])
-                groups.get('__end__').push([arr, j])
-                continue;
-            }
-            const val = arr[depth]
-            if (!groups.has(val)) groups.set(val, [])
-            groups.get(val).push([arr, j])
-        }
-
-        const conditions = []
-        for (const [val, groupArrays] of groups) {
-            if (val === '__end__') {
-                if (groupArrays.length === 1) {
-                    conditions.push(`if (${depth} >= arr.length) return ${groupArrays[0][1]};`)
-                } else {
-                    const subtree = buildTree(groupArrays, depth + 1);
-                    conditions.push(`if (${depth} >= arr.length) return ${subtree};`)
-                }
-                continue
-            }
-
-            const subtree = buildTree(groupArrays, depth + 1)
-            conditions.push(`if (arr[${depth}] === ${val}) return ${subtree};`)
-        }
-
-        return `(() => { ${conditions.join(' ')} return null; })()`
-    };
-
-    const functionBody = `return ${buildTree(predefinedArrays.map((c, i) => [c, i]))};`
-
-    return new Function('arr', functionBody)
-}
 
 export function generateNestedSwitchMatcher(predefinedArrays: Uint8Array[]) {
     const buildSwitchTree = (arrays: Uint8Array[], indices: number[], depth = 0) => {
@@ -286,52 +239,7 @@ export function generateOptimizedSwitchMatcher(predefinedArrays: Uint8Array[]) {
         }
     `
 
-    return new Function('arr', functionBody);
-}
-
-export function generateTernaryMatcher(predefinedArrays: Uint8Array[]) {
-    const buildTernary = (arrays: Uint8Array[], indices: number[], depth = 0) => {
-        if (arrays.length === 0) return 'null';
-        if (arrays.length === 1) {
-            return JSON.stringify(indices[0]);
-        }
-
-        const valueCounts = new Map();
-        for (const arr of arrays) {
-            const val = arr[depth];
-            valueCounts.set(val, (valueCounts.get(val) || 0) + 1);
-        }
-
-        const sortedVals = Array.from(valueCounts.keys())
-            .sort((a, b) => valueCounts.get(b) - valueCounts.get(a));
-
-        let ternary = '';
-        for (let i = 0; i < sortedVals.length; i++) {
-            const val = sortedVals[i];
-            const matchingIndices: number[] = [];
-            const matchingArrays: Uint8Array[] = [];
-
-            for (let j = 0; j < arrays.length; j++) {
-                if (arrays[j][depth] === val) {
-                    matchingArrays.push(arrays[j]);
-                    matchingIndices.push(indices[j]);
-                }
-            }
-
-            const condition = i === 0 ? '' : ' : ';
-            ternary += `${condition}arr[${depth}] === ${val} ? ${buildTernary(matchingArrays, matchingIndices, depth + 1)}`;
-        }
-        ternary += ' : null';
-
-        return `(${ternary})`;
-    };
-
-    const initialIndices = predefinedArrays.map((_, idx) => idx);
-
-    const functionBody = `
-        return ${buildTernary(predefinedArrays, initialIndices)};
-    `;
+                console.log(functionBody)
 
     return new Function('arr', functionBody);
 }
-
