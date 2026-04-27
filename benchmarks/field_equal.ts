@@ -1,6 +1,5 @@
 import { add, complete, cycle, suite } from 'benny'
 import { equals } from '../src/utils/array'
-import { createNameEquality } from '../src/metadata/metadata'
 
 const encoder = new TextEncoder()
 
@@ -85,4 +84,12 @@ export function genUnsafeInterpet(bytes: Uint8Array) {
     body += condition
 
     return new Function('bytes', 'i', body)
+}
+
+export function createNameEquality(bytes: Uint8Array): any {
+    const conditions = [...bytes]
+        .map((v, i) => `bytes[i+${i}]===${v}`)
+        .join(' && ')
+
+    return new Function('bytes', 'i', 'return ' + conditions)
 }

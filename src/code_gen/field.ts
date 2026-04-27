@@ -19,6 +19,32 @@ export function generateSwitchMatcherPack(fields: Uint8Array[]) {
             return 'return -1;'
         }
 
+        if (arrays.length === 1) {
+            let chunks = []
+
+            let bytes = arrays[0]
+            let i = depth
+            for (; i < bytes.length - 4; i += 4) {
+                const a = bytes[i]
+                const b = bytes[i + 1]
+                const c = bytes[i + 2]
+                const d = bytes[i + 3]
+
+                const packValue = a << 0 | b << 8 | c << 16 | d << 24
+
+                chunks.push(`((arr[i+${i}]<<0 | arr[i+${i + 1}]<<8 | arr[i+${i + 2}]<<16 | arr[i+${i + 3}]<<24) === ${packValue})`)
+            }
+
+            chunks.push(
+                '(' + [...bytes]
+                    .slice(i)
+                    .map((v, j) => `arr[i+${i + j}]===${v}`)
+                    .join(' && ') + ')'
+            )
+
+            return 'return (' + chunks.join(' && ') + `) ? ${indices[0]} : -1`
+        }
+
         const canPack4 = arrays.every(c => (c.length - depth) >= 4)
 
         if (canPack4) {
@@ -57,7 +83,6 @@ export function generateSwitchMatcherPack(fields: Uint8Array[]) {
             switchCode += `    default: return -1;\n`
             switchCode += `}\n`
             return switchCode
-
         } else {
             const valueMap = new Map()
             let defaultValue: number = -1
@@ -99,7 +124,7 @@ export function generateSwitchMatcherPack(fields: Uint8Array[]) {
         ${buildSwitchTree(fields, indices, 0)}
         return -1;
     `
-
+    
     return new Function('arr', 'i', functionBody);
 }
 
@@ -118,6 +143,32 @@ export function generateSwitchMatcher(predefinedArrays: Uint8Array[]) {
                 return `return ${indices[0]};`;
             }
             return 'return -1;';
+        }
+
+        if (arrays.length === 1) {
+            let chunks = []
+
+            let bytes = arrays[0]
+            let i = depth
+            for (; i < bytes.length - 4; i += 4) {
+                const a = bytes[i]
+                const b = bytes[i + 1]
+                const c = bytes[i + 2]
+                const d = bytes[i + 3]
+
+                const packValue = a << 0 | b << 8 | c << 16 | d << 24
+
+                chunks.push(`((arr[i+${i}]<<0 | arr[i+${i + 1}]<<8 | arr[i+${i + 2}]<<16 | arr[i+${i + 3}]<<24) === ${packValue})`)
+            }
+
+            chunks.push(
+                '(' + [...bytes]
+                    .slice(i)
+                    .map((v, j) => `arr[i+${i + j}]===${v}`)
+                    .join(' && ') + ')'
+            )
+
+            return 'return (' + chunks.join(' && ') + `) ? ${indices[0]} : -1`
         }
 
         const valueMap = new Map();
