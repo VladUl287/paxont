@@ -44,22 +44,20 @@ function getType(value: unknown): TypeName {
     return typeof value
 }
 
-export function createObjectBuilder(propertyNames: [string, any][]): (props: [string, any][]) => object {
+export function createObjectBuilder(propertyNames: string[]): (fields: string[]) => object {
     const assignments = propertyNames
-        .map((prop, index) => `${prop[0]}: props[${index}]`)
+        .map((field, index) => `${field}: fields[${index}]`)
         .join(',')
 
     const body = `return {${assignments}}`
 
-    return new Function("props", body) as (props: any[]) => object
+    return new Function("fields", body) as any
 }
 
 const encoder = new TextEncoder()
 export function toMetadata(object: unknown): Metadata {
     const value = toValue(object)
-    const creator = createObjectBuilder((value as Metadata[]).map(c => {
-        return [c.name!.value, c.defaultValue]
-    }))
+    const creator = createObjectBuilder((value as Metadata[]).map(c => c.name!.value))
 
     return {
         defaultValue: object,
