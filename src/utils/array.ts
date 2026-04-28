@@ -11,3 +11,31 @@ export function equals(a: Uint8Array, b: Uint8Array, aI: number, bI: number): bo
 
     return true
 }
+
+export function pool<T>() {
+    const store = new Map<number, T[]>()
+
+    const getLength = (minLength: number): number =>
+        Math.pow(2, Math.ceil(Math.log2(minLength)))
+
+    const rent = (minLength: number): T[] => {
+        const length = getLength(minLength)
+
+        let result = store.get(length)
+        if (result)
+            return result
+
+        result = new Array<T>(length)
+        store.set(length, result)
+        return result
+    }
+
+    const restore = (array: T[]): void => {
+        store.set(array.length, array)
+    }
+
+    return {
+        rent: rent,
+        restore: restore
+    }
+}
