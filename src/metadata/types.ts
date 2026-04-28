@@ -10,13 +10,16 @@ export type TypeName = BuiltInType | (string & {})
 export type Metadata = MetaPrimitive | MetaObject | MetaArray
 
 export type MetaObject = {
-    readonly fields: Metadata[]
+    readonly fields: MetaObjectField[]
     readonly factory: (props: unknown[]) => object
     readonly getFieldIndex: (field: Uint8Array, index: number) => number
 }
 
 export type MetaPrimitive = {
     readonly type: TypeName
+}
+
+export type MetaObjectField = MetaPrimitive & {
     readonly name: {
         value: string,
         bytes: Uint8Array<ArrayBuffer>
@@ -30,7 +33,7 @@ export type MetaArray = {
     readonly value: Metadata
 }
 
-export const isPrimitive = (meta: Metadata): meta is MetaPrimitive =>
+export const isMetaObjectField = (meta: Metadata): meta is MetaObjectField =>
     meta !== null &&
     typeof meta === 'object' &&
     'type' in meta &&
@@ -39,7 +42,7 @@ export const isPrimitive = (meta: Metadata): meta is MetaPrimitive =>
     !('fields' in meta) &&
     !('factory' in meta)
 
-export const isObject = (meta: Metadata): meta is MetaObject =>
+export const isMetaObject = (meta: Metadata): meta is MetaObject =>
     meta !== null &&
     typeof meta === 'object' &&
     'fields' in meta &&
@@ -47,7 +50,7 @@ export const isObject = (meta: Metadata): meta is MetaObject =>
     'getFieldIndex' in meta &&
     !('name' in meta)
 
-export const isArray = (meta: Metadata): meta is MetaArray =>
+export const isMetaArray = (meta: Metadata): meta is MetaArray =>
     meta !== null &&
     typeof meta === 'object' &&
     'type' in meta &&
