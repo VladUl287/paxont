@@ -1,7 +1,6 @@
 import { JsonCodes } from "../utils/constants"
 import { ConvertMeta, ConvertResult, ConvertState, isError, isMultiMeta, isSingleMeta } from "./types"
 import { skipWhitespace } from "./utils"
-import { equals } from "../utils/array"
 
 const fields = new Array<any>(16)
 export function convertObject(
@@ -37,11 +36,6 @@ export function convertObject(
         if (fieldIndex === -1)
             throw new Error(`not correct property ${metaField.name}`)
 
-        // const equal = metaField.name!.equal(bytes, index)
-        // const equal = equals(metaField.name!.bytes, bytes, 0, index)
-        // if (!equal)
-        //     throw new Error(`not correct property ${metaField.name}`)
-
         index += metaField.name!.bytes.length + 1
 
         if (bytes[index] !== JsonCodes.COLON)
@@ -66,10 +60,12 @@ export function convertObject(
     if (!metadata.creator)
         throw new Error('metadata object creator not presented')
 
-    const result = metadata.creator(fields)
+    index = skipWhitespace(bytes, index)
 
     if (bytes[index] !== JsonCodes.CURLY_CLOSE)
         throw new Error(`object close not found ${index}. depth ${depth}`)
+
+    const result = metadata.creator(fields)
 
     return {
         value: result,
