@@ -1,18 +1,36 @@
 import { generateSwitchMatcherPack } from "../code_gen/field"
 
-export type TypeName =
-    | "string"
-    | "number"
-    | "bigint"
-    | "boolean"
-    | "symbol"
-    | "object"
-    | "array"
-    | "date"
-    | "map"
-    | "set"
-    | "undefined"
-    | "function"
+export type BuiltInType =
+    | "string" | "number" | "bigint" | "boolean" | "symbol"
+    | "object" | "array" | "date" | "map" | "set"
+    | "u8" | "u16" | "u32" | "u64"
+    | "i8" | "i16" | "i32" | "i64"
+    | "f32" | "f64";
+
+export type TypeName = BuiltInType | (string & {})
+
+export type Meta = MetaPrimitive | MetaObject | MetaArray
+
+export type MetaObject = {
+    readonly fields: Meta[]
+    readonly factory: (props: unknown[]) => object
+    readonly getFieldIndex: (field: Uint8Array, index: number) => number
+}
+
+export type MetaPrimitive = {
+    readonly type: TypeName
+    readonly name: {
+        value: string,
+        bytes: Uint8Array<ArrayBuffer>
+        equal: (bytes: Uint8Array, i: number) => boolean
+    }
+    readonly value: Meta
+}
+
+export type MetaArray = {
+    readonly type: TypeName
+    readonly value: Meta
+}
 
 export type Metadata = {
     readonly type: TypeName
@@ -28,19 +46,37 @@ export type Metadata = {
 }
 
 function getType(value: unknown): TypeName {
-    if (Array.isArray(value))
-        return "array"
+    if (value === null)
+        throw new Error('invalid field type null')
 
-    if (value instanceof Date)
-        return "date"
+    const typeMap = new Map<any, TypeName>([
+        [Array, 'array'],
+        [Date, 'date'],
+        [Map, 'map'],
+        [Set, 'set'],
+        [Uint8Array, 'u8'],
+        [Uint16Array, 'u16'],
+        [Uint32Array, 'u32'],
+        [BigUint64Array, 'u64'],
+        [Int8Array, 'i8'],
+        [Int16Array, 'i16'],
+        [Int32Array, 'i32'],
+        [BigInt64Array, 'i64'],
+        [Float32Array, 'f32'],
+        [Float64Array, 'f64'],
+    ])
 
-    if (value instanceof Map)
-        return "map"
+    for (const [constructor, typeName] of typeMap) {
+        if (value instanceof constructor)
+            return typeName
+    }
 
-    if (value instanceof Set)
-        return "set"
+    const type = typeof value
 
-    return typeof value
+    if (type === 'undefined' || type === 'function')
+        throw new Error(`invalid field type ${typeof value}`)
+
+    return type
 }
 
 export function createObjectBuilder(propertyNames: string[]): (fields: string[]) => object {
