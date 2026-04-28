@@ -136,9 +136,27 @@ export function createNamesEquality(fields: Uint8Array[]): any {
 }
 
 export function createNameEquality(bytes: Uint8Array): any {
-    const conditions = [...bytes]
-        .map((v, i) => `bytes[i+${i}]===${v}`)
-        .join(' && ')
+    const field = [...bytes]
 
-    return new Function('bytes', 'i', 'return ' + conditions)
+    const chunks = []
+    let j = 0
+    for (; j < field.length - 4; j += 4) {
+        const a = field[j]
+        const b = field[j + 1]
+        const c = field[j + 2]
+        const d = field[j + 3]
+
+        const packValue = a << 0 | b << 8 | c << 16 | d << 24
+
+        chunks.push(`((bytes[i+${j}]<<0 | bytes[i+${j + 1}]<<8 | bytes[i+${j + 2}]<<16 | bytes[i+${j + 3}]<<24) === ${packValue})`)
+    }
+
+    chunks.push(
+        '(' + field
+            .slice(j)
+            .map((v, jj) => `bytes[i+${j + jj}]===${v}`)
+            .join(' && ') + ')'
+    )
+
+    return new Function('bytes', 'i', 'return (' + chunks.join(' && ') + ')')
 }
