@@ -25,7 +25,6 @@ export type Metadata = {
     readonly defaultValue?: unknown
     readonly creator?: (props: any[]) => object
     readonly getFieldIndex?: (field: Uint8Array, index: number) => number
-    readonly equals?: (index: number, field: Uint8Array, i: number) => boolean
 }
 
 function getType(value: unknown): TypeName {
@@ -67,8 +66,7 @@ export function toMetadata(object: unknown): Metadata {
         getFieldIndex: generateSwitchMatcherPack(
             Object.keys(object as any).map(c => encoder.encode(c)), {
             pack: true
-        }) as any,
-        equals: createNamesEquality(Object.keys(object as any).map(c => encoder.encode(c)))
+        }) as any
     }
 
     function toValue(object: any): Metadata | Metadata[] | undefined {
@@ -95,42 +93,6 @@ export function toMetadata(object: unknown): Metadata {
                 }
             })
     }
-}
-
-export function createNamesEquality(fields: Uint8Array[]): any {
-    let body = `
-        switch(index) {
-    `
-
-    for (let i = 0; i < fields.length; i++) {
-        const field = [...fields[i]]
-
-        const chunks = []
-        let j = 0
-        for (; j < field.length - 4; j += 4) {
-            const a = field[j]
-            const b = field[j + 1]
-            const c = field[j + 2]
-            const d = field[j + 3]
-
-            const packValue = a << 0 | b << 8 | c << 16 | d << 24
-
-            chunks.push(`((bytes[i+${j}]<<0 | bytes[i+${j + 1}]<<8 | bytes[i+${j + 2}]<<16 | bytes[i+${j + 3}]<<24) === ${packValue})`)
-        }
-
-        chunks.push(
-            '(' + field
-                .slice(j)
-                .map((v, jj) => `bytes[i+${j + jj}]===${v}`)
-                .join(' && ') + ')'
-        )
-
-        body += `case ${i}: return (${chunks.join(' && ')})\n`
-    }
-
-    body += '}'
-
-    return new Function('index', 'bytes', 'i', body)
 }
 
 export function createNameEquality(bytes: Uint8Array): any {
