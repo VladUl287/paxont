@@ -1,8 +1,8 @@
-import { TypeName } from "../metadata/metadata"
 import { Converter } from "../converters/types"
 import { convertNumber } from "../converters/number"
 import { convertString } from "../converters/string"
 import { convertObject } from "../converters/object"
+import { TypeName } from "../metadata/types"
 
 export type TypeMapping = {
     string: string
@@ -15,15 +15,13 @@ export type TypeMapping = {
     date: Date
     map: Map<any, any>
     set: Set<any>
-    undefined: undefined
-    function: Function
 }
 
 export type Converters = {
     [key in TypeName]?: Converter<unknown>
 }
 
-export type ConverterResolver = <T extends TypeName>(type: T) => Converter<TypeMapping[T]>
+export type ConverterResolver = <T extends TypeName>(type: T) => Converter<any>
 
 export type JsonOptions = {
     readonly encoder: TextEncoder

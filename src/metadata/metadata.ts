@@ -1,36 +1,5 @@
 import { generateSwitchMatcherPack } from "../code_gen/field"
-
-export type BuiltInType =
-    | "string" | "number" | "bigint" | "boolean" | "symbol"
-    | "object" | "array" | "date" | "map" | "set"
-    | "u8" | "u16" | "u32" | "u64"
-    | "i8" | "i16" | "i32" | "i64"
-    | "f32" | "f64";
-
-export type TypeName = BuiltInType | (string & {})
-
-export type Meta = MetaPrimitive | MetaObject | MetaArray
-
-export type MetaObject = {
-    readonly fields: Meta[]
-    readonly factory: (props: unknown[]) => object
-    readonly getFieldIndex: (field: Uint8Array, index: number) => number
-}
-
-export type MetaPrimitive = {
-    readonly type: TypeName
-    readonly name: {
-        value: string,
-        bytes: Uint8Array<ArrayBuffer>
-        equal: (bytes: Uint8Array, i: number) => boolean
-    }
-    readonly value: Meta
-}
-
-export type MetaArray = {
-    readonly type: TypeName
-    readonly value: Meta
-}
+import { TypeName } from "./types"
 
 export type Metadata = {
     readonly type: TypeName
