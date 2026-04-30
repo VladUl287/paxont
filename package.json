@@ -1,12 +1,11 @@
 {
   "devDependencies": {
+    "@exodus/bytes": "^1.15.0",
     "@types/jest": "^30.0.0",
     "benny": "^3.7.1",
     "jest": "^30.3.0",
+    "object-code": "^2.0.0",
     "tinybench": "^6.0.0",
     "ts-jest": "^29.4.6"
-  },
-  "dependencies": {
-    "object-code": "^2.0.0"
   }
 }
