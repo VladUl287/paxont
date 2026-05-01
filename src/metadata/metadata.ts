@@ -1,7 +1,12 @@
 import { generateSwitchMatcherPack } from "../code_gen/field"
+import { convertNumber } from "../converters/number"
+import { convertObject } from "../converters/object"
+import { convertString } from "../converters/string"
+import { Converter } from "../converters/types"
 import { TypeName } from "./types"
 
 export type Metadata = {
+    readonly convert: Converter<any>,
     readonly type: TypeName
     readonly name?: {
         value: string,
@@ -58,12 +63,19 @@ export function createObjectBuilder(propertyNames: string[]): (fields: string[])
     return new Function("fields", body) as any
 }
 
+const converters: any = {
+    number: convertNumber,
+    string: convertString,
+    object: convertObject
+}
+
 const encoder = new TextEncoder()
 export function toMetadata(object: unknown): Metadata {
     const value = toValue(object)
     const creator = createObjectBuilder((value as Metadata[]).map(c => c.name!.value))
 
     return {
+        convert: convertObject,
         defaultValue: object,
         type: getType(object),
         value: toValue(object),
@@ -80,6 +92,7 @@ export function toMetadata(object: unknown): Metadata {
 
         if (Array.isArray(object))
             return {
+                convert: undefined as any,
                 type: getType(object[0]),
                 value: toValue(object[0])
             }
@@ -87,6 +100,7 @@ export function toMetadata(object: unknown): Metadata {
         return Object.keys(object)
             .map((key): Metadata => {
                 return {
+                    convert: converters[getType(object[key])],
                     name: {
                         value: key,
                         bytes: encoder.encode(key),

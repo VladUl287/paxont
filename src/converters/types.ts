@@ -2,9 +2,8 @@ import { Metadata } from "../metadata/metadata"
 import { JsonOptions } from "../options/types"
 
 export type ConvertState = {
-    readonly bytes: Uint8Array<ArrayBuffer>
+    readonly bytes: Uint8Array
     readonly options: JsonOptions
-    readonly convert: Converter<unknown>
 }
 
 export type ConvertMeta = Metadata | Metadata[]

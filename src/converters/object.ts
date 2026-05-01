@@ -44,7 +44,7 @@ export function convertObject(
 
         index = skipWhitespace(bytes, index)
 
-        const parseResult = ctx.convert(ctx, metaField, index, depth)
+        const parseResult = metaField.convert(ctx, metaField, index, depth)
         if (isError(parseResult))
             break
 

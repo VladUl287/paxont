@@ -6,7 +6,7 @@ const WS_BITMASK =
 
 export const isWhitespace = (byte: number) => (WS_BITMASK >> byte) & 1
 
-export function skipWhitespace(bytes: Uint8Array<ArrayBuffer>, i: number): number {
+export function skipWhitespace(bytes: Uint8Array, i: number): number {
     while (isWhitespace(bytes[i])) i++
     return i
 }
