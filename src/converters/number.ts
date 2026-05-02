@@ -172,8 +172,6 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
         }
     }
 
-    mantissaU8.set(bytes, i)
-
     let mantissa = 0n
     let digitsCount = 0
 
@@ -185,65 +183,6 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
     }
 
     const end = bytes.length
-    let alignedLength = ((end - start) & ~3) / 4
-    let j = 0
-    while (j < alignedLength) {
-        const chunk = mantissaU32[j] - 0x30303030
-        const tmp = ((chunk + 0x76767676) | chunk) & 0x80808080
-
-        if (tmp === 0) {
-            let whole = 0
-
-            if (isLittleEndian) {
-                const result =
-                    ((chunk & 0x00FF00FF) * 10) +
-                    ((chunk >> 8) & 0x00FF00FF)
-                whole = ((result & 0xFFFF) * 100) + (result >>> 16)
-            }
-            else {
-                const high =
-                    ((chunk >> 24) & 0xFF) * 10 +
-                    ((chunk >> 16) & 0xFF)
-                const low =
-                    ((chunk >> 8) & 0xFF) * 10 +
-                    ((chunk & 0xFF))
-                whole = high * 100 + low
-            }
-
-            tempDigitsCount += 4
-
-            if (tempDigitsCount === 16) {
-                const low = conversionU32[0]
-                const high = conversionU32[1]
-                const newLow = low * 10000 + whole
-                const carry = Math.floor(newLow / 0x100000000)
-                conversionU32[0] = newLow >>> 0
-                conversionU32[1] = high * 10000 + carry
-
-                mantissa = mantissa * POW10[tempDigitsCount] + conversionU64[0]
-                tempDigitsCount = 0
-            }
-            else {
-                tempMantissa = tempMantissa * 10000 + whole
-
-                if (tempDigitsCount === 12) {
-                    const high = Math.floor(tempMantissa / 0x100000000)
-                    const low = tempMantissa >>> 0
-                    conversionU32[0] = low
-                    conversionU32[1] = high
-
-                    tempMantissa = 0
-                }
-            }
-
-            scale += 4
-            i += 4
-            j++
-            continue
-        }
-        break
-    }
-
     while (i < end) {
         const byte = bytes[i]
 
