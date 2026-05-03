@@ -2,22 +2,26 @@ import { parseNumberF64 } from "../src/converters/number";
 
 describe('parseNumberF64', () => {
   const toBytes = (str: string): Uint8Array => new TextEncoder().encode(str)
-  
+
   describe('Basic numeric parsing', () => {
     test('parses positive integer', () => {
       const bytes = toBytes('123')
-      expect(parseNumberF64(bytes, 0)).toStrictEqual({
-        value: 123,
-        nextIndex: 3
-      })
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 123, nextIndex: 3 })
     })
 
     test('parses negative integer', () => {
       const bytes = toBytes('-456')
-      expect(parseNumberF64(bytes, 0)).toStrictEqual({
-        value: -456,
-        nextIndex: 4
-      })
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: -456, nextIndex: 4 })
+    })
+
+    test('parses zero', () => {
+      const bytes = toBytes('0')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 0, nextIndex: 1 })
+    })
+
+    test('parses multiple zeros', () => {
+      const bytes = toBytes('000')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 0, nextIndex: 3 })
     })
   })
 
