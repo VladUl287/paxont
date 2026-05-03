@@ -21,8 +21,6 @@ for (let exp = -1022; exp <= 1023; exp++) {
 }
 
 const MAX_DIGITS_COUNT = 512
-const mantissaU8 = new Uint8Array(MAX_DIGITS_COUNT)
-const mantissaU32 = new Uint32Array(mantissaU8.buffer, mantissaU8.byteOffset, MAX_DIGITS_COUNT / 4)
 
 const buffer = new ArrayBuffer(8)
 const conversionU32 = new Uint32Array(buffer)
@@ -172,17 +170,74 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
         }
     }
 
-    let mantissa = 0n
-    let digitsCount = 0
-
-    if (tempDigitsCount > 0) {
-        mantissa = BigInt(tempMantissa)
-        digitsCount = tempDigitsCount
-        tempDigitsCount = 0
-        tempMantissa = 0
-    }
+    let mantissa = BigInt(tempMantissa)
+    let digitsCount = tempDigitsCount
+    tempDigitsCount = 0
+    tempMantissa = 0
 
     const end = bytes.length
+    while (i < end - 4) {
+        const a = bytes[i]
+        const b = bytes[i + 1]
+        const c = bytes[i + 2]
+        const d = bytes[i + 3]
+
+        const chunk = (a << 0 | b << 8 | c << 16 | d << 24) - 0x30303030
+        const tmp = ((chunk + 0x76767676) | chunk) & 0x80808080
+
+        if (tmp === 0) {
+            let whole = 0
+
+            if (isLittleEndian) {
+                const result =
+                    ((chunk & 0x00FF00FF) * 10) +
+                    ((chunk >> 8) & 0x00FF00FF)
+                whole = ((result & 0xFFFF) * 100) + (result >>> 16)
+            }
+            else {
+                const high =
+                    ((chunk >> 24) & 0xFF) * 10 +
+                    ((chunk >> 16) & 0xFF)
+                const low =
+                    ((chunk >> 8) & 0xFF) * 10 +
+                    ((chunk & 0xFF))
+                whole = high * 100 + low
+            }
+
+            tempDigitsCount += 4
+
+            if (tempDigitsCount === 16) {
+                const low = conversionU32[0]
+                const high = conversionU32[1]
+                const newLow = low * 10000 + whole
+                const carry = Math.floor(newLow / 0x100000000)
+                conversionU32[0] = newLow >>> 0
+                conversionU32[1] = high * 10000 + carry
+
+                mantissa = mantissa * POW10[tempDigitsCount] + conversionU64[0]
+                tempDigitsCount = 0
+            }
+            else {
+                tempMantissa = tempMantissa * 10000 + whole
+
+                if (tempDigitsCount === 12) {
+                    const high = Math.floor(tempMantissa / 0x100000000)
+                    const low = tempMantissa >>> 0
+                    conversionU32[0] = low
+                    conversionU32[1] = high
+
+                    tempMantissa = 0
+                }
+            }
+
+            digitsCount += 4
+            scale += 4
+            i += 4
+            continue
+        }
+        break
+    }
+
     while (i < end) {
         const byte = bytes[i]
 
