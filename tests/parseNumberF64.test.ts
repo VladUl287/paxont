@@ -25,6 +25,33 @@ describe('parseNumberF64', () => {
     })
   })
 
+  describe('Decimal numbers', () => {
+    test('parses positive decimal', () => {
+      const bytes = toBytes('123.456')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 123.456, nextIndex: 7 })
+    });
+
+    test('parses negative decimal', () => {
+      const bytes = toBytes('-123.456')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: -123.456, nextIndex: 8 })
+    });
+
+    test('parses decimal without leading zeros', () => {
+      const bytes = toBytes('.123')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 0.123, nextIndex: 4 })
+    });
+
+    test('parses decimal without trailing zeros', () => {
+      const bytes = toBytes('123.')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 123, nextIndex: 4 })
+    });
+
+    test('parses decimal with leading zeros', () => {
+      const bytes = toBytes('00123.456')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 123.456, nextIndex: 9 })
+    })
+  })
+
   // const testCases = [
   //   // Basic numbers
   //   { value: 0, description: 'zero' },
