@@ -84,6 +84,23 @@ describe('parseNumberF64', () => {
     })
   })
 
+  describe('Special values', () => {
+    test('parses Infinity', () => {
+      const bytes = toBytes('Infinity')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: Infinity, nextIndex: 8 })
+    })
+
+    test('parses -Infinity', () => {
+      const bytes = toBytes('-Infinity')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: -Infinity, nextIndex: 9 })
+    });
+
+    test('parses NaN', () => {
+      const bytes = toBytes('NaN')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: NaN, nextIndex: 3 })
+    })
+  })
+
   // const testCases = [
   //   // Basic numbers
   //   { value: 0, description: 'zero' },
