@@ -207,6 +207,34 @@ describe('parseNumberF64', () => {
     })
   })
 
+  describe('Precision tests', () => {
+    test('maintains precision for double values', () => {
+      const bytes = toBytes('0.1')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 0.1, nextIndex: 3 })
+    })
+
+    test('parses epsilon', () => {
+      const epsilon = 2.220446049250313e-16
+      const bytes = toBytes(epsilon.toString())
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: epsilon, nextIndex: 19 })
+    })
+  })
+
+  describe('Random and comprehensive tests', () => {
+    const testNumbers = [
+      0, 1, -1, 3.14159, -2.71828, 1000000, -0.000001,
+      1.23456789e-10, 9.87654321e20, -5.4321e-15
+    ]
+
+    testNumbers.forEach(num => {
+      test(`correctly parses roundtrip for ${num}`, () => {
+        const bytes = toBytes(num.toString())
+        const parsed = parseNumberF64(bytes, 0)
+        expect(parsed).toStrictEqual({ value: num, nextIndex: bytes.length })
+      })
+    })
+  })
+
   // const testCases = [
   //   // Basic numbers
   //   { value: 0, description: 'zero' },
