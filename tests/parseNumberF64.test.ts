@@ -147,6 +147,43 @@ describe('parseNumberF64', () => {
     })
   })
 
+  describe('Error handling', () => {
+    test('throws on empty string', () => {
+      const bytes = toBytes('')
+      expect(() => parseNumberF64(bytes, 0)).toThrow()
+    })
+
+    test('throws on whitespace only', () => {
+      const bytes = toBytes('   ')
+      expect(() => parseNumberF64(bytes, 0)).toThrow()
+    })
+
+    test('throws on invalid characters', () => {
+      const bytes = toBytes('12a3');
+      expect(() => parseNumberF64(bytes, 0)).toThrow()
+    })
+
+    test('throws on multiple decimal points', () => {
+      const bytes = toBytes('1.2.3')
+      expect(() => parseNumberF64(bytes, 0)).toThrow()
+    })
+
+    test('throws on multiple exponent markers', () => {
+      const bytes = toBytes('1e2e3')
+      expect(() => parseNumberF64(bytes, 0)).toThrow()
+    })
+
+    test('throws when start index is out of bounds', () => {
+      const bytes = toBytes('123')
+      expect(() => parseNumberF64(bytes, 5)).toThrow()
+    })
+
+    test('throws when no number found after whitespace', () => {
+      const bytes = toBytes('   abc')
+      expect(() => parseNumberF64(bytes, 0)).toThrow()
+    })
+  })
+
   // const testCases = [
   //   // Basic numbers
   //   { value: 0, description: 'zero' },
