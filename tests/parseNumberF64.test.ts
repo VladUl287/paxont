@@ -118,6 +118,35 @@ describe('parseNumberF64', () => {
     })
   })
 
+  describe('Edge cases and boundaries', () => {
+    test('parses maximum safe integer', () => {
+      const bytes = toBytes('9007199254740991')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 9007199254740991, nextIndex: 16 })
+    })
+
+    test('parses Number.MAX_VALUE', () => {
+      const maxValue = 1.7976931348623157e+308
+      const bytes = toBytes(maxValue.toString())
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: maxValue, nextIndex: 19 })
+    })
+
+    test('parses Number.MIN_VALUE', () => {
+      const minValue = 5e-324;
+      const bytes = toBytes(minValue.toString())
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: minValue, nextIndex: 6 })
+    });
+
+    test('parses very small number', () => {
+      const bytes = toBytes('1e-308')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 1e-308, nextIndex: 6 })
+    });
+
+    test('parses very large number', () => {
+      const bytes = toBytes('1e308')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 1e308, nextIndex: 5 })
+    })
+  })
+
   // const testCases = [
   //   // Basic numbers
   //   { value: 0, description: 'zero' },
