@@ -101,6 +101,23 @@ describe('parseNumberF64', () => {
     })
   })
 
+  describe('Start index parameter', () => {
+    test('starts parsing from specified index', () => {
+      const bytes = toBytes('abc123')
+      expect(parseNumberF64(bytes, 3)).toStrictEqual({ value: 123, nextIndex: 6 })
+    })
+
+    test('handles whitespace before start index', () => {
+      const bytes = toBytes('  123')
+      expect(parseNumberF64(bytes, 2)).toStrictEqual({ value: 123, nextIndex: 5 })
+    })
+
+    test('parses number in middle of buffer', () => {
+      const bytes = toBytes('prefix 456 suffix')
+      expect(parseNumberF64(bytes, 7)).toStrictEqual({ value: 456, nextIndex: 10 })
+    })
+  })
+
   // const testCases = [
   //   // Basic numbers
   //   { value: 0, description: 'zero' },
