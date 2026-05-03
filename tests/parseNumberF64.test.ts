@@ -52,6 +52,38 @@ describe('parseNumberF64', () => {
     })
   })
 
+  describe('Scientific notation', () => {
+    test('parses scientific notation with e', () => {
+      const bytes = toBytes('1.23e4')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 12300, nextIndex: 6 })
+    })
+
+    test('parses scientific notation with E', () => {
+      const bytes = toBytes('1.23E4')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 12300, nextIndex: 6 })
+    })
+
+    test('parses scientific notation with negative exponent', () => {
+      const bytes = toBytes('1.23e-2')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 0.0123, nextIndex: 7 })
+    })
+
+    test('parses scientific notation with positive exponent sign', () => {
+      const bytes = toBytes('1.23e+2')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 123, nextIndex: 7 })
+    })
+
+    test('parses scientific notation without decimal', () => {
+      const bytes = toBytes('123e4')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 1230000, nextIndex: 5 })
+    })
+
+    test('parses scientific notation with negative base', () => {
+      const bytes = toBytes('-1.23e4')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: -12300, nextIndex: 7 })
+    })
+  })
+
   // const testCases = [
   //   // Basic numbers
   //   { value: 0, description: 'zero' },
