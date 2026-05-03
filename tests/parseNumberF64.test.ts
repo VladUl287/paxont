@@ -184,6 +184,29 @@ describe('parseNumberF64', () => {
     })
   })
 
+  describe('Format variations', () => {
+    test('handles plus sign for positive numbers', () => {
+      const bytes = toBytes('+123')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 123, nextIndex: 4 })
+    })
+
+    test('handles plus sign for scientific notation', () => {
+      const bytes = toBytes('+1.23e+4')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 12300, nextIndex: 8 })
+    })
+
+    test('parses number with leading zeros and decimal', () => {
+      const bytes = toBytes('000.456')
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 0.456, nextIndex: 7 })
+    })
+
+    test('parses negative zero', () => {
+      const bytes = toBytes('-0')
+      const result = parseNumberF64(bytes, 0)
+      expect(result).toStrictEqual({ value: -0, nextIndex: 2 })
+    })
+  })
+
   // const testCases = [
   //   // Basic numbers
   //   { value: 0, description: 'zero' },
