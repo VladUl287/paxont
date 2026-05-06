@@ -254,11 +254,12 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
         //     }
         // }
 
+        const result = numberToFloatingPointBitsSlow(
+            mantissa, digitsCount, scale, positiveExponent,
+            integerDigitsPresent, fractionalDigitsPresent, doublePrecisionFormat
+        )
         return {
-            value: numberToFloatingPointBitsSlow(
-                mantissa, digitsCount, scale, positiveExponent,
-                integerDigitsPresent, fractionalDigitsPresent, doublePrecisionFormat
-            ),
+            value: (state & STATE_NEGATIVE) ? -result : result,
             nextIndex: i
         }
     }
@@ -574,11 +575,12 @@ export function parseNumberF64_1(bytes: Uint8Array, start: number): ConvertResul
     const integerDigitsPresent = Math.min(positiveExponent, digitsCount)
     const fractionalDigitsPresent = digitsCount - integerDigitsPresent
 
+    const result = numberToFloatingPointBitsSlow(
+        mantissa, digitsCount, scale, positiveExponent,
+        integerDigitsPresent, fractionalDigitsPresent, doublePrecisionFormat
+    )
     return {
-        value: numberToFloatingPointBitsSlow(
-            mantissa, digitsCount, scale, positiveExponent,
-            integerDigitsPresent, fractionalDigitsPresent, doublePrecisionFormat
-        ),
+        value: (state & STATE_NEGATIVE) ? -result : result,
         nextIndex: i
     }
 }
@@ -1129,7 +1131,7 @@ const doublePrecisionFormat: FloatFormatInfo = {
     normalMantissaBits: 53,      // 52 stored + 1 hidden
     denormalMantissaBits: 52,
     exponentBias: 1023,
-    maxBinaryExponent: 1024,
+    maxBinaryExponent: 1023,
     minBinaryExponent: -1022,
     exponentBits: 11,
     normalMantissaMask: (1n << 53n) - 1n,
