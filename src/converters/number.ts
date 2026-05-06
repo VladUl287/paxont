@@ -148,7 +148,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                     conversionU32[1] = Math.floor(tempMantissa / 0x100000000)
 
                     state |= STATE_BIG
-                    mantissa = mantissa * POW10[tempDigitsCount] + conversionU64[0]
+                    mantissa = mantissa * POW10[tempDigitsCount - 1] + conversionU64[0]
 
                     tempDigitsCount = 1
                     tempMantissa = digit
@@ -749,7 +749,7 @@ function numberToFloatingPointBitsSlow(
 
     const integerLastIndex = integerDigitsPresent
     const fractionalFirstIndex = integerLastIndex
-    const fractionalLastIndex = digitsCount + 1
+    const fractionalLastIndex = digitsCount
 
     let integerValue = mantissa
     if (fractionalDigitsPresent > 0) {
