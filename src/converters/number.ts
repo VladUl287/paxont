@@ -828,13 +828,6 @@ function numberToFloatingPointBitsSlow(
 
     let [fractionalMantissa, fractionalRemainder] = divRem(fractionalNumerator, fractionalDenominator)
 
-    const reminderX2 = fractionalRemainder * 2n
-    const isHalfway = reminderX2 === fractionalDenominator
-    const isAboveHalf = reminderX2 > fractionalDenominator
-    if (isAboveHalf || (isHalfway && (fractionalMantissa & 1n))) {
-        fractionalMantissa += 1n
-    }
-
     const fractionalMantissaBits = countSignificantBits(fractionalMantissa)
 
     if (fractionalMantissaBits > requiredFractionalBitsOfPrecision) {
@@ -1071,10 +1064,18 @@ function rightShiftWithRounding64(
     const lastBitMask = 1 << (shift - 1)
     const lastBit = (low & lastBitMask) !== 0
 
-    const lowerBitsMask = lastBitMask - 1
-    const hasLowerBits = (low & lowerBitsMask) !== 0
+    const extraBitsMask = (1n << (BigInt(shift) - 1n)) - 1n
+    const roundBitMask = (1n << (BigInt(shift) - 1n))
+    const lsbBitMask = 1n << BigInt(shift)
 
-    if (lastBit && (hasLowerBits || hasZeroTail || ((resultLow & 1) !== 0))) {
+    const lsbBit = (value & lsbBitMask) != 0n
+    const roundBit = (value & roundBitMask) != 0n
+    const hasTailBits = !hasZeroTail || (value & extraBitsMask) != 0n
+
+    // const lowerBitsMask = lastBitMask - 1
+    // const hasLowerBits = (low & lowerBitsMask) !== 0
+    // if (lastBit && (hasLowerBits || hasZeroTail || ((resultLow & 1) !== 0))) {
+    if (roundBit && (hasTailBits || lsbBit)) {
         let newLow = (resultLow + 1) >>> 0
         let newHigh = resultHigh
         if (newLow === 0) {
