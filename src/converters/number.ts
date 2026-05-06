@@ -816,6 +816,13 @@ function numberToFloatingPointBitsSlow(
 
     let [fractionalMantissa, fractionalRemainder] = divRem(fractionalNumerator, fractionalDenominator)
 
+    const reminderX2 = fractionalRemainder * 2n
+    const isHalfway = reminderX2 === fractionalDenominator
+    const isAboveHalf = reminderX2 > fractionalDenominator
+    if (isAboveHalf || (isHalfway && (fractionalMantissa & 1n))) {
+        fractionalMantissa += 1n
+    }
+
     const fractionalMantissaBits = countSignificantBits(fractionalMantissa)
 
     if (fractionalMantissaBits > requiredFractionalBitsOfPrecision) {
@@ -974,7 +981,7 @@ function assembleFloatingPointBits(
 
     const N = 4503599627370496 // 2^52
 
-    if(exponent <= -1022) {
+    if (exponent <= -1022) {
         return (mantissa52bits / N) * Math.pow(2, -1022)
     }
 
