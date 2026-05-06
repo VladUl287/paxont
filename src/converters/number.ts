@@ -232,7 +232,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
     const fastExponent = Math.abs(exponent)
 
     const MAX_SAFE_EXPONENT = 308
-    if ((state & STATE_BIG) === 0 && fastExponent > MAX_SAFE_EXPONENT) {
+    if ((state & STATE_BIG) === 0 && fastExponent >= MAX_SAFE_EXPONENT) {
         state |= STATE_BIG
         mantissa = BigInt(tempMantissa)
     }
