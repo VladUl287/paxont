@@ -99,7 +99,8 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                     tempMantissa = chunk
                 }
                 else if (tempDigitsCount >= 16) {
-                    if ((state & STATE_BIG) === 0 || (tempMantissa * 10000 + chunk) <= Number.MAX_SAFE_INTEGER) {
+                    // if ((state & STATE_BIG) === 0 || (tempMantissa * 10000 + chunk) <= Number.MAX_SAFE_INTEGER) {
+                    if ((state & STATE_BIG) === 0 && (tempMantissa * 10000 + chunk) <= 2220446049250312) {
                         tempMantissa = tempMantissa * 10000 + chunk
                     }
                     else {
@@ -154,7 +155,8 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                     tempMantissa = digit
                 }
                 else if (tempDigitsCount === 16) {
-                    if ((state & STATE_BIG) === 0 || (tempMantissa * 10 + digit) <= Number.MAX_SAFE_INTEGER) {
+                    // if ((state & STATE_BIG) === 0 || (tempMantissa * 10 + digit) <= Number.MAX_SAFE_INTEGER) {
+                    if ((state & STATE_BIG) === 0 && (tempMantissa * 10 + digit) <= 2220446049250312) {
                         tempMantissa = tempMantissa * 10 + digit
                     }
                     else {

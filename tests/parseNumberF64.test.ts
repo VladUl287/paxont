@@ -152,7 +152,7 @@ describe('parseNumberF64', () => {
     test('parses epsilon', () => {
       const epsilon = 2.220446049250313e-16
       const bytes = toBytes(epsilon.toString())
-      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: epsilon, nextIndex: 19 })
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: epsilon, nextIndex: 21 })
     })
   })
 
