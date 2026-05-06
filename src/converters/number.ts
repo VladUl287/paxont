@@ -965,7 +965,7 @@ function assembleFloatingPointBits(
     }
     else {
         if (normalMantissaShift < 0) {
-            mantissa = rightShiftWithRounding64(mantissa, conversionU32, conversionU64, -normalMantissaShift, hasZeroTail)
+            mantissa = rightShiftWithRounding(mantissa, -normalMantissaShift, hasZeroTail)
 
             if (mantissa > format.normalMantissaMask) {
                 mantissa = mantissa >> 1n
@@ -980,24 +980,29 @@ function assembleFloatingPointBits(
         }
     }
 
-    const maskValue = 2 ** 52 - 1  // 9007199254740991
-    const combined = combineInt53(conversionU32[1], conversionU32[0])
-    const mantissa52bits = combined % (maskValue + 1)
+    // const maskValue = 2 ** 52 - 1  // 9007199254740991
+    // const combined = combineInt53(conversionU32[1], conversionU32[0])
+    // const mantissa52bits = combined % (maskValue + 1)
+
+    // const N = 4503599627370496 // 2^52
+
+    // if (exponent <= -1022) {
+    //     return (mantissa52bits / N) * Math.pow(2, -1022)
+    // }
+
+    // const expIdx = Math.min(Math.max(exponent, -1022), 1023) + 1022
+    // return (1 + mantissa52bits / N) * POW2[expIdx]
+
+    mantissa = mantissa & format.denormalMantissaMask
 
     const N = 4503599627370496 // 2^52
 
     if (exponent <= -1022) {
-        return (mantissa52bits / N) * Math.pow(2, -1022)
+        return (Number(mantissa) / N) * Math.pow(2, -1022)
     }
 
     const expIdx = Math.min(Math.max(exponent, -1022), 1023) + 1022
-    return (1 + mantissa52bits / N) * POW2[expIdx]
-
-    // mantissa = mantissa & format.denormalMantissaMask
-
-    // const N = 4503599627370496 // 2^52
-    // const expIdx = Math.min(Math.max(exponent, -1022), 1023) + 1022
-    // return (1 + Number(mantissa) / N) * POW2[expIdx]
+    return (1 + Number(mantissa) / N) * POW2[expIdx]
 
     // mantissa = mantissa & format.denormalMantissaMask
 
@@ -1031,14 +1036,26 @@ function rightShiftWithRounding(
 
     let result = value >> BigInt(shift)
 
-    const lastBitMask = 1n << BigInt(shift - 1)
-    const lastBit = (value & lastBitMask) !== 0n
+    const extraBitsMask = (1n << (BigInt(shift) - 1n)) - 1n
+    const roundBitMask = (1n << (BigInt(shift) - 1n))
+    const lsbBitMask = 1n << BigInt(shift)
 
-    const lowerBitsMask = lastBitMask - 1n
-    const hasLowerBits = (value & lowerBitsMask) !== 0n
+    const lsbBit = (value & lsbBitMask) != 0n
+    const roundBit = (value & roundBitMask) != 0n
+    const hasTailBits = !hasZeroTail || (value & extraBitsMask) != 0n
 
-    if (lastBit && (hasLowerBits || hasZeroTail || (result & 1n)))
+    if (roundBit && (hasTailBits || lsbBit)) {
         return result + 1n
+    }
+
+    // const lastBitMask = 1n << BigInt(shift - 1)
+    // const lastBit = (value & lastBitMask) !== 0n
+
+    // const lowerBitsMask = lastBitMask - 1n
+    // const hasLowerBits = (value & lowerBitsMask) !== 0n
+
+    // if (lastBit && (hasLowerBits || hasZeroTail || (result & 1n)))
+    //     return result + 1n
 
     return result
 }
@@ -1051,6 +1068,9 @@ function rightShiftWithRounding64(
     hasZeroTail: boolean
 ): bigint {
     if (shift === 0) return 0n
+    if (shift >= 64) {
+        return 0n
+    }
 
     conversionU64[0] = value
 
