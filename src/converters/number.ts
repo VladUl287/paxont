@@ -246,13 +246,15 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
     }
 
     if (state & STATE_BIG) {
-        // if (digitsCount <= 19) {
-        //     const float = computeFloat(exponent, mantissa, defaultFloatInfo)!
-        //     return {
-        //         value: float,
-        //         nextIndex: i
-        //     }
-        // }
+        if (digitsCount <= 19) {
+            const float = computeFloat(exponent, mantissa, defaultFloatInfo)!
+            if (float) {
+                return {
+                    value: float,
+                    nextIndex: i
+                }
+            }
+        }
 
         const result = numberToFloatingPointBitsSlow(
             mantissa, digitsCount, scale, positiveExponent,
