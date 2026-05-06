@@ -749,11 +749,11 @@ function numberToFloatingPointBitsSlow(
 
     const integerLastIndex = integerDigitsPresent
     const fractionalFirstIndex = integerLastIndex
-    const fractionalLastIndex = digitsCount
+    const fractionalLastIndex = digitsCount + 1
 
     let integerValue = mantissa
     if (fractionalDigitsPresent > 0) {
-        integerValue /= 10n ** BigInt((fractionalLastIndex - fractionalFirstIndex) + 1)
+        integerValue /= 10n ** BigInt(fractionalLastIndex - fractionalFirstIndex)
     }
 
     if (integerDigitsMissing > 0) {
