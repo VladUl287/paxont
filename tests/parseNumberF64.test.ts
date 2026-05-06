@@ -175,4 +175,23 @@ describe('parseNumberF64', () => {
       })
     })
   })
+
+  describe('Common math constants', () => {
+    test('Math.PI', () => {
+      const bytes = toBytes(Math.PI.toString())
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: Math.PI, nextIndex: 17 })
+    })
+    test('Math.E', () => {
+      const bytes = toBytes(Math.E.toString())
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: Math.E, nextIndex: 17 })
+    })
+    test('Math.SQRT2', () => {
+      const bytes = toBytes(Math.SQRT2.toString())
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: Math.SQRT2, nextIndex: 18 })
+    })
+    test('Math.LN2', () => {
+      const bytes = toBytes(Math.LN2.toString())
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: Math.LN2, nextIndex: 18 })
+    })
+  })
 })
