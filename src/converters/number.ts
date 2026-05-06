@@ -995,11 +995,14 @@ function assembleFloatingPointBits(
 
     mantissa = mantissa & format.denormalMantissaMask
 
+    // const shiftedExponent = BigInt((exponent + format.exponentBias)) << BigInt(format.denormalMantissaBits)
+    // return Number(shiftedExponent | BigInt(mantissa))
+
     const N = 4503599627370496 // 2^52
 
-    if (exponent <= -1022) {
-        return (Number(mantissa) / N) * Math.pow(2, -1022)
-    }
+    // if (exponent <= -1022) {
+    //     return (Number(mantissa) / N) * Math.pow(2, -1022)
+    // }
 
     const expIdx = Math.min(Math.max(exponent, -1022), 1023) + 1022
     return (1 + Number(mantissa) / N) * POW2[expIdx]
