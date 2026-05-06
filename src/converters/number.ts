@@ -99,8 +99,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                     tempMantissa = chunk
                 }
                 else if (tempDigitsCount >= 16) {
-                    // if ((state & STATE_BIG) === 0 || (tempMantissa * 10000 + chunk) <= Number.MAX_SAFE_INTEGER) {
-                    if ((state & STATE_BIG) === 0 && (tempMantissa * 10000 + chunk) <= 2220446049250312) {
+                    if ((state & STATE_BIG) === 0 || (tempMantissa * 10000 + chunk) <= Number.MAX_SAFE_INTEGER) {
                         tempMantissa = tempMantissa * 10000 + chunk
                     }
                     else {
@@ -155,8 +154,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                     tempMantissa = digit
                 }
                 else if (tempDigitsCount === 16) {
-                    // if ((state & STATE_BIG) === 0 || (tempMantissa * 10 + digit) <= Number.MAX_SAFE_INTEGER) {
-                    if ((state & STATE_BIG) === 0 && (tempMantissa * 10 + digit) <= 2220446049250312) {
+                    if ((state & STATE_BIG) === 0 || (tempMantissa * 10 + digit) <= Number.MAX_SAFE_INTEGER) {
                         tempMantissa = tempMantissa * 10 + digit
                     }
                     else {
@@ -233,7 +231,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
     const exponent = scale - integerDigitsPresent - fractionalDigitsPresent
     const fastExponent = Math.abs(exponent)
 
-    const MAX_SAFE_EXPONENT = 308
+    const MAX_SAFE_EXPONENT = 22
     if ((state & STATE_BIG) === 0 && fastExponent >= MAX_SAFE_EXPONENT) {
         state |= STATE_BIG
         mantissa = BigInt(tempMantissa)
