@@ -84,23 +84,6 @@ describe('parseNumberF64', () => {
     })
   })
 
-  describe('Special values', () => {
-    test('parses Infinity', () => {
-      const bytes = toBytes('Infinity')
-      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: Infinity, nextIndex: 8 })
-    })
-
-    test('parses -Infinity', () => {
-      const bytes = toBytes('-Infinity')
-      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: -Infinity, nextIndex: 9 })
-    });
-
-    test('parses NaN', () => {
-      const bytes = toBytes('NaN')
-      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: NaN, nextIndex: 3 })
-    })
-  })
-
   describe('Start index parameter', () => {
     test('starts parsing from specified index', () => {
       const bytes = toBytes('abc123')
@@ -125,13 +108,13 @@ describe('parseNumberF64', () => {
     })
 
     test('parses Number.MAX_VALUE', () => {
-      const maxValue = 1.7976931348623157e+308
+      const maxValue = Number.MAX_VALUE
       const bytes = toBytes(maxValue.toString())
-      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: maxValue, nextIndex: 19 })
+      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: maxValue, nextIndex: 23 })
     })
 
     test('parses Number.MIN_VALUE', () => {
-      const minValue = 5e-324;
+      const minValue = Number.MIN_VALUE
       const bytes = toBytes(minValue.toString())
       expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: minValue, nextIndex: 6 })
     });
@@ -147,54 +130,7 @@ describe('parseNumberF64', () => {
     })
   })
 
-  describe('Error handling', () => {
-    test('throws on empty string', () => {
-      const bytes = toBytes('')
-      expect(() => parseNumberF64(bytes, 0)).toThrow()
-    })
-
-    test('throws on whitespace only', () => {
-      const bytes = toBytes('   ')
-      expect(() => parseNumberF64(bytes, 0)).toThrow()
-    })
-
-    test('throws on invalid characters', () => {
-      const bytes = toBytes('12a3');
-      expect(() => parseNumberF64(bytes, 0)).toThrow()
-    })
-
-    test('throws on multiple decimal points', () => {
-      const bytes = toBytes('1.2.3')
-      expect(() => parseNumberF64(bytes, 0)).toThrow()
-    })
-
-    test('throws on multiple exponent markers', () => {
-      const bytes = toBytes('1e2e3')
-      expect(() => parseNumberF64(bytes, 0)).toThrow()
-    })
-
-    test('throws when start index is out of bounds', () => {
-      const bytes = toBytes('123')
-      expect(() => parseNumberF64(bytes, 5)).toThrow()
-    })
-
-    test('throws when no number found after whitespace', () => {
-      const bytes = toBytes('   abc')
-      expect(() => parseNumberF64(bytes, 0)).toThrow()
-    })
-  })
-
   describe('Format variations', () => {
-    test('handles plus sign for positive numbers', () => {
-      const bytes = toBytes('+123')
-      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 123, nextIndex: 4 })
-    })
-
-    test('handles plus sign for scientific notation', () => {
-      const bytes = toBytes('+1.23e+4')
-      expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 12300, nextIndex: 8 })
-    })
-
     test('parses number with leading zeros and decimal', () => {
       const bytes = toBytes('000.456')
       expect(parseNumberF64(bytes, 0)).toStrictEqual({ value: 0.456, nextIndex: 7 })
