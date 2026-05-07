@@ -56,6 +56,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
     let tempMantissa = 0
     let tempDigitsCount = 0
     let hasNonZeroTail = false
+    let numberOfTrailingZeros = 0
 
     const end = bytes.length
     while (i < end) {
@@ -88,6 +89,15 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                 }
 
                 tempDigitsCount += 4
+
+                numberOfTrailingZeros = (chunk === 0 ? (numberOfTrailingZeros + 4) : 0)
+
+                const dump = [d, c, b, a]
+                let j = 0
+                while (j < dump.length && dump[j] === 0) {
+                    numberOfTrailingZeros++
+                    j += 1
+                }
 
                 //TODO: if digits count more than max then set hasNonZeroTail 
 
@@ -140,6 +150,8 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
 
                 if ((state & STATE_DECIMAL) === 0)
                     scale++
+
+                numberOfTrailingZeros = (digit === 0 ? numberOfTrailingZeros + 1 : 0)
 
                 if (tempDigitsCount === 17) {
                     conversionU32[0] = tempMantissa >>> 0
@@ -209,20 +221,33 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
             break
     }
 
-    const minDecimalExponent = -324
-    if ((digitsCount > 0 && tempMantissa === 0 && mantissa === 0n) || scale < minDecimalExponent) {
-        return {
-            value: (state & STATE_NEGATIVE) ? -0 : 0,
-            nextIndex: i
-        }
-    }
-
     if ((state & STATE_BIG) && tempDigitsCount > 0) {
         const high = Math.floor(tempMantissa / 0x100000000)
         const low = tempMantissa >>> 0
         conversionU32[0] = low
         conversionU32[1] = high
         mantissa = mantissa * POW10[tempDigitsCount] + conversionU64[0]
+    }
+
+    const numberOfFractionalDigits = digitsCount - scale
+    if (numberOfFractionalDigits > 0) {
+        numberOfTrailingZeros = Math.min(numberOfTrailingZeros, numberOfFractionalDigits)
+        digitsCount -= numberOfTrailingZeros
+
+        if (mantissa > 0) {
+            mantissa /= 10n ** BigInt(digitsCount - (digitsCount - numberOfTrailingZeros))
+        }
+        else {
+            tempMantissa /= 10 ** (digitsCount - (digitsCount - numberOfTrailingZeros))
+        }
+    }
+
+    const minDecimalExponent = -324
+    if ((digitsCount >= 0 && tempMantissa === 0 && mantissa === 0n) || scale < minDecimalExponent) {
+        return {
+            value: (state & STATE_NEGATIVE) ? -0 : 0,
+            nextIndex: i
+        }
     }
 
     const positiveExponent = Math.max(0, scale)
@@ -594,7 +619,7 @@ function convertBigIntegerToFloatingPointBits(
     // }
     const exponent = baseExponent + shiftAmount
 
-    const hasZeroTail = !hasNonZeroFractionalPart && ((value & MASK_BIGINTS[shiftAmount]) === 0n)
+    const hasZeroTail = !hasNonZeroFractionalPart && ((value & ((1n << BigInt(shiftAmount)) - 1n)) === 0n)
 
     // const shiftAmount = integerBitsOfPrecision - 64
 
