@@ -217,9 +217,9 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
     }
 
     const minDecimalExponent = -324
-    if (digitsCount === 0 || scale < minDecimalExponent) {
+    if ((digitsCount === 1 && tempMantissa === 0) || scale < minDecimalExponent) {
         return {
-            value: 0,
+            value: (state & STATE_NEGATIVE) ? -0 : 0,
             nextIndex: i
         }
     }
