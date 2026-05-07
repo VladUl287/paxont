@@ -102,22 +102,17 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                     tempMantissa = chunk
                 }
                 else if (tempDigitsCount >= 16) {
-                    if ((state & STATE_BIG) === 0 || (tempMantissa * 10000 + chunk) <= Number.MAX_SAFE_INTEGER) {
-                        tempMantissa = tempMantissa * 10000 + chunk
-                    }
-                    else {
-                        const high = Math.floor(tempMantissa / 0x100000000)
-                        const low = tempMantissa >>> 0
-                        const newLow = low * 10000 + chunk
-                        const carry = Math.floor(newLow / 0x100000000)
-                        conversionU32[0] = newLow >>> 0
-                        conversionU32[1] = high * 10000 + carry
+                    const high = Math.floor(tempMantissa / 0x100000000)
+                    const low = tempMantissa >>> 0
+                    const newLow = low * 10000 + chunk
+                    const carry = Math.floor(newLow / 0x100000000)
+                    conversionU32[0] = newLow >>> 0
+                    conversionU32[1] = high * 10000 + carry
 
-                        state |= STATE_BIG
-                        mantissa = mantissa * POW10[tempDigitsCount] + conversionU64[0]
-                        tempDigitsCount = 0
-                        tempMantissa = 0
-                    }
+                    state |= STATE_BIG
+                    mantissa = mantissa * POW10[tempDigitsCount] + conversionU64[0]
+                    tempDigitsCount = 0
+                    tempMantissa = 0
                 }
                 else {
                     tempMantissa = tempMantissa * 10000 + chunk
@@ -157,23 +152,18 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                     tempMantissa = digit
                 }
                 else if (tempDigitsCount === 16) {
-                    if ((state & STATE_BIG) === 0 || (tempMantissa * 10 + digit) <= Number.MAX_SAFE_INTEGER) {
-                        tempMantissa = tempMantissa * 10 + digit
-                    }
-                    else {
-                        const high = Math.floor(tempMantissa / 0x100000000)
-                        const low = tempMantissa >>> 0
-                        const newLow = low * 10 + digit
-                        const carry = Math.floor(newLow / 0x100000000)
-                        conversionU32[0] = newLow >>> 0
-                        conversionU32[1] = high * 10 + carry
+                    const high = Math.floor(tempMantissa / 0x100000000)
+                    const low = tempMantissa >>> 0
+                    const newLow = low * 10 + digit
+                    const carry = Math.floor(newLow / 0x100000000)
+                    conversionU32[0] = newLow >>> 0
+                    conversionU32[1] = high * 10 + carry
 
-                        state |= STATE_BIG
-                        mantissa = mantissa * POW10[tempDigitsCount] + conversionU64[0]
+                    state |= STATE_BIG
+                    mantissa = mantissa * POW10[tempDigitsCount] + conversionU64[0]
 
-                        tempDigitsCount = 0
-                        tempMantissa = 0
-                    }
+                    tempDigitsCount = 0
+                    tempMantissa = 0
                 }
                 else {
                     tempMantissa = tempMantissa * 10 + digit
