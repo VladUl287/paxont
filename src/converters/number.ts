@@ -88,6 +88,8 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
 
                 tempDigitsCount += 4
 
+                //TODO: if digits count more than max then set hasNonZeroTail 
+
                 if (tempDigitsCount >= 17) {
                     conversionU32[0] = tempMantissa >>> 0
                     conversionU32[1] = Math.floor(tempMantissa / 0x100000000)
@@ -840,12 +842,15 @@ function numberToFloatingPointBitsSlow(
     const completeMantissa = (integerValue << BigInt(requiredFractionalBitsOfPrecision)) + BigInt(fractionalMantissa)
     const finalExponent = (integerBitsOfPrecision > 0) ? (integerBitsOfPrecision) - 2 : -(fractionalExponent) - 1
 
+    // const hasZeroTail = !hasNonZeroTail && fractionalRemainder
+    const hasZeroTail = fractionalRemainder === 0n
+
     const test = bitLength(completeMantissa)
     const test2 = assembleFloatingPointBits(
         completeMantissa,
         test,
         finalExponent,
-        false,
+        hasZeroTail,
         doublePrecisionFormat
     )
     return test2
