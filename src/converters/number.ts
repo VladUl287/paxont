@@ -677,12 +677,14 @@ function computeProductApproximation(bitPrecision: number, e: number, m: bigint)
         : 0xFFFFFFFFFFFFFFFFn
 
     if ((high & precisionMask) === precisionMask) {
-        const high2 = (m * POW5_128[index + 1]) >> 64n;
+        const high2 = (m * POW5_128[index + 1]) >> 64n
+        low += high2
 
-        const newLow = low + high2;
+        low = BigInt.asUintN(64, low)
+
         return {
-            high: high + (newLow < low ? 1n : 0n),
-            low: newLow
+            high: high + (high2 > low ? 1n : 0n),
+            low: low
         }
     }
 
