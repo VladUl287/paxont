@@ -980,6 +980,17 @@ function assembleFloatingPointBits(
         }
     }
 
+    mantissa &= format.denormalMantissaMask
+
+    let shiftedExponent = BigInt(exponent + format.exponentBias) << BigInt(format.denormalMantissaBits)
+
+    const combined = shiftedExponent | mantissa
+
+    return new Float64Array(new BigUint64Array([combined]).buffer)[0]
+
+    // const array = new Float64Array([Number(combined)])
+    // return array[0]
+
     // const maskValue = 2 ** 52 - 1  // 9007199254740991
     // const combined = combineInt53(conversionU32[1], conversionU32[0])
     // const mantissa52bits = combined % (maskValue + 1)
@@ -993,19 +1004,19 @@ function assembleFloatingPointBits(
     // const expIdx = Math.min(Math.max(exponent, -1022), 1023) + 1022
     // return (1 + mantissa52bits / N) * POW2[expIdx]
 
-    mantissa = mantissa & format.denormalMantissaMask
+    // mantissa = mantissa & format.denormalMantissaMask
 
     // const shiftedExponent = BigInt((exponent + format.exponentBias)) << BigInt(format.denormalMantissaBits)
     // return Number(shiftedExponent | BigInt(mantissa))
 
-    const N = 4503599627370496 // 2^52
+    // const N = 4503599627370496 // 2^52
 
     // if (exponent <= -1022) {
     //     return (Number(mantissa) / N) * Math.pow(2, -1022)
     // }
 
-    const expIdx = Math.min(Math.max(exponent, -1022), 1023) + 1022
-    return (1 + Number(mantissa) / N) * POW2[expIdx]
+    // const expIdx = Math.min(Math.max(exponent, -1022), 1023) + 1022
+    // return (1 + Number(mantissa) / N) * POW2[expIdx]
 
     // mantissa = mantissa & format.denormalMantissaMask
 
