@@ -533,17 +533,16 @@ function numberToFloatingPointBitsSlow(
     let [fractionalMantissa, fractionalRemainder] = divRem(fractionalNumerator, fractionalDenominator)
 
     const fractionalMantissaBits = countSignificantBits(fractionalMantissa)
+    let hasZeroTail = !hasNonZeroTail && fractionalRemainder === 0n
 
     if (fractionalMantissaBits > requiredFractionalBitsOfPrecision) {
         const shift = (fractionalMantissaBits - requiredFractionalBitsOfPrecision)
+        hasZeroTail = hasZeroTail && (fractionalMantissa & ((1n << BigInt(shift)) - 1n)) === 0n
         fractionalMantissa >>= BigInt(shift)
     }
 
     const completeMantissa = (integerValue << BigInt(requiredFractionalBitsOfPrecision)) + BigInt(fractionalMantissa)
     const finalExponent = (integerBitsOfPrecision > 0) ? (integerBitsOfPrecision) - 2 : -(fractionalExponent) - 1
-
-    // const hasZeroTail = !hasNonZeroTail && fractionalRemainder
-    const hasZeroTail = fractionalRemainder === 0n
 
     const test = bitLength(completeMantissa)
     const test2 = assembleFloatingPointBits(
