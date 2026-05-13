@@ -2,7 +2,8 @@ import { parseNumberF64 } from "./src/converters/number"
 import { deserialize } from "./src/json"
 import { toMetadata } from "./src/metadata/metadata"
 
-const bytes = new TextEncoder().encode("3333567891")
+const bytes = new TextEncoder().encode("12345678")
+console.log(parseNumberF64(bytes, 0))
 
 let val: any = 0n
 for (let i = 0; i < 8; i++) {
@@ -44,13 +45,8 @@ console.log(val, val.toString(16))
 val = (val * 10) + (val >> 8)
 console.log(val, val.toString(16))
 
-// val = (val & 0x00FF00FF)
-// val = (val & 0xFF00FF00)
-// val = (val & 0x0000FFFF)
-// // val = (val & 0xFFFF0000)
-// console.log(val, val.toString(16))
-
-const mask1 = 0x0000FFFF
+// const mask1 = 0x0000FFFF
+const mask1 = 0xFF
 
 console.log((val & mask1), (val & mask1).toString(16))
 console.log(((val >> 16) & mask1), ((val >> 16) & mask1).toString(16))
@@ -62,8 +58,6 @@ val = (((val & mask1) * mul11) + ((val >> 16) & mask1) * mul21)
 console.log(val >>> 0, val.toString(16))
 console.log(val.toString(2), val.toString(2).length)
 console.log((3333).toString(2), (3333).toString(2).length)
-
-// console.log(parseNumberF64(integerSlowpath, 0))
 
 // const buffer = new ArrayBuffer(8)
 // const conversionU32 = new Uint32Array(buffer)
