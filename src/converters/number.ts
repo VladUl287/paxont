@@ -847,13 +847,20 @@ function rightShiftWithRounding64(
     return conversionU64[0]
 }
 
-function bitLength(value: bigint): number {
+export function bitLength(value: bigint): number {
     if (value === 0n) return 0
-    return value.toString(2).length
 
     const MASK64 = 0xFFFFFFFFFFFFFFFFn
-    if (value <= MASK64)
-        return 64 - Math.clz32(Number(value >> 32n)) - (value > 0xFFFFFFFFn ? 0 : 32)
+    const MASK32 = 0xFFFFFFFFn
+
+    if (value <= MASK64) {
+        const high = Number(value >> 32n)
+        const low = Number(value & MASK32)
+
+        if (high > 0)
+            return 32 + (32 - Math.clz32(high))
+        return 32 - Math.clz32(low)
+    }
 
     let bits = 0
     let temp = value
@@ -863,11 +870,21 @@ function bitLength(value: bigint): number {
         bits += 64
     }
 
-    const last = Number(temp)
-    if (last <= 0xFFFFFFFF) {
-        return bits + (32 - Math.clz32(last))
+    while (temp > MASK32) {
+        temp >>= 32n
+        bits += 32
     }
-    return bits + (64 - Math.clz32(last >>> 0))
+
+    const last = Number(temp)
+    if (last <= 0xFFFFFFFF)
+        return bits + (32 - Math.clz32(last))
+
+    const high = Math.floor(last / 0x100000000)
+    const low = last % 0x100000000
+
+    if (high > 0)
+        return bits + 32 + (32 - Math.clz32(high))
+    return bits + (32 - Math.clz32(low))
 }
 
 interface FloatFormatInfo {
