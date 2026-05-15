@@ -58,9 +58,9 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
     let hasNonZeroTail = false
     let numberOfTrailingZeros = 0
 
-    const end = bytes.length
-    while (i < end) {
-        if (i < end - 4) {
+    const length = bytes.length
+    while (i < length && digitsCount < MAX_DIGITS_COUNT) {
+        if (i <= length - 4 && digitsCount <= MAX_DIGITS_COUNT - 4) {
             const a = bytes[i]
             const b = bytes[i + 1]
             const c = bytes[i + 2]
@@ -137,7 +137,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
             }
         }
 
-        const sub_end = Math.min(end, i + 4)
+        const sub_end = Math.min(length, i + 4)
         while (i < sub_end) {
             const byte = bytes[i]
 
@@ -278,6 +278,13 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
             mantissa, digitsCount, scale, positiveExponent,
             integerDigitsPresent, fractionalDigitsPresent, doublePrecisionFormat, hasNonZeroTail
         )
+
+        const isNumberByte = (b: number) =>
+            isDigit(b) || b === DOT || b === EXPONENT || b === EXPONENT_UPPER || PLUS || MINUS
+
+        while (i < length && isNumberByte(bytes[i]))
+            i++
+
         return {
             value: (state & STATE_NEGATIVE) ? -result : result,
             nextIndex: i
