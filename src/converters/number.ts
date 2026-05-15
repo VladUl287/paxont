@@ -251,8 +251,8 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
         mantissa = BigInt(tempMantissa)
     }
 
-    if (mantissa > 0) {
-        if (digitsCount <= 19) {
+    if (mantissa > 0n) {
+        if (digitsCount <= MAX_SAFE_LONG_DIGITS) {
             const float = computeFloat(exponent, mantissa, defaultFloatInfo)!
             if (float) {
                 return {
