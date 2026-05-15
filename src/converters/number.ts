@@ -67,9 +67,9 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
             const d = bytes[i + 3]
 
             const word = (a << 0 | b << 8 | c << 16 | d << 24) - 0x30303030
-            const temp = ((word + 0x76767676) | word) & 0x80808080
+            const hasNonDigit = ((word + 0x76767676) | word) & 0x80808080
 
-            if (temp === 0) {
+            if (hasNonDigit === 0) {
                 const chunk = ((a & 0x0F) * 1000) + ((b & 0x0F) * 100) + ((c & 0x0F) * 10) + (d & 0x0F)
 
                 tempDigitsCount += 4
