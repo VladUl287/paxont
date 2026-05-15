@@ -43,6 +43,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
         i++
     }
 
+    const ZERO = 48
     const DOT = 46
     const EXPONENT = 69
     const EXPONENT_UPPER = 101
@@ -72,17 +73,6 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
 
                 tempDigitsCount += 4
 
-                numberOfTrailingZeros = (chunk === 0 ? (numberOfTrailingZeros + 4) : 0)
-
-                const dump = [d, c, b, a]
-                let j = 0
-                while (j < dump.length && dump[j] === 0) {
-                    numberOfTrailingZeros++
-                    j += 1
-                }
-
-                //TODO: if digits count more than max then set hasNonZeroTail 
-
                 if (tempDigitsCount >= 17) {
                     conversionU32[0] = tempMantissa >>> 0
                     conversionU32[1] = Math.floor(tempMantissa / 0x100000000)
@@ -108,6 +98,31 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                 }
                 else {
                     tempMantissa = tempMantissa * 10000 + chunk
+                }
+
+                if (d === ZERO) {
+                    if (c === ZERO) {
+                        if (b === ZERO) {
+                            if (a === ZERO) {
+                                numberOfTrailingZeros++
+                            }
+                            else {
+                                numberOfTrailingZeros = 0
+                            }
+                            numberOfTrailingZeros++
+                        }
+                        else {
+                            numberOfTrailingZeros = 0
+                        }
+                        numberOfTrailingZeros++
+                    }
+                    else {
+                        numberOfTrailingZeros = 0
+                    }
+                    numberOfTrailingZeros++
+                }
+                else {
+                    numberOfTrailingZeros = 0
                 }
 
                 if ((state & STATE_DECIMAL) === 0)
