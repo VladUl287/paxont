@@ -32,7 +32,6 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
     const STATE_NEGATIVE = 0x01
     const STATE_DECIMAL = 0x02
     const STATE_END = 0x04
-    const STATE_BIG = 0x08
 
     let state = 0 >>> 0
 
@@ -85,7 +84,6 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                     conversionU32[0] = newLow >>> 0
                     conversionU32[1] = high * 10000 + carry
 
-                    state |= STATE_BIG
                     mantissa = mantissa * POW10[tempDigitsCount] + conversionU64[0]
                     tempDigitsCount = 0
                     tempMantissa = 0
@@ -147,8 +145,6 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                     conversionU32[0] = newLow >>> 0
                     conversionU32[1] = high * 10 + carry
 
-                    state |= STATE_BIG
-
                     mantissa = mantissa * POW10[tempDigitsCount] + conversionU64[0]
                     tempDigitsCount = 0
                     tempMantissa = 0
@@ -199,7 +195,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
             break
     }
 
-    if ((state & STATE_BIG) && tempDigitsCount > 0) {
+    if (mantissa > 0 && tempDigitsCount > 0) {
         const high = Math.floor(tempMantissa / 0x100000000)
         const low = tempMantissa >>> 0
         conversionU32[0] = low
@@ -220,8 +216,8 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
         }
     }
 
-    const minDecimalExponent = -324
-    if ((digitsCount >= 0 && tempMantissa === 0 && mantissa === 0n) || scale < minDecimalExponent) {
+    const MIN_DECIMAL_EXPONENT = -324
+    if ((digitsCount >= 0 && tempMantissa === 0 && mantissa === 0n) || scale < MIN_DECIMAL_EXPONENT) {
         return {
             value: (state & STATE_NEGATIVE) ? -0 : 0,
             nextIndex: i
@@ -236,12 +232,11 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
     const fastExponent = Math.abs(exponent)
 
     const MAX_SAFE_EXPONENT = 22
-    if ((state & STATE_BIG) === 0 && fastExponent >= MAX_SAFE_EXPONENT) {
-        state |= STATE_BIG
+    if (mantissa === 0n && fastExponent >= MAX_SAFE_EXPONENT) {
         mantissa = BigInt(tempMantissa)
     }
 
-    if (state & STATE_BIG) {
+    if (mantissa > 0) {
         if (digitsCount <= 19) {
             const float = computeFloat(exponent, mantissa, defaultFloatInfo)!
             if (float) {
