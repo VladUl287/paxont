@@ -57,6 +57,8 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
     let hasNonZeroTail = false
     let numberOfTrailingZeros = 0
 
+    const MAX_SAFE_INT_DIGITS = 16
+
     const length = bytes.length
     while (i < length && digitsCount < MAX_DIGITS_COUNT) {
         if (i <= length - 4 && digitsCount <= MAX_DIGITS_COUNT - 4) {
@@ -73,17 +75,10 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
 
                 tempDigitsCount += 4
 
-                if (tempDigitsCount >= 17) {
-                    conversionU32[0] = tempMantissa >>> 0
-                    conversionU32[1] = Math.floor(tempMantissa / 0x100000000)
-
-                    state |= STATE_BIG
-                    mantissa = mantissa * POW10[tempDigitsCount - 4] + conversionU64[0]
-
-                    tempDigitsCount = 4
-                    tempMantissa = chunk
+                if (tempDigitsCount < MAX_SAFE_INT_DIGITS) {
+                    tempMantissa = tempMantissa * 10000 + chunk
                 }
-                else if (tempDigitsCount >= 16) {
+                else {
                     const high = Math.floor(tempMantissa / 0x100000000)
                     const low = tempMantissa >>> 0
                     const newLow = low * 10000 + chunk
@@ -95,9 +90,6 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                     mantissa = mantissa * POW10[tempDigitsCount] + conversionU64[0]
                     tempDigitsCount = 0
                     tempMantissa = 0
-                }
-                else {
-                    tempMantissa = tempMantissa * 10000 + chunk
                 }
 
                 if (d === ZERO) {
@@ -134,33 +126,21 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
             }
         }
 
-        const sub_end = Math.min(length, i + 4)
-        while (i < sub_end) {
+        const segment_length = Math.min(length, i + 4)
+        while (i < segment_length) {
             const byte = bytes[i]
 
             if (isDigit(byte)) {
                 const digit = byte & 0x0F
 
                 tempDigitsCount++
-                digitsCount++
-                i++
-
-                if ((state & STATE_DECIMAL) === 0)
-                    scale++
 
                 numberOfTrailingZeros = (digit === 0 ? numberOfTrailingZeros + 1 : 0)
 
-                if (tempDigitsCount === 17) {
-                    conversionU32[0] = tempMantissa >>> 0
-                    conversionU32[1] = Math.floor(tempMantissa / 0x100000000)
-
-                    state |= STATE_BIG
-                    mantissa = mantissa * POW10[tempDigitsCount - 1] + conversionU64[0]
-
-                    tempDigitsCount = 1
-                    tempMantissa = digit
+                if (tempDigitsCount < MAX_SAFE_INT_DIGITS) {
+                    tempMantissa = tempMantissa * 10 + digit
                 }
-                else if (tempDigitsCount === 16) {
+                else {
                     const high = Math.floor(tempMantissa / 0x100000000)
                     const low = tempMantissa >>> 0
                     const newLow = low * 10 + digit
@@ -169,15 +149,17 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                     conversionU32[1] = high * 10 + carry
 
                     state |= STATE_BIG
-                    mantissa = mantissa * POW10[tempDigitsCount] + conversionU64[0]
 
+                    mantissa = mantissa * POW10[tempDigitsCount] + conversionU64[0]
                     tempDigitsCount = 0
                     tempMantissa = 0
                 }
-                else {
-                    tempMantissa = tempMantissa * 10 + digit
-                }
 
+                digitsCount++
+                i++
+
+                if ((state & STATE_DECIMAL) === 0)
+                    scale++
                 continue
             }
             else if (byte === DOT) {
