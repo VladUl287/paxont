@@ -26,8 +26,6 @@ const buffer = new ArrayBuffer(8)
 const conversionU32 = new Uint32Array(buffer)
 const conversionU64 = new BigUint64Array(buffer)
 
-const isLittleEndian = new Uint8Array(new Uint32Array([1]).buffer)[0] === 1
-
 export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<number> {
     let i = start
 
@@ -70,23 +68,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
             const temp = ((word + 0x76767676) | word) & 0x80808080
 
             if (temp === 0) {
-                let chunk = 0
-
-                if (isLittleEndian) {
-                    const result =
-                        ((word & 0x00FF00FF) * 10) +
-                        ((word >> 8) & 0x00FF00FF)
-                    chunk = ((result & 0xFFFF) * 100) + (result >>> 16)
-                }
-                else {
-                    const high =
-                        ((word >> 24) & 0xFF) * 10 +
-                        ((word >> 16) & 0xFF)
-                    const low =
-                        ((word >> 8) & 0xFF) * 10 +
-                        ((word & 0xFF))
-                    chunk = high * 100 + low
-                }
+                const chunk = ((a & 0x0F) * 1000) + ((b & 0x0F) * 100) + ((c & 0x0F) * 10) + (d & 0x0F)
 
                 tempDigitsCount += 4
 
