@@ -54,7 +54,6 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
     let digitsCount = 0
     let tempMantissa = 0
     let tempDigitsCount = 0
-    let hasNonZeroTail = false
     let numberOfTrailingZeros = 0
 
     const MAX_SAFE_INT_DIGITS = 16
@@ -253,6 +252,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
             }
         }
 
+        const hasNonZeroTail = i < length && digitsCount === MAX_DIGITS_COUNT && isDigit(bytes[++i] & 0x0F)
         const result = numberToFloatingPointBitsSlow(
             mantissa, digitsCount, scale, positiveExponent,
             integerDigitsPresent, fractionalDigitsPresent, doublePrecisionFormat, hasNonZeroTail
