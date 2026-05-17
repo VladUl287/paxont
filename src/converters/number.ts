@@ -25,6 +25,7 @@ const MAX_DIGITS_COUNT = 1024
 const buffer = new ArrayBuffer(8)
 const conversionU32 = new Uint32Array(buffer)
 const conversionU64 = new BigUint64Array(buffer)
+const conversionF64 = new Float64Array(buffer)
 
 export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<number> {
     let i = start
@@ -278,17 +279,21 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
             nextIndex: i
         }
     }
-    else if (digitsCount <= MAX_SAFE_LONG_DIGITS) {
-        if (mantissa === 0n) {
-            mantissa = BigInt(tempMantissa)
-        }
-        const result = computeFloat(exponent, mantissa, defaultFloatInfo)
-        if (result) {
-            return {
-                value: result,
-                nextIndex: i
-            }
-        }
+    // else if (digitsCount <= MAX_SAFE_LONG_DIGITS) {
+    //     if (mantissa === 0n) {
+    //         mantissa = BigInt(tempMantissa)
+    //     }
+    //     const result = computeFloat(exponent, mantissa, defaultFloatInfo)
+    //     if (result) {
+    //         return {
+    //             value: result,
+    //             nextIndex: i
+    //         }
+    //     }
+    // }
+
+    if (mantissa === 0n) {
+        mantissa = BigInt(tempMantissa)
     }
 
     const hasNonZeroTail = i < length && digitsCount === MAX_DIGITS_COUNT && isDigit(bytes[++i] & 0x0F)
@@ -456,6 +461,20 @@ const defaultFloatInfo: IFloatInfo = {
     maxExponentRoundToEven: 55
 }
 
+const doublePrecisionFormat: NumberFormat = {
+    normalMantissaBits: 53,      // 52 stored + 1 hidden
+    denormalMantissaBits: 52,
+    exponentBias: 1023,
+    maxBinaryExponent: 1023,
+    minBinaryExponent: -1022,
+    exponentBits: 11,
+    normalMantissaMask: (1n << 53n) - 1n,
+    denormalMantissaMask: (1n << 52n) - 1n,
+    zeroBits: 0,
+    // overflowDecimalExponent: 308
+    overflowDecimalExponent: 324
+}
+
 function numberToFloatingPointBitsSlow(
     mantissa: bigint,
     digitsCount: number,
@@ -463,15 +482,14 @@ function numberToFloatingPointBitsSlow(
     positiveExponent: number,
     integerDigitsPresent: number,
     fractionalDigitsPresent: number,
-    format: FloatFormatInfo,
+    format: NumberFormat,
     hasNonZeroTail: boolean
 ): number {
-    const { normalMantissaBits, denormalMantissaBits, overflowDecimalExponent } = format
+    const { normalMantissaBits, overflowDecimalExponent } = format
 
     const requiredBitsOfPrecision = normalMantissaBits + 1
 
     const integerDigitsMissing = positiveExponent - integerDigitsPresent
-
     const integerLastIndex = integerDigitsPresent
     const fractionalFirstIndex = integerLastIndex
     const fractionalLastIndex = digitsCount
@@ -490,12 +508,12 @@ function numberToFloatingPointBitsSlow(
 
     const integerBitsOfPrecision = bitLength(integerValue)
 
-    if ((integerBitsOfPrecision >= requiredBitsOfPrecision) || (fractionalDigitsPresent === 0)) {
-        return convertBigIntegerToFloatingPointBits(
+    if (integerBitsOfPrecision >= requiredBitsOfPrecision || fractionalDigitsPresent === 0) {
+        return toNumber(
             integerValue,
             integerBitsOfPrecision,
             fractionalDigitsPresent !== 0,
-            denormalMantissaBits
+            format
         )
     }
 
@@ -513,11 +531,11 @@ function numberToFloatingPointBitsSlow(
     let fractionalNumerator = mantissa % divisor
 
     if (fractionalNumerator === 0n) {
-        return convertBigIntegerToFloatingPointBits(
+        return toNumber(
             integerValue,
             integerBitsOfPrecision,
             fractionalDigitsPresent !== 0,
-            denormalMantissaBits
+            format
         )
     }
 
@@ -595,50 +613,25 @@ for (let i = 1; i <= 1290; i++) {
     MASK_BIGINTS[i] = (1n << BigInt(i)) - 1n
 }
 
-function convertBigIntegerToFloatingPointBits(
+function toNumber(
     value: bigint,
-    integerBitsOfPrecision: number,
+    bits: number,
     hasNonZeroFractionalPart: boolean,
-    denormalMantissaBits: number,
+    format: NumberFormat
 ): number {
-    const baseExponent = denormalMantissaBits
+    const denormalMantissaBits = format.denormalMantissaBits
 
-    if (integerBitsOfPrecision <= 64) {
-        return assembleFloatingPointBits(
-            value,
-            bitLength(value),
-            baseExponent,
-            !hasNonZeroFractionalPart,
-            doublePrecisionFormat
-        )
-    }
+    if (bits <= 64)
+        return assembleFloatingPointBits(value, bits, denormalMantissaBits, !hasNonZeroFractionalPart, doublePrecisionFormat)
 
-    const shiftAmount = integerBitsOfPrecision - 64
+    const shiftAmount = bits - 64
+    const shift = (SHIFT_BIGINTS[shiftAmount] ?? BigInt(shiftAmount))
+    const mantissa = value >> shift
 
-    let mantissa = value >> BigInt(shiftAmount)
-    // if (shiftAmount >= 0) {
-    //     mantissa = value >> SHIFT_BIGINTS[shiftAmount]
-    // }
-    // else {
-    //     mantissa = (value << SHIFT_BIGINTS[shiftAmount + 127]) & MASK64
-    // }
-    const exponent = baseExponent + shiftAmount
+    const exponent = denormalMantissaBits + shiftAmount
 
-    const hasZeroTail = !hasNonZeroFractionalPart && ((value & ((1n << BigInt(shiftAmount)) - 1n)) === 0n)
-
-    // const shiftAmount = integerBitsOfPrecision - 64
-
-    // let mantissa
-    // if (shiftAmount >= 0) {
-    //     mantissa = value >> BigInt(shiftAmount)
-    // }
-    // else {
-    //     mantissa = (value << BigInt((-shiftAmount))) & ((1n << 64n) - 1n)
-    // }
-    // const exponent = baseExponent + shiftAmount
-
-    // const lowerBitsMask = (1n << BigInt(shiftAmount)) - 1n
-    // const hasZeroTail = !hasNonZeroFractionalPart && ((value & lowerBitsMask) === 0n)
+    const mask = MASK_BIGINTS[shiftAmount] ?? ((1n << BigInt(shiftAmount)) - 1n)
+    const hasZeroTail = !hasNonZeroFractionalPart && ((value & mask) === 0n)
 
     return assembleFloatingPointBits(
         mantissa,
@@ -654,7 +647,7 @@ function assembleFloatingPointBits(
     initialMantissaBits: number,
     initialExponent: number,
     hasZeroTail: boolean,
-    format: FloatFormatInfo
+    format: NumberFormat
 ): number {
     const normalMantissaShift = format.normalMantissaBits - initialMantissaBits
     const normalExponent = initialExponent - normalMantissaShift
@@ -671,7 +664,7 @@ function assembleFloatingPointBits(
         exponent = -format.exponentBias
 
         if (denormalMantissaShift < 0) {
-            mantissa = rightShiftWithRounding(mantissa, -denormalMantissaShift, hasZeroTail);
+            mantissa = rightShiftWithRounding(mantissa, BigInt(-denormalMantissaShift), hasZeroTail);
 
             if (mantissa === 0n) {
                 return format.zeroBits;
@@ -691,7 +684,7 @@ function assembleFloatingPointBits(
     }
     else {
         if (normalMantissaShift < 0) {
-            mantissa = rightShiftWithRounding(mantissa, -normalMantissaShift, hasZeroTail)
+            mantissa = rightShiftWithRounding(mantissa, BigInt(-normalMantissaShift), hasZeroTail)
 
             if (mantissa > format.normalMantissaMask) {
                 mantissa = mantissa >> 1n
@@ -714,10 +707,12 @@ function assembleFloatingPointBits(
     // return (1 + mantissa52bits / N) * POW2[expIdx]
 
     mantissa &= format.denormalMantissaMask
+
     const shiftedExponent = BigInt(exponent + format.exponentBias) << BigInt(format.denormalMantissaBits)
     const combined = shiftedExponent | mantissa
-    return new Float64Array(new BigUint64Array([combined]).buffer)[0]
-
+    conversionU64[0] = combined
+    return conversionF64[0]
+    
     // const array = new Float64Array([Number(combined)])
     // return array[0]
 
@@ -773,16 +768,16 @@ function countSignificantBits1(value: number): number {
 
 function rightShiftWithRounding(
     value: bigint,
-    shift: number,
+    shift: bigint,
     hasZeroTail: boolean
 ): bigint {
-    if (shift === 0) return value
+    if (shift === 0n) return value
 
-    let result = value >> BigInt(shift)
+    let result = value >> shift
 
-    const extraBitsMask = (1n << (BigInt(shift) - 1n)) - 1n
-    const roundBitMask = (1n << (BigInt(shift) - 1n))
-    const lsbBitMask = 1n << BigInt(shift)
+    const extraBitsMask = (1n << (shift - 1n)) - 1n
+    const roundBitMask = (1n << (shift - 1n))
+    const lsbBitMask = 1n << shift
 
     const lsbBit = (value & lsbBitMask) != 0n
     const roundBit = (value & roundBitMask) != 0n
@@ -898,7 +893,7 @@ export function bitLength(value: bigint): number {
     return bits + (32 - Math.clz32(low))
 }
 
-interface FloatFormatInfo {
+interface NumberFormat {
     normalMantissaBits: number
     denormalMantissaBits: number
     exponentBias: number
@@ -909,20 +904,6 @@ interface FloatFormatInfo {
     denormalMantissaMask: bigint
     zeroBits: number
     overflowDecimalExponent: number
-}
-
-const doublePrecisionFormat: FloatFormatInfo = {
-    normalMantissaBits: 53,      // 52 stored + 1 hidden
-    denormalMantissaBits: 52,
-    exponentBias: 1023,
-    maxBinaryExponent: 1023,
-    minBinaryExponent: -1022,
-    exponentBits: 11,
-    normalMantissaMask: (1n << 53n) - 1n,
-    denormalMantissaMask: (1n << 52n) - 1n,
-    zeroBits: 0,
-    // overflowDecimalExponent: 308
-    overflowDecimalExponent: 324
 }
 
 const POW5_128 =
