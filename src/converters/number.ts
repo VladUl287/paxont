@@ -298,7 +298,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
     }
 
     const hasNonZeroTail = i < length && digitsCount === MAX_DIGITS_COUNT && isDigit(bytes[++i] & 0x0F)
-    const result = toDoubleSlow(
+    const result = toNumberSlow(
         mantissa, digitsCount, scale, positiveExponent,
         integerDigitsPresent, fractionalDigitsPresent, doublePrecisionFormat, hasNonZeroTail
     )
@@ -476,7 +476,7 @@ const doublePrecisionFormat: NumberFormat = {
     overflowDecimalExponent: 324
 }
 
-function toDoubleSlow(
+function toNumberSlow(
     mantissa: bigint,
     digitsCount: number,
     scale: number,
