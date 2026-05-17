@@ -617,13 +617,13 @@ for (let i = 1; i <= 1290; i++) {
 function toNumber(
     value: bigint,
     bits: number,
-    hasNonZeroFractionalPart: boolean,
+    hasFractionalPart: boolean,
     format: NumberFormat
 ): number {
     const denormalMantissaBits = format.denormalMantissaBits
 
     if (bits <= 64)
-        return assembleFloatingPointBits(value, bits, denormalMantissaBits, !hasNonZeroFractionalPart, doublePrecisionFormat)
+        return assembleFloatingPointBits(value, bits, denormalMantissaBits, !hasFractionalPart, doublePrecisionFormat)
 
     const shiftAmount = bits - 64
     const shift = (SHIFT_BIGINTS[shiftAmount] ?? BigInt(shiftAmount))
@@ -632,7 +632,7 @@ function toNumber(
     const exponent = denormalMantissaBits + shiftAmount
 
     const mask = MASK_BIGINTS[shiftAmount] ?? ((1n << BigInt(shiftAmount)) - 1n)
-    const hasZeroTail = !hasNonZeroFractionalPart && ((value & mask) === 0n)
+    const hasZeroTail = !hasFractionalPart && ((value & mask) === 0n)
 
     return assembleFloatingPointBits(
         mantissa,
@@ -641,32 +641,6 @@ function toNumber(
         hasZeroTail,
         doublePrecisionFormat
     )
-}
-
-function assembleDoubleBits(
-    initialMantissa: Uint32Array,
-    initialMantissaBits: number,
-    initialExponent: number,
-    hasZeroTail: boolean,
-    format: NumberFormat
-): number {
-    const normalMantissaShift = format.normalMantissaBits - initialMantissaBits
-    const normalExponent = initialExponent - normalMantissaShift
-
-    if (normalExponent > format.maxBinaryExponent)
-        return Infinity
-
-    let mantissa = initialMantissa
-    let exponent = normalExponent
-
-    if (normalMantissaShift < 0) {
-        // mantissa = rightShiftWithRounding(mantissa, BigInt(-normalMantissaShift), hasZeroTail)
-
-    }
-    else if (normalMantissaShift > 0) {
-    }
-
-    return 1
 }
 
 function assembleFloatingPointBits(
