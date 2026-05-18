@@ -507,7 +507,7 @@ function toNumberSlow(
         integerValue = integerValue * 10n ** BigInt(integerDigitsMissing)
     }
 
-    const integerBitsOfPrecision = bitLength(integerValue)
+    const integerBitsOfPrecision = bitLength1(integerValue, digitsCount)
 
     if (integerBitsOfPrecision >= requiredBitsOfPrecision || fractionalDigitsPresent === 0) {
         return toNumber(
@@ -940,6 +940,61 @@ function rightShiftWithRounding64(
     conversionU32[0] = resultLow
     conversionU32[1] = resultHigh
     return conversionU64[0]
+}
+
+const MIN_BITS_ARRAY = new Uint16Array(768)
+const MIN_BITS_ARRAY_BIG = new BigInt64Array(768)
+
+MIN_BITS_ARRAY[0] = 0
+MIN_BITS_ARRAY[1] = 1
+MIN_BITS_ARRAY_BIG[0] = 0n
+MIN_BITS_ARRAY_BIG[1] = 1n
+for (let digits = 2; digits <= 767; digits++) {
+    MIN_BITS_ARRAY[digits] = Math.floor((digits - 1) * Math.LN10 / Math.LN2) + 1
+    MIN_BITS_ARRAY_BIG[digits] = BigInt(MIN_BITS_ARRAY[digits])
+}
+
+export function bitLength1(value: bigint, digitsCount: number): number {
+    if (value === 0n) return 0
+
+    const MASK64 = 0xFFFFFFFFFFFFFFFFn
+    const MASK32 = 0xFFFFFFFFn
+
+    if (value <= MASK64) {
+        const high = Number(value >> 32n)
+        const low = Number(value & MASK32)
+
+        if (high > 0)
+            return 32 + (32 - Math.clz32(high))
+        return 32 - Math.clz32(low)
+    }
+
+    let bits = 0
+    let temp = value
+
+    temp >>= MIN_BITS_ARRAY_BIG[digitsCount]
+    bits += MIN_BITS_ARRAY[digitsCount]
+
+    while (temp > MASK64) {
+        temp >>= 64n
+        bits += 64
+    }
+
+    while (temp > MASK32) {
+        temp >>= 32n
+        bits += 32
+    }
+
+    const last = Number(temp)
+    if (last <= 0xFFFFFFFF)
+        return bits + (32 - Math.clz32(last))
+
+    const high = Math.floor(last / 0x100000000)
+    const low = last % 0x100000000
+
+    if (high > 0)
+        return bits + 32 + (32 - Math.clz32(high))
+    return bits + (32 - Math.clz32(low))
 }
 
 export function bitLength(value: bigint): number {
