@@ -10,7 +10,7 @@ export default class DecimalInfo {
         this.decimal_point = 0
         this.negative = false
         this.truncated = false
-        this.digits = new Array(CalculationConstants.max_digits).fill(0)
+        this.digits = new Uint8Array(CalculationConstants.max_digits)
     }
 
     public static readonly numberOfDigitsDecimalLeftShiftTable: number[] = [
@@ -194,6 +194,24 @@ export default class DecimalInfo {
     }
 
     private decimal_left_shift_once(shift: number) {
+        // const MAX_NEEDED_DIGITS = 20
+
+        // if (this.num_digits > MAX_NEEDED_DIGITS) {
+        //     let hasNonZeroTrailing = false;
+        //     for (let i = MAX_NEEDED_DIGITS; i < this.num_digits; i++) {
+        //         if (this.digits[i] !== 0) {
+        //             hasNonZeroTrailing = true;
+        //             break;
+        //         }
+        //     }
+
+        //     if (!hasNonZeroTrailing) {
+        //         this.num_digits = MAX_NEEDED_DIGITS;
+        //     } else {
+        //         this.num_digits = Math.min(this.num_digits, MAX_NEEDED_DIGITS + 1);
+        //     }
+        // }
+
         const num_new_digits = this.number_of_digits_decimal_left_shift(shift);
         let read_index = this.num_digits - 1
         let write_index = this.num_digits - 1 + num_new_digits
