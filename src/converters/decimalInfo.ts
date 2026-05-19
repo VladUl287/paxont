@@ -180,7 +180,7 @@ export default class DecimalInfo {
     leftShift(shift: number) {
         if (this.num_digits === 0) return;
 
-        const MAX_SAFE_SHIFT = 27
+        const MAX_SAFE_SHIFT = 30
         let remainingShift = shift
         while (remainingShift > 0) {
             const currentShift = Math.min(remainingShift, MAX_SAFE_SHIFT)
@@ -199,8 +199,10 @@ export default class DecimalInfo {
         let write_index = this.num_digits - 1 + num_new_digits
         let n = 0
 
+        const multiplier = Math.pow(2, shift)
+
         while (read_index >= 0) {
-            n += (this.digits[read_index] << shift)
+            n += this.digits[read_index] * multiplier
 
             const quotient = Math.floor(n / 10)
             const remainder = n % 10
