@@ -177,7 +177,7 @@ export default class DecimalInfo {
         return n
     }
 
-    decimal_left_shift(shift: number) {
+    leftShift(shift: number) {
         if (this.num_digits === 0) return;
 
         const MAX_SAFE_SHIFT = 27
@@ -238,7 +238,7 @@ export default class DecimalInfo {
         this.trim()
     }
 
-    decimal_right_shift(shift: number) {
+    rightShift(shift: number) {
         const MAX_SAFE_SHIFT = 27
         let remainingShift = shift
         while (remainingShift > 0) {
