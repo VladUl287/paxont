@@ -82,29 +82,15 @@ export default class DecimalInfo {
         9, 5, 3, 3, 6, 9, 1, 4, 0, 6, 2, 5,
     ]
 
-    toString() {
-        let result = "0."
-        for (let i = 0; i < this.num_digits; i++) {
-            result += this.digits[i]
-        }
-        result += ` * 10 ** ${this.decimal_point}`
-        return result
-    }
-
     trim() {
-        while (this.num_digits > 0 && this.digits[this.num_digits - 1] === 0) {
+        while (this.num_digits > 0 && this.digits[this.num_digits - 1] === 0)
             this.num_digits--
-        }
-    }
-
-    static getNumberOfDigitsDecimalLeftShift(shift: number) {
-        return DecimalInfo.numberOfDigitsDecimalLeftShiftTable[shift]
     }
 
     number_of_digits_decimal_left_shift(shift: number) {
         shift &= 63
-        let x_a = DecimalInfo.getNumberOfDigitsDecimalLeftShift(shift)
-        let x_b = DecimalInfo.getNumberOfDigitsDecimalLeftShift(shift + 1)
+        let x_a = DecimalInfo.numberOfDigitsDecimalLeftShiftTable[shift]
+        let x_b = DecimalInfo.numberOfDigitsDecimalLeftShiftTable[shift + 1]
         let num_new_digits = x_a >> 11
         let pow5_a = 0x7FF & x_a
         let pow5_b = 0x7FF & x_b
@@ -113,9 +99,9 @@ export default class DecimalInfo {
         for (let i = 0; i < n; i++) {
             if (i >= this.num_digits) {
                 return num_new_digits - 1
-            } else if (this.digits[i] === DecimalInfo.numberOfDigitsDecimalLeftShiftTablePowersOf5(pow5_a + i)) {
+            } else if (this.digits[i] === DecimalInfo.powersOf5Table[pow5_a + i]) {
                 continue
-            } else if (this.digits[i] < DecimalInfo.numberOfDigitsDecimalLeftShiftTablePowersOf5(pow5_a + i)) {
+            } else if (this.digits[i] < DecimalInfo.powersOf5Table[pow5_a + i]) {
                 return num_new_digits - 1
             } else {
                 return num_new_digits
@@ -319,11 +305,10 @@ export default class DecimalInfo {
         this.trim()
     }
 
-    static parseDecimalString(str: string, decimalSeparator = '.') {
+    static parse(str: string, decimalSeparator = '.') {
         const answer = new DecimalInfo()
         let pos = 0
 
-        // Handle sign
         if (str[pos] === '-') {
             answer.negative = true
             pos++
@@ -331,12 +316,10 @@ export default class DecimalInfo {
             pos++
         }
 
-        // Skip leading zeros
         while (pos < str.length && str[pos] === '0') {
             pos++
         }
 
-        // Parse integer part
         while (pos < str.length && this.isDigit(str[pos])) {
             if (answer.num_digits < CalculationConstants.max_digits) {
                 answer.digits[answer.num_digits] = parseInt(str[pos], 10)
@@ -345,7 +328,6 @@ export default class DecimalInfo {
             pos++
         }
 
-        // Parse decimal part
         if (pos < str.length && str[pos] === decimalSeparator) {
             pos++
             const firstAfterPeriod = pos
@@ -367,7 +349,6 @@ export default class DecimalInfo {
             answer.decimal_point = firstAfterPeriod - pos
         }
 
-        // Handle trailing zeros
         if (answer.num_digits > 0) {
             let preverse = pos - 1
             let trailingZeros = 0
@@ -379,7 +360,6 @@ export default class DecimalInfo {
             answer.num_digits -= trailingZeros
         }
 
-        // Handle exponent
         if (pos < str.length && (str[pos] === 'e' || str[pos] === 'E')) {
             pos++
             let negExp = false
@@ -413,18 +393,7 @@ export default class DecimalInfo {
         const code = ch.charCodeAt(0)
         return code >= 48 && code <= 57
     }
-
-    static numberOfDigitsDecimalLeftShiftTablePowersOf5(index: number) {
-        return DecimalInfo.powersOf5Table[index]
-    }
 }
-
-const powers_of_ten_double = [
-    1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11,
-    1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22
-]
-
-const powers_of_ten_float = [1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10]
 
 const powersTable = [0, 3, 6, 9, 13, 16, 19, 23, 26, 29, 33, 36, 39, 43, 46, 49, 53, 56, 59]
 
