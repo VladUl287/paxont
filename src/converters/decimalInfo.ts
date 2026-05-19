@@ -1,12 +1,12 @@
 export default class DecimalInfo {
-    num_digits
+    total_digits
     decimal_point
     negative
     truncated
     digits
 
     constructor() {
-        this.num_digits = 0
+        this.total_digits = 0
         this.decimal_point = 0
         this.negative = false
         this.truncated = false
@@ -83,8 +83,8 @@ export default class DecimalInfo {
     ]
 
     trim() {
-        while (this.num_digits > 0 && this.digits[this.num_digits - 1] === 0)
-            this.num_digits--
+        while (this.total_digits > 0 && this.digits[this.total_digits - 1] === 0)
+            this.total_digits--
     }
 
     number_of_digits_decimal_left_shift(shift: number) {
@@ -97,7 +97,7 @@ export default class DecimalInfo {
 
         let n = pow5_b - pow5_a
         for (let i = 0; i < n; i++) {
-            if (i >= this.num_digits) {
+            if (i >= this.total_digits) {
                 return num_new_digits - 1
             } else if (this.digits[i] === DecimalInfo.powersOf5Table[pow5_a + i]) {
                 continue
@@ -110,12 +110,11 @@ export default class DecimalInfo {
         return num_new_digits
     }
 
-
-    roundToU64() {
-        if (this.num_digits === 0 || this.decimal_point < 0) {
-            return [0, 0]
+    round64() {
+        if (this.total_digits === 0 || this.decimal_point < 0) {
+            return new Uint32Array([0, 0])
         } else if (this.decimal_point > 18) {
-            return [0xFFFFFFFF, 0xFFFFFFFF]
+            return new Uint32Array([0xFFFFFFFF, 0xFFFFFFFF])
         }
 
         let dp = this.decimal_point
@@ -124,7 +123,7 @@ export default class DecimalInfo {
         let tempDigitsCount = 0
         for (let i = 0; i < dp; i++) {
             tempN *= 10
-            tempN += i < this.num_digits ? this.digits[i] : 0
+            tempN += i < this.total_digits ? this.digits[i] : 0
             tempDigitsCount++
 
             if (tempDigitsCount === 16) {
@@ -137,7 +136,7 @@ export default class DecimalInfo {
     }
 
     round() {
-        if (this.num_digits === 0 || this.decimal_point < 0) {
+        if (this.total_digits === 0 || this.decimal_point < 0) {
             return 0n
         } else if (this.decimal_point > 18) {
             return 0xFFFFFFFFFFFFFFFFn
@@ -146,13 +145,13 @@ export default class DecimalInfo {
         let dp = this.decimal_point
         let n = 0n
         for (let i = 0; i < dp; i++) {
-            n = 10n * n + BigInt((i < this.num_digits) ? this.digits[i] : 0)
+            n = 10n * n + BigInt((i < this.total_digits) ? this.digits[i] : 0)
         }
 
         let round_up = false
-        if (dp < this.num_digits) {
+        if (dp < this.total_digits) {
             round_up = this.digits[dp] >= 5
-            if (this.digits[dp] === 5 && (dp + 1 === this.num_digits)) {
+            if (this.digits[dp] === 5 && (dp + 1 === this.total_digits)) {
                 round_up = this.truncated || ((dp > 0) && this.digits[dp - 1] % 2 !== 0)
             }
         }
@@ -164,7 +163,7 @@ export default class DecimalInfo {
     }
 
     leftShift(shift: number) {
-        if (this.num_digits === 0) return;
+        if (this.total_digits === 0) return
 
         const MAX_SAFE_SHIFT = 27
         let remainingShift = shift
@@ -198,9 +197,9 @@ export default class DecimalInfo {
         //     }
         // }
 
-        const num_new_digits = this.number_of_digits_decimal_left_shift(shift);
-        let read_index = this.num_digits - 1
-        let write_index = this.num_digits - 1 + num_new_digits
+        const num_new_digits = this.number_of_digits_decimal_left_shift(shift)
+        let read_index = this.total_digits - 1
+        let write_index = this.total_digits - 1 + num_new_digits
         let n = 0
 
         while (read_index >= 0) {
@@ -234,9 +233,9 @@ export default class DecimalInfo {
             write_index--;
         }
 
-        this.num_digits += num_new_digits
-        if (this.num_digits > CalculationConstants.max_digits) {
-            this.num_digits = CalculationConstants.max_digits
+        this.total_digits += num_new_digits
+        if (this.total_digits > CalculationConstants.max_digits) {
+            this.total_digits = CalculationConstants.max_digits
         }
         this.decimal_point += num_new_digits
         this.trim()
@@ -262,11 +261,13 @@ export default class DecimalInfo {
         let n = 0
 
         while ((n >> shift) === 0) {
-            if (read_index < this.num_digits) {
+            if (read_index < this.total_digits) {
                 n = 10 * n + this.digits[read_index++]
-            } else if (n === 0) {
+            }
+            else if (n === 0) {
                 return
-            } else {
+            }
+            else {
                 while ((n >> shift) === 0) {
                     n = 10 * n
                     read_index++
@@ -277,7 +278,7 @@ export default class DecimalInfo {
 
         this.decimal_point -= (read_index - 1)
         if (this.decimal_point < -CalculationConstants.decimal_point_range) {
-            this.num_digits = 0
+            this.total_digits = 0
             this.decimal_point = 0
             this.negative = false
             this.truncated = false
@@ -285,7 +286,7 @@ export default class DecimalInfo {
         }
 
         let mask = (1 << shift) - 1
-        while (read_index < this.num_digits) {
+        while (read_index < this.total_digits) {
             let new_digit = n >> shift
             n = 10 * (n & mask) + this.digits[read_index++]
             this.digits[write_index++] = new_digit
@@ -301,7 +302,7 @@ export default class DecimalInfo {
             }
         }
 
-        this.num_digits = write_index
+        this.total_digits = write_index
         this.trim()
     }
 
@@ -321,10 +322,10 @@ export default class DecimalInfo {
         }
 
         while (pos < str.length && this.isDigit(str[pos])) {
-            if (answer.num_digits < CalculationConstants.max_digits) {
-                answer.digits[answer.num_digits] = parseInt(str[pos], 10)
+            if (answer.total_digits < CalculationConstants.max_digits) {
+                answer.digits[answer.total_digits] = parseInt(str[pos], 10)
             }
-            answer.num_digits++
+            answer.total_digits++
             pos++
         }
 
@@ -332,32 +333,32 @@ export default class DecimalInfo {
             pos++
             const firstAfterPeriod = pos
 
-            if (answer.num_digits === 0) {
+            if (answer.total_digits === 0) {
                 while (pos < str.length && str[pos] === '0') {
                     pos++
                 }
             }
 
             while (pos < str.length && this.isDigit(str[pos])) {
-                if (answer.num_digits < CalculationConstants.max_digits) {
-                    answer.digits[answer.num_digits] = parseInt(str[pos], 10)
+                if (answer.total_digits < CalculationConstants.max_digits) {
+                    answer.digits[answer.total_digits] = parseInt(str[pos], 10)
                 }
-                answer.num_digits++
+                answer.total_digits++
                 pos++
             }
 
             answer.decimal_point = firstAfterPeriod - pos
         }
 
-        if (answer.num_digits > 0) {
+        if (answer.total_digits > 0) {
             let preverse = pos - 1
             let trailingZeros = 0
             while (preverse >= 0 && (str[preverse] === '0' || str[preverse] === decimalSeparator)) {
                 if (str[preverse] === '0') trailingZeros++
                 preverse--
             }
-            answer.decimal_point += answer.num_digits
-            answer.num_digits -= trailingZeros
+            answer.decimal_point += answer.total_digits
+            answer.total_digits -= trailingZeros
         }
 
         if (pos < str.length && (str[pos] === 'e' || str[pos] === 'E')) {
@@ -382,7 +383,7 @@ export default class DecimalInfo {
             answer.decimal_point += negExp ? -expNumber : expNumber
         }
 
-        for (let i = answer.num_digits; i < CalculationConstants.max_digit_without_overflow; i++) {
+        for (let i = answer.total_digits; i < CalculationConstants.max_digit_without_overflow; i++) {
             answer.digits[i] = 0
         }
 
