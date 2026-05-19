@@ -180,7 +180,7 @@ export default class DecimalInfo {
     leftShift(shift: number) {
         if (this.num_digits === 0) return;
 
-        const MAX_SAFE_SHIFT = 30
+        const MAX_SAFE_SHIFT = 27
         let remainingShift = shift
         while (remainingShift > 0) {
             const currentShift = Math.min(remainingShift, MAX_SAFE_SHIFT)
@@ -199,10 +199,8 @@ export default class DecimalInfo {
         let write_index = this.num_digits - 1 + num_new_digits
         let n = 0
 
-        const multiplier = Math.pow(2, shift)
-
         while (read_index >= 0) {
-            n += this.digits[read_index] * multiplier
+            n += (this.digits[read_index] << shift)
 
             const quotient = Math.floor(n / 10)
             const remainder = n % 10
@@ -241,7 +239,7 @@ export default class DecimalInfo {
     }
 
     rightShift(shift: number) {
-        const MAX_SAFE_SHIFT = 30
+        const MAX_SAFE_SHIFT = 27
         let remainingShift = shift
         while (remainingShift > 0) {
             const currentShift = Math.min(remainingShift, MAX_SAFE_SHIFT)
@@ -255,58 +253,52 @@ export default class DecimalInfo {
     }
 
     decimal_right_shift_once(shift: number) {
-        if (this.num_digits === 0) return;
+        let read_index = 0
+        let write_index = 0
+        let n = 0
 
-        const divisor = Math.pow(2, shift)
-        let read_index = 0;
-        let write_index = 0;
-        let n = 0;
-
-        while (Math.floor(n / divisor) === 0) {
+        while ((n >> shift) === 0) {
             if (read_index < this.num_digits) {
-                n = n * 10 + this.digits[read_index++];
+                n = 10 * n + this.digits[read_index++]
             } else if (n === 0) {
-                return;
+                return
             } else {
-                while (Math.floor(n / divisor) === 0) {
-                    n = n * 10;
-                    read_index++;
+                while ((n >> shift) === 0) {
+                    n = 10 * n
+                    read_index++
                 }
-                break;
+                break
             }
         }
 
-        this.decimal_point -= (read_index - 1);
+        this.decimal_point -= (read_index - 1)
         if (this.decimal_point < -CalculationConstants.decimal_point_range) {
-            this.num_digits = 0;
-            this.decimal_point = 0;
-            this.negative = false;
-            this.truncated = false;
-            return;
+            this.num_digits = 0
+            this.decimal_point = 0
+            this.negative = false
+            this.truncated = false
+            return
         }
 
+        let mask = (1 << shift) - 1
         while (read_index < this.num_digits) {
-            const new_digit = Math.floor(n / divisor);
-            n = (n % divisor) * 10 + this.digits[read_index++];
-
-            if (write_index < CalculationConstants.max_digits) {
-                this.digits[write_index++] = new_digit;
-            }
+            let new_digit = n >> shift
+            n = 10 * (n & mask) + this.digits[read_index++]
+            this.digits[write_index++] = new_digit
         }
 
         while (n > 0) {
-            const new_digit = Math.floor(n / divisor);
-            n = (n % divisor) * 10;
-
+            let new_digit = n >> shift
+            n = 10 * (n & mask)
             if (write_index < CalculationConstants.max_digits) {
-                this.digits[write_index++] = new_digit;
+                this.digits[write_index++] = new_digit
             } else if (new_digit > 0) {
-                this.truncated = true;
+                this.truncated = true
             }
         }
 
-        this.num_digits = write_index;
-        this.trim();
+        this.num_digits = write_index
+        this.trim()
     }
 
     static parseDecimalString(str: string, decimalSeparator = '.') {
