@@ -178,39 +178,56 @@ export default class DecimalInfo {
     }
 
     decimal_left_shift(shift: number) {
-        if (this.num_digits === 0) {
-            return
+        if (this.num_digits === 0) return;
+
+        const MAX_SAFE_SHIFT = 27
+        let remainingShift = shift
+        while (remainingShift > 0) {
+            const currentShift = Math.min(remainingShift, MAX_SAFE_SHIFT)
+            this.decimal_left_shift_once(currentShift)
+            remainingShift -= currentShift
         }
 
-        let num_new_digits = this.number_of_digits_decimal_left_shift(shift)
+        // for (let i = 0; i < shift; i++) {
+        //     this.decimal_left_shift_once(1)
+        // }
+    }
+
+    private decimal_left_shift_once(shift: number) {
+        const num_new_digits = this.number_of_digits_decimal_left_shift(shift);
         let read_index = this.num_digits - 1
         let write_index = this.num_digits - 1 + num_new_digits
-        let n = 0n
+        let n = 0
 
         while (read_index >= 0) {
-            n += BigInt(this.digits[read_index]) << BigInt(shift)
-            let quotient = n / 10n
-            let remainder = n - (10n * quotient)
+            n += (this.digits[read_index] << shift)
+
+            const quotient = Math.floor(n / 10)
+            const remainder = n % 10
+
             if (write_index < CalculationConstants.max_digits) {
-                this.digits[write_index] = Number(remainder)
+                this.digits[write_index] = remainder
             } else if (remainder > 0) {
                 this.truncated = true
             }
+
             n = quotient
             write_index--
             read_index--
         }
 
         while (n > 0) {
-            let quotient = n / 10n
-            let remainder = n - (10n * quotient)
+            const quotient = Math.floor(n / 10);
+            const remainder = n % 10;
+
             if (write_index < CalculationConstants.max_digits) {
-                this.digits[write_index] = Number(remainder)
+                this.digits[write_index] = remainder;
             } else if (remainder > 0) {
-                this.truncated = true
+                this.truncated = true;
             }
-            n = quotient
-            write_index--
+
+            n = quotient;
+            write_index--;
         }
 
         this.num_digits += num_new_digits
@@ -222,18 +239,32 @@ export default class DecimalInfo {
     }
 
     decimal_right_shift(shift: number) {
+        const MAX_SAFE_SHIFT = 27
+        let remainingShift = shift
+        while (remainingShift > 0) {
+            const currentShift = Math.min(remainingShift, MAX_SAFE_SHIFT)
+            this.decimal_right_shift_once(currentShift)
+            remainingShift -= currentShift
+        }
+
+        // for (let i = 0; i < shift; i++) {
+        //     this.decimal_right_shift_once(1)
+        // }
+    }
+
+    decimal_right_shift_once(shift: number) {
         let read_index = 0
         let write_index = 0
-        let n = 0n
+        let n = 0
 
-        while ((n >> BigInt(shift)) === 0n) {
+        while ((n >> shift) === 0) {
             if (read_index < this.num_digits) {
-                n = 10n * n + BigInt(this.digits[read_index++])
-            } else if (n === 0n) {
+                n = 10 * n + this.digits[read_index++]
+            } else if (n === 0) {
                 return
             } else {
-                while ((n >> BigInt(shift)) === 0n) {
-                    n = 10n * n
+                while ((n >> shift) === 0) {
+                    n = 10 * n
                     read_index++
                 }
                 break
@@ -249,16 +280,16 @@ export default class DecimalInfo {
             return
         }
 
-        let mask = (1n << BigInt(shift)) - 1n
+        let mask = (1 << shift) - 1
         while (read_index < this.num_digits) {
-            let new_digit = Number(n >> BigInt(shift))
-            n = 10n * (n & mask) + BigInt(this.digits[read_index++])
+            let new_digit = n >> shift
+            n = 10 * (n & mask) + this.digits[read_index++]
             this.digits[write_index++] = new_digit
         }
 
         while (n > 0) {
-            let new_digit = Number(n >> BigInt(shift))
-            n = 10n * (n & mask)
+            let new_digit = n >> shift
+            n = 10 * (n & mask)
             if (write_index < CalculationConstants.max_digits) {
                 this.digits[write_index++] = new_digit
             } else if (new_digit > 0) {
