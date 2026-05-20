@@ -481,21 +481,21 @@ export function decimalToNumber(decimal: DecimalInfo) {
 
     exp2--
 
-    const mantissa_size_in_bits = 53
+    // const mantissa_size_in_bits = 53
 
-    decimal.leftShift(mantissa_size_in_bits)
+    // decimal.leftShift(mantissa_size_in_bits)
 
-    const m = decimal.roundToU64()
+    // const m = decimal.roundToU64()
 
-    const mantissa = combineInt53(m[1], m[0]) + 1
+    // const mantissa = combineInt53(m[1], m[0]) + 1
 
-    const maskValue = 2 ** 52 - 1
-    const mantissa52bits = mantissa % (maskValue + 1)
-    const N = 4503599627370496 // 2^52
-    const expIdx = Math.min(Math.max(exp2, -1022), 1023) + 1022
-    const result = (1 + mantissa52bits / N) * POW2[expIdx]
+    // const maskValue = 2 ** 52 - 1
+    // const mantissa52bits = mantissa % (maskValue + 1)
+    // const N = 4503599627370496 // 2^52
+    // const expIdx = Math.min(Math.max(exp2, -1022), 1023) + 1022
+    // const result = (1 + mantissa52bits / N) * POW2[expIdx]
 
-    return result
+    // return result
 }
 
 function calculatePower(q: number): number {
