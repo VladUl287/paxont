@@ -1,6 +1,5 @@
 import { formatNumber } from "tinybench"
 import { ConvertMeta, ConvertResult, ConvertState } from "./types"
-import DecimalInfo, { CalculationConstants } from "./decimalInfo"
 
 export function convertNumber(
     ctx: ConvertState, _metadata: ConvertMeta, index: number, _depth: number): ConvertResult<number> {
@@ -435,67 +434,6 @@ function clz(x: bigint): number {
     // }
     // const low = Number(x & 0xFFFFFFFFn) // low 32 bits as Number
     // return 32 + Math.clz32(low) // all high bits were zero
-}
-
-export function decimalToNumber(decimal: DecimalInfo) {
-    const max_shift = 60
-    const num_powers = 19
-
-    let exp2 = 0
-    while (decimal.decimal_point > 0) {
-        const n = decimal.decimal_point
-        const shift = (n < num_powers) ? CalculationConstants.get_powers(n) : max_shift;
-
-        decimal.rightShift(shift)
-
-        if (decimal.decimal_point < -CalculationConstants.decimal_point_range) {
-            break
-        }
-
-        exp2 += shift
-    }
-
-    while (decimal.decimal_point <= 0) {
-        let shift
-        if (decimal.decimal_point == 0) {
-            if (decimal.digits[0] >= 5)
-                break
-            if (decimal.digits[0] < 2)
-                shift = 2
-            else
-                shift = 1
-        }
-        else {
-            const n = (-decimal.decimal_point)
-            shift = (n < num_powers) ? CalculationConstants.get_powers(n) : max_shift
-        }
-
-        decimal.leftShift(shift)
-
-        if (decimal.decimal_point > CalculationConstants.decimal_point_range) {
-            break
-        }
-
-        exp2 -= shift
-    }
-
-    exp2--
-
-    // const mantissa_size_in_bits = 53
-
-    // decimal.leftShift(mantissa_size_in_bits)
-
-    // const m = decimal.roundToU64()
-
-    // const mantissa = combineInt53(m[1], m[0]) + 1
-
-    // const maskValue = 2 ** 52 - 1
-    // const mantissa52bits = mantissa % (maskValue + 1)
-    // const N = 4503599627370496 // 2^52
-    // const expIdx = Math.min(Math.max(exp2, -1022), 1023) + 1022
-    // const result = (1 + mantissa52bits / N) * POW2[expIdx]
-
-    // return result
 }
 
 function calculatePower(q: number): number {
