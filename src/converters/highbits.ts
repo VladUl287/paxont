@@ -1,20 +1,16 @@
 const registers = new Uint32Array(3)
 
 export function getHigh64BitsFrom96(digits: Uint8Array | number[], base = 10) {
-    const TWO_POW_32 = 0x100000000
-
     for (let i = 0; i < digits.length; i++) {
         let carry = digits[i]
 
         let product = registers[0] * base + carry
         registers[0] = product & 0xFFFFFFFF
-        carry = Math.floor(product / TWO_POW_32)
-        // carry = (product / 0x100000000) | 0
+        carry = (product / 0x100000000) | 0
 
         product = registers[1] * base + carry
         registers[1] = product & 0xFFFFFFFF
-        carry = Math.floor(product / TWO_POW_32)
-        // carry = (product / 0x100000000) | 0
+        carry = (product / 0x100000000) | 0
 
         product = registers[2] * base + carry
         registers[2] = product & 0xFFFFFFFF
