@@ -1,7 +1,30 @@
 const registers = new Uint32Array(3)
 
 export function getHigh64BitsFrom96(digits: Uint8Array | number[], base = 10) {
-    for (let i = 0; i < digits.length; i++) {
+    const CHUNK_MUL = Math.pow(base, 4)
+
+    let i = 0
+    for (; i < digits.length - 4; i += 4) {
+        const a = digits[i]
+        const b = digits[i + 1]
+        const c = digits[i + 2]
+        const d = digits[i + 3]
+
+        let carry = (((a * 10) + b) * 10 + c) * 10 + d
+
+        let product = registers[0] * CHUNK_MUL + carry
+        registers[0] = product & 0xFFFFFFFF
+        carry = (product / 0x100000000) | 0
+
+        product = registers[1] * CHUNK_MUL + carry
+        registers[1] = product & 0xFFFFFFFF
+        carry = (product / 0x100000000) | 0
+
+        product = registers[2] * CHUNK_MUL + carry
+        registers[2] = product & 0xFFFFFFFF
+    }
+
+    for (; i < digits.length; i++) {
         let carry = digits[i]
 
         let product = registers[0] * base + carry
