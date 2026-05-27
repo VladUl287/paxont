@@ -8,8 +8,6 @@ export function getHigh64BitsFrom96(digits: Uint8Array | number[], length: numbe
 
     const UINT32_MAX = 0xFFFFFFFF
 
-    const u32 = new Array(3).fill(0)
-
     let i = 0
     for (; i < length - CHUNK_SIZE; i += CHUNK_SIZE) {
         let carry =
@@ -21,30 +19,30 @@ export function getHigh64BitsFrom96(digits: Uint8Array | number[], length: numbe
             digits[i + 5]
 
         let product = u32[0] * CHUNK_MUL + carry
-        u32[0] = (product & UINT32_MAX) >>> 0
+        u32[0] = product & UINT32_MAX
         carry = (product / 0x100000000) | 0
 
         product = u32[1] * CHUNK_MUL + carry
-        u32[1] = (product & UINT32_MAX) >>> 0
+        u32[1] = product & UINT32_MAX
         carry = (product / 0x100000000) | 0
 
         product = u32[2] * CHUNK_MUL + carry
-        u32[2] = (product & UINT32_MAX) >>> 0
+        u32[2] = product & UINT32_MAX
     }
 
     for (; i < length; i++) {
         let carry = digits[i]
 
         let product = u32[0] * base + carry
-        u32[0] = (product & UINT32_MAX) >>> 0
+        u32[0] = product & UINT32_MAX
         carry = (product / 0x100000000) | 0
 
         product = u32[1] * base + carry
-        u32[1] = (product & UINT32_MAX) >>> 0
+        u32[1] = product & UINT32_MAX
         carry = (product / 0x100000000) | 0
 
         product = u32[2] * base + carry
-        u32[2] = (product & UINT32_MAX) >>> 0
+        u32[2] = product & UINT32_MAX
     }
 
     return u32
