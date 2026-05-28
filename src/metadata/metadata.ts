@@ -53,14 +53,11 @@ function getType(value: unknown): TypeName {
     return type
 }
 
-export function createObjectBuilder(propertyNames: string[]): (fields: string[]) => object {
-    const assignments = propertyNames
-        .map((field, index) => `${field}: fields[${index}]`)
+export function objectLiteralFactory(fields: string[]): (values: unknown[]) => object {
+    const assignments = fields
+        .map((field, i) => `${field}: v[${i}]`)
         .join(',')
-
-    const body = `return {${assignments}}`
-
-    return new Function("fields", body) as any
+    return new Function("v", `return {${assignments}}`) as (values: unknown[]) => object
 }
 
 const converters: any = {
@@ -72,7 +69,7 @@ const converters: any = {
 const encoder = new TextEncoder()
 export function toMetadata(object: unknown): Metadata {
     const value = toValue(object)
-    const creator = createObjectBuilder((value as Metadata[]).map(c => c.name!.value))
+    const creator = objectLiteralFactory((value as Metadata[]).map(c => c.name!.value))
 
     return {
         convert: convertObject,
@@ -99,16 +96,25 @@ export function toMetadata(object: unknown): Metadata {
 
         return Object.keys(object)
             .map((key): Metadata => {
+                const keyValue = object[key]
+                const type = getType(keyValue)
+                const value = toValue(keyValue)
                 return {
-                    convert: converters[getType(object[key])],
+                    convert: converters[type],
                     name: {
                         value: key,
                         bytes: encoder.encode(key),
                         equal: createNameEquality(encoder.encode(key))
                     },
-                    type: getType(object[key]),
-                    value: toValue(object[key]),
-                    defaultValue: object[key]
+                    type: type,
+                    value: value,
+                    defaultValue: keyValue,
+                    getFieldIndex: (type === 'object' ? (
+                        generateSwitchMatcherPack(Object.keys(keyValue).map(c => encoder.encode(c)), { pack: true }) as any
+                    ) : undefined),
+                    creator: (type === 'object' ?
+                        objectLiteralFactory((value as Metadata[]).map(c => c.name!.value)) :
+                        undefined)
                 }
             })
     }
