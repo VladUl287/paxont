@@ -453,35 +453,40 @@ try {
                 // locals: 4 × i64
                 1, 4, 126,
                 // instructions
-                32, 0, 172,            // local.get 0; i64.extend_i32_u
-                32, 2, 172,            // local.get 2; i64.extend_i32_u
+                32, 0, 173,            // local.get 0; i64.extend_i32_u
+                32, 2, 173,            // local.get 2; i64.extend_i32_u
                 126,                   // i64.mul
                 34, 4,                 // local.tee 4 (mull)
+
                 66, 32,                // i64.const 32
                 136,                   // i64.shr_u
-                32, 1, 172,            // local.get 1; i64.extend_i32_u
-                32, 2, 172,            // local.get 2; i64.extend_i32_u
+                32, 1, 173,            // local.get 1; i64.extend_i32_u
+                32, 2, 173,            // local.get 2; i64.extend_i32_u
                 126,                   // i64.mul
                 124,                   // i64.add
                 34, 5,                 // local.tee 5 (t)
                 26,                    // drop ← was 167 (i32.wrap_i64)
-                32, 0, 172,            // local.get 0; i64.extend_i32_u
-                32, 3, 172,            // local.get 3; i64.extend_i32_u
+
+                32, 0, 173,            // local.get 0; i64.extend_i32_u
+                32, 3, 173,            // local.get 3; i64.extend_i32_u
                 126,                   // i64.mul
                 32, 5,                 // local.get 5
                 167,                   // i32.wrap_i64
                 172,                   // i64.extend_i32_u
                 124,                   // i64.add
                 34, 6,                 // local.tee 6 (tl)
+
                 32, 4,                 // local.get 4 (mull)
                 167,                   // i32.wrap_i64
                 36, 0,                 // global.set 0 (low)
+
                 32, 6,                 // local.get 6 (tl)
                 167,                   // i32.wrap_i64
                 36, 1,                 // global.set 1 (mlow)
                 26,
-                32, 1, 172,            // local.get 1; i64.extend_i32_u
-                32, 3, 172,            // local.get 3; i64.extend_i32_u
+
+                32, 1, 173,            // local.get 1; i64.extend_i32_u
+                32, 3, 173,            // local.get 3; i64.extend_i32_u
                 126,                   // i64.mul
                 32, 5,                 // local.get 5 (t)
                 66, 32,                // i64.const 32
@@ -502,7 +507,7 @@ try {
             ]),
         ),
         {},
-    ).exports;
+    ).exports
 } catch { }
 
 function computeProductApproximation(bitPrecision: number, e: number, m: bigint): { high: bigint; low: bigint } {
