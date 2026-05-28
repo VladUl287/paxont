@@ -392,6 +392,119 @@ export function computeFloat(e: number, m: bigint, info: IFloatInfo): number | u
     return undefined
 }
 
+let wasm = null
+try {
+    wasm = new WebAssembly.Instance(
+        new WebAssembly.Module(
+            new Uint8Array([
+                // \0asm
+                0, 97, 115, 109,
+                // version 1
+                1, 0, 0, 0,
+
+                // section "type" (2 types)
+                1, 13, 2,
+                // type 0: () -> i32
+                96, 0, 1, 127,
+                // type 1: (i32, i32, i32, i32) -> i32
+                96, 4, 127, 127, 127, 127, 1, 127,
+
+                // section "function" (4 functions)
+                3, 5, 4,
+                // func 0: get_low, type 0
+                0,
+                // func 1: get_mlow, type 0
+                0,
+                // func 2: get_mhigh, type 0
+                0,
+                // func 3: mul, type 1
+                1,
+
+                // section "global" (3 mutable i32 globals)
+                6, 16, 3,
+                // global 0: low
+                127, 1, 65, 0, 11,
+                // global 1: mlow
+                127, 1, 65, 0, 11,
+                // global 2: mhigh
+                127, 1, 65, 0, 11,
+
+                // section "export" (4 exports)
+                7, 40, 4,
+                // "mul" -> func 3
+                3, 109, 117, 108, 0, 3,
+                // "get_low" -> func 0
+                7, 103, 101, 116, 95, 108, 111, 119, 0, 0,
+                // "get_mlow" -> func 1
+                8, 103, 101, 116, 95, 109, 108, 111, 119, 0, 1,
+                // "get_mhigh" -> func 2
+                9, 103, 101, 116, 95, 109, 104, 105, 103, 104, 0, 2,
+
+                // section "code" (4 bodies)
+                10, 99, 4,
+                // func 0: get_low (size 4)
+                4, 0, 35, 0, 11,
+                // func 1: get_mlow (size 4)
+                4, 0, 35, 1, 11,
+                // func 2: get_mhigh (size 4)
+                4, 0, 35, 2, 11,
+                // func 3: mul (size 81)
+                82,
+                // locals: 4 × i64
+                1, 4, 126,
+                // instructions
+                32, 0, 172,            // local.get 0; i64.extend_i32_u
+                32, 2, 172,            // local.get 2; i64.extend_i32_u
+                126,                   // i64.mul
+                34, 4,                 // local.tee 4 (mull)
+                66, 32,                // i64.const 32
+                136,                   // i64.shr_u
+                32, 1, 172,            // local.get 1; i64.extend_i32_u
+                32, 2, 172,            // local.get 2; i64.extend_i32_u
+                126,                   // i64.mul
+                124,                   // i64.add
+                34, 5,                 // local.tee 5 (t)
+                26,                    // drop ← was 167 (i32.wrap_i64)
+                32, 0, 172,            // local.get 0; i64.extend_i32_u
+                32, 3, 172,            // local.get 3; i64.extend_i32_u
+                126,                   // i64.mul
+                32, 5,                 // local.get 5
+                167,                   // i32.wrap_i64
+                172,                   // i64.extend_i32_u
+                124,                   // i64.add
+                34, 6,                 // local.tee 6 (tl)
+                32, 4,                 // local.get 4 (mull)
+                167,                   // i32.wrap_i64
+                36, 0,                 // global.set 0 (low)
+                32, 6,                 // local.get 6 (tl)
+                167,                   // i32.wrap_i64
+                36, 1,                 // global.set 1 (mlow)
+                26,
+                32, 1, 172,            // local.get 1; i64.extend_i32_u
+                32, 3, 172,            // local.get 3; i64.extend_i32_u
+                126,                   // i64.mul
+                32, 5,                 // local.get 5 (t)
+                66, 32,                // i64.const 32
+                136,                   // i64.shr_u
+                124,                   // i64.add
+                32, 6,                 // local.get 6 (tl)
+                66, 32,                // i64.const 32
+                136,                   // i64.shr_u
+                124,                   // i64.add
+                34, 7,                 // local.tee 7 (high64)
+                167,                   // i32.wrap_i64
+                36, 2,                 // global.set 2 (mhigh)
+                32, 7,                 // local.get 7
+                66, 32,                // i64.const 32
+                136,                   // i64.shr_u
+                167,                   // i32.wrap_i64
+                11,                    // end
+            ]),
+        ),
+        {},
+    ).exports;
+} catch { }
+
 function computeProductApproximation(bitPrecision: number, e: number, m: bigint): { high: bigint; low: bigint } {
     const index = 2 * (e + 342)
 
@@ -712,7 +825,7 @@ function assembleFloatingPointBits(
     const combined = shiftedExponent | mantissa
     conversionU64[0] = combined
     return conversionF64[0]
-    
+
     // const array = new Float64Array([Number(combined)])
     // return array[0]
 
