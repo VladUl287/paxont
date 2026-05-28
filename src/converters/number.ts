@@ -392,7 +392,7 @@ export function computeFloat(e: number, m: bigint, info: IFloatInfo): number | u
     return undefined
 }
 
-let wasm = null
+let wasm: any = null
 try {
     wasm = new WebAssembly.Instance(
         new WebAssembly.Module(
@@ -510,12 +510,31 @@ try {
     ).exports
 } catch { }
 
+const mul: any = wasm.mul
+
+function split(value: bigint) {
+    const low = Number(value & 0xFFFFFFFFn)
+    const high = Number((value >> 32n) & 0xFFFFFFFFn)
+    return { high, low }
+}
+
+function combine(high: number, low: number) {
+    return (BigInt(high) << 32n) | (BigInt(low) & 0xFFFFFFFFn)
+}
+
 function computeProductApproximation(bitPrecision: number, e: number, m: bigint): { high: bigint; low: bigint } {
     const index = 2 * (e + 342)
 
     const product = m * POW5_128[index]
     let low = product & 0xFFFFFFFFFFFFFFFFn
     let high = product >> 64n
+
+    const low32 = split(m)
+    const high32 = split(POW5_128[index])
+
+    const highR = mul(low32.low, low32.high, high32.low, high32.high)
+    const high64 = combine(highR, wasm.get_mhigh())
+    const low64 = combine(wasm.get_low(), wasm.get_mlow())
 
     const precisionMask = bitPrecision < 64
         ? (0xFFFFFFFFFFFFFFFFn >> BigInt(bitPrecision))
