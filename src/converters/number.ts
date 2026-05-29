@@ -472,7 +472,7 @@ try {
                 126,                   // i64.mul
                 32, 5,                 // local.get 5
                 167,                   // i32.wrap_i64
-                172,                   // i64.extend_i32_u
+                173,                   // i64.extend_i32_u
                 124,                   // i64.add
                 34, 6,                 // local.tee 6 (tl)
 
