@@ -1,3 +1,5 @@
+import { Converter } from "../converters/types"
+
 export type BuiltInType =
     | "string" | "number" | "bigint" | "boolean" | "symbol"
     | "object" | "array" | "date" | "map" | "set"
@@ -6,6 +8,30 @@ export type BuiltInType =
     | "f32" | "f64"
 
 export type TypeName = BuiltInType | (string & {})
+
+export interface BaseMeta<T> {
+    readonly convert: Converter<T>,
+    readonly type: TypeName
+}
+
+export interface PrimitiveMeta<T> extends BaseMeta<T> { }
+
+export interface ObjectMeta<T> extends BaseMeta<T> {
+    readonly fields: ObjectFieldMeta<unknown>[],
+    readonly factory: (props: any[]) => object
+    readonly fieldIndexResolver: (field: Uint8Array, index: number) => number
+}
+
+export interface ObjectFieldMeta<T> extends BaseMeta<T> {
+    readonly name: {
+        value: string,
+        bytes: Uint8Array<ArrayBuffer>
+    }
+}
+
+export interface CollectionMeta<T> extends BaseMeta<T> {
+    readonly value: BaseMeta<unknown>
+}
 
 export type Metadata = MetaPrimitive | MetaObject | MetaArray
 
