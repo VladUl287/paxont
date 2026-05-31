@@ -45,7 +45,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
     let digitsCount = 0
     let tempMantissa = 0
     let tempDigitsCount = 0
-    let numberOfTrailingZeros = 0
+    let trailingZeros = 0
 
     const MAX_SAFE_INT_DIGITS = 16
     const MAX_SAFE_LONG_DIGITS = 19
@@ -84,25 +84,25 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                         if (c === ZERO) {
                             if (b === ZERO) {
                                 if (a === ZERO) {
-                                    numberOfTrailingZeros++
+                                    trailingZeros++
                                 }
                                 else {
-                                    numberOfTrailingZeros = 0
+                                    trailingZeros = 0
                                 }
-                                numberOfTrailingZeros++
+                                trailingZeros++
                             }
                             else {
-                                numberOfTrailingZeros = 0
+                                trailingZeros = 0
                             }
-                            numberOfTrailingZeros++
+                            trailingZeros++
                         }
                         else {
-                            numberOfTrailingZeros = 0
+                            trailingZeros = 0
                         }
-                        numberOfTrailingZeros++
+                        trailingZeros++
                     }
                     else {
-                        numberOfTrailingZeros = 0
+                        trailingZeros = 0
                     }
 
                     if ((state & STATE_DECIMAL) === 0)
@@ -128,8 +128,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                     const digit = byte & 0x0F
 
                     tempDigitsCount++
-
-                    numberOfTrailingZeros = (digit === 0 ? numberOfTrailingZeros + 1 : 0)
+                    trailingZeros = (digit === 0 ? trailingZeros + 1 : 0)
 
                     if (tempDigitsCount < MAX_SAFE_INT_DIGITS) {
                         tempMantissa = tempMantissa * 10 + digit
@@ -202,10 +201,10 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
     if (digitsCount <= MAX_SAFE_LONG_DIGITS) {
         const numberOfFractionalDigits = digitsCount - scale
         if (numberOfFractionalDigits > 0) {
-            numberOfTrailingZeros = Math.min(numberOfTrailingZeros, numberOfFractionalDigits)
-            digitsCount -= numberOfTrailingZeros
+            trailingZeros = Math.min(trailingZeros, numberOfFractionalDigits)
+            digitsCount -= trailingZeros
 
-            const divisorCount = (digitsCount - (digitsCount - numberOfTrailingZeros))
+            const divisorCount = (digitsCount - (digitsCount - trailingZeros))
             if (digitsCount < MAX_SAFE_INT_DIGITS) {
                 if (originalDigitsCount >= MAX_SAFE_INT_DIGITS) {
                     const low = conversionU32[0]
