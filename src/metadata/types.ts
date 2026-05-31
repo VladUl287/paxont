@@ -17,14 +17,21 @@ export interface BaseMeta<T> {
 export interface PrimitiveMeta<T> extends BaseMeta<T> { }
 
 export interface ObjectMeta<T> extends BaseMeta<T> {
-    readonly fields: ObjectFieldMeta<unknown>[],
+    // readonly fields: {
+    //     [K in keyof T]: BaseMeta<T[K]>
+    // }[keyof T][],
+    readonly fields: ObjectFieldMeta<T>[]
+    // readonly fields: ObjectFieldMeta<unknown>[],
     readonly factory: (props: any[]) => object
     readonly fieldIndexResolver: (field: Uint8Array, index: number) => number
 }
 
+// const test = {} as ObjectMeta<{ name: string }>
+// test.fields[0]
+
 export interface ObjectFieldMeta<T> extends BaseMeta<T> {
     readonly name: {
-        value: string,
+        value: keyof T
         bytes: Uint8Array<ArrayBuffer>
     }
 }
