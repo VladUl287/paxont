@@ -20,10 +20,13 @@ for (let exp = -1022; exp <= 1023; exp++) {
 
 const MAX_DIGITS_COUNT = 753
 
-const buffer = new ArrayBuffer(8)
-const conversionU32 = new Uint32Array(buffer)
-const conversionU64 = new BigUint64Array(buffer)
-const conversionF64 = new Float64Array(buffer)
+const bufferMantissa = new ArrayBuffer(8)
+const mantissaU32 = new Uint32Array(bufferMantissa)
+
+const bufferConversion = new ArrayBuffer(8)
+const conversionU32 = new Uint32Array(bufferConversion)
+const conversionU64 = new BigUint64Array(bufferConversion)
+const conversionF64 = new Float64Array(bufferConversion)
 
 export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<number> {
     let i = start
@@ -43,8 +46,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
     let scale = 0
 
     let digitsCount = 0
-    let tempMantissa = 0
-    let tempDigitsCount = 0
+    let mantissa = 0
     let trailingZeros = 0
 
     const MAX_SAFE_INT_DIGITS = 16
@@ -64,20 +66,21 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
             if (hasNonDigit === 0) {
                 const chunk = ((a & 0x0F) * 1000) + ((b & 0x0F) * 100) + ((c & 0x0F) * 10) + (d & 0x0F)
                 if (chunk !== 0 || (state & STATE_NONZERO)) {
-                    tempDigitsCount += 4
+                    digitsCount += 4
 
-                    if (tempDigitsCount < MAX_SAFE_INT_DIGITS) {
-                        tempMantissa = tempMantissa * 10000 + chunk
+                    if ((state & STATE_DECIMAL) === 0)
+                        scale += 4
+
+                    state |= STATE_NONZERO
+
+                    if (digitsCount < MAX_SAFE_INT_DIGITS) {
+                        mantissa = mantissa * 10000 + chunk
                     }
                     else {
-                        const high = Math.floor(tempMantissa / 0x100000000)
-                        const low = tempMantissa >>> 0
-                        const newLow = low * 10000 + chunk
-                        const carry = Math.floor(newLow / 0x100000000)
-                        conversionU32[0] = newLow >>> 0
-                        conversionU32[1] = high * 10000 + carry
-
-                        tempMantissa = 0
+                        const high = Math.floor(mantissa / 0x100000000)
+                        const low = (mantissa >>> 0) * 10000 + chunk
+                        mantissaU32[0] = low >>> 0
+                        mantissaU32[1] = high * 10000 + Math.floor(low / 0x100000000)
                     }
 
                     if (d === ZERO) {
@@ -104,12 +107,6 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                     else {
                         trailingZeros = 0
                     }
-
-                    if ((state & STATE_DECIMAL) === 0)
-                        scale += 4
-
-                    state |= STATE_NONZERO
-                    digitsCount += 4
                 }
                 else if (state & STATE_DECIMAL) {
                     scale -= 4
@@ -127,34 +124,28 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                 if (byte !== ZERO || (state & STATE_NONZERO)) {
                     const digit = byte & 0x0F
 
-                    tempDigitsCount++
+                    digitsCount++
                     trailingZeros = (digit === 0 ? trailingZeros + 1 : 0)
 
-                    if (tempDigitsCount < MAX_SAFE_INT_DIGITS) {
-                        tempMantissa = tempMantissa * 10 + digit
-                    }
-                    else if (tempDigitsCount === MAX_SAFE_INT_DIGITS) {
-                        const high = Math.floor(tempMantissa / 0x100000000)
-                        const low = tempMantissa >>> 0
-                        const newLow = low * 10 + digit
-                        const carry = Math.floor(newLow / 0x100000000)
-                        conversionU32[0] = newLow >>> 0
-                        conversionU32[1] = high * 10 + carry
-
-                        tempMantissa = 0
-                    }
-                    else if (tempDigitsCount <= MAX_SAFE_LONG_DIGITS) {
-                        const newLow = conversionU32[0] * 10 + digit
-                        const carry = Math.floor(newLow / 0x100000000)
-                        conversionU32[0] = newLow >>> 0
-                        conversionU32[1] = conversionU32[1] * 10 + carry
-                    }
+                    state |= STATE_NONZERO
 
                     if ((state & STATE_DECIMAL) === 0)
                         scale++
 
-                    state |= STATE_NONZERO
-                    digitsCount++
+                    if (digitsCount < MAX_SAFE_INT_DIGITS) {
+                        mantissa = mantissa * 10 + digit
+                    }
+                    else if (digitsCount === MAX_SAFE_INT_DIGITS) {
+                        const high = Math.floor(mantissa / 0x100000000)
+                        const low = (mantissa >>> 0) * 10 + digit
+                        mantissaU32[0] = low >>> 0
+                        mantissaU32[1] = high * 10 + Math.floor(low / 0x100000000)
+                    }
+                    else if (digitsCount <= MAX_SAFE_LONG_DIGITS) {
+                        const low = mantissaU32[0] * 10 + digit
+                        mantissaU32[0] = low >>> 0
+                        mantissaU32[1] = mantissaU32[1] * 10 + Math.floor(low / 0x100000000)
+                    }
                 }
                 else if (state & STATE_DECIMAL) {
                     scale--
@@ -207,8 +198,8 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
             const divisorCount = (digitsCount - (digitsCount - trailingZeros))
             if (digitsCount < MAX_SAFE_INT_DIGITS) {
                 if (originalDigitsCount >= MAX_SAFE_INT_DIGITS) {
-                    const low = conversionU32[0]
-                    const high = conversionU32[1]
+                    const low = mantissaU32[0]
+                    const high = mantissaU32[1]
 
                     const divisor = 10 ** divisorCount
                     let newHigh = Math.floor(high / divisor)
@@ -221,18 +212,18 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                     newHigh += carry
                     newLow = newLow % 0x100000000
 
-                    conversionU32[0] = newLow
-                    conversionU32[1] = newHigh
+                    mantissaU32[0] = newLow
+                    mantissaU32[1] = newHigh
 
-                    tempMantissa = combine53(conversionU32[1], conversionU32[0])
+                    mantissa = combine53(mantissaU32[1], mantissaU32[0])
                 }
                 else {
-                    tempMantissa /= 10 ** divisorCount
+                    mantissa /= 10 ** divisorCount
                 }
             }
             else if (digitsCount <= MAX_SAFE_LONG_DIGITS) {
-                const low = conversionU32[0]
-                const high = conversionU32[1]
+                const low = mantissaU32[0]
+                const high = mantissaU32[1]
 
                 const divisor = 10 ** divisorCount
                 let newHigh = Math.floor(high / divisor)
@@ -245,13 +236,13 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                 newHigh += carry
                 newLow = newLow % 0x100000000
 
-                conversionU32[0] = newLow
-                conversionU32[1] = newHigh
+                mantissaU32[0] = newLow
+                mantissaU32[1] = newHigh
             }
         }
 
         const MIN_DECIMAL_EXPONENT = -324
-        if ((digitsCount >= 0 && tempMantissa === 0 && conversionU32[0] === 0 && conversionU32[1] === 0) ||
+        if ((digitsCount >= 0 && mantissa === 0 && mantissaU32[0] === 0 && mantissaU32[1] === 0) ||
             scale < MIN_DECIMAL_EXPONENT) {
             return {
                 value: (state & STATE_NEGATIVE) ? -0 : 0,
@@ -270,31 +261,31 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
         if (fastExponent <= MAX_FAST_EXPONENT && digitsCount < MAX_SAFE_INT_DIGITS) {
             const expScale = POS_POW10[fastExponent]
             if (fractionalDigitsPresent !== 0)
-                tempMantissa /= expScale
+                mantissa /= expScale
             else
-                tempMantissa *= expScale
+                mantissa *= expScale
 
             if (state & STATE_NEGATIVE)
                 return {
-                    value: -tempMantissa,
+                    value: -mantissa,
                     nextIndex: i
                 }
 
             return {
-                value: tempMantissa,
+                value: mantissa,
                 nextIndex: i
             }
         }
         else if (digitsCount <= MAX_SAFE_LONG_DIGITS) {
             if (digitsCount < MAX_SAFE_INT_DIGITS) {
-                conversionU32[0] = tempMantissa >>> 0
-                conversionU32[1] = Math.floor(tempMantissa / 0x100000000)
+                mantissaU32[0] = mantissa >>> 0
+                mantissaU32[1] = Math.floor(mantissa / 0x100000000)
             }
 
-            const mantissa = combine(conversionU32[1], conversionU32[0])
+            const mantissaBig = combine(mantissaU32[1], mantissaU32[0])
 
-            const result = toFloat64(conversionU32, exponent)
-            const result1 = computeFloat(exponent, mantissa, defaultFloatInfo)
+            const result = toFloat64(mantissaU32, exponent)
+            const result1 = computeFloat(exponent, mantissaBig, defaultFloatInfo)
 
             if (result1 && !result) {
                 return {
