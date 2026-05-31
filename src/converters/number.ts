@@ -1,10 +1,8 @@
+import { DOT, EXPONENT, EXPONENT_UPPER, MINUS, PLUS, ZERO } from "../utils/utf8constants"
 import { ConvertMeta, ConvertResult, ConvertState } from "./types"
 
-export function convertNumber(
-    ctx: ConvertState, _metadata: ConvertMeta, index: number, _depth: number): ConvertResult<number> {
-    const bytes = ctx.bytes
-
-    return parseNumberF64(bytes, index)
+export function convertNumber(ctx: ConvertState, _metadata: ConvertMeta, index: number, _depth: number): ConvertResult<number> {
+    return parseNumberF64(ctx.bytes, index)
 }
 
 const isDigit = (byte: number) => byte >= 48 && byte <= 57
@@ -20,7 +18,7 @@ for (let exp = -1022; exp <= 1023; exp++) {
     POW2[exp + 1022] = Math.pow(2, exp)
 }
 
-const MAX_DIGITS_COUNT = 1024
+const MAX_DIGITS_COUNT = 753
 
 const buffer = new ArrayBuffer(8)
 const conversionU32 = new Uint32Array(buffer)
@@ -30,9 +28,6 @@ const conversionF64 = new Float64Array(buffer)
 export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<number> {
     let i = start
 
-    conversionU32[0] = 0
-    conversionU32[1] = 0
-
     const STATE_NEGATIVE = 0x01
     const STATE_DECIMAL = 0x02
     const STATE_END = 0x04
@@ -40,17 +35,10 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
 
     let state = 0 >>> 0
 
-    const PLUS = 43
-    const MINUS = 45
     if (bytes[i] === MINUS) {
         state ^= STATE_NEGATIVE
         i++
     }
-
-    const ZERO = 48
-    const DOT = 46
-    const EXPONENT = 69
-    const EXPONENT_UPPER = 101
 
     let scale = 0
 
