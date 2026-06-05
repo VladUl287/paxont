@@ -2,7 +2,7 @@ import { DOT, EXPONENT, EXPONENT_UPPER, MINUS, PLUS, ZERO } from "../utils/utf8c
 import { ConvertMeta, ConvertResult, ConvertState } from "./types"
 
 export function convertNumber(ctx: ConvertState, _metadata: ConvertMeta, index: number, _depth: number): ConvertResult<number> {
-    return parseNumberF64(ctx.bytes, index)
+    return parseNumberF64_2(ctx.bytes, index)
 }
 
 const isDigit = (byte: number) => byte >= 48 && byte <= 57
@@ -47,39 +47,29 @@ function tryParseInteger(b: Uint8Array, store: Store): boolean {
     const MAX_SAFE_LONG_DIGITS = 19
 
     const len = b.length
+
     while (i <= len - 4 && dc <= MAX_SAFE_INT_DIGITS - 4) {
-        const a1 = b[i],
-            a2 = b[i + 1],
-            a3 = b[i + 2],
-            a4 = b[i + 3]
+        const a1 = (b[i] - 48) >>> 0
+        const a2 = (b[i + 1] - 48) >>> 0
+        const a3 = (b[i + 2] - 48) >>> 0
+        const a4 = (b[i + 3] - 48) >>> 0
 
-        const word = (a1 | a2 << 8 | a3 << 16 | a4 << 24) - 0x30303030
-        const hasNonDigit = ((word + 0x76767676) | word) & 0x80808080
+        if (a1 > 9 || a2 > 9 || a3 > 9 || a4 > 9) break
 
-        if (hasNonDigit !== 0)
-            break
-
-        const chunk = ((a1 & 0x0F) * 1000 + (a2 & 0x0F) * 100 + (a3 & 0x0F) * 10 + (a4 & 0x0F))
-        m = m * 10000 + chunk
+        m = m * 10000 + (a1 * 1000 + a2 * 100 + a3 * 10 + a4)
         dc += 4
         i += 4
     }
 
     while (i < len && dc <= MAX_SAFE_INT_DIGITS) {
-        const d = (b[i] & 0x0F) >>> 0
+        const d = (b[i] - 48) >>> 0
 
-        if (d > 9)
-            break
+        if (d > 9) break
 
         m = m * 10 + d
         dc++
         i++
     }
-
-    // if (i < len && isDigit(b[i])) {
-    //     while (i < len && dc <= MAX_SAFE_LONG_DIGITS) {
-    //     }
-    // }
 
     store.index = i
     store.mantissa = m
@@ -150,7 +140,7 @@ function tryParseExponent(b: Uint8Array, state: any): boolean {
     return true
 }
 
-export function parseNumberF64(b: Uint8Array, offset: number): ConvertResult<number> {
+export function parseNumberF64_2(b: Uint8Array, offset: number): ConvertResult<number> {
     let i = offset
 
     let state = 0 >>> 0
