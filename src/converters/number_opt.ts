@@ -62,7 +62,7 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
         i += 4
     }
 
-    while (i < len && dc <= MAX_SAFE_INT_DIGITS) {
+    while (i < len && dc < MAX_SAFE_INT_DIGITS) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
 
@@ -71,12 +71,12 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
         i++
     }
 
-    if (dc === MAX_SAFE_INT_DIGITS)
-        tryParseLong(b, s)
-
     s.index = i
     s.mantissa = m
     s.digitsCount = dc
+
+    if (dc === MAX_SAFE_INT_DIGITS)
+        tryParseLong(b, s)
 
     return true
 }
@@ -87,30 +87,34 @@ function tryParseLong(b: Uint8Array, s: Store): void {
     let m32 = s.mantissaU32
     let dc = s.digitsCount
 
-    mantissaU32[0] = m >>> 0
-    mantissaU32[1] = Math.floor(m / 0x100000000)
+    if (((b[i] - 48) >>> 0) > 9)
+        return
+
+    m32[0] = m >>> 0
+    m32[1] = Math.floor(m / 0x100000000)
     m = 0
 
+    let localDc = 0
     const len = b.length
-    while (i < len && dc <= MAX_SAFE_LONG_DIGITS) {
+    while (i < len && dc < MAX_SAFE_LONG_DIGITS) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
 
         m = m * 10 + d
+        localDc++
         dc++
         i++
     }
 
-    if (m > 0) {
-        const low = mantissaU32[0] * 1000 + m
-        mantissaU32[0] = low >>> 0
-        mantissaU32[1] = mantissaU32[1] * 1000 + Math.floor(low / 0x100000000)
+    if (localDc > 0) {
+        const low = m32[0] * POS_POW10[localDc] + m
+        m32[0] = low >>> 0
+        m32[1] = m32[1] * POS_POW10[localDc] + Math.floor(low / 0x100000000)
         m = 0
     }
 
     s.index = i
     s.mantissa = m
-    s.mantissaU32 = m32
     s.digitsCount = dc
 }
 
@@ -218,7 +222,7 @@ export function parseNumberF64_2(b: Uint8Array, offset: number): ConvertResult<n
             if (dc < MAX_SAFE_INT_DIGITS || (dc === MAX_SAFE_INT_DIGITS && m <= MAX_SAFE_INTEGER))
                 split(m, m32)
 
-            const f64 = toFloat64(mantissaU32, e)
+            const f64 = toFloat64(m32, e)
             if (f64) {
                 return {
                     value: f64,
@@ -332,29 +336,6 @@ function shiftRight2(low: number, high: number, bits: number): Uint32Array {
 
     value[0] = 0
     value[1] = 0
-    return value
-}
-
-function shiftRight3(value: Uint32Array, bits: number, index: number): Uint32Array {
-    const low = value[index]
-    const high = value[index + 1]
-
-    if (bits === 0) return value
-
-    if (bits < 32) {
-        value[index] = (low >>> bits) | (high << (32 - bits))
-        value[index + 1] = high >>> bits
-        return value
-    }
-
-    if (bits < 64) {
-        value[index] = high >>> (bits - 32)
-        value[index + 1] = 0
-        return value
-    }
-
-    value[index] = 0
-    value[index + 1] = 0
     return value
 }
 
