@@ -38,22 +38,23 @@ type Store = {
     index: number
 }
 
-function tryParseInteger(b: Uint8Array, store: Store): boolean {
-    let i = store.index
-    let m = store.mantissa
-    let dc = store.digitsCount
+const MAX_SAFE_INTEGER = 9007199254740992
+const MAX_SAFE_INT_DIGITS = 16
+const MAX_SAFE_LONG_DIGITS = 19
+const MAX_FAST_EXPONENT = 22
+const MIN_FAST_EXPONENT = -22
 
-    const MAX_SAFE_INT_DIGITS = 16
-    const MAX_SAFE_LONG_DIGITS = 19
+function tryParseInteger(b: Uint8Array, s: Store): boolean {
+    let i = s.index
+    let m = s.mantissa
+    let dc = s.digitsCount
 
     const len = b.length
-
     while (i <= len - 4 && dc <= MAX_SAFE_INT_DIGITS - 4) {
         const a1 = (b[i] - 48) >>> 0
         const a2 = (b[i + 1] - 48) >>> 0
         const a3 = (b[i + 2] - 48) >>> 0
         const a4 = (b[i + 3] - 48) >>> 0
-
         if (a1 > 9 || a2 > 9 || a3 > 9 || a4 > 9) break
 
         m = m * 10000 + (a1 * 1000 + a2 * 100 + a3 * 10 + a4)
@@ -63,7 +64,6 @@ function tryParseInteger(b: Uint8Array, store: Store): boolean {
 
     while (i < len && dc <= MAX_SAFE_INT_DIGITS) {
         const d = (b[i] - 48) >>> 0
-
         if (d > 9) break
 
         m = m * 10 + d
@@ -71,78 +71,102 @@ function tryParseInteger(b: Uint8Array, store: Store): boolean {
         i++
     }
 
-    store.index = i
-    store.mantissa = m
-    store.digitsCount = dc
+    if (dc === MAX_SAFE_INT_DIGITS)
+        tryParseLong(b, s)
+
+    s.index = i
+    s.mantissa = m
+    s.digitsCount = dc
 
     return true
 }
 
-function tryParseDecimal(b: Uint8Array, state: Store): boolean {
-    let i = state.index
-    let integerLength = i
-    let mantissa = state.mantissa
-    let exponent = state.exponent
-    let digitsCount = state.digitsCount
+function tryParseLong(b: Uint8Array, s: Store): void {
+    let i = s.index
+    let m = s.mantissa
+    let m32 = s.mantissaU32
+    let dc = s.digitsCount
 
-    const length = b.length
-    while (i < length) {
-        const digit = b[i] & 0x0F
+    mantissaU32[0] = m >>> 0
+    mantissaU32[1] = Math.floor(m / 0x100000000)
+    m = 0
 
-        if ((digit >>> 0) > 9)
-            break
+    const len = b.length
+    while (i < len && dc <= MAX_SAFE_LONG_DIGITS) {
+        const d = (b[i] - 48) >>> 0
+        if (d > 9) break
 
-        mantissa = mantissa * 10 + digit
+        m = m * 10 + d
+        dc++
         i++
     }
 
-    exponent = integerLength - i + 1
-    digitsCount -= exponent
+    if (m > 0) {
+        const low = mantissaU32[0] * 1000 + m
+        mantissaU32[0] = low >>> 0
+        mantissaU32[1] = mantissaU32[1] * 1000 + Math.floor(low / 0x100000000)
+        m = 0
+    }
 
-    state.mantissa = mantissa
-    state.exponent = exponent
-    state.digitsCount = digitsCount
-
-    return true
+    s.index = i
+    s.mantissa = m
+    s.mantissaU32 = m32
+    s.digitsCount = dc
 }
 
-function tryParseExponent(b: Uint8Array, state: any): boolean {
-    let i = state.i
-    let exponent = state.exponent
-    const length = state.length
-    if (i < length && (b[i] === EXPONENT || b[i] === EXPONENT_UPPER)) {
+function tryParseDecimal(b: Uint8Array, s: Store): void {
+    let i = s.index + 1
+    let m = s.mantissa
+    let dc = s.digitsCount
+
+    const start = i
+    const len = b.length
+
+    while (i < len) {
+        const d = (b[i] - 48) >>> 0
+        if (d > 9) break
+
+        m = m * 10 + d
         i++
-
-        let exponentSign = 1
-        if (b[i] === MINUS) {
-            exponentSign = -1
-            i++
-        }
-        else if (b[i] === PLUS) {
-            i++
-        }
-
-        let exponentNum = 0
-
-        while (isDigit(b[i])) {
-            if (exponentNum < 0x10000) {
-                exponentNum = exponentNum * 10 + (b[i] & 0x0F)
-            }
-            i++
-        }
-
-        exponentNum *= exponentSign
-        exponent += exponentNum
     }
 
-    state.exponent = exponent
+    const e = start - i + 1
+    dc -= e
+
+    s.mantissa = m
+    s.exponent = e
+    s.digitsCount = dc
+}
+
+function tryParseExponent(b: Uint8Array, s: Store): boolean {
+    let i = s.index + 1
+
+    let sign = 1
+    if (b[i] === MINUS) {
+        sign = -1
+        i++
+    }
+    else if (b[i] === PLUS) {
+        i++
+    }
+
+    let e = 0
+    while (i < b.length) {
+        const d = (b[i] - 48) >>> 0
+        if (d > 9) break
+
+        if (e < 0x10000)
+            e = e * 10 + d
+
+        i++
+    }
+    s.exponent += (e * sign)
 
     return true
 }
 
 export function parseNumberF64_2(b: Uint8Array, offset: number): ConvertResult<number> {
     let i = offset
-
     let state = 0 >>> 0
 
     const STATE_NEGATIVE = 0x01
@@ -151,12 +175,8 @@ export function parseNumberF64_2(b: Uint8Array, offset: number): ConvertResult<n
         i++
     }
 
-    const MAX_SAFE_INT_DIGITS = 16
-    const MAX_SAFE_LONG_DIGITS = 19
-
-    const length = b.length
-
-    const store = {
+    const len = b.length
+    const s = {
         index: i,
         exponent: 0,
         mantissa: 0,
@@ -164,38 +184,44 @@ export function parseNumberF64_2(b: Uint8Array, offset: number): ConvertResult<n
         digitsCount: 0,
     }
 
-    if (tryParseInteger(b, store)) {
-        i = store.index
+    if (tryParseInteger(b, s)) {
+        i = s.index
 
-        if (i < length && b[i] === DOT) {
-            tryParseDecimal(b, store)
-        }
+        if (i < len && b[i] === DOT)
+            tryParseDecimal(b, s)
+        i = s.index
 
-        if (i < length && (b[i] === EXPONENT || b[i] === EXPONENT_UPPER)) {
-            tryParseExponent(b, store)
-        }
+        if (s.digitsCount === 0)
+            throw new Error('')
 
-        let mantissa = store.mantissa
-        let exponent = store.exponent
-        let digitsCount = store.digitsCount
+        if (i < len && (b[i] === EXPONENT || b[i] === EXPONENT_UPPER))
+            tryParseExponent(b, s)
+        i = s.index
 
-        const MAX_FAST_EXPONENT = 22
-        const MIN_FAST_EXPONENT = -22
-        if (exponent >= MIN_FAST_EXPONENT && exponent <= MAX_FAST_EXPONENT && digitsCount < MAX_SAFE_INT_DIGITS) {
-            if (exponent < 0)
-                mantissa /= POS_POW10[-exponent]
+        let m = s.mantissa
+        let e = s.exponent
+        let dc = s.digitsCount
+
+        if (MIN_FAST_EXPONENT <= e && e <= MAX_FAST_EXPONENT && dc <= MAX_SAFE_INT_DIGITS && m <= MAX_SAFE_INTEGER) {
+            if (e < 0)
+                m /= POS_POW10[-e]
             else
-                mantissa *= POS_POW10[exponent]
+                m *= POS_POW10[e]
             return {
-                value: (state & STATE_NEGATIVE) ? -mantissa : mantissa,
+                value: (state & STATE_NEGATIVE) ? -m : m,
                 nextIndex: i
             }
         }
-        else if (digitsCount >= MAX_SAFE_INT_DIGITS && digitsCount <= MAX_SAFE_LONG_DIGITS) {
-            const result = toFloat64(mantissaU32, exponent)
-            if (result) {
+        else if (dc <= MAX_SAFE_LONG_DIGITS) {
+            let m32 = s.mantissaU32
+
+            if (dc < MAX_SAFE_INT_DIGITS || (dc === MAX_SAFE_INT_DIGITS && m <= MAX_SAFE_INTEGER))
+                split(m, m32)
+
+            const f64 = toFloat64(mantissaU32, e)
+            if (f64) {
                 return {
-                    value: result,
+                    value: f64,
                     nextIndex: i
                 }
             }
@@ -205,7 +231,7 @@ export function parseNumberF64_2(b: Uint8Array, offset: number): ConvertResult<n
     const isNumberByte = (b: number) =>
         isDigit(b) || b === DOT || b === EXPONENT || b === EXPONENT_UPPER || PLUS || MINUS
 
-    while (i < length && isNumberByte(b[i]))
+    while (i < len && isNumberByte(b[i]))
         i++
 
     const result = decoder.decode(b.subarray(offset, i))
@@ -757,6 +783,11 @@ function split64(value: bigint) {
     const low = Number(value & 0xFFFFFFFFn)
     const high = Number((value >> 32n) & 0xFFFFFFFFn)
     return { high, low }
+}
+
+function split(value: number, result: Uint32Array): void {
+    result[0] = value >>> 0
+    result[1] = Math.floor(value / 0x100000000)
 }
 
 function combine(high: number, low: number) {
