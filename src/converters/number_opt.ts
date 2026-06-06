@@ -43,6 +43,13 @@ const MAX_SAFE_INT_DIGITS = 16
 const MAX_SAFE_LONG_DIGITS = 19
 const MAX_FAST_EXPONENT = 22
 const MIN_FAST_EXPONENT = -22
+const MIN_SAFE_EXPONENT = -342
+const MAX_SAFE_EXPONENT = 308
+const DENORMAL_MANTISSA_BITS = 52
+const MIN_EXP_ROUND_TO_EVEN = -27
+const MAX_EXP_ROUND_TO_EVEN = 55
+const MAX_BINARY_EXPONENT = 1023
+const INFINITY_EXPONENT = 2047
 
 function tryParseInteger(b: Uint8Array, s: Store): boolean {
     let i = s.index
@@ -292,7 +299,7 @@ function shiftLeft(value: Uint32Array, bits: number): Uint32Array {
     return value
 }
 
-function shiftLeft2(value: Uint32Array, bits: number): Uint32Array {
+function shiftLeft3(value: Uint32Array, bits: number): Uint32Array {
     const low = value[0]
     const high = value[1]
 
@@ -317,26 +324,24 @@ function shiftLeft2(value: Uint32Array, bits: number): Uint32Array {
     return result
 }
 
-function shiftRight2(low: number, high: number, bits: number): Uint32Array {
-    const value = new Uint32Array(2)
-
-    if (bits === 0) return value
+function shiftRight2(low: number, high: number, bits: number, result: Uint32Array): Uint32Array {
+    if (bits === 0) return result
 
     if (bits < 32) {
-        value[0] = (low >>> bits) | (high << (32 - bits))
-        value[1] = high >>> bits
-        return value
+        result[0] = (low >>> bits) | (high << (32 - bits))
+        result[1] = high >>> bits
+        return result
     }
 
     if (bits < 64) {
-        value[0] = high >>> (bits - 32)
-        value[1] = 0
-        return value
+        result[0] = high >>> (bits - 32)
+        result[1] = 0
+        return result
     }
 
-    value[0] = 0
-    value[1] = 0
-    return value
+    result[0] = 0
+    result[1] = 0
+    return result
 }
 
 function isGreaterThan(al: number, ah: number, bl: number, bh: number) {
@@ -371,33 +376,26 @@ const POW_2 = new Array<number>(2048); // Adjust size as needed
 for (let i = -1024; i <= 1024; i++) {
     POW_2[i + 1024] = Math.pow(2, i);
 }
+
 const product = new Uint32Array(4)
 
 const maxValue = split64(9007199254740992n)
 const halfValue = split64(4503599627370496n)
+
 export function toFloat64(m: Uint32Array, e: number): number | undefined {
-    const low = m[0]
-    const high = m[1]
+    const m32 = m
+    const low = m32[0]
+    const high = m32[1]
 
-    product[0] = 0
-    product[1] = 0
-    product[2] = 0
-    product[3] = 0
-
-    const MIN_SAFE_EXPONENT = -342
     if ((low === 0 && high === 0) || e < MIN_SAFE_EXPONENT)
         return undefined
 
-    const MAX_SAFE_EXPONENT = 308
     if (e > MAX_SAFE_EXPONENT)
         return NaN
 
-    const lz = clz1(m)
-    const normalizedM = shiftLeft(m, lz)
+    const lz = clz1(m32)
+    const normalizedM = shiftLeft(m32, lz)
 
-    const test = combine(normalizedM[1], normalizedM[0])
-
-    const DENORMAL_MANTISSA_BITS = 52
     computeProduct(normalizedM, e, DENORMAL_MANTISSA_BITS + 3, product)
 
     const alow = product[0]
@@ -405,27 +403,15 @@ export function toFloat64(m: Uint32Array, e: number): number | undefined {
     const ahigh = product[2]
     const bhigh = product[3]
 
-    const test1 = combine32(bhigh, ahigh, blow, alow) //170141183460469225374508428468124369920n
-
-    const MIN_EXP_ROUND_TO_EVEN = -27
-    const MAX_EXP_ROUND_TO_EVEN = 55
     const insideSafeExponent = e >= MIN_EXP_ROUND_TO_EVEN && e <= MAX_EXP_ROUND_TO_EVEN
     if (alow === 0xFFFFFFFF && blow === 0xFFFFFFFF && !insideSafeExponent)
         return undefined
 
-    const test3 = bhigh.toString(2)
-    // const upperBit = (bhigh >>> (31 - Math.clz32(bhigh)))
-    const upperBit = (bhigh >>> 31)
-
+    const upperBit = bhigh >>> 31
     const shiftAmount = upperBit + 64 - DENORMAL_MANTISSA_BITS - 3
-    const mantissaU32 = shiftRight2(ahigh, bhigh, shiftAmount)
-
-    const test2 = combine(mantissaU32[1], mantissaU32[0])
-
-    const MAX_BINARY_EXPONENT = 1023
+    const mantissaU32 = shiftRight2(ahigh, bhigh, shiftAmount, m32)
     let exponent = calculatePower(e) + upperBit - lz + MAX_BINARY_EXPONENT
 
-    const INFINITY_EXPONENT = 2047
     if (exponent <= 0) {
         if (-exponent + 1 >= 64)
             return undefined
@@ -446,14 +432,12 @@ export function toFloat64(m: Uint32Array, e: number): number | undefined {
 
         shiftRight(mantissaU32, 1)
 
-        const test = combine(mantissaU32[1], mantissaU32[0])
-
         exponent = isLessThan(mantissaU32[0], mantissaU32[1], halfValue.low, halfValue.high) ? 0 : 1
     }
     else {
         const lessOrEqualToOne = blow === 0 && ((alow >>> 0) <= 1)
-        if (lessOrEqualToOne && insideSafeExponent && (mantissaU32[0] & 3) === 1) {
-            const check = shiftLeft2(mantissaU32, shiftAmount)
+        if (lessOrEqualToOne && insideSafeExponent && (m32[0] & 3) === 1) {
+            const check = shiftLeft3(mantissaU32, shiftAmount)
             if (check[0] === ahigh && check[1] === bhigh) {
                 mantissaU32[0] &= ~1
             }
@@ -490,9 +474,8 @@ export function toFloat64(m: Uint32Array, e: number): number | undefined {
     if (exponent <= 0)
         return undefined
 
-    const mantissa = Number(((BigInt(mantissaU32[1]) & 0xFFFFFn) << 32n) | BigInt(mantissaU32[0]))
-    // const mantissa = combine53(mantissaU32[1], mantissaU32[0])
-    // const mantissa = ((mantissaU32[1] & 0xFFFFF) >>> 0) | mantissaU32[0]
+    // const mantissa = Number(((BigInt(mantissaU32[1]) & 0xFFFFFn) << 32n) | BigInt(mantissaU32[0]))
+    const mantissa = combine53(mantissaU32[1], mantissaU32[0])
 
     if (exponent === INFINITY_EXPONENT && mantissa === 0)
         return Infinity
@@ -508,23 +491,24 @@ export function toFloat64(m: Uint32Array, e: number): number | undefined {
 const precisionMasks = new Array(64).fill(0).map((_, i) => split64(0xFFFFFFFFFFFFFFFFn >> BigInt(i + 1)))
 const precisionMaskAll = split64(0xFFFFFFFFFFFFFFFFn)
 
-function computeProduct(m: Uint32Array, e: number, bits: number, result: Uint32Array): void {
-    const mlow = m[0]
-    const mhigh = m[1]
+function computeProduct(m: Uint32Array, e: number, bits: number, r: Uint32Array): void {
+    const mlow = m[0] >>> 0
+    const mhigh = m[1] >>> 0
 
     const index = 2 * (e + 342)
-    const { low: plow, high: phigh } = POW5_64[index]
+    const plow = POW5_64_LOW[index]
+    const phigh = POW5_64_HIGH[index]
 
-    const bhigh = wasm.mul(mlow >>> 0, mhigh >>> 0, plow >>> 0, phigh >>> 0) >>> 0
+    const bhigh = wasm.mul(mlow, mhigh, plow >>> 0, phigh >>> 0) >>> 0
     const ahigh = wasm.get_mhigh() >>> 0
     const blow = wasm.get_mlow() >>> 0
     const alow = wasm.get_low() >>> 0
 
-    const precisionMask = bits < 64 ? precisionMasks[bits] : precisionMaskAll
+    const preciseMask = bits < 64 ? precisionMasks[bits] : precisionMaskAll
 
-    if (((ahigh & precisionMask.low) === precisionMask.low) &&
-        ((bhigh & precisionMask.high) === precisionMask.high)) {
-        const { low: plow, high: phigh } = POW5_64[index + 1]
+    if ((ahigh & preciseMask.low) === preciseMask.low && (bhigh & preciseMask.high) === preciseMask.high) {
+        const plow = POW5_64_LOW[index + 1]
+        const phigh = POW5_64_HIGH[index + 1]
 
         const bhigh2 = wasm.mul(mlow, mhigh, plow, phigh) >>> 0
         const ahigh2 = wasm.get_mhigh() >>> 0
@@ -541,24 +525,19 @@ function computeProduct(m: Uint32Array, e: number, bits: number, result: Uint32A
 
             if ((newHighLow >>> 0) < ahigh)
                 newHighHigh++
-
-            // if (newHighLow > 0xFFFFFFFF) {
-            //     newHighLow = 0
-            //     newHighHigh++
-            // }
         }
 
-        result[0] = newLow
-        result[1] = newLowHigh
-        result[2] = newHighLow
-        result[3] = newHighHigh
+        r[0] = newLow
+        r[1] = newLowHigh
+        r[2] = newHighLow
+        r[3] = newHighHigh
         return
     }
 
-    result[0] = alow
-    result[1] = blow
-    result[2] = ahigh
-    result[3] = bhigh
+    r[0] = alow
+    r[1] = blow
+    r[2] = ahigh
+    r[3] = bhigh
 }
 
 export function computeFloat(e: number, m: bigint, info: IFloatInfo): number | undefined {
@@ -813,9 +792,7 @@ function clz1(value: Uint32Array): number {
     const high = value[1]
     if (high !== 0)
         return Math.clz32(high)
-
-    const low = value[0]
-    return 32 + Math.clz32(low)
+    return 32 + Math.clz32(value[0])
 }
 
 function clz(x: bigint): number {
@@ -1962,3 +1939,5 @@ const POW5_128 =
     ]
 
 const POW5_64 = POW5_128.map(value => split64(value))
+const POW5_64_LOW = POW5_128.map(value => split64(value).low)
+const POW5_64_HIGH = POW5_128.map(value => split64(value).high)
