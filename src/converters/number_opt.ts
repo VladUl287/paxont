@@ -82,20 +82,29 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
         i++
     }
 
-    const d = (b[i] - 48) >>> 0
-    if (d <= 9 && (m * 10 + d) <= MAX_SAFE_INTEGER) {
-        m = m * 10 + d
-        dc++
-        i++
+    if (i < len && dc >= MAX_SAFE_INT_DIGITS - 1) {
+        const d = (b[i] - 48) >>> 0
+
+        if (d <= 9) {
+            const tempM = m * 10 + d
+            if (tempM <= MAX_SAFE_INTEGER) {
+                m = tempM
+                dc++
+                i++
+            }
+
+            s.index = i
+            s.mantissa = m
+            s.digitsCount = dc
+
+            tryParseLong(b, s)
+            return true
+        }
     }
 
     s.index = i
     s.mantissa = m
     s.digitsCount = dc
-
-    if (dc >= MAX_SAFE_INT_DIGITS - 1)
-        tryParseLong(b, s)
-
     return true
 }
 
