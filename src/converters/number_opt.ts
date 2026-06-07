@@ -57,7 +57,7 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
     let dc = s.digitsCount
 
     const len = b.length
-    while (i <= len - 4 && dc <= MAX_SAFE_INT_DIGITS - 4) {
+    while (i <= len - 4 && dc < MAX_SAFE_INT_DIGITS - 4) {
         const a1 = b[i]
         const a2 = b[i + 1]
         const a3 = b[i + 2]
