@@ -259,18 +259,108 @@ export function parseNumberF64_2(b: Uint8Array, offset: number): ConvertResult<n
         }
     }
 
-    const isNumberByte = (b: number) =>
-        isDigit(b) || b === DOT || b === EXPONENT || b === EXPONENT_UPPER || PLUS || MINUS
+    // const strNumber = decodeNumber(b, offset)
+    // return {
+    //     value: Number(strNumber),
+    //     nextIndex: i
+    // }
 
-    while (i < len && isNumberByte(b[i]))
-        i++
-
-    const result = decoder.decode(b.subarray(offset, i))
-
+    const strNumber = decodeNumber1(b, offset)
     return {
-        value: Number(result),
+        value: Number(strNumber),
         nextIndex: i
     }
+}
+
+const chunked = new Array(1024).fill(0)
+function decodeNumber(b: Uint8Array, i: number) {
+    let j = 0
+    let dc = 0
+
+    const len = b.length
+
+    while (i < len - 4) {
+        const a1 = b[i]
+        const a2 = b[i + 1]
+        const a3 = b[i + 2]
+        const a4 = b[i + 3]
+
+        const word = (a1 | a2 << 8 | a3 << 16 | a4 << 24) - 0x30303030
+        const hasNonDigit = ((word + 0x76767676) | word) & 0x80808080
+
+        if (hasNonDigit !== 0) break
+
+        const chunk = (a1 & 0x0F) * 1000 + (a2 & 0x0F) * 100 + (a3 & 0x0F) * 10 + (a4 & 0x0F)
+        chunked[j] = chunked[j] * 10000 + chunk
+        dc += 4
+        i += 4
+
+        if (dc === MAX_SAFE_INT_DIGITS - 4) {
+            while (i < len) {
+                const d = (b[i] - 48) >>> 0
+                if (d <= 9) {
+                    chunked[j] = chunked[j] * 10 + d
+                    dc++
+
+                    if (dc === MAX_SAFE_INT_DIGITS - 1) {
+                        dc = 0
+                        j++
+                        i++
+                        break
+                    }
+                }
+                i++
+            }
+        }
+    }
+
+    while (i < len) {
+        const d = (b[i] - 48) >>> 0
+
+        if (d <= 9) {
+            chunked[j] = chunked[j] * 10 + d
+            dc++
+
+            if (dc === MAX_SAFE_INT_DIGITS - 1) {
+                j++
+                dc = 0
+            }
+        }
+
+        i++
+    }
+
+    return `${chunked[0]}${chunked[1]}${chunked[2]}${chunked[3]}${chunked[4]}${chunked[5]}${chunked[6]}${chunked[7]}${chunked[8]}${chunked[9]}${chunked[10]}${chunked[11]}${chunked[12]}`
+}
+
+function decodeNumber1(b: Uint8Array, offset: number) {
+    let i = offset
+    let dc = 0
+
+    const len = b.length
+    while (i < len - 4) {
+        const a1 = b[i]
+        const a2 = b[i + 1]
+        const a3 = b[i + 2]
+        const a4 = b[i + 3]
+
+        const word = (a1 | a2 << 8 | a3 << 16 | a4 << 24) - 0x30303030
+        const hasNonDigit = ((word + 0x76767676) | word) & 0x80808080
+        if (hasNonDigit !== 0) break
+
+        dc += 4
+        i += 4
+    }
+
+    while (i < len) {
+        const d = (b[i] - 48) >>> 0
+        if (d > 9) break
+
+        dc++
+        i++
+    }
+
+    return decoder.decode(b.subarray(offset, i))
 }
 
 function shiftRight(value: Uint32Array, bits: number): Uint32Array {
