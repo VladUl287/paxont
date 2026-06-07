@@ -73,10 +73,17 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
         i += 4
     }
 
-    while (i < len && dc < MAX_SAFE_INT_DIGITS) {
+    while (i < len && dc < MAX_SAFE_INT_DIGITS - 1) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
 
+        m = m * 10 + d
+        dc++
+        i++
+    }
+
+    const d = (b[i] - 48) >>> 0
+    if (d <= 9 && (m * 10 + d) <= MAX_SAFE_INTEGER) {
         m = m * 10 + d
         dc++
         i++
@@ -98,7 +105,8 @@ function tryParseLong(b: Uint8Array, s: Store): void {
     let m32 = s.mantissaU32
     let dc = s.digitsCount
 
-    if (((b[i] - 48) >>> 0) > 9)
+    const len = b.length
+    if (i < len && ((b[i] - 48) >>> 0) > 9)
         return
 
     m32[0] = m >>> 0
@@ -106,7 +114,6 @@ function tryParseLong(b: Uint8Array, s: Store): void {
     m = 0
 
     let localDc = 0
-    const len = b.length
     while (i < len && dc < MAX_SAFE_LONG_DIGITS) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
@@ -201,6 +208,11 @@ export function parseNumberF64_2(b: Uint8Array, offset: number): ConvertResult<n
 
     if (tryParseInteger(b, s)) {
         i = s.index
+
+        return {
+            value: s.mantissa,
+            nextIndex: i
+        }
 
         if (i < len && b[i] === DOT)
             tryParseDecimal(b, s)
