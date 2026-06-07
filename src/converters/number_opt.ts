@@ -118,8 +118,7 @@ function tryParseLong(b: Uint8Array, s: Store): void {
     if (i < len && ((b[i] - 48) >>> 0) > 9)
         return
 
-    m32[0] = m >>> 0
-    m32[1] = Math.floor(m / 0x100000000)
+    split32(m, m32)
     m = 0
 
     let localDc = 0
@@ -248,7 +247,7 @@ export function parseNumberF64_2(b: Uint8Array, offset: number): ConvertResult<n
             let m32 = s.mantissaU32
 
             if (dc < MAX_SAFE_INT_DIGITS || (dc === MAX_SAFE_INT_DIGITS && m <= MAX_SAFE_INTEGER))
-                split(m, m32)
+                split32(m, m32)
 
             const f64 = toFloat64(m32, e)
             if (f64) {
@@ -766,7 +765,7 @@ function split64(value: bigint) {
     return { high, low }
 }
 
-function split(value: number, result: Uint32Array): void {
+function split32(value: number, result: Uint32Array): void {
     result[0] = value >>> 0
     result[1] = Math.floor(value / 0x100000000)
 }
