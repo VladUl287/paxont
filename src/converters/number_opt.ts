@@ -134,9 +134,10 @@ function tryParseLong(b: Uint8Array, s: Store): void {
     }
 
     if (localDc > 0) {
-        const low = m32[0] * POS_POW10[localDc] + m
+        const pow = POS_POW10[localDc]
+        const low = m32[0] * pow + m
         m32[0] = low >>> 0
-        m32[1] = m32[1] * POS_POW10[localDc] + Math.floor(low / 0x100000000)
+        m32[1] = m32[1] * pow + Math.floor(low / 0x100000000)
         m = 0
     }
 
@@ -217,11 +218,6 @@ export function parseNumberF64_2(b: Uint8Array, offset: number): ConvertResult<n
 
     if (tryParseInteger(b, s)) {
         i = s.index
-
-        return {
-            value: s.mantissa,
-            nextIndex: i
-        }
 
         if (i < len && b[i] === DOT)
             tryParseDecimal(b, s)
