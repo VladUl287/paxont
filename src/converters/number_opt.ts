@@ -58,13 +58,18 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
 
     const len = b.length
     while (i <= len - 4 && dc <= MAX_SAFE_INT_DIGITS - 4) {
-        const a1 = (b[i] - 48) >>> 0
-        const a2 = (b[i + 1] - 48) >>> 0
-        const a3 = (b[i + 2] - 48) >>> 0
-        const a4 = (b[i + 3] - 48) >>> 0
-        if (a1 > 9 || a2 > 9 || a3 > 9 || a4 > 9) break
+        const a1 = b[i]
+        const a2 = b[i + 1]
+        const a3 = b[i + 2]
+        const a4 = b[i + 3]
 
-        m = m * 10000 + (a1 * 1000 + a2 * 100 + a3 * 10 + a4)
+        const word = (a1 | a2 << 8 | a3 << 16 | a4 << 24) - 0x30303030
+        const hasNonDigit = ((word + 0x76767676) | word) & 0x80808080
+
+        if (hasNonDigit !== 0) break
+
+        m = m * 10000 + ((a1 & 0x0F) * 1000 + (a2 & 0x0F) * 100 + (a3 & 0x0F) * 10 + (a4 & 0x0F))
+
         dc += 4
         i += 4
     }
