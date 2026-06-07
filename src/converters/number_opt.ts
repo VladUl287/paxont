@@ -69,7 +69,6 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
         if (hasNonDigit !== 0) break
 
         m = m * 10000 + ((a1 & 0x0F) * 1000 + (a2 & 0x0F) * 100 + (a3 & 0x0F) * 10 + (a4 & 0x0F))
-
         dc += 4
         i += 4
     }
@@ -87,7 +86,7 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
     s.mantissa = m
     s.digitsCount = dc
 
-    if (dc === MAX_SAFE_INT_DIGITS)
+    if (dc >= MAX_SAFE_INT_DIGITS - 1)
         tryParseLong(b, s)
 
     return true
