@@ -265,7 +265,7 @@ export function parseNumberF64_2(b: Uint8Array, offset: number): ConvertResult<n
     //     nextIndex: i
     // }
 
-    const strNumber = decodeNumber1(b, offset)
+    const strNumber = decodeNumber2(b, offset)
     return {
         value: Number(strNumber),
         nextIndex: i
@@ -335,7 +335,6 @@ function decodeNumber(b: Uint8Array, i: number) {
 
 function decodeNumber1(b: Uint8Array, offset: number) {
     let i = offset
-    let dc = 0
 
     const len = b.length
     while (i < len - 4) {
@@ -348,7 +347,6 @@ function decodeNumber1(b: Uint8Array, offset: number) {
         const hasNonDigit = ((word + 0x76767676) | word) & 0x80808080
         if (hasNonDigit !== 0) break
 
-        dc += 4
         i += 4
     }
 
@@ -356,11 +354,47 @@ function decodeNumber1(b: Uint8Array, offset: number) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
 
-        dc++
         i++
     }
 
-    return decoder.decode(b.subarray(offset, i))
+    return b.subarray(offset, i)
+}
+
+const ascii = new Array(1024).fill(0)
+function decodeNumber2(b: Uint8Array, offset: number) {
+    let i = offset
+
+    const len = b.length
+    let j = 0
+    const comma = 0x2C2C2C2C
+    while (i < len - 4) {
+        const a1 = b[i]
+        const a2 = b[i + 1]
+        const a3 = b[i + 2]
+        const a4 = b[i + 3]
+
+        const word = (a1 | a2 << 8 | a3 << 16 | a4 << 24) ^ comma
+        const hasZeroByte = ((word & 0x7F7F7F7F) + 0x7F7F7F7F) & 0x80808080
+
+        if (hasZeroByte !== 0) break
+
+        ascii[j] = b[i]
+        ascii[j + 1] = b[i + 1]
+        ascii[j + 2] = b[i + 2]
+        ascii[j + 3] = b[i + 3]
+
+        j += 4
+        i += 4
+    }
+
+    while (i < len) {
+        if (b[i] === 44) break
+        ascii[j] = b[i]
+        j++
+        i++
+    }
+
+    return String.fromCharCode.apply(0, ascii)
 }
 
 function shiftRight(value: Uint32Array, bits: number): Uint32Array {
