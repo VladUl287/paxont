@@ -328,7 +328,26 @@ function decodeNumber(b: Uint8Array, i: number) {
         i++
     }
 
-    return `${c[0]}${c[1]}${c[2]}${c[3]}${c[4]}${c[5]}${c[6]}${c[7]}${c[8]}${c[9]}${c[10]}${c[11]}${c[12]}`
+    const builder = literalBuilder(j)
+    return builder(c)
+}
+
+type LiteralFunc = (arr: Array<any>) => string
+const literalCache = new Array<LiteralFunc>(70)
+function genLiteralFunc(length: number) {
+    if (length === 0)
+        throw new Error('')
+
+    let literal = '`${c[0]}'
+    for (let i = 1; i <= length; i++)
+        literal += '${c[' + i + ']}'
+    literal += '`'
+
+    return new Function('c', `return ${literal}`)
+}
+function literalBuilder(length: number): LiteralFunc {
+    literalCache[length] ??= genLiteralFunc(length) as LiteralFunc
+    return literalCache[length]
 }
 
 function decodeNumber1(b: Uint8Array, offset: number) {
