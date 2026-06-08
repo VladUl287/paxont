@@ -97,8 +97,7 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
             s.mantissa = m
             s.digitsCount = dc
 
-            tryParseLong(b, s)
-            return true
+            return tryParseLong(b, s)
         }
     }
 
@@ -108,7 +107,7 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
     return true
 }
 
-function tryParseLong(b: Uint8Array, s: Store): void {
+function tryParseLong(b: Uint8Array, s: Store): boolean {
     let i = s.index
     let m = s.mantissa
     let m32 = s.mantissaU32
@@ -116,7 +115,7 @@ function tryParseLong(b: Uint8Array, s: Store): void {
 
     const len = b.length
     if (i < len && ((b[i] - 48) >>> 0) > 9)
-        return
+        return true
 
     split32(m, m32)
     m = 0
@@ -132,6 +131,10 @@ function tryParseLong(b: Uint8Array, s: Store): void {
         i++
     }
 
+    if (dc === MAX_SAFE_LONG_DIGITS && ((b[i] - 48) >>> 0) <= 9) {
+        return false //too many digits, go to slow path
+    }
+
     if (localDc > 0) {
         const pow = POS_POW10[localDc]
         const low = m32[0] * pow + m
@@ -143,6 +146,7 @@ function tryParseLong(b: Uint8Array, s: Store): void {
     s.index = i
     s.mantissa = m
     s.digitsCount = dc
+    return true
 }
 
 function tryParseDecimal(b: Uint8Array, s: Store): void {
@@ -259,20 +263,14 @@ export function parseNumberF64_2(b: Uint8Array, offset: number): ConvertResult<n
         }
     }
 
-    // const strNumber = decodeNumber(b, offset)
-    // return {
-    //     value: Number(strNumber),
-    //     nextIndex: i
-    // }
-
-    const strNumber = decodeNumber2(b, offset)
+    const numberStr = decodeNumber(b, offset)
     return {
-        value: Number(strNumber),
+        value: Number(numberStr),
         nextIndex: i
     }
 }
 
-const chunked = new Array(1024).fill(0)
+const c = new Array(1024).fill(0)
 function decodeNumber(b: Uint8Array, i: number) {
     let j = 0
     let dc = 0
@@ -291,7 +289,7 @@ function decodeNumber(b: Uint8Array, i: number) {
         if (hasNonDigit !== 0) break
 
         const chunk = (a1 & 0x0F) * 1000 + (a2 & 0x0F) * 100 + (a3 & 0x0F) * 10 + (a4 & 0x0F)
-        chunked[j] = chunked[j] * 10000 + chunk
+        c[j] = c[j] * 10000 + chunk
         dc += 4
         i += 4
 
@@ -299,7 +297,7 @@ function decodeNumber(b: Uint8Array, i: number) {
             while (i < len) {
                 const d = (b[i] - 48) >>> 0
                 if (d <= 9) {
-                    chunked[j] = chunked[j] * 10 + d
+                    c[j] = c[j] * 10 + d
                     dc++
 
                     if (dc === MAX_SAFE_INT_DIGITS - 1) {
@@ -318,7 +316,7 @@ function decodeNumber(b: Uint8Array, i: number) {
         const d = (b[i] - 48) >>> 0
 
         if (d <= 9) {
-            chunked[j] = chunked[j] * 10 + d
+            c[j] = c[j] * 10 + d
             dc++
 
             if (dc === MAX_SAFE_INT_DIGITS - 1) {
@@ -330,7 +328,7 @@ function decodeNumber(b: Uint8Array, i: number) {
         i++
     }
 
-    return `${chunked[0]}${chunked[1]}${chunked[2]}${chunked[3]}${chunked[4]}${chunked[5]}${chunked[6]}${chunked[7]}${chunked[8]}${chunked[9]}${chunked[10]}${chunked[11]}${chunked[12]}`
+    return `${c[0]}${c[1]}${c[2]}${c[3]}${c[4]}${c[5]}${c[6]}${c[7]}${c[8]}${c[9]}${c[10]}${c[11]}${c[12]}`
 }
 
 function decodeNumber1(b: Uint8Array, offset: number) {
@@ -357,7 +355,7 @@ function decodeNumber1(b: Uint8Array, offset: number) {
         i++
     }
 
-    return b.subarray(offset, i)
+    return decoder.decode(b.subarray(offset, i))
 }
 
 const ascii = new Array(1024).fill(0)
