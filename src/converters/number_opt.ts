@@ -334,7 +334,7 @@ function decodeNumber(b: Uint8Array, i: number) {
 
 type LiteralFunc = (arr: Array<any>) => string
 const literalCache = new Array<LiteralFunc>(70)
-function genLiteralFunc(length: number) {
+function genLiteralFunc(length: number): LiteralFunc {
     if (length === 0)
         throw new Error('')
 
@@ -343,11 +343,10 @@ function genLiteralFunc(length: number) {
         literal += '${c[' + i + ']}'
     literal += '`'
 
-    return new Function('c', `return ${literal}`)
+    return new Function('c', `return ${literal}`) as LiteralFunc
 }
 function literalBuilder(length: number): LiteralFunc {
-    literalCache[length] ??= genLiteralFunc(length) as LiteralFunc
-    return literalCache[length]
+    return literalCache[length] ??= genLiteralFunc(length)
 }
 
 function decodeNumber1(b: Uint8Array, offset: number) {
