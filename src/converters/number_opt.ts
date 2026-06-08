@@ -56,8 +56,10 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
     let m = s.mantissa
     let dc = s.digitsCount
 
-    const len = b.length
-    while (i <= len - 4 && dc < MAX_SAFE_INT_DIGITS - 4) {
+    const length = b.length
+    while (i < length && b[i] === ZERO) i++
+
+    while (i <= length - 4 && dc < MAX_SAFE_INT_DIGITS - 4) {
         const a1 = b[i]
         const a2 = b[i + 1]
         const a3 = b[i + 2]
@@ -73,7 +75,7 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
         i += 4
     }
 
-    while (i < len && dc < MAX_SAFE_INT_DIGITS - 1) {
+    while (i < length && dc < MAX_SAFE_INT_DIGITS - 1) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
 
@@ -82,7 +84,7 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
         i++
     }
 
-    if (i < len && dc >= MAX_SAFE_INT_DIGITS - 1) {
+    if (i < length && dc >= MAX_SAFE_INT_DIGITS - 1) {
         const d = (b[i] - 48) >>> 0
 
         if (d <= 9) {
@@ -154,10 +156,11 @@ function tryParseDecimal(b: Uint8Array, s: Store): void {
     let m = s.mantissa
     let dc = s.digitsCount
 
-    const start = i
-    const len = b.length
+    if (dc === 0) while (b[i] === ZERO) i++
 
-    while (i < len) {
+    const start = i
+    const length = b.length
+    while (i < length && dc < MAX_SAFE_INT_DIGITS - 1) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
 
@@ -166,11 +169,9 @@ function tryParseDecimal(b: Uint8Array, s: Store): void {
     }
 
     const e = start - i + 1
-    dc -= e
-
     s.mantissa = m
     s.exponent = e
-    s.digitsCount = dc
+    s.digitsCount -= e
 }
 
 function tryParseExponent(b: Uint8Array, s: Store): boolean {
