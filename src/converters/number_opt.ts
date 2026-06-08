@@ -377,43 +377,6 @@ function decodeNumber1(b: Uint8Array, offset: number) {
     return decoder.decode(b.subarray(offset, i))
 }
 
-const ascii = new Array(1024).fill(0)
-function decodeNumber2(b: Uint8Array, offset: number) {
-    let i = offset
-
-    const len = b.length
-    let j = 0
-    const comma = 0x2C2C2C2C
-    while (i < len - 4) {
-        const a1 = b[i]
-        const a2 = b[i + 1]
-        const a3 = b[i + 2]
-        const a4 = b[i + 3]
-
-        const word = (a1 | a2 << 8 | a3 << 16 | a4 << 24) ^ comma
-        const hasZeroByte = ((word & 0x7F7F7F7F) + 0x7F7F7F7F) & 0x80808080
-
-        if (hasZeroByte !== 0) break
-
-        ascii[j] = b[i]
-        ascii[j + 1] = b[i + 1]
-        ascii[j + 2] = b[i + 2]
-        ascii[j + 3] = b[i + 3]
-
-        j += 4
-        i += 4
-    }
-
-    while (i < len) {
-        if (b[i] === 44) break
-        ascii[j] = b[i]
-        j++
-        i++
-    }
-
-    return String.fromCharCode.apply(0, ascii)
-}
-
 function shiftRight(value: Uint32Array, bits: number): Uint32Array {
     const low = value[0]
     const high = value[1]
