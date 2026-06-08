@@ -156,10 +156,10 @@ function tryParseDecimal(b: Uint8Array, s: Store): void {
     let m = s.mantissa
     let dc = s.digitsCount
 
-    if (dc === 0) while (b[i] === ZERO) i++
+    const length = b.length
+    if (dc === 0) while (i < length && b[i] === ZERO) i++
 
     const start = i
-    const length = b.length
     while (i < length && dc < MAX_SAFE_INT_DIGITS - 1) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
