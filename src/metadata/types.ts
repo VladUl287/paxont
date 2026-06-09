@@ -17,27 +17,29 @@ export interface BaseMeta<T> {
 export interface PrimitiveMeta<T> extends BaseMeta<T> { }
 
 export interface ObjectMeta<T> extends BaseMeta<T> {
-    // readonly fields: {
-    //     [K in keyof T]: BaseMeta<T[K]>
-    // }[keyof T][],
-    readonly fields: ObjectFieldMeta<T>[]
-    // readonly fields: ObjectFieldMeta<unknown>[],
-    readonly factory: (props: any[]) => object
+    readonly fields: {
+        [K in keyof T]: BaseMeta<T[K]> & WithName<K>
+    }[keyof T][]
+    readonly factory: (values: unknown[]) => T
     readonly fieldIndexResolver: (field: Uint8Array, index: number) => number
 }
 
-// const test = {} as ObjectMeta<{ name: string }>
-// test.fields[0]
-
-export interface ObjectFieldMeta<T> extends BaseMeta<T> {
+export type WithName<K> = {
     readonly name: {
-        value: keyof T
-        bytes: Uint8Array<ArrayBuffer>
+        value: K;
+        bytes: Uint8Array
     }
 }
 
 export interface CollectionMeta<T> extends BaseMeta<T> {
     readonly value: BaseMeta<unknown>
+}
+
+const test = {} as ObjectMeta<{ id: number }>
+test.fields[0]
+
+export function toMeta<T>(data: T): BaseMeta<T> {
+    return {} as any
 }
 
 export type Metadata = MetaPrimitive | MetaObject | MetaArray
