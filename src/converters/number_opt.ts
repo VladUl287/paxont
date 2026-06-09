@@ -165,11 +165,11 @@ function tryParseDecimal(b: Uint8Array, s: Store): boolean {
     let m = s.mantissa
     let dc = 0
 
+    const start = i
     const length = b.length
     if (s.digitsCount === 0)
         while (i < length && b[i] === ZERO) i++
 
-    const start = i
     while (i < length && dc < MAX_SAFE_INT_DIGITS - 1) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
@@ -192,23 +192,21 @@ function tryParseDecimal(b: Uint8Array, s: Store): boolean {
             s.index = i
             s.mantissa = m
 
-            return tryParseDecimalLong(b, s, start)
+            return tryParseDecimalLong(b, s, dc, start)
         }
     }
 
-    const e = start - i
     s.index = i
     s.mantissa = m
-    s.exponent = e
-    s.digitsCount -= e
+    s.exponent = start - i
+    s.digitsCount = dc
     return true
 }
 
-function tryParseDecimalLong(b: Uint8Array, s: Store, start: number): boolean {
+function tryParseDecimalLong(b: Uint8Array, s: Store, dc: number, start: number): boolean {
     let i = s.index
     let m = s.mantissa
     let m32 = s.mantissaU32
-    let dc = 0
 
     const length = b.length
     if (i < length && ((b[i] - 48) >>> 0) > 9)
@@ -217,11 +215,13 @@ function tryParseDecimalLong(b: Uint8Array, s: Store, start: number): boolean {
     splitTo32(m, m32)
     m = 0
 
+    let localDc = 0
     while (i < length && dc < MAX_SAFE_LONG_DIGITS) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
 
         m = m * 10 + d
+        localDc++
         dc++
         i++
     }
@@ -230,19 +230,18 @@ function tryParseDecimalLong(b: Uint8Array, s: Store, start: number): boolean {
         return false
     }
 
-    if (dc > 0) {
-        const pow = POS_POW10[dc]
+    if (localDc > 0) {
+        const pow = POS_POW10[localDc]
         const low = m32[0] * pow + m
         m32[0] = low >>> 0
         m32[1] = m32[1] * pow + Math.floor(low / 0x100000000)
         m = 0
     }
 
-    const e = start - i
     s.index = i
     s.mantissa = m
-    s.exponent = e
-    s.digitsCount -= e
+    s.exponent = start - i
+    s.digitsCount = dc
 
     return true
 }
