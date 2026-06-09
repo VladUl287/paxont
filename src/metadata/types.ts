@@ -20,7 +20,7 @@ export interface ObjectMeta<T> extends BaseMeta<T> {
     readonly fields: {
         [K in keyof T]: BaseMeta<T[K]> & WithName<K>
     }[keyof T][]
-    readonly factory: (values: unknown[]) => T
+    readonly factory: (values: T[keyof T][]) => T
     readonly fieldIndexResolver: (field: Uint8Array, index: number) => number
 }
 
@@ -35,8 +35,7 @@ export interface CollectionMeta<T> extends BaseMeta<T> {
     readonly value: BaseMeta<unknown>
 }
 
-const test = {} as ObjectMeta<{ id: number }>
-test.fields[0]
+const test = {} as ObjectMeta<{ id: number, name: string }>
 
 export function toMeta<T>(data: T): BaseMeta<T> {
     return {} as any
