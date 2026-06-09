@@ -1,4 +1,4 @@
-import { JsonCodes } from "../utils/constants"
+import * as JsonCodes from "../utils/utf8constants"
 import { ConvertMeta, ConvertResult, ConvertState, isError, isMultiMeta, isSingleMeta } from "./types"
 import { skipWhitespace } from "./utils"
 

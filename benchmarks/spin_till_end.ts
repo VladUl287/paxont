@@ -1,5 +1,5 @@
 import { add, complete, cycle, suite } from 'benny'
-import { JsonCodes } from '../src/utils/constants'
+import * as JsonCodes from '../src/utils/utf8constants'
 
 const bytes = new TextEncoder().encode("343543534}")
 

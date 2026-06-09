@@ -1,4 +1,4 @@
-import { JsonCodes } from "../utils/constants"
+import * as JsonCodes from "../utils/utf8constants"
 
 const WS_BITMASK =
     (1 << JsonCodes.SPACE) | (1 << JsonCodes.NEW_LINE) |

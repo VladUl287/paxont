@@ -1,4 +1,4 @@
-import { JsonCodes } from '../src/utils/constants'
+import * as JsonCodes from '../src/utils/utf8constants'
 import { Bench } from 'tinybench'
 
 const suite = new Bench({ name: 'is_whitespace', warmupIterations: 200 })
