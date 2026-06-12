@@ -1,4 +1,4 @@
-import { Converter } from "../converters/types"
+import { JsonOptions } from "../options"
 
 export type BuiltInType =
     | "string" | "number" | "bigint" | "boolean" | "symbol"
@@ -9,7 +9,12 @@ export type BuiltInType =
 
 export type TypeName = BuiltInType | (string & {})
 
-export type toValueConverter<T> = (ctx: any, meta: any, index: number, depth: number) => T
+export type ConvertCtx = {
+    readonly bytes: Uint8Array
+    readonly options: JsonOptions
+}
+
+export type toValueConverter<T> = (ctx: ConvertCtx, meta: BaseMeta<T>, index: number, depth: number) => T
 export type toJsonConverter<T> = (value: T) => string
 
 export interface BaseMeta<T> {
@@ -32,7 +37,7 @@ export type ObjectFieldMeta<T, K extends keyof T> = BaseMeta<T[K]> & WithName<K>
 
 export type WithName<K> = {
     readonly name: {
-        value: K;
+        value: K
         bytes: Uint8Array
     }
 }
@@ -41,8 +46,6 @@ export interface CollectionMeta<T> extends BaseMeta<T> {
     readonly value: BaseMeta<unknown>
 }
 
-const test = {} as ObjectMeta<{ id: number, name: string }>
-
 export function toMeta<T>(data: T): BaseMeta<T> {
     return {} as any
 }
@@ -50,54 +53,3 @@ export function toMeta<T>(data: T): BaseMeta<T> {
 export function toMeta1<T>(data: T, meta: BaseMeta<any>): BaseMeta<T> {
     return {} as any
 }
-
-export type Metadata = MetaPrimitive | MetaObject | MetaArray
-
-export type MetaObject = {
-    readonly fields: MetaObjectField[]
-    readonly factory: (props: unknown[]) => object
-    readonly getFieldIndex: (field: Uint8Array, index: number) => number
-}
-
-export type MetaPrimitive = {
-    readonly type: TypeName
-}
-
-export type MetaObjectField = MetaPrimitive & {
-    readonly name: {
-        value: string,
-        bytes: Uint8Array<ArrayBuffer>
-        equal: (bytes: Uint8Array, i: number) => boolean
-    }
-    readonly value: Metadata
-}
-
-export type MetaArray = {
-    readonly type: TypeName
-    readonly value: Metadata
-}
-
-export const isMetaObjectField = (meta: Metadata): meta is MetaObjectField =>
-    meta !== null &&
-    typeof meta === 'object' &&
-    'type' in meta &&
-    'name' in meta &&
-    'value' in meta &&
-    !('fields' in meta) &&
-    !('factory' in meta)
-
-export const isMetaObject = (meta: Metadata): meta is MetaObject =>
-    meta !== null &&
-    typeof meta === 'object' &&
-    'fields' in meta &&
-    'factory' in meta &&
-    'getFieldIndex' in meta &&
-    !('name' in meta)
-
-export const isMetaArray = (meta: Metadata): meta is MetaArray =>
-    meta !== null &&
-    typeof meta === 'object' &&
-    'type' in meta &&
-    'value' in meta &&
-    !('name' in meta) &&
-    !('fields' in meta);
