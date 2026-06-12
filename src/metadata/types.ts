@@ -63,37 +63,36 @@ export interface Type<T = any, R = BaseMeta<T>> {
 }
 
 export type UseMetadata = {
-    addType: <T>(type: Type<T, BaseMeta<T>>) => void;
-    removeType: (type: string | Type) => Type;
-    getTypes: () => Type[];
-    clearTypes: () => void;
-    hasType: (name: string) => boolean;
-    toMetadata: <T>(data: T) => BaseMeta<T>;
+    addType: <T, R extends BaseMeta<T>>(type: Type<T, R>) => void
+    removeType: (type: string | Type) => Type
+    getTypes: () => Type[]
+    clearTypes: () => void
+    hasType: (name: string) => boolean
+    toMetadata: <T>(data: T) => BaseMeta<T>
 }
 
 export function useMetadata(): UseMetadata {
     const types = new Map<string, Type>()
 
     const withDefaultTypes = (metadata: UseMetadata): UseMetadata => {
-        metadata.addType({
+        metadata.addType<any[], CollectionMeta<any[], any>>({
             name: 'array',
             check: (data): data is any[] => Array.isArray(data),
             process: (data) => {
                 const collectionItem = metadata.toMetadata(data[0])
-                const collectionMeta: CollectionMeta<Array<any>, any> = {
+                return {
                     type: 'array',
                     value: collectionItem,
                     toJson: {} as any,
                     toValue: {} as any,
                 }
-                return {} as any
             },
             priority: 50
         })
         return metadata
     }
 
-    const addType = <T>(type: Type<T>): void => { types.set(type.name, type) }
+    const addType = <T, R extends BaseMeta<T>>(type: Type<T, R>): void => { types.set(type.name, type) }
 
     const removeType = (type: string | Type): Type => {
         const typeToDelete = typeof type === 'string' ? type : type.name
