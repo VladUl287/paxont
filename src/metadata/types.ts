@@ -47,6 +47,10 @@ export function toMeta<T>(data: T): BaseMeta<T> {
     return {} as any
 }
 
+export function toMeta1<T>(data: T, meta: BaseMeta<any>): BaseMeta<T> {
+    return {} as any
+}
+
 export type Metadata = MetaPrimitive | MetaObject | MetaArray
 
 export type MetaObject = {
