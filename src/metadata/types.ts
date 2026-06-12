@@ -46,6 +46,11 @@ export interface CollectionMeta<T> extends BaseMeta<T> {
     readonly value: BaseMeta<unknown>
 }
 
+export interface MapMeta<T> extends BaseMeta<T> {
+    readonly key: BaseMeta<unknown>
+    readonly value: BaseMeta<unknown>
+}
+
 export function toMeta<T>(data: T): BaseMeta<T> {
     return {} as any
 }
