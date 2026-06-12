@@ -1,5 +1,5 @@
 import { Metadata } from "../metadata/metadata"
-import { JsonOptions } from "../options/types"
+import { JsonOptions } from "../options"
 
 export type ConvertState = {
     readonly bytes: Uint8Array
