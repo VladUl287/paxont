@@ -1,3 +1,20 @@
+export function isTypedArray(data: unknown):
+    data is Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array |
+    Uint32Array | Float32Array | Float64Array | BigInt64Array | BigUint64Array {
+    if (!data) return false
+
+    return data instanceof Int8Array ||
+        data instanceof Uint8Array ||
+        data instanceof Int16Array ||
+        data instanceof Uint16Array ||
+        data instanceof Int32Array ||
+        data instanceof Uint32Array ||
+        data instanceof Float32Array ||
+        data instanceof Float64Array ||
+        data instanceof BigInt64Array ||
+        data instanceof BigUint64Array
+}
+
 export function equals(a: Uint8Array, b: Uint8Array, aI: number, bI: number): boolean {
     const length = Math.min(a.length - aI, b.length - bI)
     if (length <= 0) return true
