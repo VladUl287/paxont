@@ -1,4 +1,5 @@
 import { JsonOptions } from "../options"
+import { isTypedArray } from "../utils/array"
 
 export type BuiltInType =
     | "string" | "number" | "bigint" | "boolean" | "symbol"
@@ -42,19 +43,121 @@ export type WithName<K> = {
     }
 }
 
-export interface CollectionMeta<T> extends BaseMeta<T> {
-    readonly value: BaseMeta<unknown>
+export interface CollectionMeta<T, V> extends BaseMeta<T> {
+    readonly value: BaseMeta<V>
 }
 
-export interface MapMeta<T> extends BaseMeta<T> {
-    readonly key: BaseMeta<unknown>
-    readonly value: BaseMeta<unknown>
+export interface MapMeta<T, K, V> extends BaseMeta<T> {
+    readonly key: BaseMeta<K>
+    readonly value: BaseMeta<V>
+}
+
+export type TypeChecker<T = any> = (data: any) => data is T
+export type TypeProcessor<T = any, R = BaseMeta<T>> = (data: T) => R
+
+export interface Type<T = any, R = BaseMeta<T>> {
+    name: TypeName
+    check: TypeChecker<T>
+    process: TypeProcessor<T, R>
+    priority: number
+}
+
+export function useMetadata() {
+    const types = new Map<string, Type>()
+
+    const addDefaultTypes = (): void => {
+        addType({
+            name: 'array',
+            check: (data): data is any[] => Array.isArray(data),
+            process: (data) => {
+                const collectionMeta: CollectionMeta<Array<any>, string> = {
+                    type: 'array',
+                    value: {} as any,
+                    toJson: {} as any,
+                    toValue: {} as any,
+                }
+                return {} as any
+            },
+            priority: 50
+        })
+    }
+
+    addDefaultTypes()
+
+    const addType = <T>(type: Type<T>): void => { types.set(type.name, type) }
+
+    const removeType = (type: string | Type): Type => {
+        const typeToDelete = typeof type === 'string' ? type : type.name
+
+        const toDelete = types.get(typeToDelete)
+        if (!toDelete)
+            throw new Error()
+
+        if (!types.delete(typeToDelete))
+            throw new Error()
+
+        return toDelete
+    }
+
+    const hasType = (name: string): boolean => types.has(name)
+
+    const getTypes = (): Type[] => Array.from(types.values()).sort((a, b) => a.priority - b.priority)
+
+    const clearTypes = (): void => types.clear()
+
+    const toMeta = <T>(data: T): BaseMeta<T> => {
+        const types = getTypes()
+
+        for (const type of types) {
+            if (type.check(data))
+                return type.process(data)
+        }
+
+        throw new Error(`No type handler found for: ${typeof data}`)
+    }
+
+    return {
+        addType,
+        removeType,
+        getTypes,
+        clearTypes,
+        hasType,
+        toMeta
+    }
 }
 
 export function toMeta<T>(data: T): BaseMeta<T> {
+    if (data === null || data === undefined)
+        throw new Error('fail to detect type of data')
+
+    if (Array.isArray(data)) {
+
+    }
+
+    if (data instanceof Date) {
+
+    }
+
+    if (isTypedArray(data)) {
+
+    }
+
+    if (data instanceof Map) {
+
+    }
+
+    if (data instanceof Set) {
+
+    }
+
+    if (typeof data === "object") {
+
+    }
+
     return {} as any
 }
 
 export function toMeta1<T>(data: T, meta: BaseMeta<any>): BaseMeta<T> {
     return {} as any
 }
+
