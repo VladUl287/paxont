@@ -62,17 +62,27 @@ export interface Type<T = any, R = BaseMeta<T>> {
     priority: number
 }
 
-export function useMetadata() {
+export type UseMetadata = {
+    addType: <T>(type: Type<T, BaseMeta<T>>) => void;
+    removeType: (type: string | Type) => Type;
+    getTypes: () => Type[];
+    clearTypes: () => void;
+    hasType: (name: string) => boolean;
+    toMetadata: <T>(data: T) => BaseMeta<T>;
+}
+
+export function useMetadata(): UseMetadata {
     const types = new Map<string, Type>()
 
-    const addDefaultTypes = (): void => {
-        addType({
+    const withDefaultTypes = (metadata: UseMetadata): UseMetadata => {
+        metadata.addType({
             name: 'array',
             check: (data): data is any[] => Array.isArray(data),
             process: (data) => {
-                const collectionMeta: CollectionMeta<Array<any>, string> = {
+                const collectionItem = metadata.toMetadata(data[0])
+                const collectionMeta: CollectionMeta<Array<any>, any> = {
                     type: 'array',
-                    value: {} as any,
+                    value: collectionItem,
                     toJson: {} as any,
                     toValue: {} as any,
                 }
@@ -80,9 +90,8 @@ export function useMetadata() {
             },
             priority: 50
         })
+        return metadata
     }
-
-    addDefaultTypes()
 
     const addType = <T>(type: Type<T>): void => { types.set(type.name, type) }
 
@@ -105,7 +114,7 @@ export function useMetadata() {
 
     const clearTypes = (): void => types.clear()
 
-    const toMeta = <T>(data: T): BaseMeta<T> => {
+    const toMetadata = <T>(data: T): BaseMeta<T> => {
         const types = getTypes()
 
         for (const type of types) {
@@ -116,14 +125,14 @@ export function useMetadata() {
         throw new Error(`No type handler found for: ${typeof data}`)
     }
 
-    return {
+    return withDefaultTypes({
         addType,
         removeType,
         getTypes,
         clearTypes,
         hasType,
-        toMeta
-    }
+        toMetadata
+    })
 }
 
 export function toMeta<T>(data: T): BaseMeta<T> {
