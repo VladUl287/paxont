@@ -89,6 +89,30 @@ export function useMetadata(): UseMetadata {
             },
             priority: 50
         })
+        metadata.addType<Date, PrimitiveMeta<Date>>({
+            name: 'date',
+            check: (data): data is Date => data instanceof Date,
+            process: (date) => {
+                return {
+                    type: 'date',
+                    toJson: {} as any,
+                    toValue: {} as any,
+                }
+            },
+            priority: 51
+        })
+        metadata.addType<number, PrimitiveMeta<number>>({
+            name: 'number',
+            check: (data): data is number => typeof data === 'number',
+            process: (data) => {
+                return {
+                    type: 'number',
+                    toJson: {} as any,
+                    toValue: {} as any,
+                }
+            },
+            priority: 51
+        })
         return metadata
     }
 
