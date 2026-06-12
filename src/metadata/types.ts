@@ -9,8 +9,12 @@ export type BuiltInType =
 
 export type TypeName = BuiltInType | (string & {})
 
+export type toValueConverter<T> = (ctx: any, meta: any, index: number, depth: number) => T
+export type toJsonConverter<T> = (value: T) => string
+
 export interface BaseMeta<T> {
-    readonly convert: Converter<T>,
+    readonly toValue: toValueConverter<T>,
+    readonly toJson: toJsonConverter<T>,
     readonly type: TypeName
 }
 
