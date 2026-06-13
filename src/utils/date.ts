@@ -6,19 +6,19 @@ export function isISO8601FromString(d: string): boolean {
 }
 
 export function isISO8601(b: Uint8Array, i: number): boolean {
-    if (!(isDigit(b[i]) && isDigit(b[++i]) && isDigit(b[++i]) && isDigit(b[++i]))) //YYYY
+    if ((b[++i] - 48 >>> 0) > 9 || (b[++i] - 48 >>> 0) > 9 || (b[++i] - 48 >>> 0) > 9 || (b[++i] - 48 >>> 0) > 9) //YYYY
         return false
 
     if (b[++i] !== MINUS)
         return false
 
-    if (!(isDigit(b[++i]) && isDigit(b[++i]))) //MM
+    if ((b[++i] - 48 >>> 0) > 9 || (b[++i] - 48 >>> 0) > 9) //MM
         return false
 
     if (b[++i] !== MINUS)
         return false
 
-    if (!(isDigit(b[++i]) && isDigit(b[++i])))
+    if ((b[++i] - 48 >>> 0) > 9 || (b[++i] - 48 >>> 0) > 9) //DD
         return false
 
     return true
