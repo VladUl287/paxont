@@ -4,11 +4,20 @@ export function isISO8601FromString(d: string): boolean {
     const isoRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:[+-]\d{2}:\d{2}|Z)$/
     return isoRegex.test(d)
 }
+
+const notDigit = (b: number) => !isDigitU8(b)
+
+function yearIndex(b: Uint8Array, i: number): number {
+    if (i + 4 >= b.length || notDigit(b[i]) || notDigit(b[++i]) || notDigit(b[++i]) || notDigit(b[++i])) //YYYY
+        return -1
+    return ++i
+}
+
 export function isISO8601(b: Uint8Array, i: number): boolean {
     const len = b.length
     const len1 = b.length - 1
 
-    if (!(i + 4 < len && isDigitU8(b[i]) && isDigitU8(b[++i]) && isDigitU8(b[++i]) && isDigitU8(b[++i]))) //YYYY
+    if ((i = yearIndex(b, i)) < 0)
         return false
 
     if (i >= len1 || b[++i] !== MINUS)
