@@ -193,3 +193,23 @@ export function toMeta1<T>(data: T, meta: BaseMeta<any>): BaseMeta<T> {
     return {} as any
 }
 
+export function isObjectFieldMeta(obj: unknown): obj is ObjectFieldMeta<any, any> {
+    if (!obj || typeof obj !== 'object')
+        return false
+
+    const potential = obj as Record<string, unknown>
+
+    const hasToValue = typeof potential.toValue === 'function'
+    const hasToJson = typeof potential.toJson === 'function'
+    const hasType = typeof potential.type === 'string'
+
+    const hasName = potential.name !== undefined && potential.name !== null && typeof potential.name === 'object'
+
+    if (!hasToValue || !hasToJson || !hasType || !hasName) return false
+
+    const nameObj = potential.name as Record<string, unknown>
+    const hasNameValue = 'value' in nameObj
+    const hasNameBytes = nameObj.bytes instanceof Uint8Array
+
+    return hasNameValue && hasNameBytes
+}
