@@ -1,5 +1,5 @@
-import { BaseMeta, ConvertCtx, isObjectFieldMeta } from "../metadata/types";
-import { A, E, F, L, R, S, T, U } from "../utils/utf8constants";
+import { BaseMeta, ConvertCtx, isObjectFieldMeta } from "../metadata/types"
+import { A, E, F, L, R, S, T, U } from "../utils/utf8constants"
 
 export function toBoolean(ctx: ConvertCtx, meta: BaseMeta<boolean>, index: number, _depth: number): boolean {
     const i = index
