@@ -1,4 +1,4 @@
-import { DOT, EXPONENT, EXPONENT_UPPER, MINUS, PLUS, ZERO } from "../utils/utf8constants"
+import { DOT, E, E_UPPER, MINUS, PLUS, ZERO } from "../utils/utf8constants"
 import { ConvertMeta, ConvertResult, ConvertState } from "./types"
 
 export function convertNumber(ctx: ConvertState, _metadata: ConvertMeta, index: number, _depth: number): ConvertResult<number> {
@@ -158,7 +158,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
                 i++
                 continue
             }
-            else if (byte === EXPONENT || byte === EXPONENT_UPPER) {
+            else if (byte === E || byte === E_UPPER) {
                 i++
 
                 let signExp = 1
@@ -304,7 +304,7 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<
     }
 
     const isNumberByte = (b: number) =>
-        isDigit(b) || b === DOT || b === EXPONENT || b === EXPONENT_UPPER || PLUS || MINUS
+        isDigit(b) || b === DOT || b === E || b === E_UPPER || PLUS || MINUS
 
     while (i < length && isNumberByte(bytes[i]))
         i++

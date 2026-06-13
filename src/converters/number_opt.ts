@@ -1,4 +1,4 @@
-import { DOT, EXPONENT, EXPONENT_UPPER, MINUS, PLUS, ZERO } from "../utils/utf8constants"
+import { DOT, E, E_UPPER, MINUS, PLUS, ZERO } from "../utils/utf8constants"
 import { ConvertMeta, ConvertResult, ConvertState } from "./types"
 
 export function convertNumber(ctx: ConvertState, _metadata: ConvertMeta, index: number, _depth: number): ConvertResult<number> {
@@ -298,7 +298,7 @@ export function parseNumberF64_2(b: Uint8Array, offset: number): ConvertResult<n
         if (s.digitsCount === 0)
             throw new Error('')
 
-        if (i < length && (b[i] === EXPONENT || b[i] === EXPONENT_UPPER))
+        if (i < length && (b[i] === E || b[i] === E_UPPER))
             tryParseExponent(b, s)
         i = s.index
 
