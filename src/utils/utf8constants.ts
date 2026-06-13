@@ -22,3 +22,5 @@ export const F = 102
 export const A = 97
 export const L = 108
 export const S = 115
+
+export const isDigit = (b: number) => b >= 48 && b <= 57
