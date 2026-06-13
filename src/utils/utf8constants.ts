@@ -23,6 +23,7 @@ export const A = 97
 export const L = 108
 export const S = 115
 export const Y = 89
+export const Z = 90
 
 export const isDigit = (b: number) => b >= 48 && b <= 57
 export const isDigitU8 = (b: number) => ((b - 48) >>> 0) <= 9
