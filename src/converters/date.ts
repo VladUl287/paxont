@@ -1,4 +1,5 @@
 import { BaseMeta, ConvertCtx, isObjectFieldMeta } from "../metadata/types"
+import { tryParseISO8601 } from "../utils/date"
 import { DOUBLE_QUOTE, isDigit } from "../utils/utf8constants"
 
 export function toDate(ctx: ConvertCtx, meta: BaseMeta<Date>, index: number, _depth: number): Date {
@@ -19,6 +20,11 @@ export function toDate(ctx: ConvertCtx, meta: BaseMeta<Date>, index: number, _de
 }
 
 function fromString(b: Uint8Array, i: number): Date {
+    let milliseconds: number = 0
+    
+    if ((milliseconds = tryParseISO8601(b, i)) > 0)
+        return new Date(milliseconds)
+
     return new Date()
 }
 
