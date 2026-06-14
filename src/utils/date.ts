@@ -40,7 +40,7 @@ export function tryParseISO8601(b: Uint8Array, i: number): number {
         return -1
 
     const YYYY = ((b[i - 4] & 0x0F) * 1000) + ((b[i - 3] & 0x0F) * 100) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
-    if (i >= len1 || b[++i] !== MINUS)
+    if (i >= len1 || b[i++] !== MINUS)
         return Date.UTC(YYYY)
 
     if ((i = twoDigits(b, i)) < 0) //MM
@@ -50,7 +50,7 @@ export function tryParseISO8601(b: Uint8Array, i: number): number {
     if (MM < 0 || MM > 11)
         return -1
 
-    if (i >= len1 || b[++i] !== MINUS)
+    if (i >= len1 || b[i++] !== MINUS)
         return Date.UTC(YYYY, MM)
 
     if ((i = twoDigits(b, i)) < 0) //DD
