@@ -12,8 +12,12 @@ const yearOnlyBytes = encoder.encode(yearOnly)
 const dateOnly = "\"1970-06-25\""
 const dateOnlyBytes = encoder.encode(dateOnly)
 
+const dateTimeUtcOnly = "\"1970-06-25T12:32:12.123Z\""
+const dateTimeUtcBytes = encoder.encode(dateTimeUtcOnly)
+
 const yearOnlyCtx: ConvertCtx = { bytes: yearOnlyBytes, options: defaultOptions }
 const dateOnlyCtx: ConvertCtx = { bytes: dateOnlyBytes, options: defaultOptions }
+const dateTimeUtcCtx: ConvertCtx = { bytes: dateTimeUtcBytes, options: defaultOptions }
 
 const metaMock: any = {}
 
@@ -25,6 +29,9 @@ suite(
 
     add('toDate YYYY-MM-DD', () => toDate(dateOnlyCtx, metaMock, 0, 0)),
     add('new Date YYYY-MM-DD', () => new Date(decoder.decode(dateOnlyBytes.subarray(1, dateOnlyBytes.length - 1)))),
+
+    add('toDate YYYY-MM-DDTHH:mm:ss.sssZ', () => toDate(dateTimeUtcCtx, metaMock, 0, 0)),
+    add('new Date YYYY-MM-DDTHH:mm:ss.sssZ', () => new Date(decoder.decode(dateTimeUtcBytes.subarray(1, dateTimeUtcBytes.length - 1)))),
 
     cycle((result) => {
         const nanoseconds = (1 / result.ops) * 1e9
