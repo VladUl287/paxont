@@ -6,12 +6,14 @@ import { DOUBLE_QUOTE, isDigitU8 } from "../utils/utf8constants"
 export function toDate(ctx: ConvertCtx, meta: BaseMeta<Date>, index: number, _depth: number): Date {
     const i = index
     const b = ctx.bytes
+    const len = b.length
 
-    if (b[i] === DOUBLE_QUOTE) {
-        return fromString(b, i + 1, ctx.options)
-    }
-    else if (isDigitU8(b[i])) {
-        return fromTimestamp(b, i)
+    if (i < len) {
+        if (b[i] === DOUBLE_QUOTE)
+            return fromString(b, i + 1, ctx.options)
+
+        if (isDigitU8(b[i]))
+            return fromTimestamp(b, i)
     }
 
     if (isObjectFieldMeta(meta))
@@ -33,7 +35,7 @@ function fromString(b: Uint8Array, i: number, opt: JsonOptions): Date {
     if (!isNaN(date.valueOf()))
         return date
 
-    throw new Error(`invlid date format, at index ${i}`)
+    throw new Error(`invalid date value, at index ${i}`)
 }
 
 function fromTimestamp(b: Uint8Array, i: number): Date {
