@@ -25,20 +25,28 @@ function twoDigits(b: Uint8Array, i: number): number {
     return ++i
 }
 
+function combine(b: Uint8Array, i: number, count: number): number {
+    let result = 0
+    for (let j = i; j < i + count; j++) {
+        result = result * 10 + (b[j] & 0x0F)
+    }
+    return result
+}
+
 export function tryParseISO8601(b: Uint8Array, i: number): number {
     const len1 = b.length - 1
 
     if ((i = fourDigits(b, i)) < 0) //YYYY
         return -1
 
-    const YYYY = (b[i - 3] * 10) + (b[i - 2] * 10) + (b[i - 1] * 10) + (b[i])
+    const YYYY = ((b[i - 4] & 0x0F) * 1000) + ((b[i - 3] & 0x0F) * 100) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
     if (i >= len1 || b[++i] !== MINUS)
         return Date.UTC(YYYY)
 
     if ((i = twoDigits(b, i)) < 0) //MM
         return -1
 
-    const MM = ((b[i - 1] * 10) + b[i]) - 1
+    const MM = (((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)) - 1
     if (MM < 0 || MM > 11)
         return -1
 
@@ -48,7 +56,7 @@ export function tryParseISO8601(b: Uint8Array, i: number): number {
     if ((i = twoDigits(b, i)) < 0) //DD
         return -1
 
-    const DD = (b[i - 1] * 10) + b[i]
+    const DD = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
     if (DD < 1 || DD > 31)
         return -1
 
@@ -58,11 +66,11 @@ export function tryParseISO8601(b: Uint8Array, i: number): number {
     if ((i = twoDigits(b, i)) < 0 || b[++i] !== COLON || (i = twoDigits(b, i)) < 0) //HH:mm
         return -1
 
-    const HH = (b[i - 1] * 10) + b[i]
+    const HH = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
     if (HH < 0 || HH > 23)
         return -1
 
-    const mm = (b[i - 1] * 10) + b[i]
+    const mm = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
     if (mm < 0 || mm > 59)
         return -1
 
@@ -72,7 +80,7 @@ export function tryParseISO8601(b: Uint8Array, i: number): number {
     if ((i = twoDigits(b, i)) < 0) //ss
         return -1
 
-    const ss = (b[i - 1] * 10) + b[i]
+    const ss = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
     if (ss < 0 || ss > 59)
         return -1
 
@@ -82,7 +90,7 @@ export function tryParseISO8601(b: Uint8Array, i: number): number {
     if ((i = threeDigits(b, i)) < 0) //sss
         return -1
 
-    const sss = (b[i - 2] * 10) + (b[i - 1] * 10) + b[i]
+    const sss = ((b[i - 3] & 0x0F) * 10) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
     if (sss < 0 || ss > 999)
         return -1
 
@@ -94,11 +102,11 @@ export function tryParseISO8601(b: Uint8Array, i: number): number {
     if ((i = twoDigits(b, i)) < 0 || b[++i] !== COLON || (i = twoDigits(b, i)) < 0) //HH:mm
         return -1
 
-    const ZHH = ((b[i - 1] * 10) + b[i])
+    const ZHH = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
     if (ZHH < 0 || ZHH > 23)
         return -1
 
-    const zmm = ((b[i - 1] * 10) + b[i])
+    const zmm = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
     if (zmm < 0 || zmm > 59)
         return -1
 
