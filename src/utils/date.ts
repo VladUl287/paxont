@@ -85,8 +85,8 @@ export function tryParseISO8601(b: Uint8Array, i: number): number {
         return -1
 
     let sss = 0
-    if (i <= len1 && b[i++] === DOT) {
-        if ((i = threeDigits(b, i)) < 0) //sss
+    if (i <= len1 && b[i] === DOT) {
+        if ((i = threeDigits(b, i + 1)) < 0) //sss
             return -1
 
         sss = ((b[i - 3] & 0x0F) * 100) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
@@ -94,8 +94,11 @@ export function tryParseISO8601(b: Uint8Array, i: number): number {
             return -1
     }
 
-    if (i >= len1 || b[i++] === Z || (b[i] !== MINUS && b[i] !== PLUS)) //Z and not ±
+    if (i < len1 && b[i] === Z) //Z
         return Date.UTC(YYYY, MM, DD, HH, mm, ss, sss)
+
+    if (i >= len1 && b[i] !== MINUS && b[i] !== PLUS) //not ±
+        return new Date(YYYY, MM, DD, HH, mm, ss, sss).getTime()
 
     const sign = b[i] === MINUS ? -1 : 1
 
