@@ -66,7 +66,7 @@ export function tryParseISO8601(b: Uint8Array, i: number): number {
     if ((i = twoDigits(b, i)) < 0 || b[i++] !== COLON || (i = twoDigits(b, i)) < 0) //HH:mm
         return -1
 
-    const HH = ((b[i - 4] & 0x0F) * 10) + (b[i - 2] & 0x0F)
+    const HH = ((b[i - 5] & 0x0F) * 10) + (b[i - 4] & 0x0F)
     if (HH < 0 || HH > 23)
         return -1
 
