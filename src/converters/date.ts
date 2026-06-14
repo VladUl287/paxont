@@ -21,11 +21,11 @@ export function toDate(ctx: ConvertCtx, meta: BaseMeta<Date>, index: number, _de
 
 function fromString(b: Uint8Array, i: number): Date {
     let milliseconds: number = 0
-    
+
     if ((milliseconds = tryParseISO8601(b, i)) > 0)
         return new Date(milliseconds)
 
-    return new Date()
+    throw new Error(`invlid date format, at index ${i}`)
 }
 
 function fromTimestamp(b: Uint8Array, i: number): Date {
