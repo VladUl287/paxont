@@ -5,62 +5,68 @@ export function isISO8601FromString(d: string): boolean {
     return isoRegex.test(d)
 }
 
-const notDigit = (b: number) => !isDigitU8(b)
+const nonDigit = (b: number) => !isDigitU8(b)
 
-function yearIndex(b: Uint8Array, i: number): number {
-    if (i + 4 >= b.length || notDigit(b[i]) || notDigit(b[++i]) || notDigit(b[++i]) || notDigit(b[++i])) //YYYY
+function fourDigits(b: Uint8Array, i: number): number {
+    if (i + 4 >= b.length || nonDigit(b[i]) || nonDigit(b[++i]) || nonDigit(b[++i]) || nonDigit(b[++i]))
         return -1
     return ++i
 }
 
-export function isISO8601(b: Uint8Array, i: number): boolean {
+function threeDigits(b: Uint8Array, i: number): number {
+    if (i + 3 >= b.length || nonDigit(b[i]) || nonDigit(b[++i]) || nonDigit(b[i]))
+        return -1
+    return ++i
+}
+
+function twoDigits(b: Uint8Array, i: number): number {
+    if (i + 2 >= b.length || nonDigit(b[i]) || nonDigit(b[++i]))
+        return -1
+    return ++i
+}
+
+export function isISO8601(b: Uint8Array, i: number): number {
     const len = b.length
     const len1 = b.length - 1
 
-    if ((i = yearIndex(b, i)) < 0)
-        return false
+    if ((i = fourDigits(b, i)) < 0)
+        return -1
 
     if (i >= len1 || b[++i] !== MINUS)
-        return true
+        return i
 
-    if (!(i + 2 < len && isDigitU8(b[++i]) && isDigitU8(b[++i]))) //MM
-        return false
+    if ((i = twoDigits(b, i)) < 0) //MM
+        return -1
 
     if (i >= len1 || b[++i] !== MINUS)
-        return true
+        return i
 
-    if (!(i + 2 < len && isDigitU8(b[++i]) && isDigitU8(b[++i]))) //DD
-        return false
+    if ((i = twoDigits(b, i)) < 0) //DD
+        return -1
 
     if (i >= len1 || b[++i] !== T)
-        return true
+        return i
 
-    if (i + 5 >= len) //HH:mm
-        return false
-
-    if (!(isDigitU8(b[++i]) && isDigitU8(b[++i]) && b[++i] === COLON && isDigitU8(b[++i]) && isDigitU8(b[++i])))//HH:mm
-        return false
+    if ((i = twoDigits(b, i)) < 0 || b[++i] !== COLON || (i = twoDigits(b, i)) < 0) //HH:mm
+        return -1
 
     if (i >= len1 || b[++i] !== COLON)
-        return true
+        return i
 
-    if (!(i + 2 < len && isDigitU8(b[++i]) && isDigitU8(b[++i]))) //ss
-        return false
+    if ((i = twoDigits(b, i)) < 0) //ss
+        return -1
 
     if (i >= len1 || b[++i] !== DOT) //ss.sss
-        return true
+        return i
 
-    if (!(isDigitU8(b[++i]) && isDigitU8(b[++i]) && isDigitU8(b[++i]))) //sss
-        return false
+    if ((i = threeDigits(b, i)) < 0) //sss
+        return -1
 
-    if (i >= len1 || b[++i] === Z) //Z
-        return true
+    if (i >= len1 || b[++i] === Z || (b[i] !== MINUS && b[i] !== PLUS)) //Z and not ±
+        return i
 
-    if (i >= len1 || (b[i] !== MINUS && b[i] !== PLUS)) //±
-        return true
+    if ((i = twoDigits(b, i)) < 0 || b[++i] !== COLON || (i = twoDigits(b, i)) < 0) //HH:mm
+        return -1
 
-    if (!(isDigitU8(b[++i]) && isDigitU8(b[++i]) && b[++i] === COLON && isDigitU8(b[++i]) && isDigitU8(b[++i]))) //HH:mm
-        return false
-
-    return true
+    return i
 }
