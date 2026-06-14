@@ -14,7 +14,7 @@ function fourDigits(b: Uint8Array, i: number): number {
 }
 
 function threeDigits(b: Uint8Array, i: number): number {
-    if (i + 3 >= b.length || nonDigit(b[i]) || nonDigit(b[++i]) || nonDigit(b[i]))
+    if (i + 3 >= b.length || nonDigit(b[i]) || nonDigit(b[++i]) || nonDigit(b[++i]))
         return -1
     return ++i
 }
@@ -60,13 +60,13 @@ export function tryParseISO8601(b: Uint8Array, i: number): number {
     if (DD < 1 || DD > 31)
         return -1
 
-    if (i >= len1 || b[++i] !== T)
+    if (i >= len1 || b[i++] !== T)
         return Date.UTC(YYYY, MM, DD)
 
-    if ((i = twoDigits(b, i)) < 0 || b[++i] !== COLON || (i = twoDigits(b, i)) < 0) //HH:mm
+    if ((i = twoDigits(b, i)) < 0 || b[i++] !== COLON || (i = twoDigits(b, i)) < 0) //HH:mm
         return -1
 
-    const HH = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
+    const HH = ((b[i - 4] & 0x0F) * 10) + (b[i - 2] & 0x0F)
     if (HH < 0 || HH > 23)
         return -1
 
@@ -74,7 +74,7 @@ export function tryParseISO8601(b: Uint8Array, i: number): number {
     if (mm < 0 || mm > 59)
         return -1
 
-    if (i >= len1 || b[++i] !== COLON)
+    if (i >= len1 || b[i++] !== COLON)
         return Date.UTC(YYYY, MM, DD, HH, mm)
 
     if ((i = twoDigits(b, i)) < 0) //ss
@@ -84,17 +84,17 @@ export function tryParseISO8601(b: Uint8Array, i: number): number {
     if (ss < 0 || ss > 59)
         return -1
 
-    if (i >= len1 || b[++i] !== DOT) //ss.sss
+    if (i >= len1 || b[i++] !== DOT) //ss.sss
         return Date.UTC(YYYY, MM, DD, HH, mm, ss)
 
     if ((i = threeDigits(b, i)) < 0) //sss
         return -1
 
-    const sss = ((b[i - 3] & 0x0F) * 10) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
+    const sss = ((b[i - 3] & 0x0F) * 100) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
     if (sss < 0 || ss > 999)
         return -1
 
-    if (i >= len1 || b[++i] === Z || (b[i] !== MINUS && b[i] !== PLUS)) //Z and not ±
+    if (i >= len1 || b[i++] === Z || (b[i] !== MINUS && b[i] !== PLUS)) //Z and not ±
         return Date.UTC(YYYY, MM, DD, HH, mm, ss, sss)
 
     const sign = b[i] === MINUS ? -1 : 1
