@@ -84,15 +84,15 @@ export function tryParseISO8601(b: Uint8Array, i: number): number {
     if (ss < 0 || ss > 59)
         return -1
 
-    if (i >= len1 || b[i++] !== DOT) //ss.sss
-        return Date.UTC(YYYY, MM, DD, HH, mm, ss)
+    let sss = 0
+    if (i <= len1 && b[i++] === DOT) {
+        if ((i = threeDigits(b, i)) < 0) //sss
+            return -1
 
-    if ((i = threeDigits(b, i)) < 0) //sss
-        return -1
-
-    const sss = ((b[i - 3] & 0x0F) * 100) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
-    if (sss < 0 || ss > 999)
-        return -1
+        sss = ((b[i - 3] & 0x0F) * 100) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
+        if (sss < 0 || ss > 999)
+            return -1
+    }
 
     if (i >= len1 || b[i++] === Z || (b[i] !== MINUS && b[i] !== PLUS)) //Z and not ±
         return Date.UTC(YYYY, MM, DD, HH, mm, ss, sss)
