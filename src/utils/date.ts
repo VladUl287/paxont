@@ -25,7 +25,7 @@ function twoDigits(b: Uint8Array, i: number): number {
     return ++i
 }
 
-export function tryParseISO8601(b: Uint8Array, i: number): Date | number {
+export function tryParseISO8601(b: Uint8Array, i: number): number {
     const len1 = b.length - 1
 
     if ((i = fourDigits(b, i)) < 0) //YYYY
@@ -33,7 +33,7 @@ export function tryParseISO8601(b: Uint8Array, i: number): Date | number {
 
     const YYYY = (b[i - 3] * 10) + (b[i - 2] * 10) + (b[i - 1] * 10) + (b[i])
     if (i >= len1 || b[++i] !== MINUS)
-        return new Date(Date.UTC(YYYY))
+        return Date.UTC(YYYY)
 
     if ((i = twoDigits(b, i)) < 0) //MM
         return -1
@@ -43,7 +43,7 @@ export function tryParseISO8601(b: Uint8Array, i: number): Date | number {
         return -1
 
     if (i >= len1 || b[++i] !== MINUS)
-        return new Date(Date.UTC(YYYY, MM))
+        return Date.UTC(YYYY, MM)
 
     if ((i = twoDigits(b, i)) < 0) //DD
         return -1
@@ -53,7 +53,7 @@ export function tryParseISO8601(b: Uint8Array, i: number): Date | number {
         return -1
 
     if (i >= len1 || b[++i] !== T)
-        return new Date(Date.UTC(YYYY, MM, DD))
+        return Date.UTC(YYYY, MM, DD)
 
     if ((i = twoDigits(b, i)) < 0 || b[++i] !== COLON || (i = twoDigits(b, i)) < 0) //HH:mm
         return -1
@@ -67,7 +67,7 @@ export function tryParseISO8601(b: Uint8Array, i: number): Date | number {
         return -1
 
     if (i >= len1 || b[++i] !== COLON)
-        return new Date(Date.UTC(YYYY, MM, DD, HH, mm))
+        return Date.UTC(YYYY, MM, DD, HH, mm)
 
     if ((i = twoDigits(b, i)) < 0) //ss
         return -1
@@ -77,7 +77,7 @@ export function tryParseISO8601(b: Uint8Array, i: number): Date | number {
         return -1
 
     if (i >= len1 || b[++i] !== DOT) //ss.sss
-        return new Date(Date.UTC(YYYY, MM, DD, HH, mm, ss))
+        return Date.UTC(YYYY, MM, DD, HH, mm, ss)
 
     if ((i = threeDigits(b, i)) < 0) //sss
         return -1
@@ -87,7 +87,7 @@ export function tryParseISO8601(b: Uint8Array, i: number): Date | number {
         return -1
 
     if (i >= len1 || b[++i] === Z || (b[i] !== MINUS && b[i] !== PLUS)) //Z and not ±
-        return new Date(Date.UTC(YYYY, MM, DD, HH, mm, ss, sss))
+        return Date.UTC(YYYY, MM, DD, HH, mm, ss, sss)
 
     const sign = b[i] === MINUS ? -1 : 1
 
@@ -102,7 +102,7 @@ export function tryParseISO8601(b: Uint8Array, i: number): Date | number {
     if (zmm < 0 || zmm > 59)
         return -1
 
-    return new Date(Date.UTC(YYYY, MM, DD, HH - (ZHH * sign), mm - (zmm * sign), ss, sss))
+    return Date.UTC(YYYY, MM, DD, HH - (ZHH * sign), mm - (zmm * sign), ss, sss)
 }
 
 export function isISO8601(b: Uint8Array, i: number): number {
