@@ -20,14 +20,6 @@ function twoDigits(b: Uint8Array, i: number): number {
     return ++i
 }
 
-function combine(b: Uint8Array, i: number, count: number): number {
-    let result = 0
-    for (let j = i; j < i + count; j++) {
-        result = result * 10 + (b[j] & 0x0F)
-    }
-    return result
-}
-
 export function tryParseISO8601(b: Uint8Array, i: number, result: Date): number {
     const len1 = b.length - 1
 
