@@ -2,19 +2,19 @@ import { COLON, DOT, isDigitU8, MINUS, PLUS, T_UPPER, Z } from "./utf8constants"
 
 const nonDigit = (b: number) => !isDigitU8(b)
 
-function fourDigits(b: Uint8Array, i: number): number {
+function expectFourDigits(b: Uint8Array, i: number): number {
     if (i + 4 >= b.length || nonDigit(b[i]) || nonDigit(b[++i]) || nonDigit(b[++i]) || nonDigit(b[++i]))
         return -1
     return ++i
 }
 
-function threeDigits(b: Uint8Array, i: number): number {
+function expectThreeDigits(b: Uint8Array, i: number): number {
     if (i + 3 >= b.length || nonDigit(b[i]) || nonDigit(b[++i]) || nonDigit(b[++i]))
         return -1
     return ++i
 }
 
-function twoDigits(b: Uint8Array, i: number): number {
+function expectTwoDigits(b: Uint8Array, i: number): number {
     if (i + 2 >= b.length || nonDigit(b[i]) || nonDigit(b[++i]))
         return -1
     return ++i
@@ -23,7 +23,7 @@ function twoDigits(b: Uint8Array, i: number): number {
 export function tryParseISO8601(b: Uint8Array, i: number, result: Date): number {
     const len1 = b.length - 1
 
-    if ((i = fourDigits(b, i)) < 0) //YYYY
+    if ((i = expectFourDigits(b, i)) < 0) //YYYY
         return -1
 
     const YYYY = ((b[i - 4] & 0x0F) * 1000) + ((b[i - 3] & 0x0F) * 100) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
@@ -32,7 +32,7 @@ export function tryParseISO8601(b: Uint8Array, i: number, result: Date): number 
         return i
     }
 
-    if ((i = twoDigits(b, i)) < 0) //MM
+    if ((i = expectTwoDigits(b, i)) < 0) //MM
         return -1
 
     const MM = (((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)) - 1
@@ -44,7 +44,7 @@ export function tryParseISO8601(b: Uint8Array, i: number, result: Date): number 
         return i
     }
 
-    if ((i = twoDigits(b, i)) < 0) //DD
+    if ((i = expectTwoDigits(b, i)) < 0) //DD
         return -1
 
     const DD = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
@@ -56,7 +56,7 @@ export function tryParseISO8601(b: Uint8Array, i: number, result: Date): number 
         return i
     }
 
-    if ((i = twoDigits(b, i)) < 0 || b[i++] !== COLON || (i = twoDigits(b, i)) < 0) //HH:mm
+    if ((i = expectTwoDigits(b, i)) < 0 || b[i++] !== COLON || (i = expectTwoDigits(b, i)) < 0) //HH:mm
         return -1
 
     const HH = ((b[i - 5] & 0x0F) * 10) + (b[i - 4] & 0x0F)
@@ -72,7 +72,7 @@ export function tryParseISO8601(b: Uint8Array, i: number, result: Date): number 
         return i
     }
 
-    if ((i = twoDigits(b, i)) < 0) //ss
+    if ((i = expectTwoDigits(b, i)) < 0) //ss
         return -1
 
     const ss = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
@@ -81,7 +81,7 @@ export function tryParseISO8601(b: Uint8Array, i: number, result: Date): number 
 
     let sss = 0
     if (i <= len1 && b[i] === DOT) {
-        if ((i = threeDigits(b, i + 1)) < 0) //sss
+        if ((i = expectThreeDigits(b, i + 1)) < 0) //sss
             return -1
 
         sss = ((b[i - 3] & 0x0F) * 100) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
@@ -101,7 +101,7 @@ export function tryParseISO8601(b: Uint8Array, i: number, result: Date): number 
 
     const sign = b[i] === MINUS ? -1 : 1
 
-    if ((i = twoDigits(b, i)) < 0 || b[++i] !== COLON || (i = twoDigits(b, i)) < 0) //HH:mm
+    if ((i = expectTwoDigits(b, i)) < 0 || b[++i] !== COLON || (i = expectTwoDigits(b, i)) < 0) //HH:mm
         return -1
 
     const ZHH = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
