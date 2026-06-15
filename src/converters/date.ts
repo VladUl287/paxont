@@ -23,24 +23,24 @@ export function toDate(ctx: ConvertCtx, meta: BaseMeta<Date>, index: number, _de
 }
 
 function fromString(b: Uint8Array, i: number, opt: JsonOptions): ConvertResult<Date> {
-    const result = {
-        value: Date.prototype,
-        nextIndex: i
-    }
+    const result = new Date(0)
+    let index: number = 0
 
-    if (tryParseISO8601(b, i, result))
-        return result
+    if ((index = tryParseISO8601(b, i, result)) >= 0)
+        return {
+            value: result,
+            nextIndex: index + 2
+        }
 
     let start = i
-    while (i < b.length && b[i] !== DOUBLE_QUOTE)
-        i++
-
+    while (i < b.length && b[i] !== DOUBLE_QUOTE) i++
     const dateString = opt.decoder.decode(b.subarray(start, i))
-    result.value = new Date(dateString)
-    result.nextIndex = i
-
-    if (!isNaN(result.value.valueOf()))
-        return result
+    const date = new Date(dateString)
+    if (!isNaN(date.valueOf()))
+        return {
+            value: date,
+            nextIndex: i
+        }
 
     throw new Error(`invalid date value, at index ${i}`)
 }
