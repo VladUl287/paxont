@@ -20,7 +20,7 @@ function expectTwoDigits(b: Uint8Array, i: number): number {
     return ++i
 }
 
-export function tryParseISO8601(b: Uint8Array, i: number, result: Date): number {
+export function tryParseISO8601(b: Uint8Array, i: number, r: Date): number {
     const len1 = b.length - 1
 
     if ((i = expectFourDigits(b, i)) < 0) //YYYY
@@ -28,7 +28,7 @@ export function tryParseISO8601(b: Uint8Array, i: number, result: Date): number 
 
     const YYYY = ((b[i - 4] & 0x0F) * 1000) + ((b[i - 3] & 0x0F) * 100) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
     if (i >= len1 || b[i++] !== MINUS) {
-        result.setTime(Date.UTC(YYYY))
+        r.setTime(Date.UTC(YYYY))
         return i
     }
 
@@ -40,7 +40,7 @@ export function tryParseISO8601(b: Uint8Array, i: number, result: Date): number 
         return -1
 
     if (i >= len1 || b[i++] !== MINUS) {
-        result.setTime(Date.UTC(YYYY, MM))
+        r.setTime(Date.UTC(YYYY, MM))
         return i
     }
 
@@ -52,7 +52,7 @@ export function tryParseISO8601(b: Uint8Array, i: number, result: Date): number 
         return -1
 
     if (i >= len1 || b[i++] !== T_UPPER) {
-        result.setTime(Date.UTC(YYYY, MM, DD))
+        r.setTime(Date.UTC(YYYY, MM, DD))
         return i
     }
 
@@ -68,7 +68,7 @@ export function tryParseISO8601(b: Uint8Array, i: number, result: Date): number 
         return -1
 
     if (i >= len1 || b[i++] !== COLON) {
-        result.setTime(Date.UTC(YYYY, MM, DD, HH, mm))
+        r.setTime(Date.UTC(YYYY, MM, DD, HH, mm))
         return i
     }
 
@@ -90,12 +90,12 @@ export function tryParseISO8601(b: Uint8Array, i: number, result: Date): number 
     }
 
     if (i < len1 && b[i] === Z) { //Z
-        result.setTime(Date.UTC(YYYY, MM, DD, HH, mm, ss, sss))
+        r.setTime(Date.UTC(YYYY, MM, DD, HH, mm, ss, sss))
         return i
     }
 
     if (i >= len1 && b[i] !== MINUS && b[i] !== PLUS) { //not ±
-        result.setTime(new Date(YYYY, MM, DD, HH, mm, ss, sss).getTime())
+        r.setTime(new Date(YYYY, MM, DD, HH, mm, ss, sss).getTime())
         return i
     }
 
@@ -112,6 +112,6 @@ export function tryParseISO8601(b: Uint8Array, i: number, result: Date): number 
     if (zmm < 0 || zmm > 59)
         return -1
 
-    result.setTime(Date.UTC(YYYY, MM, DD, HH - (ZHH * sign), mm - (zmm * sign), ss, sss))
+    r.setTime(Date.UTC(YYYY, MM, DD, HH - (ZHH * sign), mm - (zmm * sign), ss, sss))
     return i
 }
