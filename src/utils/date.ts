@@ -95,7 +95,13 @@ export function tryParseISO8601(b: Uint8Array, i: number, r: Date): number {
     }
 
     if (i >= len1 && b[i] !== MINUS && b[i] !== PLUS) { //not ±
-        r.setTime(new Date(YYYY, MM, DD, HH, mm, ss, sss).getTime())
+        r.setFullYear(YYYY)
+        r.setMonth(MM)
+        r.setDate(DD)
+        r.setHours(HH)
+        r.setMinutes(mm)
+        r.setSeconds(ss)
+        r.setMilliseconds(sss)
         return i
     }
 
