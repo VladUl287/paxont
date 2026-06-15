@@ -1,27 +1,22 @@
-import * as JsonCodes from "../utils/utf8constants"
-import { ConvertMeta, ConvertResult, ConvertState } from "./types"
-import { skipWhitespace } from "./utils"
+import { ConvertCtx, ConvertResult, PrimitiveMeta } from "../metadata/types"
+import { DOUBLE_QUOTE } from "../utils/utf8constants"
 
 export function convertString(
-    ctx: ConvertState, metadata: ConvertMeta, index: number, depth: number): ConvertResult<string> {
+    ctx: ConvertCtx, _meta: PrimitiveMeta<string>, i: number, _depth: number): ConvertResult<string> {
     const bytes = ctx.bytes
 
-    index = skipWhitespace(bytes, index)
+    if (bytes[i] !== DOUBLE_QUOTE)
+        throw new Error("")
+    i++
 
-    if (bytes[index] !== JsonCodes.DOUBLE_QUOTE)
-        return { error: "not quote" }
-    index++
+    let start = i
+    while (bytes[i] !== DOUBLE_QUOTE)
+        i++
 
-    let start = index
-    while (bytes[index] !== JsonCodes.DOUBLE_QUOTE) {
-        index++
-    }
-
-    const stringValue = ctx.options.decoder.decode(bytes.slice(start, index))
-    index++
+    const stringValue = ctx.options.decoder.decode(bytes.subarray(start, i))
 
     return {
         value: stringValue,
-        nextIndex: index
+        nextIndex: ++i
     }
 }
