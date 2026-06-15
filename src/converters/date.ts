@@ -1,6 +1,7 @@
 import { BaseMeta, ConvertCtx, ConvertResult, isObjectFieldMeta } from "../metadata/types"
 import { JsonOptions } from "../options"
 import { tryParseISO8601 } from "../utils/date"
+import { parseNumberF64 } from "../utils/number"
 import { DOUBLE_QUOTE, isDigitU8 } from "../utils/utf8constants"
 
 export function toDate(ctx: ConvertCtx, meta: BaseMeta<Date>, index: number, _depth: number): ConvertResult<Date> {
@@ -34,8 +35,10 @@ function fromString(b: Uint8Array, i: number, opt: JsonOptions): ConvertResult<D
 
     let start = i
     while (i < b.length && b[i] !== DOUBLE_QUOTE) i++
-    const dateString = opt.decoder.decode(b.subarray(start, i))
-    const date = new Date(dateString)
+
+    const dateStr = opt.decoder.decode(b.subarray(start, i))
+    const date = new Date(dateStr)
+
     if (!isNaN(date.valueOf()))
         return {
             value: date,
@@ -47,7 +50,7 @@ function fromString(b: Uint8Array, i: number, opt: JsonOptions): ConvertResult<D
 
 function fromTimestamp(b: Uint8Array, i: number): ConvertResult<Date> {
     return {
-        value: new Date(),
+        value: new Date(parseNumberF64(b, i)),
         nextIndex: i
     }
 }
