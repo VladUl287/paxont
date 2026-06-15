@@ -1,9 +1,4 @@
-import { COLON, DOT, isDigit, isDigitU8, MINUS, PLUS, T_UPPER, Z } from "./utf8constants";
-
-export function isISO8601FromString(d: string): boolean {
-    const isoRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:[+-]\d{2}:\d{2}|Z)$/
-    return isoRegex.test(d)
-}
+import { COLON, DOT, isDigitU8, MINUS, PLUS, T_UPPER, Z } from "./utf8constants";
 
 const nonDigit = (b: number) => !isDigitU8(b)
 
