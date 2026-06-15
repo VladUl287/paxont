@@ -1,7 +1,7 @@
 import { ConvertCtx, ConvertResult, PrimitiveMeta } from "../metadata/types"
 import { DOUBLE_QUOTE } from "../utils/utf8constants"
 
-export function convertString(
+export function toString(
     ctx: ConvertCtx, _meta: PrimitiveMeta<string>, i: number, _depth: number): ConvertResult<string> {
     const bytes = ctx.bytes
 
