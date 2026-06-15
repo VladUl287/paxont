@@ -1,4 +1,4 @@
-import { COLON, DOT, isDigit, isDigitU8, MINUS, PLUS, T, Z } from "./utf8constants";
+import { COLON, DOT, isDigit, isDigitU8, MINUS, PLUS, T_UPPER, Z } from "./utf8constants";
 
 export function isISO8601FromString(d: string): boolean {
     const isoRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:[+-]\d{2}:\d{2}|Z)$/
@@ -64,7 +64,7 @@ export function tryParseISO8601(b: Uint8Array, i: number, result: Date): number 
     if (DD < 1 || DD > 31)
         return -1
 
-    if (i >= len1 || b[i++] !== T) {
+    if (i >= len1 || b[i++] !== T_UPPER) {
         result.setTime(Date.UTC(YYYY, MM, DD))
         return i
     }
