@@ -1,8 +1,8 @@
-import { ConvertCtx, ConvertResult, PrimitiveMeta } from "../metadata/types"
+import { BaseMeta, ConvertCtx, ConvertResult } from "../metadata/types"
 import { DOUBLE_QUOTE } from "../utils/utf8constants"
 
 export function toString(
-    ctx: ConvertCtx, _meta: PrimitiveMeta<string>, i: number, _depth: number): ConvertResult<string> {
+    ctx: ConvertCtx, _meta: BaseMeta<string>, i: number, _depth: number): ConvertResult<string> {
     const bytes = ctx.bytes
 
     if (bytes[i] !== DOUBLE_QUOTE)
