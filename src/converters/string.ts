@@ -17,6 +17,8 @@ const wasmMem = new Uint8Array(wasm.memory.buffer)
 const indexOfSimd = wasm.indexOfSimd as Function
 let set = false
 
+const temp = new Array(4)
+
 export function toString(
     ctx: ConvertCtx, _meta: BaseMeta<string>, i: number, _depth: number): ConvertResult<string> {
     const b = ctx.bytes
@@ -44,15 +46,25 @@ export function toString(
     // i += inde
 
     if (!set) {
-        wasmMem.set(ctx.bytes)
+        wasmMem.set(b)
         set = true
     }
 
-    const inde = indexOfSimd(i, b.length, 34)
-    i += inde
+    const count = indexOfSimd(i, b.length, 34)
+    i += count
+
+    if (count < 5) {
+        b.subarray(start, i).forEach((item, i) => {
+            temp[i] = item
+        })
+        return {
+            value: String.fromCharCode.apply(0, temp),
+            nextIndex: ++i
+        }
+    }
 
     return {
-        value: i as any,
+        value: ctx.options.decoder.decode(b.subarray(start, i)),
         nextIndex: ++i
     }
 }
