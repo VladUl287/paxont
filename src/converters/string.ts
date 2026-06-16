@@ -1,5 +1,5 @@
 import { BaseMeta, ConvertCtx, ConvertResult } from "../metadata/types"
-import { DOUBLE_QUOTE as DQ } from "../utils/utf8constants"
+import { COMMA, CURLY_CLOSE, DOUBLE_QUOTE as DQ } from "../utils/utf8constants"
 
 let wasm: any = null
 try {
@@ -30,21 +30,6 @@ export function toString(
 
     let start = i
 
-    // while (b[i] !== DQ && b[i + 1] !== DQ && b[i + 2] !== DQ && b[i + 3] !== DQ)
-    //     i += 4
-
-    // while (b[i] !== DQ)
-    //     i++
-
-    // i = b.indexOf(DOUBLE_QUOTE, i)
-
-    // const stringValue = ctx.options.decoder.decode(b.subarray(start, i))
-
-    // const sub = ctx.bytes.subarray(i)
-    // wasmMem.set(sub, 0)
-    // const inde = indexOfSimd(0, sub.length, 34)
-    // i += inde
-
     if (!set) {
         wasmMem.set(b)
         set = true
@@ -53,12 +38,9 @@ export function toString(
     const count = indexOfSimd(i, b.length, 34)
     i += count
 
-    if (count < 5) {
-        b.subarray(start, i).forEach((item, i) => {
-            temp[i] = item
-        })
+    if (count <= 32) {
         return {
-            value: String.fromCharCode.apply(0, temp),
+            value: decode(b, start, i),
             nextIndex: ++i
         }
     }
@@ -69,3 +51,48 @@ export function toString(
     }
 }
 
+const TEMP_CACHE = new Array<number[]>(32)
+for (let i = 1; i <= 32; i++) {
+    TEMP_CACHE[i] = new Array<number>(i).fill(0)
+}
+
+function decode(bytes: Uint8Array, i: number, length: number) {
+    const result = TEMP_CACHE[length - i]
+
+    let j = 0
+    while (i < length) {
+        const byte = bytes[i++]
+        if (byte < 0x80) {
+            result[j] = byte
+        }
+        else if (byte < 0xE0) {
+            const byte2 = bytes[i++]
+            result[j] = ((byte & 0x1F) << 6) | (byte2 & 0x3F)
+        }
+        else if (byte < 0xF0) {
+            const byte2 = bytes[i++]
+            const byte3 = bytes[i++]
+            result[j] = (
+                ((byte & 0x0F) << 12) |
+                ((byte2 & 0x3F) << 6) |
+                ((byte3 & 0x3F))
+            )
+        }
+        else {
+            const byte2 = bytes[i++]
+            const byte3 = bytes[i++]
+            const byte4 = bytes[i++]
+            const codePoint = ((byte & 0x07) << 18) |
+                ((byte2 & 0x3F) << 12) |
+                ((byte3 & 0x3F) << 6) |
+                (byte4 & 0x3F)
+            result[j] = (
+                Math.floor((codePoint - 0x10000) / 0x400) + 0xD800,
+                ((codePoint - 0x10000) % 0x400) + 0xDC00
+            )
+        }
+        j++
+    }
+
+    return String.fromCharCode.apply(String, result)
+}
