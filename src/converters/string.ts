@@ -17,12 +17,11 @@ const wasmMem = new Uint8Array(wasm.memory.buffer)
 const indexOfSimd = wasm.indexOfSimd as Function
 let set = false
 
-const temp = new Array(4)
+const MAX_FAST_DECODE = 32
 
 export function toString(
     ctx: ConvertCtx, _meta: BaseMeta<string>, i: number, _depth: number): ConvertResult<string> {
     const b = ctx.bytes
-    const len = b.length
 
     if (b[i] !== DQ)
         throw new Error("")
@@ -38,7 +37,7 @@ export function toString(
     const count = indexOfSimd(i, b.length, 34)
     i += count
 
-    if (count <= 32) {
+    if (count <= MAX_FAST_DECODE) {
         return {
             value: decode(b, start, i),
             nextIndex: ++i
@@ -51,8 +50,8 @@ export function toString(
     }
 }
 
-const TEMP_CACHE = new Array<number[]>(32)
-for (let i = 1; i <= 32; i++) {
+const TEMP_CACHE = new Array<number[]>(MAX_FAST_DECODE)
+for (let i = 1; i <= MAX_FAST_DECODE; i++) {
     TEMP_CACHE[i] = new Array<number>(i).fill(0)
 }
 
