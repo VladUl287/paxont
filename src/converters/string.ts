@@ -99,10 +99,6 @@ function decode(bytes: Uint8Array, start: number, end: number) {
         j++
     }
 
-    try {
-        result.length = finalLength
-        return String.fromCharCode.apply(String, result)
-    } finally {
-        result.length = length
-    }
+    return String.fromCharCode.apply(String, result)
+        .substring(0, finalLength)
 }
