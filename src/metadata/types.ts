@@ -2,7 +2,7 @@ import { JsonOptions } from "../options"
 import { isTypedArray } from "../utils/array"
 
 export type BuiltInType =
-    | "string" | "number" | "bigint" | "boolean" | "symbol"
+    | "string" | "number" | "bigint" | "boolean"
     | "object" | "array" | "date" | "map" | "set"
     | "u8" | "u16" | "u32" | "u64"
     | "i8" | "i16" | "i32" | "i64"
