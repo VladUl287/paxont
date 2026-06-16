@@ -55,43 +55,54 @@ for (let i = 1; i <= MAX_FAST_DECODE; i++) {
     TEMP_CACHE[i] = new Array<number>(i).fill(0)
 }
 
-function decode(bytes: Uint8Array, i: number, length: number) {
-    const result = TEMP_CACHE[length - i]
+function decode(bytes: Uint8Array, start: number, end: number) {
+    const length = end - start
+    const result = TEMP_CACHE[length]
 
+    let finalLength = result.length
     let j = 0
-    while (i < length) {
-        const byte = bytes[i++]
+
+    while (start < end) {
+        const byte = bytes[start++]
         if (byte < 0x80) {
             result[j] = byte
         }
         else if (byte < 0xE0) {
-            const byte2 = bytes[i++]
+            const byte2 = bytes[start++]
             result[j] = ((byte & 0x1F) << 6) | (byte2 & 0x3F)
+            finalLength--
         }
         else if (byte < 0xF0) {
-            const byte2 = bytes[i++]
-            const byte3 = bytes[i++]
+            const byte2 = bytes[start++]
+            const byte3 = bytes[start++]
             result[j] = (
                 ((byte & 0x0F) << 12) |
                 ((byte2 & 0x3F) << 6) |
                 ((byte3 & 0x3F))
             )
+            finalLength -= 2
         }
         else {
-            const byte2 = bytes[i++]
-            const byte3 = bytes[i++]
-            const byte4 = bytes[i++]
-            const codePoint = ((byte & 0x07) << 18) |
+            const byte2 = bytes[start++]
+            const byte3 = bytes[start++]
+            const byte4 = bytes[start++]
+            const codePoint = (
+                ((byte & 0x07) << 18) |
                 ((byte2 & 0x3F) << 12) |
                 ((byte3 & 0x3F) << 6) |
                 (byte4 & 0x3F)
-            result[j] = (
-                Math.floor((codePoint - 0x10000) / 0x400) + 0xD800,
-                ((codePoint - 0x10000) % 0x400) + 0xDC00
             )
+            result[j] = Math.floor((codePoint - 0x10000) / 0x400) + 0xD800
+            result[++j] = ((codePoint - 0x10000) % 0x400) + 0xDC00
+            finalLength -= 2
         }
         j++
     }
 
-    return String.fromCharCode.apply(String, result)
+    try {
+        result.length = finalLength
+        return String.fromCharCode.apply(String, result)
+    } finally {
+        result.length = length
+    }
 }
