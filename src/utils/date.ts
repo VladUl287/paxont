@@ -28,7 +28,7 @@ export function tryParseISO8601(b: Uint8Array, i: number, r: Date): number {
 
     const YYYY = ((b[i - 4] & 0x0F) * 1000) + ((b[i - 3] & 0x0F) * 100) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
     if (i >= len1 || b[i++] !== MINUS) {
-        r.setTime(Date.UTC(YYYY))
+        r.setTime(utc(YYYY, 0))
         return i
     }
 
@@ -40,7 +40,7 @@ export function tryParseISO8601(b: Uint8Array, i: number, r: Date): number {
         return -1
 
     if (i >= len1 || b[i++] !== MINUS) {
-        r.setTime(Date.UTC(YYYY, MM))
+        r.setTime(utc(YYYY, MM))
         return i
     }
 
@@ -52,7 +52,7 @@ export function tryParseISO8601(b: Uint8Array, i: number, r: Date): number {
         return -1
 
     if (i >= len1 || b[i++] !== T_UPPER) {
-        r.setTime(Date.UTC(YYYY, MM, DD))
+        r.setTime(utc(YYYY, MM, DD))
         return i
     }
 
@@ -68,7 +68,7 @@ export function tryParseISO8601(b: Uint8Array, i: number, r: Date): number {
         return -1
 
     if (i >= len1 || b[i++] !== COLON) {
-        r.setTime(Date.UTC(YYYY, MM, DD, HH, mm))
+        r.setTime(utc(YYYY, MM, DD, HH, mm))
         return i
     }
 
@@ -118,7 +118,7 @@ export function tryParseISO8601(b: Uint8Array, i: number, r: Date): number {
     if (zmm < 0 || zmm > 59)
         return -1
 
-    r.setTime(Date.UTC(YYYY, MM, DD, HH - (ZHH * sign), mm - (zmm * sign), ss, sss))
+    r.setTime(utc(YYYY, MM, DD, HH - (ZHH * sign), mm - (zmm * sign), ss, sss))
     return i
 }
 
