@@ -149,6 +149,8 @@ export function toInt64Array(b: Uint8Array, i: number): ConvertResult<BigInt64Ar
     }
 }
 
+const tempUint64 = new BigUint64Array(1024).fill(0n)
+
 const bufferUInt = new ArrayBuffer(8)
 const conversionU32 = new Uint32Array(bufferUInt)
 const conversionU64 = new BigUint64Array(bufferUInt)
@@ -156,8 +158,6 @@ export function toUInt64Array(b: Uint8Array, i: number): ConvertResult<BigUint64
     if (b[i] !== SQUARE_OPEN)
         throw new Error(`array open not found at position ${i}`)
     i++
-
-    let result = new Array<bigint>()
 
     const MAX_DIGITS = 20
     const MIN_VALUE = 0n
@@ -206,7 +206,7 @@ export function toUInt64Array(b: Uint8Array, i: number): ConvertResult<BigUint64
         if (dc > MAX_SAFE_LONG_DIGITS && value > MAX_VALUE)
             throw new Error(`invalid uint64 value ${value}, must be ${MIN_VALUE}-${MAX_VALUE}`)
 
-        result[j] = value
+        tempUint64[j] = value
         j++
 
         i = skipWhitespace(b, i)
@@ -215,8 +215,16 @@ export function toUInt64Array(b: Uint8Array, i: number): ConvertResult<BigUint64
             i++
     }
 
+    const result = new BigUint64Array(j)
+
+    let n = 0
+    while (n < result.length) {
+        result[n] = tempUint64[n]
+        n++
+    }
+
     return {
-        value: new BigUint64Array(result),
+        value: result,
         nextIndex: ++i
     }
 }
