@@ -2,6 +2,7 @@ import { CollectionMeta, ConvertCtx } from "../metadata/types"
 import { f32Format, f64Format, parseNumber } from "../utils/number"
 import { TypedArray, TypedArrayCtor } from "../utils/typedArray"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
+import { parseNumberF64_2 } from "./number_opt"
 import { ConvertResult } from "./types"
 import { skipWhitespace } from "./utils"
 
@@ -262,20 +263,20 @@ export function toF32Array(b: Uint8Array, i: number): ConvertResult<Float32Array
     }
 }
 
+const tempF64 = new Float64Array(1024).fill(0)
 export function toF64Array(b: Uint8Array, i: number): ConvertResult<Float64Array> {
     if (b[i] !== SQUARE_OPEN)
         throw new Error(`array open not found at position ${i}`)
     i++
 
-    let result = new Array<number>()
-
     let j = 0
     while (b[i] !== SQUARE_CLOSE) {
         i = skipWhitespace(b, i)
 
-        const number = parseNumber(b, i, f64Format)
-        result[j] = number.value
+        const number = parseNumberF64_2(b, i) as { value: number, nextIndex: number }
+        tempF64[j] = number.value
         i = number.nextIndex
+
         j++
 
         i = skipWhitespace(b, i)
@@ -284,8 +285,15 @@ export function toF64Array(b: Uint8Array, i: number): ConvertResult<Float64Array
             i++
     }
 
+    const result = new Float64Array(j)
+    let n = 0
+    while (n < result.length) {
+        result[n] = tempF64[n]
+        n++
+    }
+
     return {
-        value: new Float64Array(result),
-        nextIndex: i
+        value: result,
+        nextIndex: ++i
     }
 }
