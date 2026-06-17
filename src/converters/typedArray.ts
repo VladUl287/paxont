@@ -118,12 +118,12 @@ export function toU16Array(b: Uint8Array, i: number): ConvertResult<Uint16Array>
     }
 }
 
+const tempNumbers = new Array<number>(1024).fill(0)
+
 export function toU32Array(b: Uint8Array, i: number): ConvertResult<Uint32Array> {
     if (b[i] !== SQUARE_OPEN)
         throw new Error(`array open not found at position ${i}`)
     i++
-
-    let result = new Array<number>()
 
     const MAX_DIGITS = 10
     const MIN_VALUE = 0
@@ -139,15 +139,16 @@ export function toU32Array(b: Uint8Array, i: number): ConvertResult<Uint32Array>
         while (dc < MAX_DIGITS) {
             const d = (b[i] - 48) >>> 0
             if (d > 9) break
+
             temp = temp * 10 + d
             dc++
             i++
         }
 
-        if (dc >= MAX_DIGITS || temp < MIN_VALUE || temp > MAX_VALUE)
+        if (dc > MAX_DIGITS || temp < MIN_VALUE || temp > MAX_VALUE)
             throw new Error(`invalid uint8 value ${temp}, must be ${MIN_VALUE}-${MAX_VALUE}`)
 
-        result[j] = temp
+        tempNumbers[j] = temp
         j++
 
         i = skipWhitespace(b, i)
@@ -156,8 +157,16 @@ export function toU32Array(b: Uint8Array, i: number): ConvertResult<Uint32Array>
             i++
     }
 
+    const result = new Uint32Array(j)
+
+    let n = 0
+    while (n < result.length) {
+        result[n] = tempNumbers[n]
+        n++
+    }
+
     return {
-        value: new Uint32Array(result),
+        value: result,
         nextIndex: ++i
     }
 }
