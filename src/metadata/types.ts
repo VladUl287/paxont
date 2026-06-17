@@ -1,5 +1,5 @@
 import { JsonOptions } from "../options"
-import { isTypedArray } from "../utils/array"
+import { isTypedArray } from "../utils/typedArray"
 
 export type BuiltInType =
     | "string" | "number" | "bigint" | "boolean"
