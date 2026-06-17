@@ -136,33 +136,18 @@ export function toU32Array(b: Uint8Array, i: number): ConvertResult<Uint32Array>
         let temp = 0
         let dc = 0 >>> 0
 
-        const d1 = (b[i] - 48) >>> 0
-        const d2 = (b[i] - 48) >>> 0
-        const d3 = (b[i] - 48) >>> 0
-        const d4 = (b[i] - 48) >>> 0
-        const d5 = (b[i] - 48) >>> 0
-        const d6 = (b[i] - 48) >>> 0
-        const d7 = (b[i] - 48) >>> 0
-        const d8 = (b[i] - 48) >>> 0
-        const d9 = (b[i] - 48) >>> 0
-        const d10 = (b[i] - 48) >>> 0
-
-        if (d1 <= 9) temp = temp * 10 + d1; dc++
-        if (d2 <= 9) temp = temp * 10 + d2; dc++
-        if (d3 <= 9) temp = temp * 10 + d3; dc++
-        if (d4 <= 9) temp = temp * 10 + d4; dc++
-        if (d5 <= 9) temp = temp * 10 + d5; dc++
-        if (d6 <= 9) temp = temp * 10 + d6; dc++
-        if (d7 <= 9) temp = temp * 10 + d7; dc++
-        if (d8 <= 9) temp = temp * 10 + d8; dc++
-        if (d9 <= 9) temp = temp * 10 + d9; dc++
-        if (d10 <= 9) temp = temp * 10 + d10; dc++
+        while (dc < MAX_DIGITS) {
+            const d = (b[i] - 48) >>> 0
+            if (d > 9) break
+            temp = temp * 10 + d
+            dc++
+            i++
+        }
 
         if (dc >= MAX_DIGITS || temp < MIN_VALUE || temp > MAX_VALUE)
             throw new Error(`invalid uint8 value ${temp}, must be ${MIN_VALUE}-${MAX_VALUE}`)
 
         result[j] = temp
-        i += dc
         j++
 
         i = skipWhitespace(b, i)
