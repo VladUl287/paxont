@@ -158,7 +158,7 @@ export function toU32Array(b: Uint8Array, i: number): ConvertResult<Uint32Array>
 
     return {
         value: new Uint32Array(result),
-        nextIndex: i
+        nextIndex: ++i
     }
 }
 
