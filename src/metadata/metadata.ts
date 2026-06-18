@@ -1,8 +1,15 @@
 import { generateSwitchMatcherPack } from "../code_gen/field"
+import { toArray } from "../converters/array"
+import { toBigInt } from "../converters/bigint"
+import { toBoolean } from "../converters/boolean"
+import { toDate } from "../converters/date"
 import { convertNumber } from "../converters/number"
 import { convertObject } from "../converters/object"
-import { convertString } from "../converters/string"
+import { toSet } from "../converters/set"
+import { toString } from "../converters/string"
+import { toInt64Array, toTypedArray } from "../converters/typedArray"
 import { Converter } from "../converters/types"
+import { isTypedArray } from "../utils/typedArray"
 import { TypeName } from "./types"
 
 export type Metadata = {
@@ -17,6 +24,7 @@ export type Metadata = {
     readonly defaultValue?: unknown
     readonly creator?: (props: any[]) => object
     readonly getFieldIndex?: (field: Uint8Array, index: number) => number
+    readonly [key: string]: any
 }
 
 function getType(value: unknown): TypeName {
@@ -62,8 +70,23 @@ export function objectLiteralFactory(fields: string[]): (values: unknown[]) => o
 
 const converters: any = {
     number: convertNumber,
-    string: convertString,
-    object: convertObject
+    string: toString,
+    object: convertObject,
+    date: toDate,
+    boolean: toBoolean,
+    bigint: toBigInt,
+    array: toArray,
+    set: toSet,
+    'u8[]': toTypedArray,
+    'u16[]': toTypedArray,
+    'u32[]': toTypedArray,
+    'u64[]': toTypedArray,
+    'i8[]': toTypedArray,
+    'i16[]': toTypedArray,
+    'i32[]': toTypedArray,
+    'i64[]': toTypedArray,
+    'f32[]': toTypedArray,
+    'f64[]': toTypedArray
 }
 
 const encoder = new TextEncoder()
@@ -89,10 +112,25 @@ export function toMetadata(object: unknown): Metadata {
 
         if (Array.isArray(object))
             return {
-                convert: undefined as any,
+                toValue: converters[getType(object[0])],
+                convert: converters[getType(object[0])],
                 type: getType(object[0]),
                 value: toValue(object[0])
             }
+
+        if (isTypedArray(object)) {
+            return {} as any
+        }
+
+        if (object instanceof Set) {
+            const value = object.values().next().value
+            return {
+                toValue: converters[getType(value)],
+                convert: converters[getType(value)],
+                type: getType(value),
+                value: toValue(value)
+            }
+        }
 
         return Object.keys(object)
             .map((key): Metadata => {
