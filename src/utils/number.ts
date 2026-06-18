@@ -1,4 +1,5 @@
 import { ConvertResult } from "../metadata/types"
+import { isDigitU8, MINUS } from "./utf8constants"
 
 type NumberFormat = {
     normalMantissaBits: number
@@ -46,7 +47,35 @@ export function parseNumber(b: Uint8Array, i: number, format: NumberFormat): Con
     }
 }
 
-export function parseNumberI8(b: Uint8Array, i: number): number { return 1 }
+export function parseInt8(b: Uint8Array, i: number): number {
+    const MAX_DIGITS = 3
+    const MIN_VALUE = -128
+    const MAX_VALUE = 127
+
+    const negative = b[i] === MINUS
+    if (negative) i++
+
+    const length = Math.min(b.length, i + MAX_DIGITS)
+    const start = i
+    let m = 0 >>> 0
+
+    if (i < length && isDigitU8(b[i])) {
+        m = m * 10 + (b[i++] & 0x0F)
+
+        if (i < length && isDigitU8(b[i])) {
+            m = m * 10 + (b[i++] & 0x0F)
+
+            if (i < length && isDigitU8(b[i]))
+                m = m * 10 + (b[i++] & 0x0F)
+        }
+    }
+
+    const dc = i - start
+    if (dc > MAX_DIGITS || m < MIN_VALUE || m > MAX_VALUE)
+        throw new Error(`invalid u8 value ${m}, valid range ${MIN_VALUE}-${MAX_VALUE}`)
+
+    return negative ? -m : m
+}
 
 export function parseNumberU8(b: Uint8Array, i: number): number { return 1 }
 

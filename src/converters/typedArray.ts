@@ -28,6 +28,42 @@ export function toTypedArray(ctx: ConvertCtx, m: CollectionMeta<TypedArray, Type
 }
 
 const tempNumbers = new Array<number>(1024).fill(0)
+
+export function toIntArray1(
+    b: Uint8Array, i: number, converter: (b: Uint8Array, i: number) => number, ctor: TypedArrayCtor): ConvertResult<TypedArray> {
+    if (b[i] !== SQUARE_OPEN)
+        throw new Error(`array open not found at position ${i}`)
+    i++
+
+    let j = 0
+    while (b[i] !== SQUARE_CLOSE) {
+        i = skipWhitespace(b, i)
+
+        const temp = converter(b, i)
+
+        tempNumbers[j] = temp
+        j++
+
+        i = skipWhitespace(b, i)
+
+        if (b[i] === COMMA)
+            i++
+    }
+
+    const result = new ctor(j)
+
+    let n = 0
+    while (n < result.length) {
+        result[n] = tempNumbers[n]
+        n++
+    }
+
+    return {
+        value: result,
+        nextIndex: ++i
+    }
+}
+
 export function toIntArray(
     b: Uint8Array, i: number, maxDigits: number, minValue: number, maxValue: number, ctor: TypedArrayCtor): ConvertResult<TypedArray> {
     if (b[i] !== SQUARE_OPEN)
