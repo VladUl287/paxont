@@ -1,4 +1,4 @@
-import { DOT, E, E_UPPER, MINUS, PLUS, ZERO } from "../utils/utf8constants"
+import { DOT, E, E_UPPER, isDigitU8, MINUS, PLUS, ZERO } from "../utils/utf8constants"
 import { ConvertMeta, ConvertResult, ConvertState } from "./types"
 
 export function convertNumber(ctx: ConvertState, _metadata: ConvertMeta, index: number, _depth: number): ConvertResult<number> {
@@ -53,8 +53,7 @@ const INFINITY_EXPONENT = 2047
 
 function tryParseMantissa(b: Uint8Array, s: Store): boolean {
     if (tryParseInteger(b, s)) {
-        if (s.index < b.length && b[s.index] === DOT)
-            return tryParseDecimal(b, s)
+        if (b[s.index] === DOT) return tryParseDecimal(b, s)
         return true
     }
     return false
@@ -62,74 +61,71 @@ function tryParseMantissa(b: Uint8Array, s: Store): boolean {
 
 function tryParseInteger(b: Uint8Array, s: Store): boolean {
     let i = s.index
-    let m = s.mantissa
-    let dc = s.digitsCount
 
-    const length = b.length
-    while (i < length && b[i] === ZERO) i++
+    const start = i
+    const len = Math.min(b.length, start + MAX_SAFE_INT_DIGITS)
 
-    while (i <= length - 4 && dc < MAX_SAFE_INT_DIGITS - 4) {
-        const a1 = b[i]
-        const a2 = b[i + 1]
-        const a3 = b[i + 2]
-        const a4 = b[i + 3]
+    let m = 0
+    while (i < len - 4) {
+        const d = b[i], d2 = b[i + 1], d3 = b[i + 2], d4 = b[i + 3]
 
-        const word = (a1 | a2 << 8 | a3 << 16 | a4 << 24) - 0x30303030
-        const hasNonDigit = ((word + 0x76767676) | word) & 0x80808080
+        const w = (d | d2 << 8 | d3 << 16 | d4 << 24) - 0x30303030
+        const nonDigit = ((w + 0x76767676) | w) & 0x80808080
 
-        if (hasNonDigit !== 0) break
+        if (nonDigit !== 0) break
 
-        m = m * 10000 + ((a1 & 0x0F) * 1000 + (a2 & 0x0F) * 100 + (a3 & 0x0F) * 10 + (a4 & 0x0F))
-        dc += 4
+        m = m * 10000 + ((d & 0x0F) * 1000 + (d2 & 0x0F) * 100 + (d3 & 0x0F) * 10 + (d4 & 0x0F))
         i += 4
     }
 
-    while (i < length && dc < MAX_SAFE_INT_DIGITS - 1) {
-        const d = (b[i] - 48) >>> 0
-        if (d > 9) break
-
+    if (isDigitU8(b[i])) {
+        const d = b[i++] & 0x0F
         m = m * 10 + d
-        dc++
-        i++
-    }
 
-    if (i < length && dc >= MAX_SAFE_INT_DIGITS - 1) {
-        const d = (b[i] - 48) >>> 0
+        if (isDigitU8(b[i])) {
+            const d2 = b[i++] & 0x0F
+            m = m * 10 + d2
 
-        if (d <= 9) {
-            const tempM = m * 10 + d
-            if (tempM <= MAX_SAFE_INTEGER) {
-                m = tempM
-                dc++
-                i++
+            if (isDigitU8(b[i])) {
+                const d3 = b[i++] & 0x0F
+                m = m * 10 + d3
+
+                if (isDigitU8(b[i]))
+                    return tryParseLong(b, start, i, m, len + 3, s)
             }
-
-            s.index = i
-            s.mantissa = m
-            s.digitsCount = dc
-
-            return tryParseLong(b, s)
         }
     }
 
+    if (b[i] === E || b[i] === E_UPPER)
+        return tryParseExponent(b, s)
+
     s.index = i
     s.mantissa = m
-    s.digitsCount = dc
+    s.digitsCount = i - start
     return true
 }
 
-function tryParseLong(b: Uint8Array, s: Store): boolean {
-    let i = s.index
-    let m = s.mantissa
-    let m32 = s.mantissaU32
+function tryParseLong(b: Uint8Array, start: number, i: number, m: number, len: number, s: Store): boolean {
+    len = Math.min(b.length, len)
+
+    // if (isDigitU8(b[i]) && (isDigitU8(b[i + 1]) || (m > 900719925474099 && (b[i] & 0x0F) > 2))) {
+    //     //split mode
+    // }
+
+    // m = m * 10 + (b[i] & 0x0F)
+    // s.digitsCount = i - start
+    // s.mantissa = m
+    // s.index = i
+    // return true
+
     let dc = s.digitsCount
 
-    const len = b.length
     if (i < len && ((b[i] - 48) >>> 0) > 9)
         return true
 
+    let m32 = s.mantissaU32
     splitTo32(m, m32)
-    m = 0
+    s.mantissa = 0
 
     let localDc = 0
     while (i < len && dc < MAX_SAFE_LONG_DIGITS) {
@@ -154,9 +150,8 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
         m = 0
     }
 
-    s.index = i
-    s.mantissa = m
     s.digitsCount = dc
+    s.index = i
     return true
 }
 
@@ -273,18 +268,15 @@ function tryParseExponent(b: Uint8Array, s: Store): boolean {
     return true
 }
 
-export function parseNumberF64_2(b: Uint8Array, offset: number): ConvertResult<number> {
-    let i = offset
-    let state = 0 >>> 0
+const POW10_TABLE = new Float64Array(2 * MAX_FAST_EXPONENT + 1)
+for (let exp = -MAX_FAST_EXPONENT; exp <= MAX_FAST_EXPONENT; exp++)
+    POW10_TABLE[exp + MAX_FAST_EXPONENT] = 10 ** exp
 
-    const STATE_NEGATIVE = 0x01
-    if (b[i] === MINUS) {
-        state ^= STATE_NEGATIVE
-        i++
-    }
+export function parseNumberF64_2(b: Uint8Array, i: number): ConvertResult<number> {
+    const negative = b[i] === MINUS
+    if (negative) i++
 
-    const length = b.length
-    const s = {
+    const s: Store = {
         index: i,
         exponent: 0,
         mantissa: 0,
@@ -295,53 +287,35 @@ export function parseNumberF64_2(b: Uint8Array, offset: number): ConvertResult<n
     if (tryParseMantissa(b, s)) {
         i = s.index
 
-        if (s.digitsCount === 0)
-            throw new Error('')
-
-        if (i < length && (b[i] === E || b[i] === E_UPPER))
-            tryParseExponent(b, s)
-        i = s.index
-
         let m = s.mantissa
-        let e = s.exponent
-        let dc = s.digitsCount
+        const e = s.exponent
+        const eabs = Math.abs(e)
 
-        if (MIN_FAST_EXPONENT <= e && e <= MAX_FAST_EXPONENT && dc <= MAX_SAFE_INT_DIGITS && m <= MAX_SAFE_INTEGER) {
-            if (e < 0)
-                m /= POS_POW10[-e]
-            else
-                m *= POS_POW10[e]
+        if (m > 0 && eabs <= MAX_FAST_EXPONENT) {
+            if (eabs > 0) m *= POW10_TABLE[eabs]
             return {
-                value: (state & STATE_NEGATIVE) ? -m : m,
+                value: negative ? -m : m,
                 nextIndex: i
             }
         }
 
-        if (dc <= MAX_SAFE_LONG_DIGITS) {
-            let m32 = s.mantissaU32
+        if (m > 0) splitTo32(m, s.mantissaU32)
 
-            if (dc < MAX_SAFE_INT_DIGITS || (dc === MAX_SAFE_INT_DIGITS && m <= MAX_SAFE_INTEGER))
-                splitTo32(m, m32)
-
-            const f64 = toFloat64(m32, e)
-            if (f64) {
-                return {
-                    value: f64,
-                    nextIndex: i
-                }
-            }
+        const f64 = toFloat64(s.mantissaU32, e)
+        if (f64) return {
+            value: f64,
+            nextIndex: i
         }
     }
 
-    const numberStr = decodeNumber(b, offset)
     return {
-        value: Number(numberStr),
+        value: Number(fastDecode(b, i)),
         nextIndex: i
     }
 }
 
 const c = new Array(1024).fill(0)
-function decodeNumber(b: Uint8Array, i: number) {
+function fastDecode(b: Uint8Array, i: number) {
     let j = 0
     let dc = 0
 
