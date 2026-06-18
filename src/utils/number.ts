@@ -39,10 +39,29 @@ export const f32Format: NumberFormat = {
     overflowDecimalExponent: 324
 }
 
-export function parseNumber(b: Uint8Array, offset: number, format: NumberFormat): ConvertResult<number> {
+export function parseNumber(b: Uint8Array, i: number, format: NumberFormat): ConvertResult<number> {
     return {
         value: 1,
         nextIndex: 1
     }
 }
 
+export function parseNumberI8(b: Uint8Array, i: number): number { return 1 }
+
+export function parseNumberU8(b: Uint8Array, i: number): number { return 1 }
+
+export function parseNumberI16(b: Uint8Array, i: number): number { return 1 }
+
+export function parseNumberU16(b: Uint8Array, i: number): number { return 1 }
+
+export function parseNumberI32(b: Uint8Array, i: number): number { return 1 }
+
+export function parseNumberU32(b: Uint8Array, i: number): number { return 1 }
+
+export function parseNumberF32(b: Uint8Array, i: number): number { return 1 }
+
+export function parseNumberF64(b: Uint8Array, i: number): number { return 1 }
+
+export function parseNumberI64(b: Uint8Array, i: number): bigint { return 1n }
+
+export function parseNumberU64(b: Uint8Array, i: number): bigint { return 1n }
