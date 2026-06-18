@@ -10,21 +10,21 @@ export function toTypedArray(ctx: ConvertCtx, m: CollectionMeta<TypedArray, Type
     const b = ctx.bytes
 
     switch (m.type) {
-        case 'u8': return toIntArray(b, i, 3, 0, 255, Uint8Array)
-        case 'u16': return toIntArray(b, i, 5, 0, 65535, Uint16Array)
-        case 'u32': return toIntArray(b, i, 10, 0, 4294967295, Uint32Array)
-        case 'i8': return toIntArray(b, i, 3, -128, 127, Int8Array)
-        case 'i16': return toIntArray(b, i, 3, -128, 127, Int16Array)
-        case 'i32': return toIntArray(b, i, 3, -2147483648, 2147483647, Int32Array)
+        case 'u8[]': return toIntArray(b, i, 3, 0, 255, Uint8Array)
+        case 'u16[]': return toIntArray(b, i, 5, 0, 65535, Uint16Array)
+        case 'u32[]': return toIntArray(b, i, 10, 0, 4294967295, Uint32Array)
+        case 'i8[]': return toIntArray(b, i, 3, -128, 127, Int8Array)
+        case 'i16[]': return toIntArray(b, i, 3, -128, 127, Int16Array)
+        case 'i32[]': return toIntArray(b, i, 3, -2147483648, 2147483647, Int32Array)
 
-        case 'u64': return toUInt64Array(b, i)
-        case 'i64': return toInt64Array(b, i)
+        case 'u64[]': return toUInt64Array(b, i)
+        case 'i64[]': return toInt64Array(b, i)
 
-        case 'f32': return toF32Array(b, i)
-        case 'f64': return toF64Array(b, i)
+        case 'f32[]': return toF32Array(b, i)
+        case 'f64[]': return toF64Array(b, i)
 
         default:
-            throw new Error(`not typed array '${m.type}'`)
+            throw new Error(`not supported typed array '${m.type}'`)
     }
 }
 
