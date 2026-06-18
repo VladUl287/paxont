@@ -51,13 +51,10 @@ const MAX_EXP_ROUND_TO_EVEN = 55
 const MAX_BINARY_EXPONENT = 1023
 const INFINITY_EXPONENT = 2047
 
-function tryParseMantissa(b: Uint8Array, s: Store): boolean {
-    if (tryParseInteger(b, s)) {
-        if (s.index < b.length && b[s.index] === DOT)
-            return tryParseDecimal(b, s)
-        return true
-    }
-    return false
+function tryFastParse(b: Uint8Array, s: Store): boolean {
+    return tryParseInteger(b, s) &&
+        (b[s.index] !== DOT || tryParseDecimal(b, s)) &&
+        (((b[s.index] | 32) !== E) || tryParseExponent(b, s))
 }
 
 function tryParseInteger(b: Uint8Array, s: Store): boolean {
@@ -87,7 +84,7 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
             if (isDigitU8(b[i])) {
                 m = m * 10 + (b[i++] & 0x0F)
 
-                if (i < len && isDigitU8(b[i]))
+                if (isDigitU8(b[i]))
                     return tryParseLong(b, s)
             }
         }
@@ -96,10 +93,6 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
     s.index = i
     s.mantissa = m
     s.digitsCount = i - st
-
-    // if (i < len && (b[i] | 32) === E)
-    //     return tryParseExponent(b, s)
-
     return true
 }
 
@@ -274,7 +267,7 @@ export function parseNumberF64_2(b: Uint8Array, i: number): ConvertResult<number
         digitsCount: 0,
     }
 
-    if (tryParseMantissa(b, s)) {
+    if (tryFastParse(b, s)) {
         i = s.index
 
         let m = s.mantissa
