@@ -53,7 +53,8 @@ const INFINITY_EXPONENT = 2047
 
 function tryParseMantissa(b: Uint8Array, s: Store): boolean {
     if (tryParseInteger(b, s)) {
-        if (b[s.index] === DOT) return tryParseDecimal(b, s)
+        if (s.index < b.length && b[s.index] === DOT)
+            return tryParseDecimal(b, s)
         return true
     }
     return false
@@ -62,8 +63,8 @@ function tryParseMantissa(b: Uint8Array, s: Store): boolean {
 function tryParseInteger(b: Uint8Array, s: Store): boolean {
     let i = s.index
 
-    const start = i
-    const len = Math.min(b.length, start + MAX_SAFE_INT_DIGITS)
+    const st = i
+    const len = Math.min(b.length, st + MAX_SAFE_INT_DIGITS)
 
     let m = 0
     while (i < len - 4) {
@@ -71,7 +72,6 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
 
         const w = (d | d2 << 8 | d3 << 16 | d4 << 24) - 0x30303030
         const nonDigit = ((w + 0x76767676) | w) & 0x80808080
-
         if (nonDigit !== 0) break
 
         m = m * 10000 + ((d & 0x0F) * 1000 + (d2 & 0x0F) * 100 + (d3 & 0x0F) * 10 + (d4 & 0x0F))
@@ -79,53 +79,42 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
     }
 
     if (isDigitU8(b[i])) {
-        const d = b[i++] & 0x0F
-        m = m * 10 + d
+        m = m * 10 + (b[i++] & 0x0F)
 
         if (isDigitU8(b[i])) {
-            const d2 = b[i++] & 0x0F
-            m = m * 10 + d2
+            m = m * 10 + (b[i++] & 0x0F)
 
             if (isDigitU8(b[i])) {
-                const d3 = b[i++] & 0x0F
-                m = m * 10 + d3
+                m = m * 10 + (b[i++] & 0x0F)
 
-                if (isDigitU8(b[i]))
-                    return tryParseLong(b, start, i, m, len + 3, s)
+                if (i < len && isDigitU8(b[i]))
+                    return tryParseLong(b, s)
             }
         }
     }
 
-    if (b[i] === E || b[i] === E_UPPER)
-        return tryParseExponent(b, s)
-
     s.index = i
     s.mantissa = m
-    s.digitsCount = i - start
+    s.digitsCount = i - st
+
+    // if (i < len && (b[i] | 32) === E)
+    //     return tryParseExponent(b, s)
+
     return true
 }
 
-function tryParseLong(b: Uint8Array, start: number, i: number, m: number, len: number, s: Store): boolean {
-    len = Math.min(b.length, len)
-
-    // if (isDigitU8(b[i]) && (isDigitU8(b[i + 1]) || (m > 900719925474099 && (b[i] & 0x0F) > 2))) {
-    //     //split mode
-    // }
-
-    // m = m * 10 + (b[i] & 0x0F)
-    // s.digitsCount = i - start
-    // s.mantissa = m
-    // s.index = i
-    // return true
-
+function tryParseLong(b: Uint8Array, s: Store): boolean {
+    let i = s.index
+    let m = s.mantissa
+    let m32 = s.mantissaU32
     let dc = s.digitsCount
 
+    const len = b.length
     if (i < len && ((b[i] - 48) >>> 0) > 9)
         return true
 
-    let m32 = s.mantissaU32
     splitTo32(m, m32)
-    s.mantissa = 0
+    m = 0
 
     let localDc = 0
     while (i < len && dc < MAX_SAFE_LONG_DIGITS) {
@@ -150,8 +139,9 @@ function tryParseLong(b: Uint8Array, start: number, i: number, m: number, len: n
         m = 0
     }
 
-    s.digitsCount = dc
     s.index = i
+    s.mantissa = m
+    s.digitsCount = dc
     return true
 }
 
