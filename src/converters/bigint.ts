@@ -1,6 +1,5 @@
-import { BaseMeta, ConvertCtx, isObjectFieldMeta } from "../metadata/types"
+import { BaseMeta, ConvertCtx, ConvertResult, isObjectFieldMeta } from "../metadata/types"
 import { isDigitU8 } from "../utils/utf8constants"
-import { ConvertResult } from "./types"
 
 export function toBigInt(ctx: ConvertCtx, meta: BaseMeta<bigint>, index: number, _depth: number): ConvertResult<bigint> {
     const b = ctx.bytes

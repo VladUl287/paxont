@@ -1,6 +1,5 @@
-import { CollectionMeta, ConvertCtx, MapMeta } from "../metadata/types"
+import { CollectionMeta, ConvertCtx, ConvertResult, MapMeta } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
-import { ConvertResult } from "./types"
 import { skipWhitespace } from "./utils"
 
 export function toArray<V>(ctx: ConvertCtx, m: CollectionMeta<Array<V>, V>, i: number, d: number): ConvertResult<Array<V>> {

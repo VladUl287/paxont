@@ -1,6 +1,5 @@
-import { ConvertCtx, MapMeta } from "../metadata/types"
+import { ConvertCtx, ConvertResult, MapMeta } from "../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/utf8constants"
-import { ConvertResult } from "./types"
 import { skipWhitespace } from "./utils"
 
 export function toMap<V>(ctx: ConvertCtx, meta: MapMeta<V>, index: number, depth: number): ConvertResult<Map<string, V>> {

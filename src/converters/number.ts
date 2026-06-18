@@ -1,8 +1,9 @@
 import { DOT, E, E_UPPER, MINUS, PLUS, ZERO } from "../utils/utf8constants"
+import { parseNumberF64_2 } from "./number_opt"
 import { ConvertMeta, ConvertResult, ConvertState } from "./types"
 
 export function convertNumber(ctx: ConvertState, _metadata: ConvertMeta, index: number, _depth: number): ConvertResult<number> {
-    return parseNumberF64(ctx.bytes, index)
+    return parseNumberF64_2(ctx.bytes, index)
 }
 
 const isDigit = (byte: number) => byte >= 48 && byte <= 57

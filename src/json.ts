@@ -1,4 +1,3 @@
-import { isError } from "./converters/types"
 import { Metadata } from "./metadata/metadata"
 import { defaultOptions, JsonOptions, mergeOptions } from "./options"
 import { createCache } from "./cache/cache"
@@ -23,9 +22,6 @@ export function deserialize<T>(json: Uint8Array, meta: Metadata, options?: Parti
         bytes: json,
         options: opts
     }, meta, 0, 0)
-
-    if (isError(result))
-        throw new Error(result.error)
 
     return result.value as T
 }

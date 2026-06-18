@@ -1,5 +1,6 @@
+import { ConvertResult } from "../metadata/types"
 import * as JsonCodes from "../utils/utf8constants"
-import { ConvertMeta, ConvertResult, ConvertState, isError, isMultiMeta, isSingleMeta } from "./types"
+import { ConvertMeta, ConvertState, isMultiMeta, isSingleMeta } from "./types"
 import { skipWhitespace } from "./utils"
 
 const fields = new Array<any>(16)
@@ -45,9 +46,6 @@ export function convertObject(
         index = skipWhitespace(bytes, index)
 
         const parseResult = metaField.convert(ctx, metaField, index, depth)
-        if (isError(parseResult))
-            break
-
         index = parseResult.nextIndex
 
         if (bytes[index] === JsonCodes.COMMA) {

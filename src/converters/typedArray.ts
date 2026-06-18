@@ -1,9 +1,8 @@
-import { CollectionMeta, ConvertCtx } from "../metadata/types"
+import { CollectionMeta, ConvertCtx, ConvertResult } from "../metadata/types"
 import { f32Format, f64Format, parseNumber } from "../utils/number"
 import { TypedArray, TypedArrayCtor } from "../utils/typedArray"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { parseNumberF64_2 } from "./number_opt"
-import { ConvertResult } from "./types"
 import { skipWhitespace } from "./utils"
 
 export function toTypedArray(ctx: ConvertCtx, m: CollectionMeta<TypedArray, TypedArray[number]>, i: number, d: number): ConvertResult<TypedArray> {
