@@ -84,7 +84,7 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
             if (isDigitU8(b[i])) {
                 m = m * 10 + (b[i++] & 0x0F)
 
-                if (isDigitU8(b[i]))
+                if (i < len && isDigitU8(b[i]))
                     return tryParseLong(b, s)
             }
         }
