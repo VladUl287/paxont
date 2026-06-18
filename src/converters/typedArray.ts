@@ -285,15 +285,8 @@ export function toF64Array(b: Uint8Array, i: number): ConvertResult<Float64Array
             i++
     }
 
-    const result = new Float64Array(j)
-    let n = 0
-    while (n < result.length) {
-        result[n] = tempF64[n]
-        n++
-    }
-
     return {
-        value: result,
+        value: tempF64.slice(0, j),
         nextIndex: ++i
     }
 }
