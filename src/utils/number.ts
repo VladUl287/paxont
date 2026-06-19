@@ -70,11 +70,13 @@ export function parseInt8(b: Uint8Array, i: number): number {
         }
     }
 
+    m = negative ? -m : m
+
     const dc = i - start
     if (dc > MAX_DIGITS || m < MIN_VALUE || m > MAX_VALUE)
         throw new Error(`invalid u8 value ${m}, valid range ${MIN_VALUE}-${MAX_VALUE}`)
 
-    return negative ? -m : m
+    return m
 }
 
 export function parseNumberU8(b: Uint8Array, i: number): number { return 1 }
