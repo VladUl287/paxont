@@ -35,20 +35,6 @@ export type TypedArrayCtor<T extends TypedArray> =
   T extends BigUint64Array ? BigUint64ArrayConstructor :
   never
 
-
-export type TypedArrayElement<T extends TypedArray> =
-  T extends Int8Array ? number :
-  T extends Uint8Array ? number :
-  T extends Int16Array ? number :
-  T extends Uint16Array ? number :
-  T extends Int32Array ? number :
-  T extends Uint32Array ? number :
-  T extends Float32Array ? number :
-  T extends Float64Array ? number :
-  T extends BigInt64Array ? bigint :
-  T extends BigUint64Array ? bigint :
-  never
-
 export function isTypedArray(data: unknown): data is TypedArray {
   if (!data) return false
 
