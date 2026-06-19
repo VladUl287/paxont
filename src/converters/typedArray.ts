@@ -28,7 +28,7 @@ export function toTypedArray(
         case 'i64[]': return toArray(b, i, i64, parseInt64)
 
         case 'f32[]': return toArray(b, i, f32, parseFloat32)
-        case 'f64[]': return toArray(b, i, f32, parseFloat64)
+        case 'f64[]': return toArray(b, i, f64, parseFloat64)
 
         default: throw new Error(`Unsupported TypedArray type '${m.type}' at index ${i}`);
     }
