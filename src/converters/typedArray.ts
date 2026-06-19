@@ -1,28 +1,27 @@
 import { CollectionMeta, ConvertCtx, ConvertResult } from "../metadata/types"
-import { f32Format, parseNumber, parseInt64, parseUint64, parseInt8, parseInt16, parseUint8, parseUint16, parseUint32, parseInt32 } from "../utils/number"
+import { parseInt64, parseUint64, parseInt8, parseInt16, parseUint8, parseUint16, parseUint32, parseInt32, parseFloat64, parseFloat32 } from "../utils/number"
 import { TypedArray, TypedArrayCtor } from "../utils/typedArray"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
-import { parseNumberF64_2 } from "./number_opt"
 import { skipWhitespace } from "./utils"
 
 export function toTypedArray(ctx: ConvertCtx, m: CollectionMeta<TypedArray, TypedArray[number]>, i: number, d: number): ConvertResult<TypedArray> {
     const b = ctx.bytes
 
     switch (m.type) {
-        case 'i8[]': return toIntArray(b, i, Int8Array, i8, parseInt8)
-        case 'u8[]': return toIntArray(b, i, Uint8Array, u8, parseUint8)
+        case 'i8[]': return toArray(b, i, Int8Array, i8, parseInt8)
+        case 'u8[]': return toArray(b, i, Uint8Array, u8, parseUint8)
 
-        case 'i16[]': return toIntArray(b, i, Int16Array, i16, parseInt16)
-        case 'u16[]': return toIntArray(b, i, Uint16Array, u16, parseUint16)
+        case 'i16[]': return toArray(b, i, Int16Array, i16, parseInt16)
+        case 'u16[]': return toArray(b, i, Uint16Array, u16, parseUint16)
 
-        case 'i32[]': return toIntArray(b, i, Int32Array, i32, parseInt32)
-        case 'u32[]': return toIntArray(b, i, Uint32Array, u32, parseUint32)
+        case 'i32[]': return toArray(b, i, Int32Array, i32, parseInt32)
+        case 'u32[]': return toArray(b, i, Uint32Array, u32, parseUint32)
 
-        case 'u64[]': return toIntArray(b, i, BigUint64Array, u64, parseUint64)
-        case 'i64[]': return toIntArray(b, i, BigInt64Array, i64, parseInt64)
+        case 'u64[]': return toArray(b, i, BigUint64Array, u64, parseUint64)
+        case 'i64[]': return toArray(b, i, BigInt64Array, i64, parseInt64)
 
-        case 'f32[]': return toF32Array(b, i)
-        case 'f64[]': return toF64Array(b, i)
+        case 'f32[]': return toArray(b, i, Float32Array, f32, parseFloat32)
+        case 'f64[]': return toArray(b, i, Float32Array, f32, parseFloat64)
 
         default:
             throw new Error(`not supported typed array '${m.type}'`)
@@ -56,14 +55,12 @@ const f32 = () => (_f32 ??= new Float32Array(TEMP_SIZE))
 let _f64: Float64Array | null = null
 const f64 = () => (_f64 ??= new Float64Array(TEMP_SIZE))
 
-type Parser<T> = (
+type Parser<T extends TypedArray> = (
     b: Uint8Array,
-    i: number,
-    target: T,
-    targetIndex: number
-) => number
+    i: number
+) => ConvertResult<T[number]>
 
-export function toIntArray<T extends TypedArray>(
+function toArray<T extends TypedArray>(
     b: Uint8Array, i: number, ctor: TypedArrayCtor<T>,
     buffer: () => T, parseValue: Parser<T>): ConvertResult<T> {
     if (b[i] !== SQUARE_OPEN)
@@ -77,7 +74,9 @@ export function toIntArray<T extends TypedArray>(
     let j = 0
     while (b[i] !== SQUARE_CLOSE) {
         i = skipWhitespace(b, i)
-        i = parseValue(b, i, temp, j)
+        const result = parseValue(b, i)
+        temp[j] = result.value
+        i = result.nextIndex
         j++
 
         if (j >= tempLength) {
@@ -106,58 +105,3 @@ export function toIntArray<T extends TypedArray>(
     }
 }
 
-export function toF32Array(b: Uint8Array, i: number): ConvertResult<Float32Array> {
-    if (b[i] !== SQUARE_OPEN)
-        throw new Error(`array open not found at position ${i}`)
-    i++
-
-    let result = new Array<number>()
-
-    let j = 0
-    while (b[i] !== SQUARE_CLOSE) {
-        i = skipWhitespace(b, i)
-
-        const number = parseNumber(b, i, f32Format)
-        result[j] = number.value
-        i = number.nextIndex
-        j++
-
-        i = skipWhitespace(b, i)
-
-        if (b[i] === COMMA)
-            i++
-    }
-
-    return {
-        value: new Float32Array(result),
-        nextIndex: i
-    }
-}
-
-const tempF64 = new Float64Array(1024).fill(0)
-export function toF64Array(b: Uint8Array, i: number): ConvertResult<Float64Array> {
-    if (b[i] !== SQUARE_OPEN)
-        throw new Error(`array open not found at position ${i}`)
-    i++
-
-    let j = 0
-    while (b[i] !== SQUARE_CLOSE) {
-        i = skipWhitespace(b, i)
-
-        const number = parseNumberF64_2(b, i) as { value: number, nextIndex: number }
-        tempF64[j] = number.value
-        i = number.nextIndex
-
-        j++
-
-        i = skipWhitespace(b, i)
-
-        if (b[i] === COMMA)
-            i++
-    }
-
-    return {
-        value: tempF64.slice(0, j),
-        nextIndex: ++i
-    }
-}
