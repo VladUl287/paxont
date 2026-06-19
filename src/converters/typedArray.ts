@@ -4,99 +4,94 @@ import { TypedArray, TypedArrayCtor } from "../utils/typedArray"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
 
-export function toTypedArray(ctx: ConvertCtx, m: CollectionMeta<TypedArray, TypedArray[number]>, i: number, d: number): ConvertResult<TypedArray> {
+export function toTypedArray(
+    ctx: ConvertCtx,
+    m: CollectionMeta<TypedArray, TypedArray[number]>,
+    i: number,
+    d: number
+): ConvertResult<TypedArray> {
+    if (d > ctx.options.maxDepth)
+        throw new Error(`Maximum depth exceeded: limit ${ctx.options.maxDepth} at index ${i}`);
+
     const b = ctx.bytes
-
     switch (m.type) {
-        case 'i8[]': return toArray(b, i, Int8Array, i8, parseInt8)
-        case 'u8[]': return toArray(b, i, Uint8Array, u8, parseUint8)
+        case 'i8[]': return toArray(b, i, i8, parseInt8)
+        case 'u8[]': return toArray(b, i, u8, parseUint8)
 
-        case 'i16[]': return toArray(b, i, Int16Array, i16, parseInt16)
-        case 'u16[]': return toArray(b, i, Uint16Array, u16, parseUint16)
+        case 'i16[]': return toArray(b, i, i16, parseInt16)
+        case 'u16[]': return toArray(b, i, u16, parseUint16)
 
-        case 'i32[]': return toArray(b, i, Int32Array, i32, parseInt32)
-        case 'u32[]': return toArray(b, i, Uint32Array, u32, parseUint32)
+        case 'i32[]': return toArray(b, i, i32, parseInt32)
+        case 'u32[]': return toArray(b, i, u32, parseUint32)
 
-        case 'u64[]': return toArray(b, i, BigUint64Array, u64, parseUint64)
-        case 'i64[]': return toArray(b, i, BigInt64Array, i64, parseInt64)
+        case 'u64[]': return toArray(b, i, u64, parseUint64)
+        case 'i64[]': return toArray(b, i, i64, parseInt64)
 
-        case 'f32[]': return toArray(b, i, Float32Array, f32, parseFloat32)
-        case 'f64[]': return toArray(b, i, Float32Array, f32, parseFloat64)
+        case 'f32[]': return toArray(b, i, f32, parseFloat32)
+        case 'f64[]': return toArray(b, i, f32, parseFloat64)
 
-        default:
-            throw new Error(`not supported typed array '${m.type}'`)
+        default: throw new Error(`Unsupported TypedArray type '${m.type}' at index ${i}`);
     }
 }
 
-const TEMP_SIZE = 1024
+type Parser<T extends TypedArray> = (b: Uint8Array, i: number) => ConvertResult<T[number]>
+type BufferFactory<T extends TypedArray> = (length: number, source?: T) => T
 
-let _i8: Int8Array | null = null
-const i8 = () => (_i8 ??= new Int8Array(TEMP_SIZE))
-let _u8: Uint8Array | null = null
-const u8 = () => (_u8 ??= new Uint8Array(TEMP_SIZE))
+const i8 = createFactory<Int8Array>(Int8Array)
+const u8 = createFactory<Uint8Array>(Uint8Array)
+const i16 = createFactory<Int16Array>(Int16Array)
+const u16 = createFactory<Uint16Array>(Uint16Array)
+const i32 = createFactory<Int32Array>(Int32Array)
+const u32 = createFactory<Uint32Array>(Uint32Array)
+const i64 = createFactory<BigInt64Array>(BigInt64Array)
+const u64 = createFactory<BigUint64Array>(BigUint64Array)
+const f32 = createFactory<Float32Array>(Float32Array)
+const f64 = createFactory<Float64Array>(Float64Array)
 
-let _i16: Int16Array | null = null
-const i16 = () => (_i16 ??= new Int16Array(TEMP_SIZE))
-let _u16: Uint16Array | null = null
-const u16 = () => (_u16 ??= new Uint16Array(TEMP_SIZE))
+function createFactory<T extends TypedArray>(ctor: TypedArrayCtor<T>): BufferFactory<T> {
+    let array: T | null = null
+    return (length, source) => {
+        if (array?.length === length)
+            return array
 
-let _i32: Int32Array | null = null
-const i32 = () => (_i32 ??= new Int32Array(TEMP_SIZE))
-let _u32: Uint32Array | null = null
-const u32 = () => (_u32 ??= new Uint32Array(TEMP_SIZE))
+        array = new ctor(length) as T
 
-let _i64: BigInt64Array | null = null
-const i64 = () => (_i64 ??= new BigInt64Array(TEMP_SIZE))
-let _u64: BigUint64Array | null = null
-const u64 = () => (_u64 ??= new BigUint64Array(TEMP_SIZE))
+        if (source)
+            array.set(source as any)
 
-let _f32: Float32Array | null = null
-const f32 = () => (_f32 ??= new Float32Array(TEMP_SIZE))
-let _f64: Float64Array | null = null
-const f64 = () => (_f64 ??= new Float64Array(TEMP_SIZE))
-
-type Parser<T extends TypedArray> = (
-    b: Uint8Array,
-    i: number
-) => ConvertResult<T[number]>
+        return array
+    }
+}
 
 function toArray<T extends TypedArray>(
-    b: Uint8Array, i: number, ctor: TypedArrayCtor<T>,
-    buffer: () => T, parseValue: Parser<T>): ConvertResult<T> {
+    b: Uint8Array,
+    i: number,
+    factory: BufferFactory<T>,
+    parseValue: Parser<T>
+): ConvertResult<T> {
     if (b[i] !== SQUARE_OPEN)
-        throw new Error(`array open not found at position ${i}`)
+        throw new Error(`Expected '[' at index ${i}, but found '${b[i]}' while parsing array`)
     i++
 
-    let temps: T[] | null = null
-    const temp = buffer()
-    const tempLength = temp.length
+    let temp = factory(Math.min(b.length, 1024))
+    let tempLength = temp.length
 
     let j = 0
     while (b[i] !== SQUARE_CLOSE) {
         i = skipWhitespace(b, i)
+
         const result = parseValue(b, i)
         temp[j] = result.value
         i = result.nextIndex
         j++
 
-        if (j >= tempLength) {
-            (temps ??= []).push(temp.slice(0) as T)
-            j = 0
-        }
+        if (j >= tempLength)
+            temp = factory(temp.length * 2, temp)
 
         i = skipWhitespace(b, i)
 
         if (b[i] === COMMA)
             i++
-    }
-
-    if (temps !== null) {
-        const allElements = temps.flatMap((t) => [...t]) as any
-        const remainingElements = [...temp.slice(0, j)] as any
-        return {
-            value: new ctor([...allElements, ...remainingElements]) as T,
-            nextIndex: ++i
-        }
     }
 
     return {
