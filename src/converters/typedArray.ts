@@ -1,5 +1,5 @@
 import { CollectionMeta, ConvertCtx, ConvertResult } from "../metadata/types"
-import { f32Format, f64Format, parseNumber } from "../utils/number"
+import { f32Format, f64Format, parseNumber, parseNumberU64 } from "../utils/number"
 import { TypedArray, TypedArrayCtor } from "../utils/typedArray"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { parseNumberF64_2 } from "./number_opt"
@@ -190,82 +190,57 @@ export function toInt64Array(b: Uint8Array, i: number): ConvertResult<BigInt64Ar
     }
 }
 
-const tempUint64 = new BigUint64Array(1024).fill(0n)
+type InternalLazy = {
+    _u8: Uint8Array | null,
+    readonly u8: Uint8Array
+    _u64: BigUint64Array | null,
+    readonly u64: BigUint64Array,
+    _i64: BigInt64Array | null,
+    readonly i64: BigInt64Array
+}
 
-const bufferUInt = new ArrayBuffer(8)
-const conversionU32 = new Uint32Array(bufferUInt)
-const conversionU64 = new BigUint64Array(bufferUInt)
+const TEMP_SIZE = 1024
+const _internal: InternalLazy = {
+    _u8: null,
+    get u8() { return (this._u8 ??= new Uint8Array(TEMP_SIZE)) },
+    _u64: null,
+    get u64() { return (this._u64 ??= new BigUint64Array(TEMP_SIZE)) },
+    _i64: null,
+    get i64() { return (this._i64 ??= new BigInt64Array(TEMP_SIZE)) }
+}
+
 export function toUInt64Array(b: Uint8Array, i: number): ConvertResult<BigUint64Array> {
     if (b[i] !== SQUARE_OPEN)
         throw new Error(`array open not found at position ${i}`)
     i++
 
-    const MAX_DIGITS = 20
-    const MIN_VALUE = 0n
-    const MAX_VALUE = 18446744073709551615n
-
-    const MAX_SAFE_INT_DIGITS = 16
-    const MAX_SAFE_LONG_DIGITS = 19
+    let temps: BigUint64Array[] | null = null
+    const temp = _internal.u64
 
     let j = 0
     while (b[i] !== SQUARE_CLOSE) {
         i = skipWhitespace(b, i)
 
-        let temp = 0
-        let dc = 0 >>> 0
-
-        while (dc <= MAX_DIGITS) {
-            const d = (b[i] - 48) >>> 0
-            if (d > 9) break
-
-            dc++
-            i++
-
-            if (dc < MAX_SAFE_INT_DIGITS) {
-                temp = temp * 10 + d
-            }
-            else if (dc === MAX_SAFE_INT_DIGITS) {
-                const high = Math.floor(temp / 0x100000000)
-                const low = (temp) * 10 + temp
-                conversionU32[0] = low >>> 0
-                conversionU32[1] = high * 10 + Math.floor(low / 0x100000000)
-            }
-            else {
-                const low = conversionU32[0] * 10 + d
-                conversionU32[0] = low >>> 0
-                conversionU32[1] = conversionU32[1] * 10 + Math.floor(low / 0x100000000)
-            }
-        }
-
-        if (dc < MAX_SAFE_INT_DIGITS) {
-            conversionU32[0] = temp >>> 0
-            conversionU32[1] = Math.floor(temp / 0x100000000)
-        }
-
-        const value = conversionU64[0]
-
-        if (dc > MAX_SAFE_LONG_DIGITS && value > MAX_VALUE)
-            throw new Error(`invalid uint64 value ${value}, must be ${MIN_VALUE}-${MAX_VALUE}`)
-
-        tempUint64[j] = value
+        i = parseNumberU64(b, i, temp, j)
         j++
+
+        if (j >= temp.length)
+            (temps ??= []).push(temp.slice(0))
 
         i = skipWhitespace(b, i)
 
-        if (b[i] === COMMA)
-            i++
+        if (b[i] === COMMA) i++
     }
 
-    const result = new BigUint64Array(j)
-
-    let n = 0
-    while (n < result.length) {
-        result[n] = tempUint64[n]
-        n++
+    if (temps !== null) {
+        return {
+            value: new BigUint64Array([...temps.flatMap((t) => [...t]), ...temp.slice(0, j)]),
+            nextIndex: ++i
+        }
     }
 
     return {
-        value: result,
+        value: temp.slice(0, j),
         nextIndex: ++i
     }
 }
