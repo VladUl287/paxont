@@ -181,7 +181,7 @@ export function parseUint16(b: Uint8Array, i: number): number {
     return m
 }
 
-export function parseNumberI32(b: Uint8Array, i: number): number {
+export function parseInt32(b: Uint8Array, i: number): number {
     const MAX_DIGITS = 10
     const MIN_VALUE = -2147483648
     const MAX_VALUE = 2147483647
@@ -205,7 +205,7 @@ export function parseNumberI32(b: Uint8Array, i: number): number {
     return m
 }
 
-export function parseNumberU32(b: Uint8Array, i: number): number {
+export function parseUint32(b: Uint8Array, i: number): number {
     const MAX_DIGITS = 10
     const MIN_VALUE = 0
     const MAX_VALUE = 4294967295
@@ -224,14 +224,15 @@ export function parseNumberU32(b: Uint8Array, i: number): number {
     return m
 }
 
-export function parseNumberF32(b: Uint8Array, i: number): number { return 1 }
+export function parseFloat32(b: Uint8Array, i: number): number { return 1 }
 
-export function parseNumberF64(b: Uint8Array, i: number): number { return 1 }
+export function parseFloat64(b: Uint8Array, i: number): number { return 1 }
 
 const bufferInt = new ArrayBuffer(8)
 const conversionU32 = new Uint32Array(bufferInt)
 const conversionU64 = new BigUint64Array(bufferInt)
-export function parseNumberI64(b: Uint8Array, i: number, r: BigInt64Array, rIndex: number): number {
+
+export function parseInt64(b: Uint8Array, i: number, r: BigInt64Array, rIndex: number): number {
     const MAX_DIGITS = 19
     const MAX_SAFE_INT_DIGITS = 16
     const MIN_VALUE = -9223372036854775808n
@@ -281,7 +282,7 @@ export function parseNumberI64(b: Uint8Array, i: number, r: BigInt64Array, rInde
     return i
 }
 
-export function parseNumberU64(b: Uint8Array, i: number, r: BigUint64Array, rIndex: number): number {
+export function parseUint64(b: Uint8Array, i: number, r: BigUint64Array, rIndex: number): number {
     const MAX_DIGITS = 20
     const MAX_SAFE_INT_DIGITS = 16
     const MIN_VALUE = 0
