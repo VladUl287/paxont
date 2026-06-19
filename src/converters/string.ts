@@ -34,7 +34,8 @@ export function toString(
         set = true
     }
 
-    const count = indexOfSimd(i, b.length, 34)
+    // const count = indexOfSimd(i, b.length, 34)
+    const count = findNext(b, i, COMMA)
     i += count
 
     if (count <= MAX_FAST_DECODE) {
@@ -48,6 +49,34 @@ export function toString(
         value: ctx.options.decoder.decode(b.subarray(start, i)),
         nextIndex: ++i
     }
+}
+
+function findNext(b: Uint8Array, i: number, symbol: number): number {
+    const b32 = new Uint32Array(b.buffer, b.byteOffset, b.byteLength >> 2)
+    
+    const mask = symbol | symbol << 8 | symbol << 16 | symbol << 24
+
+    let j = 0
+    while (j < b32.length) {
+        const value = b32[j]
+        const x = value ^ mask
+
+        if (((x - 0x01010101) & ~x & 0x80808080) !== 0)
+            break
+
+        j++
+    }
+
+    if (j === b.length)
+        return i + j * 4
+
+    i = i + (j - 1) * 4
+    while (i < b.length) {
+        if (b[i++] === symbol)
+            return i
+    }
+
+    return -1
 }
 
 const TEMP_CACHE = new Array<number[]>(MAX_FAST_DECODE)
