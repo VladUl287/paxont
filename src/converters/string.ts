@@ -1,5 +1,5 @@
 import { BaseMeta, ConvertCtx, ConvertResult } from "../metadata/types"
-import { COMMA, CURLY_CLOSE, DOUBLE_QUOTE as DQ } from "../utils/utf8constants"
+import { COMMA, CURLY_CLOSE, DOUBLE_QUOTE, DOUBLE_QUOTE as DQ } from "../utils/utf8constants"
 
 let wasm: any = null
 try {
@@ -19,6 +19,10 @@ let set = false
 
 const MAX_FAST_DECODE = 32
 
+// const reader = new FileReader()
+// reader.onload = () => console.log(reader.result)
+// reader.readAsText(blob)
+
 export function toString(
     ctx: ConvertCtx, _meta: BaseMeta<string>, i: number, _depth: number): ConvertResult<string> {
     const b = ctx.bytes
@@ -29,32 +33,85 @@ export function toString(
 
     let start = i
 
-    if (!set) {
-        wasmMem.set(b)
-        set = true
-    }
+    // if (!set) {
+    //     wasmMem.set(b)
+    //     set = true
+    // }
 
     // const count = indexOfSimd(i, b.length, 34)
-    const count = findNext(b, i, COMMA)
-    i += count
+    // i += count
 
-    if (count <= MAX_FAST_DECODE) {
-        return {
-            value: decode(b, start, i),
-            nextIndex: ++i
-        }
-    }
+    // if (count <= MAX_FAST_DECODE) {
+    //     return {
+    //         value: decode(b, start, i),
+    //         nextIndex: ++i
+    //     }
+    // }
+
+    // i = findNext1(b, i, DOUBLE_QUOTE)
+    i = findNext2(b, i, DOUBLE_QUOTE)
+    // i = findNext3(b, i, DOUBLE_QUOTE)
+
+    // if (i === -1) {
+    //     i = b.length - 2
+    // }
 
     return {
+        // value: i as any,
+        // value: b.subarray(1, b.length - 1) as any,
         value: ctx.options.decoder.decode(b.subarray(start, i)),
+        // value: i as any,
         nextIndex: ++i
     }
 }
 
-function findNext(b: Uint8Array, i: number, symbol: number): number {
-    const b32 = new Uint32Array(b.buffer, b.byteOffset, b.byteLength >> 2)
-    
-    const mask = symbol | symbol << 8 | symbol << 16 | symbol << 24
+function findNext3(b: Uint8Array, i: number, s: number): number {
+    const len = b.length
+    if (i >= len) return -1
+
+    while (i < len && (i & 3) !== 0) {
+        if (b[i] === s) return i
+        i++
+    }
+
+    const mask = s * 0x01010101
+
+    const view = new DataView(b.buffer, b.byteOffset)
+    const limit = len - 3
+
+    while (i < limit - 2) {
+        const worda = view.getUint32(i, true)
+        const wordb = view.getUint32(i + 4, true)
+
+        const x = (worda & wordb) ^ mask
+        const t = (x - 0x01010101) & ~x & 0x80808080
+
+        if (t) {
+            while (i < len && b[i] !== s) i++
+            return i
+            // const pos = ((t & -t) * 0x02020202) >>> 24
+            // return i + pos
+        }
+        i += 8
+    }
+
+    while (i < len && b[i] !== s) i++
+    return i
+}
+
+function findNext2(b: Uint8Array, i: number, s: number): number {
+    const len = b.length
+    if (i >= len) return -1
+
+    while (i < len && (i & 3) !== 0) {
+        if (b[i] === s) return i
+        i++
+    }
+
+    const u32length = ((b.byteLength - i) / 4) | 0
+    const b32 = new Uint32Array(b.buffer, i, u32length)
+
+    const mask = s * 0x01010101
 
     let j = 0
     while (j < b32.length) {
@@ -67,14 +124,19 @@ function findNext(b: Uint8Array, i: number, symbol: number): number {
         j++
     }
 
-    if (j === b.length)
-        return i + j * 4
-
     i = i + (j - 1) * 4
-    while (i < b.length) {
-        if (b[i++] === symbol)
-            return i
+    while (i < len && b[i] !== s) i++
+    return i
+}
+
+function findNext1(b: Uint8Array, i: number, s: number): number {
+    while (i < b.length - 4) {
+        if (b[i] === s || b[i + 1] === s || b[i + 2] === s || b[i + 3] === s) break
+        i += 4
     }
+
+    while (i < b.length && b[i] !== s)
+        i++
 
     return -1
 }
