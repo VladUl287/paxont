@@ -50,7 +50,6 @@ export function toString(
 
     // i = findNext1(b, i, DOUBLE_QUOTE)
     i = findNext2(b, i, DOUBLE_QUOTE)
-    // i = findNext3(b, i, DOUBLE_QUOTE)
 
     // if (i === -1) {
     //     i = b.length - 2
@@ -63,40 +62,6 @@ export function toString(
         // value: i as any,
         nextIndex: ++i
     }
-}
-
-function findNext3(b: Uint8Array, i: number, s: number): number {
-    const len = b.length
-    if (i >= len) return -1
-
-    while (i < len && (i & 3) !== 0) {
-        if (b[i] === s) return i
-        i++
-    }
-
-    const mask = s * 0x01010101
-
-    const view = new DataView(b.buffer, b.byteOffset)
-    const limit = len - 3
-
-    while (i < limit - 2) {
-        const worda = view.getUint32(i, true)
-        const wordb = view.getUint32(i + 4, true)
-
-        const x = (worda & wordb) ^ mask
-        const t = (x - 0x01010101) & ~x & 0x80808080
-
-        if (t) {
-            while (i < len && b[i] !== s) i++
-            return i
-            // const pos = ((t & -t) * 0x02020202) >>> 24
-            // return i + pos
-        }
-        i += 8
-    }
-
-    while (i < len && b[i] !== s) i++
-    return i
 }
 
 function findNext2(b: Uint8Array, i: number, s: number): number {
@@ -114,18 +79,24 @@ function findNext2(b: Uint8Array, i: number, s: number): number {
     const mask = s * 0x01010101
 
     let j = 0
-    while (j < b32.length) {
-        const value = b32[j]
-        const x = value ^ mask
+    while (j < b32.length - 2) {
+        const x = (b32[j] & b32[j + 1]) ^ mask
 
         if (((x - 0x01010101) & ~x & 0x80808080) !== 0)
             break
 
-        j++
+        j += 2
     }
 
-    i = i + (j - 1) * 4
+    i = i + (j - 2) * 4
+
+    while (i < b.length - 4) {
+        if (b[i] === s || b[i + 1] === s || b[i + 2] === s || b[i + 3] === s) break
+        i += 4
+    }
+
     while (i < len && b[i] !== s) i++
+
     return i
 }
 
