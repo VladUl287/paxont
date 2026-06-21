@@ -87,20 +87,19 @@ function findNext2(b: Uint8Array, i: number, s: number): number {
 
         j += 2
     }
-
     i = i + (j - 2) * 4
 
-    while (i < b.length - 4) {
-        if (b[i] === s || b[i + 1] === s || b[i + 2] === s || b[i + 3] === s) break
-        i += 4
-    }
-
     while (i < len && b[i] !== s) i++
-
     return i
 }
 
 function findNext1(b: Uint8Array, i: number, s: number): number {
+    while (i < b.length - 8) {
+        if (b[i] === s || b[i + 1] === s || b[i + 2] === s || b[i + 3] === s) break
+        if (b[i + 4] === s || b[i + 5] === s || b[i + 6] === s || b[i + 7] === s) break
+        i += 8
+    }
+
     while (i < b.length - 4) {
         if (b[i] === s || b[i + 1] === s || b[i + 2] === s || b[i + 3] === s) break
         i += 4
