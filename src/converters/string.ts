@@ -49,7 +49,8 @@ export function toString(
     // }
 
     // i = findNext1(b, i, DOUBLE_QUOTE)
-    i = findNext2(b, i, DOUBLE_QUOTE)
+    // i = findNext2(b, i, DOUBLE_QUOTE)
+    i = findNext3(b, i, DOUBLE_QUOTE)
 
     // if (i === -1) {
     //     i = b.length - 2
@@ -62,6 +63,39 @@ export function toString(
         // value: i as any,
         nextIndex: ++i
     }
+}
+
+function findNext3(b: Uint8Array, i: number, s: number): number {
+    const len = b.length
+    if (i >= len) return -1
+
+    while (i < len && (i & 3) !== 0) {
+        if (b[i] === s) return i
+        i++
+    }
+
+    const u32length = ((b.byteLength - i) / 4) | 0
+    const b32 = new Uint32Array(b.buffer, i, u32length)
+
+    const mask = s * 0x01010101
+
+    let j = 0
+    while (j < b32.length - 4) {
+        const xa = (b32[j] & b32[j + 1]) ^ mask
+        const xb = (b32[j + 2] & b32[j + 3]) ^ mask
+
+        const ta = (xa - 0x01010101) & ~xa
+        const tb = (xb - 0x01010101) & ~xb
+
+        if (((ta | tb) & 0x80808080) !== 0)
+            break
+
+        j += 4
+    }
+    i = i + j * 4
+
+    while (i < len && b[i] !== s) i++
+    return i
 }
 
 function findNext2(b: Uint8Array, i: number, s: number): number {
