@@ -33,11 +33,7 @@ export function toString(
 
     let start = i
 
-    // if (!set) {
-    //     wasmMem.set(b)
-    //     set = true
-    // }
-
+    // wasmMem.set(b)
     // const count = indexOfSimd(i, b.length, 34)
     // i += count
 
@@ -49,40 +45,32 @@ export function toString(
     // }
 
     // i = findNext1(b, i, DOUBLE_QUOTE)
-    // i = findNext2(b, i, DOUBLE_QUOTE)
-    i = findNext3(b, i, DOUBLE_QUOTE)
-
-    // if (i === -1) {
-    //     i = b.length - 2
-    // }
+    i = findNext2(b, i, DOUBLE_QUOTE)
+    // i = findNext3(b, i, DOUBLE_QUOTE)
 
     return {
-        // value: i as any,
-        // value: b.subarray(1, b.length - 1) as any,
-        value: ctx.options.decoder.decode(b.subarray(start, i)),
-        // value: i as any,
+        value: i as any,
+        // value: ctx.options.decoder.decode(b.subarray(start, i)),
+        // value: ctx.options.decoder.decode(b),
+        // value: ctx.options.decoder.decode(b.subarray(start, b.length - 1)),
+        // value: String.fromCharCode.apply(String, b as any),
         nextIndex: ++i
     }
 }
 
+const temp = new Uint8Array(8192)
+const tempU32 = new Uint32Array(temp.buffer)
 function findNext3(b: Uint8Array, i: number, s: number): number {
-    const len = b.length
-    if (i >= len) return -1
-
-    while (i < len && (i & 3) !== 0) {
-        if (b[i] === s) return i
-        i++
-    }
-
-    const u32length = ((b.byteLength - i) / 4) | 0
-    const b32 = new Uint32Array(b.buffer, i, u32length)
+    temp.set(b)
 
     const mask = s * 0x01010101
 
-    let j = 0
-    while (j < b32.length - 4) {
-        const xa = (b32[j] & b32[j + 1]) ^ mask
-        const xb = (b32[j + 2] & b32[j + 3]) ^ mask
+    let j = Math.floor(i / 4) + 1
+
+    const len32 = Math.floor(b.length / 4)
+    while (j < len32 - 4) {
+        const xa = (tempU32[j] & tempU32[j + 1]) ^ mask
+        const xb = (tempU32[j + 2] & tempU32[j + 3]) ^ mask
 
         const ta = (xa - 0x01010101) & ~xa
         const tb = (xb - 0x01010101) & ~xb
@@ -93,18 +81,15 @@ function findNext3(b: Uint8Array, i: number, s: number): number {
         j += 4
     }
 
-    const x = b32[j] ^ mask
-    if (((x - 0x01010101) & ~x & 0x80808080) === 0) {
-        const x = b32[++j] ^ mask
-        if (((x - 0x01010101) & ~x & 0x80808080) === 0) {
-            const x = b32[++j] ^ mask
-            if (((x - 0x01010101) & ~x & 0x80808080) === 0)
-                j++
-        }
+    while (j < tempU32.length) {
+        const x = tempU32[j] ^ mask
+        if (((x - 0x01010101) & ~x & 0x80808080) !== 0)
+            break
+        j++
     }
-
     i = i + j * 4
-    while (i < len && b[i] !== s) i++
+
+    while (i < b.length && b[i] !== s) i++
     return i
 }
 
@@ -122,16 +107,31 @@ function findNext2(b: Uint8Array, i: number, s: number): number {
 
     const mask = s * 0x01010101
 
-    let j = 0
-    while (j < b32.length - 2) {
-        const x = (b32[j] & b32[j + 1]) ^ mask
+    let j = Math.floor(i / 4) + 1
+
+    const len32 = Math.floor(b.length / 4)
+    while (j < len32 - 4) {
+        const xa = (b32[j] & b32[j + 1]) ^ mask
+        const xb = (b32[j + 2] & b32[j + 3]) ^ mask
+
+        const ta = (xa - 0x01010101) & ~xa
+        const tb = (xb - 0x01010101) & ~xb
+
+        if (((ta | tb) & 0x80808080) !== 0)
+            break
+
+        j += 4
+    }
+
+    while (j < b32.length) {
+        const x = b32[j] ^ mask
 
         if (((x - 0x01010101) & ~x & 0x80808080) !== 0)
             break
 
-        j += 2
+        j++
     }
-    i = i + (j - 2) * 4
+    i = i + j * 4
 
     while (i < len && b[i] !== s) i++
     return i
