@@ -92,8 +92,18 @@ function findNext3(b: Uint8Array, i: number, s: number): number {
 
         j += 4
     }
-    i = i + j * 4
 
+    const x = b32[j] ^ mask
+    if (((x - 0x01010101) & ~x & 0x80808080) === 0) {
+        const x = b32[++j] ^ mask
+        if (((x - 0x01010101) & ~x & 0x80808080) === 0) {
+            const x = b32[++j] ^ mask
+            if (((x - 0x01010101) & ~x & 0x80808080) === 0)
+                j++
+        }
+    }
+
+    i = i + j * 4
     while (i < len && b[i] !== s) i++
     return i
 }
