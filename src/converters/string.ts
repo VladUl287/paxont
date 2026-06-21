@@ -45,7 +45,7 @@ export function toString(
     // }
 
     // i = findNext1(b, i, DOUBLE_QUOTE)
-    i = findNext2(b, i, DOUBLE_QUOTE)
+    i = findNext3(b, i, DOUBLE_QUOTE)
     // i = findNext3(b, i, DOUBLE_QUOTE)
 
     return {
@@ -68,29 +68,34 @@ function findNext3(b: Uint8Array, i: number, s: number): number {
     let j = Math.floor(i / 4) + 1
 
     const len32 = Math.floor(b.length / 4)
-    while (j < len32 - 4) {
+    while (j < len32 - 6) {
         const xa = (tempU32[j] & tempU32[j + 1]) ^ mask
         const xb = (tempU32[j + 2] & tempU32[j + 3]) ^ mask
+        const xc = (tempU32[j + 4] & tempU32[j + 5]) ^ mask
 
         const ta = (xa - 0x01010101) & ~xa
         const tb = (xb - 0x01010101) & ~xb
+        const tc = (xc - 0x01010101) & ~xc
 
-        if (((ta | tb) & 0x80808080) !== 0)
+        if (((ta | tb | tc) & 0x80808080) !== 0)
             break
 
-        j += 4
+        j += 6
     }
 
     while (j < tempU32.length) {
         const x = tempU32[j] ^ mask
-        if (((x - 0x01010101) & ~x & 0x80808080) !== 0)
-            break
+        const t = ((x - 0x01010101) & ~x & 0x80808080) >>> 0
+
+        if (t !== 0) {
+            const byteIndex = (31 - Math.clz32(t & -t)) >>> 3
+            return i + j * 4 + byteIndex
+        }
+
         j++
     }
-    i = i + j * 4
 
-    while (i < b.length && b[i] !== s) i++
-    return i
+    return b.length
 }
 
 function findNext2(b: Uint8Array, i: number, s: number): number {
