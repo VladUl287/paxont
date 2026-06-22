@@ -12,14 +12,14 @@ export function equals(a: Uint8Array, b: Uint8Array, aI: number, bI: number): bo
     return true
 }
 
+export const clampLength = (minLength: number): number =>
+    Math.pow(2, Math.ceil(Math.log2(minLength)))
+
 export function pool<T>() {
     const store = new Map<number, T[]>()
 
-    const getLength = (minLength: number): number =>
-        Math.pow(2, Math.ceil(Math.log2(minLength)))
-
     const rent = (minLength: number): T[] => {
-        const length = getLength(minLength)
+        const length = clampLength(minLength)
 
         let result = store.get(length)
         if (result)
