@@ -58,37 +58,40 @@ export function toString(
     }
 }
 
-const temp = new Uint8Array(8192)
-const tempU32 = new Uint32Array(temp.buffer)
+const u8 = new Uint8Array(8192)
+const u32 = new Uint32Array(u8.buffer)
 function findNext3(b: Uint8Array, i: number, s: number): number {
-    temp.set(b)
+    u8.set(b)
 
     const mask = s * 0x01010101
 
     let j = Math.floor(i / 4) + 1
 
     const len32 = Math.floor(b.length / 4)
-    while (j < len32 - 6) {
-        const xa = (tempU32[j] & tempU32[j + 1]) ^ mask
-        const xb = (tempU32[j + 2] & tempU32[j + 3]) ^ mask
-        const xc = (tempU32[j + 4] & tempU32[j + 5]) ^ mask
 
-        const ta = (xa - 0x01010101) & ~xa
-        const tb = (xb - 0x01010101) & ~xb
-        const tc = (xc - 0x01010101) & ~xc
+    while (j < len32 - 8) {
+        const x1 = u32[j] ^ mask
+        const x2 = u32[j + 1] ^ mask
+        const x3 = u32[j + 2] ^ mask
+        const x4 = u32[j + 3] ^ mask
+        const x5 = u32[j + 4] ^ mask
+        const x6 = u32[j + 5] ^ mask
+        const x7 = u32[j + 6] ^ mask
+        const x8 = u32[j + 7] ^ mask
 
-        if (((ta | tb | tc) & 0x80808080) !== 0)
+        const c = (x1 & x2 & x3 & x4 & x5 & x6 & x7 & x8)
+        if ((((c - 0x01010101) ^ c) & 0x80808080) !== 0)
             break
 
-        j += 6
+        j += 8
     }
 
-    while (j < tempU32.length) {
-        const x = tempU32[j] ^ mask
-        const t = ((x - 0x01010101) & ~x & 0x80808080) >>> 0
+    while (j < u32.length) {
+        const x1 = u32[j] ^ mask
 
-        if (t !== 0) {
-            const byteIndex = (31 - Math.clz32(t & -t)) >>> 3
+        const c = ((x1 - 0x01010101) ^ x1) & 0x80808080
+        if (c !== 0) {
+            const byteIndex = (31 - Math.clz32(c & -c)) >>> 3
             return i + j * 4 + byteIndex
         }
 
