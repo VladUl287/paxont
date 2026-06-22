@@ -1,5 +1,4 @@
 import { BaseMeta, ConvertCtx, ConvertResult } from "../metadata/types"
-import { clampLength } from "../utils/array"
 import { DOUBLE_QUOTE } from "../utils/utf8constants"
 
 export function toString(
@@ -124,7 +123,7 @@ function findNext1(u8: Uint8Array, i: number, s: number): number {
     return u8.length
 }
 
-const MAX_FAST_DECODE = 24
+const MAX_FAST_DECODE = 32
 
 const TEMP_CACHE = new Array<number[]>(MAX_FAST_DECODE)
 for (let i = 1; i <= MAX_FAST_DECODE; i++) {
