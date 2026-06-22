@@ -1,4 +1,4 @@
-import { BaseMeta, ConvertCtx, ConvertResult, isObjectFieldMeta } from "../metadata/types"
+import { BaseMeta, ConvertCtx, ConvertResult } from "../metadata/types"
 import { A, E, F, L, R, S, T, U } from "../utils/utf8constants"
 
 export function toBoolean(ctx: ConvertCtx, meta: BaseMeta<boolean>, index: number, _depth: number): ConvertResult<boolean> {
@@ -17,9 +17,6 @@ export function toBoolean(ctx: ConvertCtx, meta: BaseMeta<boolean>, index: numbe
             value: false,
             nextIndex: i + 5
         }
-
-    if (isObjectFieldMeta(meta))
-        throw new Error(`invalid boolean: field '${meta.name.value}', at index ${i}`)
 
     throw new Error(`invalid boolean, at index ${i}`)
 }
