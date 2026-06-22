@@ -49,9 +49,13 @@ function findNextFactory(): (b: Uint8Array, i: number, s: number) => number {
 
             const u8Resolver = (minLength: number) => {
                 if (u8Wasm.byteLength < minLength) {
-                    const length = clampLength(minLength)
-                    //grow and set
-                    u8Wasm = new Uint8Array(exports.memory.buffer)
+                    const PAGE_SIZE = 65536
+
+                    const currentPages = u8Wasm.byteLength / PAGE_SIZE
+                    const neededPages = Math.ceil(minLength / PAGE_SIZE)
+                    wasm.memory.grow(neededPages - currentPages)
+
+                    u8Wasm = new Uint8Array(wasm.memory.buffer)
                 }
                 return u8Wasm
             }
