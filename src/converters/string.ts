@@ -50,11 +50,16 @@ function findNextFactory(): (b: Uint8Array, i: number, s: number) => number {
             const u8Resolver = (minLength: number) => {
                 if (u8Wasm.byteLength < minLength) {
                     const PAGE_SIZE = 65536
+                    const MAX_PAGES_COUNT = 100 //(6.4MB)
 
                     const currentPages = u8Wasm.byteLength / PAGE_SIZE
                     const neededPages = Math.ceil(minLength / PAGE_SIZE)
-                    wasm.memory.grow(neededPages - currentPages)
 
+                    if (neededPages > MAX_PAGES_COUNT) {
+                        //partially decode
+                    }
+
+                    wasm.memory.grow(neededPages - currentPages)
                     u8Wasm = new Uint8Array(wasm.memory.buffer)
                 }
                 return u8Wasm
