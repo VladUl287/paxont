@@ -16,7 +16,7 @@ for (let y = 1969; y >= 0; y--) {
     daysYearsBefore[y] = days + (daysYearsBefore[y + 1] || 0)
 }
 
-function utc(year: number, month: number, day = 1, hours = 0, minutes = 0, seconds = 0, ms = 0) {
+export function utc(year: number, month: number, day = 1, hours = 0, minutes = 0, seconds = 0, ms = 0) {
     if (year < MIN_YEAR || year > MAX_YEAR)
         return Date.UTC(year, month, day, hours, minutes, seconds, ms)
 
