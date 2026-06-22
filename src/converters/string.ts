@@ -45,12 +45,15 @@ export function toString(
     // }
 
     // i = findNext1(b, i, DOUBLE_QUOTE)
+    // const t = b.indexOf(DOUBLE_QUOTE, i)
+
     i = findNext3(b, i, DOUBLE_QUOTE)
     // i = findNext3(b, i, DOUBLE_QUOTE)
 
+
     return {
-        value: i as any,
-        // value: ctx.options.decoder.decode(b.subarray(start, i)),
+        // value: i as any,
+        value: ctx.options.decoder.decode(b.subarray(start, i)),
         // value: ctx.options.decoder.decode(b),
         // value: ctx.options.decoder.decode(b.subarray(start, b.length - 1)),
         // value: String.fromCharCode.apply(String, b as any),
@@ -66,6 +69,7 @@ function findNext3(b: Uint8Array, i: number, s: number): number {
     const mask = s * 0x01010101
 
     let j = Math.floor(i / 4) + 1
+    let start = j
 
     const len32 = Math.floor(b.length / 4)
 
@@ -91,8 +95,18 @@ function findNext3(b: Uint8Array, i: number, s: number): number {
 
         const c = ((x1 - 0x01010101) ^ x1) & 0x80808080
         if (c !== 0) {
-            const byteIndex = (31 - Math.clz32(c & -c)) >>> 3
-            return i + j * 4 + byteIndex
+            i = j * 4
+
+            // const byteIndex = (31 - Math.clz32(c & -c)) >>> 3
+            // return byteIndex + i
+
+            if (b[i] === s) return i
+            if (b[++i] === s) return i
+            if (b[++i] === s) return i
+            if (b[++i] === s) return i
+
+            // while (i < b.length && b[i] !== s) i++
+            // return i
         }
 
         j++
