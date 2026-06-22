@@ -2,37 +2,34 @@ import { CollectionMeta, ConvertCtx, ConvertResult, MapMeta } from "../metadata/
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
 
+const temp = new Array(1024)
 export function toArray<V>(ctx: ConvertCtx, m: CollectionMeta<Array<V>, V>, i: number, d: number): ConvertResult<Array<V>> {
     const b = ctx.bytes
 
     if (b[i] !== SQUARE_OPEN)
-        throw new Error(`array open not found at position ${i}. depth ${d}`)
+        throw new Error(`Expected '[' at index ${i}, but found '${b[i]}' while parsing array`)
     i++
 
-    const result = new Array<V>()
-    const mValue = m.value
+    const meta = m.value
+    const toValue = meta.toValue
 
     let j = 0
-    while (true) {
+    while (i < b.length && b[i] !== SQUARE_CLOSE) {
         i = skipWhitespace(b, i)
 
-        const arrayItemResult = mValue.toValue(ctx, mValue, i, d)
-        result[j] = arrayItemResult.value
-        i = arrayItemResult.nextIndex
+        const result = toValue(ctx, meta, i, d)
+        temp[j] = result.value
+        i = result.nextIndex
         j++
 
         i = skipWhitespace(b, i)
 
-        if (b[i] === SQUARE_CLOSE)
-            break
-
-        if (b[i] !== COMMA)
-            throw new Error('not end of value')
-        i++
+        if (b[i] === COMMA)
+            i++
     }
 
     return {
-        value: result,
+        value: temp.slice(0, j),
         nextIndex: ++i
     }
 }
