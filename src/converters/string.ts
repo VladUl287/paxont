@@ -69,7 +69,6 @@ function findNext3(b: Uint8Array, i: number, s: number): number {
     const mask = s * 0x01010101
 
     let j = Math.floor(i / 4) + 1
-    let start = j
 
     const len32 = Math.floor(b.length / 4)
 
@@ -97,16 +96,10 @@ function findNext3(b: Uint8Array, i: number, s: number): number {
         if (c !== 0) {
             i = j * 4
 
-            // const byteIndex = (31 - Math.clz32(c & -c)) >>> 3
-            // return byteIndex + i
-
             if (b[i] === s) return i
             if (b[++i] === s) return i
             if (b[++i] === s) return i
             if (b[++i] === s) return i
-
-            // while (i < b.length && b[i] !== s) i++
-            // return i
         }
 
         j++
