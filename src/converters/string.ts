@@ -1,20 +1,20 @@
 import { BaseMeta, ConvertCtx, ConvertResult } from "../metadata/types"
-import { DOUBLE_QUOTE, DOUBLE_QUOTE as DQ } from "../utils/utf8constants"
+import { DOUBLE_QUOTE } from "../utils/utf8constants"
+
+const findNext = findNextFactory()
 
 export function toString(
     ctx: ConvertCtx, _meta: BaseMeta<string>, i: number, _depth: number): ConvertResult<string> {
     const b = ctx.bytes
 
-    if (b[i] !== DQ) throw new Error("")
+    if (b[i] !== DOUBLE_QUOTE)
+        throw new Error(`Expected " at index ${i}, but found '${b[i]}' while parsing string`)
     i++
 
     let start = i
+    i = findNext(b, i, DOUBLE_QUOTE)
 
-    wasmMem.set(b)
-
-    const count = indexOfSimd(i, b.length, DOUBLE_QUOTE)
-    i += count
-
+    const count = i - start
     if (count <= MAX_FAST_DECODE) {
         return {
             value: decode(b, start, i),
@@ -30,29 +30,53 @@ export function toString(
     }
 }
 
-let wasm: any = null
-try {
-    wasm = new WebAssembly.Instance(
-        new WebAssembly.Module(
-            new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 1, 96, 3, 127, 127, 127, 1, 127, 3, 2, 1, 0, 5, 3, 1, 0, 1, 7, 24, 2, 6, 109, 101, 109, 111, 114, 121, 2, 0, 11, 105, 110, 100, 101, 120, 79, 102, 83, 105, 109, 100, 0, 0, 10, 115, 1, 113, 3, 1, 127, 2, 123, 1, 127, 32, 2, 253, 15, 33, 4, 2, 64, 3, 64, 32, 3, 65, 16, 106, 32, 1, 77, 69, 13, 1, 32, 0, 32, 3, 106, 253, 0, 4, 0, 33, 5, 32, 5, 32, 4, 253, 35, 253, 100, 34, 6, 4, 64, 32, 3, 32, 6, 104, 106, 15, 11, 32, 3, 65, 16, 106, 33, 3, 12, 0, 11, 11, 3, 64, 32, 3, 32, 1, 79, 4, 64, 65, 127, 15, 11, 32, 0, 32, 3, 106, 45, 0, 0, 32, 2, 70, 4, 64, 32, 3, 15, 11, 32, 3, 65, 1, 106, 33, 3, 12, 0, 11, 65, 127, 11]),
-        ),
-        {},
-    ).exports
-} catch { }
+function findNextFactory(): (b: Uint8Array, i: number, s: number) => number {
+    try {
+        const wasm = new WebAssembly.Instance(
+            new WebAssembly.Module(
+                new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 1, 96, 3, 127, 127, 127, 1, 127, 3, 2, 1, 0, 5, 3, 1, 0, 1, 7, 24, 2, 6, 109, 101, 109, 111, 114, 121, 2, 0, 11, 105, 110, 100, 101, 120, 79, 102, 83, 105, 109, 100, 0, 0, 10, 115, 1, 113, 3, 1, 127, 2, 123, 1, 127, 32, 2, 253, 15, 33, 4, 2, 64, 3, 64, 32, 3, 65, 16, 106, 32, 1, 77, 69, 13, 1, 32, 0, 32, 3, 106, 253, 0, 4, 0, 33, 5, 32, 5, 32, 4, 253, 35, 253, 100, 34, 6, 4, 64, 32, 3, 32, 6, 104, 106, 15, 11, 32, 3, 65, 16, 106, 33, 3, 12, 0, 11, 11, 3, 64, 32, 3, 32, 1, 79, 4, 64, 65, 127, 15, 11, 32, 0, 32, 3, 106, 45, 0, 0, 32, 2, 70, 4, 64, 32, 3, 15, 11, 32, 3, 65, 1, 106, 33, 3, 12, 0, 11, 65, 127, 11]),
+            ), {},
+        )?.exports as any
 
-const u8 = new Uint8Array(8192)
-const u32 = new Uint32Array(u8.buffer)
-const wasmMem = new Uint8Array(wasm.memory.buffer)
-const indexOfSimd = wasm.indexOfSimd as Function
+        if (wasm) {
+            let _u8Wasm = new Uint8Array(wasm.memory.buffer)
+            const u8Resolver = (minLength: number) => {
+                if (_u8Wasm.byteLength < minLength) {
+                    //grow and set
+                }
+                return _u8Wasm
+            }
 
-function findNext1(b: Uint8Array, i: number, s: number): number {
-    u8.set(b)
+            return (b: Uint8Array, i: number, s: number) => {
+                const u8 = u8Resolver(b.length)
+                u8.set(b)
+                return wasm.findNext(i, b.length, DOUBLE_QUOTE)
+            }
+        }
 
+        const _u8 = Uint8Array.prototype
+        const u8Factory = (minLength: number) => _u8
+        const u32 = Uint32Array.prototype
+
+        return (b: Uint8Array, i: number, s: number) => {
+            const u8 = u8Factory(b.length)
+            u8.set(b)
+            return findNext1(u8, u32, i, s)
+        }
+    } catch {
+        console.info('Wasm unsupported in this environment, fallback to native js')
+
+        //fallback
+        return {} as any
+    }
+}
+
+function findNext1(u8: Uint8Array, u32: Uint32Array, i: number, s: number): number {
     const mask = s * 0x01010101
 
     let j = Math.floor(i / 4) + 1
 
-    const len32 = Math.floor(b.length / 4)
+    const len32 = Math.floor(u8.length / 4)
 
     while (j < len32 - 8) {
         const x1 = u32[j] ^ mask
@@ -78,16 +102,16 @@ function findNext1(b: Uint8Array, i: number, s: number): number {
         if (c !== 0) {
             i = j * 4
 
-            if (b[i] === s) return i
-            if (b[++i] === s) return i
-            if (b[++i] === s) return i
-            if (b[++i] === s) return i
+            if (u8[i] === s) return i
+            if (u8[++i] === s) return i
+            if (u8[++i] === s) return i
+            if (u8[++i] === s) return i
         }
 
         j++
     }
 
-    return b.length
+    return u8.length
 }
 
 const MAX_FAST_DECODE = 24
