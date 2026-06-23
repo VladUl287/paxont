@@ -1,6 +1,8 @@
 import { JsonOptions } from "../options"
+import { isPlainObject } from "../utils/object"
 import { isTypedArray } from "../utils/typedArray"
 import { ReadResult } from "../utils/types"
+import { object } from "./builder"
 
 export type BuiltInType =
     | "string" | "number" | "bigint" | "boolean"
@@ -77,6 +79,12 @@ export function useMetadata(): UseMetadata {
     const types = new Map<string, Type>()
 
     const withDefaultTypes = (metadata: UseMetadata): UseMetadata => {
+        metadata.addType<object, ObjectMeta<object>>({
+            name: 'object',
+            check: (data): data is object => isPlainObject(data),
+            process: (data) => object(data),
+            priority: 50
+        })
         metadata.addType<any[], CollectionMeta<any[], any>>({
             name: 'array',
             check: (data): data is any[] => Array.isArray(data),
