@@ -10,7 +10,6 @@ import { toFloat64 } from "../converters/number_opt"
 import { convertObject } from "../converters/object"
 import { toSet } from "../converters/set"
 import { toString } from "../converters/string"
-import { toTypedArray } from "../converters/typedArray"
 import { Converter } from "../converters/types"
 import { isTypedArray, TypedArray } from "../utils/typedArray"
 import { TypeName } from "./types"
@@ -80,16 +79,16 @@ const converters: any = {
     bigint: toBigInt,
     array: toArray,
     set: toSet,
-    'u8[]': toTypedArray,
-    'u16[]': toTypedArray,
-    'u32[]': toTypedArray,
-    'u64[]': toTypedArray,
-    'i8[]': toTypedArray,
-    'i16[]': toTypedArray,
-    'i32[]': toTypedArray,
-    'i64[]': toTypedArray,
-    'f32[]': toTypedArray,
-    'f64[]': toTypedArray
+    'u8[]': toArray,
+    'u16[]': toArray,
+    'u32[]': toArray,
+    'u64[]': toArray,
+    'i8[]': toArray,
+    'i16[]': toArray,
+    'i32[]': toArray,
+    'i64[]': toArray,
+    'f32[]': toArray,
+    'f64[]': toArray
 }
 
 const encoder = new TextEncoder()
