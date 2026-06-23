@@ -1,12 +1,14 @@
-import * as JsonCodes from "../utils/utf8constants"
+import { CARRIAGE_RETURN, NEW_LINE, SPACE, TAB } from "../utils/utf8constants"
 
-const WS_BITMASK =
-    (1 << JsonCodes.SPACE) | (1 << JsonCodes.NEW_LINE) |
-    (1 << JsonCodes.TAB) | (1 << JsonCodes.CARRIAGE_RETURN)
+const lookup = new Uint8Array(256)
+lookup[TAB] = 1
+lookup[SPACE] = 1
+lookup[NEW_LINE] = 1
+lookup[CARRIAGE_RETURN] = 1
 
-export const isWhitespace = (byte: number) => (WS_BITMASK >> byte) & 1
+export const isWhitespace = (b: number) => lookup[b]
 
-export function skipWhitespace(bytes: Uint8Array, i: number): number {
-    while (isWhitespace(bytes[i])) i++
+export function skipWhitespace(b: Uint8Array, i: number): number {
+    while (lookup[b[i]]) i++
     return i
 }
