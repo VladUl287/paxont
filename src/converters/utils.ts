@@ -8,31 +8,29 @@ lookup[CARRIAGE_RETURN] = 1
 
 export const isWhitespace = (b: number) => lookup[b]
 
-export function skipWhitespace(bytes: Uint8Array, i: number): number {
-    if (bytes[i] > SPACE) return i
-
-    const FOUR_SPACES = 0x20202020
-    const TWO_SPACES = 0x20202020
+export function skipWhitespace(b: Uint8Array, i: number): number {
+    if (b[i] > SPACE) return i
 
     while (true) {
-        const b = bytes[i]
-        if (b === SPACE) {
-            const word = bytes[i] | bytes[i + 1] << 8 | bytes[i + 2] << 16 | bytes[i + 3] << 24
+        if (b[i] === SPACE) {
+            const word = b[i] | b[i + 1] << 8 | b[i + 2] << 16 | b[i + 3] << 24
 
-            if (word === FOUR_SPACES) {
+            if (word === 0x20202020) {
                 i += 4
                 continue
             }
 
-            if ((word & 0xFFFF) === TWO_SPACES) {
+            if ((word & 0xFFFF) === 0x2020) {
                 i += 2
                 continue
             }
 
             i++
+            continue
         }
-        else if (lookup[b]) { i++ }
-        else { break }
+        else if (lookup[b[i]]) { i++ }
+        else if (b[i] < SPACE) { throw new Error('Syntax error') }
+        else break
     }
 
     return i
