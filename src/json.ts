@@ -39,3 +39,7 @@ export function deserialize<T>(json: Uint8Array, meta: Metadata, options?: Parti
 
     return result.value as T
 }
+
+export function serialize<T, M extends BaseMeta<T> = BaseMeta<T>>(value: T | M, options: JsonOptions): string {
+    return ''
+}
