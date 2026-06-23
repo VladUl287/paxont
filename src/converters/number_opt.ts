@@ -1,5 +1,5 @@
 import { ConvertCtx, ConvertResult } from "../metadata/types"
-import { DOT, E, isDigitU8, MINUS, PLUS, ZERO } from "../utils/utf8constants"
+import { DOT, E, isDigitUnsafe, MINUS, PLUS, ZERO } from "../utils/utf8constants"
 import { ConvertMeta } from "./types"
 
 export function convertNumber(ctx: ConvertCtx, _metadata: ConvertMeta, index: number, _depth: number): ConvertResult<number> {
@@ -76,16 +76,16 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
         i += 4
     }
 
-    if (isDigitU8(b[i])) {
+    if (isDigitUnsafe(b[i])) {
         m = m * 10 + (b[i++] & 0x0F)
 
-        if (isDigitU8(b[i])) {
+        if (isDigitUnsafe(b[i])) {
             m = m * 10 + (b[i++] & 0x0F)
 
-            if (isDigitU8(b[i])) {
+            if (isDigitUnsafe(b[i])) {
                 m = m * 10 + (b[i++] & 0x0F)
 
-                if (i < len && isDigitU8(b[i]))
+                if (i < len && isDigitUnsafe(b[i]))
                     return tryParseLong(b, s)
             }
         }

@@ -1,7 +1,7 @@
 import { BaseMeta, ConvertCtx, ConvertResult } from "../metadata/types"
 import { JsonOptions } from "../options"
 import { utc } from "../utils/date"
-import { COLON, DOT, DOUBLE_QUOTE, isDigitU8, MINUS, PLUS, T_UPPER, Z } from "../utils/utf8constants"
+import { COLON, DOT, DOUBLE_QUOTE, isDigitUnsafe, MINUS, PLUS, T_UPPER, Z } from "../utils/utf8constants"
 
 export function toDate(ctx: ConvertCtx, _m: BaseMeta<Date>, i: number, _d: number): ConvertResult<Date> {
     const b = ctx.bytes
@@ -11,7 +11,7 @@ export function toDate(ctx: ConvertCtx, _m: BaseMeta<Date>, i: number, _d: numbe
         if (b[i] === DOUBLE_QUOTE)
             return fromString(b, i + 1, ctx.options)
 
-        if (isDigitU8(b[i]))
+        if (isDigitUnsafe(b[i]))
             return fromTimestamp(b, i)
     }
 
@@ -49,7 +49,7 @@ function fromTimestamp(b: Uint8Array, i: number): ConvertResult<Date> {
     }
 }
 
-const nonDigit = (b: number) => !isDigitU8(b)
+const nonDigit = (b: number) => !isDigitUnsafe(b)
 
 function expectFourDigits(b: Uint8Array, i: number): number {
     if (i + 4 >= b.length || nonDigit(b[i]) || nonDigit(b[++i]) || nonDigit(b[++i]) || nonDigit(b[++i]))

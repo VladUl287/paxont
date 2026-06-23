@@ -1,5 +1,5 @@
 import { ConvertResult } from "../metadata/types"
-import { DOT, E, isDigitU8, MINUS, PLUS, ZERO } from "./utf8constants"
+import { DOT, E, isDigitUnsafe, MINUS, PLUS, ZERO } from "./utf8constants"
 
 type NumberFormat = {
     normalMantissaBits: number
@@ -70,13 +70,13 @@ export function parseInt8(b: Uint8Array, i: number): ConvertResult<number> {
     const start = i
 
     let m = 0 >>> 0
-    if (i < length && isDigitU8(b[i])) {
+    if (i < length && isDigitUnsafe(b[i])) {
         m = m * 10 + (b[i++] & 0x0F)
 
-        if (i < length && isDigitU8(b[i])) {
+        if (i < length && isDigitUnsafe(b[i])) {
             m = m * 10 + (b[i++] & 0x0F)
 
-            if (i < length && isDigitU8(b[i]))
+            if (i < length && isDigitUnsafe(b[i]))
                 m = m * 10 + (b[i++] & 0x0F)
         }
     }
@@ -102,13 +102,13 @@ export function parseUint8(b: Uint8Array, i: number): ConvertResult<number> {
     const start = i
 
     let m = 0 >>> 0
-    if (i < length && isDigitU8(b[i])) {
+    if (i < length && isDigitUnsafe(b[i])) {
         m = m * 10 + (b[i++] & 0x0F)
 
-        if (i < length && isDigitU8(b[i])) {
+        if (i < length && isDigitUnsafe(b[i])) {
             m = m * 10 + (b[i++] & 0x0F)
 
-            if (i < length && isDigitU8(b[i]))
+            if (i < length && isDigitUnsafe(b[i]))
                 m = m * 10 + (b[i++] & 0x0F)
         }
     }
@@ -135,19 +135,19 @@ export function parseInt16(b: Uint8Array, i: number): ConvertResult<number> {
     const start = i
 
     let m = 0 >>> 0
-    if (i < length && isDigitU8(b[i])) {
+    if (i < length && isDigitUnsafe(b[i])) {
         m = m * 10 + (b[i++] & 0x0F)
 
-        if (i < length && isDigitU8(b[i])) {
+        if (i < length && isDigitUnsafe(b[i])) {
             m = m * 10 + (b[i++] & 0x0F)
 
-            if (i < length && isDigitU8(b[i])) {
+            if (i < length && isDigitUnsafe(b[i])) {
                 m = m * 10 + (b[i++] & 0x0F)
 
-                if (i < length && isDigitU8(b[i])) {
+                if (i < length && isDigitUnsafe(b[i])) {
                     m = m * 10 + (b[i++] & 0x0F)
 
-                    if (i < length && isDigitU8(b[i]))
+                    if (i < length && isDigitUnsafe(b[i]))
                         m = m * 10 + (b[i++] & 0x0F)
                 }
             }
@@ -175,19 +175,19 @@ export function parseUint16(b: Uint8Array, i: number): ConvertResult<number> {
     const start = i
 
     let m = 0 >>> 0
-    if (i < length && isDigitU8(b[i])) {
+    if (i < length && isDigitUnsafe(b[i])) {
         m = m * 10 + (b[i++] & 0x0F)
 
-        if (i < length && isDigitU8(b[i])) {
+        if (i < length && isDigitUnsafe(b[i])) {
             m = m * 10 + (b[i++] & 0x0F)
 
-            if (i < length && isDigitU8(b[i])) {
+            if (i < length && isDigitUnsafe(b[i])) {
                 m = m * 10 + (b[i++] & 0x0F)
 
-                if (i < length && isDigitU8(b[i])) {
+                if (i < length && isDigitUnsafe(b[i])) {
                     m = m * 10 + (b[i++] & 0x0F)
 
-                    if (i < length && isDigitU8(b[i]))
+                    if (i < length && isDigitUnsafe(b[i]))
                         m = m * 10 + (b[i++] & 0x0F)
                 }
             }
@@ -216,7 +216,7 @@ export function parseInt32(b: Uint8Array, i: number): ConvertResult<number> {
     const start = i
 
     let m = 0 >>> 0
-    while (i < length && isDigitU8(b[i]))
+    while (i < length && isDigitUnsafe(b[i]))
         m = m * 10 + (b[i++] & 0x0F)
 
     m = negative ? -m : m
@@ -240,7 +240,7 @@ export function parseUint32(b: Uint8Array, i: number): ConvertResult<number> {
     const start = i
 
     let m = 0 >>> 0
-    while (i < length && isDigitU8(b[i]))
+    while (i < length && isDigitUnsafe(b[i]))
         m = m * 10 + (b[i++] & 0x0F)
 
     const dc = i - start
@@ -458,16 +458,16 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
         i += 4
     }
 
-    if (isDigitU8(b[i])) {
+    if (isDigitUnsafe(b[i])) {
         m = m * 10 + (b[i++] & 0x0F)
 
-        if (isDigitU8(b[i])) {
+        if (isDigitUnsafe(b[i])) {
             m = m * 10 + (b[i++] & 0x0F)
 
-            if (isDigitU8(b[i])) {
+            if (isDigitUnsafe(b[i])) {
                 m = m * 10 + (b[i++] & 0x0F)
 
-                if (i < len && isDigitU8(b[i]))
+                if (i < len && isDigitUnsafe(b[i]))
                     return tryParseLong(b, s)
             }
         }

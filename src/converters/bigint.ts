@@ -1,5 +1,5 @@
 import { BaseMeta, ConvertCtx, ConvertResult } from "../metadata/types"
-import { isDigitU8 } from "../utils/utf8constants"
+import { isDigitUnsafe } from "../utils/utf8constants"
 
 export function toBigInt(ctx: ConvertCtx, meta: BaseMeta<bigint>, i: number, _depth: number): ConvertResult<bigint> {
     const b = ctx.bytes
@@ -18,7 +18,7 @@ export function toBigInt(ctx: ConvertCtx, meta: BaseMeta<bigint>, i: number, _de
         i += 4
     }
 
-    while (i < len && isDigitU8(b[i])) i++
+    while (i < len && isDigitUnsafe(b[i])) i++
 
     const decoder = ctx.options.decoder
     const view = new Uint8Array(b.buffer, start, i - start)
