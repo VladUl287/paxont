@@ -28,8 +28,6 @@ export interface BaseMeta<T> {
     readonly type: TypeName
 }
 
-export interface PrimitiveMeta<T> extends BaseMeta<T> { }
-
 export interface ObjectMeta<T> extends BaseMeta<T> {
     readonly fields: {
         [K in keyof T]: ObjectFieldMeta<T, K>
@@ -93,7 +91,7 @@ export function useMetadata(): UseMetadata {
             },
             priority: 50
         })
-        metadata.addType<Date, PrimitiveMeta<Date>>({
+        metadata.addType<Date, BaseMeta<Date>>({
             name: 'date',
             check: (data): data is Date => data instanceof Date,
             process: (date) => {
@@ -105,7 +103,7 @@ export function useMetadata(): UseMetadata {
             },
             priority: 51
         })
-        metadata.addType<number, PrimitiveMeta<number>>({
+        metadata.addType<number, BaseMeta<number>>({
             name: 'number',
             check: (data): data is number => typeof data === 'number',
             process: (data) => {
