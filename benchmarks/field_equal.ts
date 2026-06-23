@@ -1,5 +1,4 @@
 import { add, complete, cycle, suite } from 'benny'
-import { equals } from '../src/utils/array'
 
 const encoder = new TextEncoder()
 
@@ -20,13 +19,11 @@ const codegenIntepretMid = genUnsafeInterpet(mid)
 suite(
     'field_equal',
 
-    add('loop', () => equals(mid, midCopy, 0, 0)),
     add('codegen', () => codegenEqualityMid(mid, 0)),
     add('codegen_two_arrays', () => codegenEqualityTwoArrays(mid, midCopy, 0, 0)),
     add('codegen_pack', () => codegenPackEqMid(mid, 0)),
     add('codegen_interpret', () => codegenIntepretMid(mid, 0)),
 
-    add('loop_big', () => equals(big, bigCopy, 0, 0)),
     add('codegen_big', () => codegenEqualityBig(big, 0)),
     add('codegen_two_arrays_big', () => codegenEqualityTwoArraysBig(big, bigCopy, 0, 0)),
     add('codegen_pack_big', () => codegenPackEq(big, 0)),
