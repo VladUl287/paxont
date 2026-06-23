@@ -20,7 +20,6 @@ export type Metadata = {
     readonly name?: {
         value: string,
         bytes: Uint8Array<ArrayBuffer>
-        equal: (bytes: Uint8Array, i: number) => boolean
     }
     readonly value?: Metadata | Metadata[]
     readonly defaultValue?: unknown
@@ -182,8 +181,7 @@ export function toMetadata(object: unknown): Metadata {
                     convert: converters[type],
                     name: {
                         value: key,
-                        bytes: encoder.encode(key),
-                        equal: createNameEquality(encoder.encode(key))
+                        bytes: encoder.encode(key)
                     },
                     type: type,
                     value: value,
@@ -197,30 +195,4 @@ export function toMetadata(object: unknown): Metadata {
                 }
             })
     }
-}
-
-export function createNameEquality(bytes: Uint8Array): any {
-    const field = [...bytes]
-
-    const chunks = []
-    let j = 0
-    for (; j < field.length - 4; j += 4) {
-        const a = field[j]
-        const b = field[j + 1]
-        const c = field[j + 2]
-        const d = field[j + 3]
-
-        const packValue = a << 0 | b << 8 | c << 16 | d << 24
-
-        chunks.push(`((bytes[i+${j}]<<0 | bytes[i+${j + 1}]<<8 | bytes[i+${j + 2}]<<16 | bytes[i+${j + 3}]<<24) === ${packValue})`)
-    }
-
-    chunks.push(
-        '(' + field
-            .slice(j)
-            .map((v, jj) => `bytes[i+${j + jj}]===${v}`)
-            .join(' && ') + ')'
-    )
-
-    return new Function('bytes', 'i', 'return (' + chunks.join(' && ') + ')')
 }
