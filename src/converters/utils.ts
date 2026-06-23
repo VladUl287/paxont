@@ -9,6 +9,7 @@ lookup[CARRIAGE_RETURN] = 1
 export const isWhitespace = (b: number) => lookup[b]
 
 export function skipWhitespace(b: Uint8Array, i: number): number {
+    if (b[i] > SPACE) return i
     while (lookup[b[i]]) i++
     return i
 }
