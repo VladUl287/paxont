@@ -1,5 +1,6 @@
-import { BaseMeta, ConvertCtx, ReadResult } from "../metadata/types"
+import { BaseMeta, ConvertCtx } from "../metadata/types"
 import { DOUBLE_QUOTE } from "../utils/utf8constants"
+import { ReadResult } from "../utils/types"
 
 export function toString(
     ctx: ConvertCtx, _meta: BaseMeta<string>, i: number, _depth: number): ReadResult<string> {

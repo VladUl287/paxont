@@ -1,5 +1,6 @@
-import { BaseMeta, ConvertCtx, ReadResult } from "../metadata/types"
+import { BaseMeta, ConvertCtx } from "../metadata/types"
 import { E } from "../utils/utf8constants"
+import { ReadResult } from "../utils/types"
 
 export function toBoolean(ctx: ConvertCtx, _m: BaseMeta<boolean>, i: number, _d: number): ReadResult<boolean> {
     const b = ctx.bytes

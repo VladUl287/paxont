@@ -1,5 +1,6 @@
-import { BaseMeta, ConvertCtx, ReadResult } from "../metadata/types"
+import { BaseMeta, ConvertCtx } from "../metadata/types"
 import { parseInt16, parseInt32, parseInt64, parseInt8, parseUint16, parseUint32, parseUint64, parseUint8 } from "../utils/number"
+import { ReadResult } from "../utils/types"
 
 export const toInt = (ctx: ConvertCtx, m: BaseMeta<number>, i: number, _d: number): ReadResult<number> => {
     const b = ctx.bytes

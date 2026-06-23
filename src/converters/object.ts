@@ -1,7 +1,8 @@
-import { ConvertCtx, ReadResult } from "../metadata/types"
+import { ConvertCtx } from "../metadata/types"
 import * as JsonCodes from "../utils/utf8constants"
 import { ConvertMeta, isMultiMeta, isSingleMeta } from "./types"
 import { skipWhitespace } from "./utils"
+import { ReadResult } from "../utils/types"
 
 const fields = new Array<any>(16)
 export function convertObject(

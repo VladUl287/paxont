@@ -1,6 +1,6 @@
 import { Metadata } from "../metadata/metadata"
-import { ConvertCtx, ReadResult } from "../metadata/types"
-import { JsonOptions } from "../options"
+import { ConvertCtx } from "../metadata/types"
+import { ReadResult } from "../utils/types"
 
 export type ConvertMeta = Metadata | Metadata[]
 

@@ -1,5 +1,6 @@
 import { JsonOptions } from "../options"
 import { isTypedArray } from "../utils/typedArray"
+import { ReadResult } from "../utils/types"
 
 export type BuiltInType =
     | "string" | "number" | "bigint" | "boolean"
@@ -12,11 +13,6 @@ export type BuiltInType =
     | "f32[]" | "f64[]"
 
 export type TypeName = BuiltInType | (string & {})
-
-export type ReadResult<T> = {
-    readonly value: T
-    readonly nextIndex: number
-}
 
 export type ConvertCtx = {
     readonly bytes: Uint8Array

@@ -1,5 +1,5 @@
-import { ReadResult } from "../metadata/types"
 import { DOT, E, isDigitUnsafe, MINUS, PLUS, ZERO } from "./utf8constants"
+import { ReadResult } from "../utils/types"
 
 type NumberFormat = {
     normalMantissaBits: number
