@@ -3,13 +3,16 @@ import { toArray } from "../converters/array"
 import { toBigInt } from "../converters/bigint"
 import { toBoolean } from "../converters/boolean"
 import { toDate } from "../converters/date"
+import { toFloat32 } from "../converters/float"
+import { toInt, toInt64, toUInt64 } from "../converters/int"
 import { convertNumber } from "../converters/number"
+import { toFloat64 } from "../converters/number_opt"
 import { convertObject } from "../converters/object"
 import { toSet } from "../converters/set"
 import { toString } from "../converters/string"
 import { toTypedArray } from "../converters/typedArray"
 import { Converter } from "../converters/types"
-import { isTypedArray } from "../utils/typedArray"
+import { isTypedArray, TypedArray } from "../utils/typedArray"
 import { TypeName } from "./types"
 
 export type Metadata = {
@@ -119,7 +122,46 @@ export function toMetadata(object: unknown): Metadata {
             }
 
         if (isTypedArray(object)) {
-            return {} as any
+            function getTypedArrayType(arr: TypedArray): TypeName {
+                if (arr instanceof Int8Array) return 'i8[]'
+                if (arr instanceof Uint8Array) return 'u8[]'
+                if (arr instanceof Int16Array) return 'i16[]'
+                if (arr instanceof Uint16Array) return 'u16[]'
+                if (arr instanceof Int32Array) return 'i32[]'
+                if (arr instanceof Uint32Array) return 'u32[]'
+                if (arr instanceof Float32Array) return 'f32[]'
+                if (arr instanceof Float64Array) return 'f64[]'
+                if (arr instanceof BigInt64Array) return 'i64[]'
+                if (arr instanceof BigUint64Array) return 'u64[]'
+                throw new Error('')
+            }
+
+            function getTypedArrayParser(arr: TypeName) {
+                switch (arr) {
+                    case 'i8[]':
+                    case 'u8[]':
+                    case 'i16[]':
+                    case 'u16[]':
+                    case 'i32[]':
+                    case 'u32[]':
+                        return toInt
+
+                    case 'i64[]': return toInt64
+                    case 'u64[]': return toUInt64
+
+                    case 'f32[]': return toFloat32
+                    case 'f64[]': return toFloat64
+
+                    default: throw new Error(`error`);
+                }
+            }
+
+            const type = getTypedArrayType(object[0] as any)
+            return {
+                toValue: getTypedArrayParser(type),
+                type: type,
+                convert: {} as any,
+            }
         }
 
         if (object instanceof Set) {
