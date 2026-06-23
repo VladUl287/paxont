@@ -1,4 +1,4 @@
-import { generateSwitchMatcherPack } from "../code_gen/field"
+import { generateTrieSwitch } from "../code_gen/field"
 import { toArray } from "../converters/array"
 import { toBigInt } from "../converters/bigint"
 import { toBoolean } from "../converters/boolean"
@@ -102,7 +102,7 @@ export function toMetadata(object: unknown): Metadata {
         type: getType(object),
         value: toValue(object),
         creator: creator,
-        getFieldIndex: generateSwitchMatcherPack(
+        getFieldIndex: generateTrieSwitch(
             Object.keys(object as any).map(c => encoder.encode(c)), {
             pack: true
         }) as any
@@ -189,7 +189,7 @@ export function toMetadata(object: unknown): Metadata {
                     value: value,
                     defaultValue: keyValue,
                     getFieldIndex: (type === 'object' ? (
-                        generateSwitchMatcherPack(Object.keys(keyValue).map(c => encoder.encode(c)), { pack: true }) as any
+                        generateTrieSwitch(Object.keys(keyValue).map(c => encoder.encode(c)), { pack: true }) as any
                     ) : undefined),
                     creator: (type === 'object' ?
                         objectLiteralFactory((value as Metadata[]).map(c => c.name!.value)) :

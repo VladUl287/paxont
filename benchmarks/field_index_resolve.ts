@@ -1,40 +1,7 @@
 import { add, complete, cycle, suite } from 'benny'
-import { generateSwitchMatcher, generateSwitchMatcherLength, generateSwitchMatcherPack } from '../src/code_gen/field'
+import { generateTrieSwitch } from '../src/code_gen/field'
 
 const encoder = new TextEncoder()
-
-const small_unique_object = {
-    "id": 1,
-    "name": "Project Alpha",
-    "active": true,
-    "score": 99.5,
-    "code": "ALPHA-001",
-    "description": "This is a top-level project description without any nested structures inside.",
-    "priority": "high",
-    "created_at": "2025-01-15T10:30:00Z",
-    "version": 3,
-    "is_verified": false,
-    "tags_count": 12
-}
-
-const mid_duplicates_object = {
-    id: 15,
-    order: 1244,
-    phone: 343543534,
-    phone1: 343543534,
-    phone2: 343543534,
-    phone3: 343543534,
-    phone4: 343543534,
-    phone5: 343543534,
-    phone6: 343543534,
-    phone7: 343543534,
-    phone8: 343543534,
-    phone9: 343543534,
-    phone10: 343543534,
-    phone11: 343543534,
-    phone12: 343543534,
-    phone13: 343543534,
-}
 
 const big_unique_object = {
     "id": 1,
@@ -93,33 +60,16 @@ const keys = Object.keys(big_unique_object).map(c => {
     return encoder.encode(c)
 })
 
-const switchMathcer = generateSwitchMatcher(keys, { pack: false })
-const switchMathcerPack = generateSwitchMatcher(keys, { pack: false })
-const switchMathcerWithPack = generateSwitchMatcher(keys, { pack: true })
-const switchMathcerPackWithPack = generateSwitchMatcherPack(keys, { pack: true })
-const switchMathcerLength = generateSwitchMatcherLength(keys)
+const switchMathcerWithoutPack = generateTrieSwitch(keys, { pack: false })
+const switchMathcerPackWithPack = generateTrieSwitch(keys, { pack: true })
 
 suite(
     'field_index_resolve',
 
-    add('switchMathcer', () => {
+    add('switchMathcerWithoutPack', () => {
         let result = 0
         for (let i = 0; i < keys.length; i++) {
-            result += switchMathcer(keys[i], 0)
-        }
-        return result
-    }),
-    add('switchMathcerPack', () => {
-        let result = 0
-        for (let i = 0; i < keys.length; i++) {
-            result += switchMathcerPack(keys[i], 0)
-        }
-        return result
-    }),
-    add('switchMathcerWithPack', () => {
-        let result = 0
-        for (let i = 0; i < keys.length; i++) {
-            result += switchMathcerWithPack(keys[i], 0)
+            result += switchMathcerWithoutPack(keys[i], 0)
         }
         return result
     }),
@@ -130,15 +80,7 @@ suite(
         }
         return result
     }),
-    add('switchMathcerLength', () => {
-        let result = 0
-        for (let i = 0; i < keys.length; i++) {
-            result += switchMathcerLength(keys[i], 0)
-        }
-        return result
-    }),
 
-    // cycle(),
     cycle((result) => {
         const nanoseconds = (1 / result.ops) * 1e9
         console.log(
