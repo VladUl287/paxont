@@ -1,4 +1,4 @@
-import { ConvertResult } from "../metadata/types"
+import { ReadResult } from "../metadata/types"
 import { DOT, E, isDigitUnsafe, MINUS, PLUS, ZERO } from "./utf8constants"
 
 type NumberFormat = {
@@ -58,7 +58,7 @@ export const f32Format: NumberFormat = {
     infinityExponent: 255
 }
 
-export function parseInt8(b: Uint8Array, i: number): ConvertResult<number> {
+export function parseInt8(b: Uint8Array, i: number): ReadResult<number> {
     const MAX_DIGITS = 3
     const MIN_VALUE = -128
     const MAX_VALUE = 127
@@ -93,7 +93,7 @@ export function parseInt8(b: Uint8Array, i: number): ConvertResult<number> {
     }
 }
 
-export function parseUint8(b: Uint8Array, i: number): ConvertResult<number> {
+export function parseUint8(b: Uint8Array, i: number): ReadResult<number> {
     const MAX_DIGITS = 3
     const MIN_VALUE = 0
     const MAX_VALUE = 255
@@ -123,7 +123,7 @@ export function parseUint8(b: Uint8Array, i: number): ConvertResult<number> {
     }
 }
 
-export function parseInt16(b: Uint8Array, i: number): ConvertResult<number> {
+export function parseInt16(b: Uint8Array, i: number): ReadResult<number> {
     const MAX_DIGITS = 5
     const MIN_VALUE = -32768
     const MAX_VALUE = 32767
@@ -166,7 +166,7 @@ export function parseInt16(b: Uint8Array, i: number): ConvertResult<number> {
     }
 }
 
-export function parseUint16(b: Uint8Array, i: number): ConvertResult<number> {
+export function parseUint16(b: Uint8Array, i: number): ReadResult<number> {
     const MAX_DIGITS = 5
     const MIN_VALUE = 0
     const MAX_VALUE = 65535
@@ -204,7 +204,7 @@ export function parseUint16(b: Uint8Array, i: number): ConvertResult<number> {
     }
 }
 
-export function parseInt32(b: Uint8Array, i: number): ConvertResult<number> {
+export function parseInt32(b: Uint8Array, i: number): ReadResult<number> {
     const MAX_DIGITS = 10
     const MIN_VALUE = -2147483648
     const MAX_VALUE = 2147483647
@@ -231,7 +231,7 @@ export function parseInt32(b: Uint8Array, i: number): ConvertResult<number> {
     }
 }
 
-export function parseUint32(b: Uint8Array, i: number): ConvertResult<number> {
+export function parseUint32(b: Uint8Array, i: number): ReadResult<number> {
     const MAX_DIGITS = 10
     const MIN_VALUE = 0
     const MAX_VALUE = 4294967295
@@ -257,7 +257,7 @@ const bufferInt = new ArrayBuffer(8)
 const conversionU32 = new Uint32Array(bufferInt)
 const conversionU64 = new BigUint64Array(bufferInt)
 
-export function parseInt64(b: Uint8Array, i: number): ConvertResult<bigint> {
+export function parseInt64(b: Uint8Array, i: number): ReadResult<bigint> {
     const MAX_DIGITS = 19
     const MAX_SAFE_INT_DIGITS = 16
     const MIN_VALUE = -9223372036854775808n
@@ -309,7 +309,7 @@ export function parseInt64(b: Uint8Array, i: number): ConvertResult<bigint> {
     }
 }
 
-export function parseUint64(b: Uint8Array, i: number): ConvertResult<bigint> {
+export function parseUint64(b: Uint8Array, i: number): ReadResult<bigint> {
     const MAX_DIGITS = 20
     const MAX_SAFE_INT_DIGITS = 16
     const MIN_VALUE = 0
@@ -358,15 +358,15 @@ export function parseUint64(b: Uint8Array, i: number): ConvertResult<bigint> {
     }
 }
 
-export function parseFloat32(b: Uint8Array, i: number): ConvertResult<number> {
+export function parseFloat32(b: Uint8Array, i: number): ReadResult<number> {
     return parseFloat(b, i, f32Format)
 }
 
-export function parseFloat64(b: Uint8Array, i: number): ConvertResult<number> {
+export function parseFloat64(b: Uint8Array, i: number): ReadResult<number> {
     return parseFloat(b, i, f64Format)
 }
 
-export function parseFloat(b: Uint8Array, i: number, f: NumberFormat): ConvertResult<number> {
+export function parseFloat(b: Uint8Array, i: number, f: NumberFormat): ReadResult<number> {
     const negative = b[i] === MINUS
     if (negative) i++
 

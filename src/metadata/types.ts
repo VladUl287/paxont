@@ -13,7 +13,7 @@ export type BuiltInType =
 
 export type TypeName = BuiltInType | (string & {})
 
-export type ConvertResult<T> = {
+export type ReadResult<T> = {
     readonly value: T
     readonly nextIndex: number
 }
@@ -23,7 +23,7 @@ export type ConvertCtx = {
     readonly options: JsonOptions
 }
 
-export type toValueConverter<T> = (ctx: ConvertCtx, meta: BaseMeta<T>, index: number, depth: number) => ConvertResult<T>
+export type toValueConverter<T> = (ctx: ConvertCtx, meta: BaseMeta<T>, index: number, depth: number) => ReadResult<T>
 export type toJsonConverter<T> = (value: T) => string
 
 export interface BaseMeta<T> {

@@ -1,9 +1,9 @@
-import { BaseMeta, ConvertCtx, ConvertResult } from "../metadata/types"
+import { BaseMeta, ConvertCtx, ReadResult } from "../metadata/types"
 import { JsonOptions } from "../options"
 import { utc } from "../utils/date"
 import { COLON, DOT, DOUBLE_QUOTE, isDigitUnsafe, MINUS, PLUS, T_UPPER, Z } from "../utils/utf8constants"
 
-export function toDate(ctx: ConvertCtx, _m: BaseMeta<Date>, i: number, _d: number): ConvertResult<Date> {
+export function toDate(ctx: ConvertCtx, _m: BaseMeta<Date>, i: number, _d: number): ReadResult<Date> {
     const b = ctx.bytes
     const len = b.length
 
@@ -18,7 +18,7 @@ export function toDate(ctx: ConvertCtx, _m: BaseMeta<Date>, i: number, _d: numbe
     throw new Error(`Invalid date value '${b[i]}' at index ${i}`)
 }
 
-function fromString(b: Uint8Array, i: number, opt: JsonOptions): ConvertResult<Date> {
+function fromString(b: Uint8Array, i: number, opt: JsonOptions): ReadResult<Date> {
     const result = {
         value: Date.prototype,
         nextIndex: 0
@@ -42,7 +42,7 @@ function fromString(b: Uint8Array, i: number, opt: JsonOptions): ConvertResult<D
     throw new Error(`invalid date value, at index ${i}`)
 }
 
-function fromTimestamp(b: Uint8Array, i: number): ConvertResult<Date> {
+function fromTimestamp(b: Uint8Array, i: number): ReadResult<Date> {
     return {
         value: new Date(),
         nextIndex: i

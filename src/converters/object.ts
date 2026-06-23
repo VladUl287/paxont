@@ -1,11 +1,11 @@
-import { ConvertCtx, ConvertResult } from "../metadata/types"
+import { ConvertCtx, ReadResult } from "../metadata/types"
 import * as JsonCodes from "../utils/utf8constants"
 import { ConvertMeta, isMultiMeta, isSingleMeta } from "./types"
 import { skipWhitespace } from "./utils"
 
 const fields = new Array<any>(16)
 export function convertObject(
-    ctx: ConvertCtx, metadata: ConvertMeta, index: number, depth: number): ConvertResult<object> {
+    ctx: ConvertCtx, metadata: ConvertMeta, index: number, depth: number): ReadResult<object> {
     const bytes = ctx.bytes
 
     if (isMultiMeta(metadata))

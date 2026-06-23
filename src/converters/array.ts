@@ -1,11 +1,11 @@
-import { CollectionMeta, ConvertCtx, ConvertResult, TypeName } from "../metadata/types"
+import { CollectionMeta, ConvertCtx, ReadResult, TypeName } from "../metadata/types"
 import { TypedArray } from "../utils/typedArray"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
 
 type ArrayLike<T> = T[] | TypedArray
 
-export function toArray<V>(ctx: ConvertCtx, m: CollectionMeta<ArrayLike<V>, V>, i: number, d: number): ConvertResult<ArrayLike<V>> {
+export function toArray<V>(ctx: ConvertCtx, m: CollectionMeta<ArrayLike<V>, V>, i: number, d: number): ReadResult<ArrayLike<V>> {
     const b = ctx.bytes
 
     if (b[i] !== SQUARE_OPEN)

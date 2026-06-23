@@ -1,9 +1,9 @@
-import { ConvertCtx, ConvertResult } from "../metadata/types"
+import { ConvertCtx, ReadResult } from "../metadata/types"
 import { DOT, E, E_UPPER, MINUS, PLUS, ZERO } from "../utils/utf8constants"
 import { parseNumberF64_2 } from "./number_opt"
 import { ConvertMeta } from "./types"
 
-export function convertNumber(ctx: ConvertCtx, _metadata: ConvertMeta, index: number, _depth: number): ConvertResult<number> {
+export function convertNumber(ctx: ConvertCtx, _metadata: ConvertMeta, index: number, _depth: number): ReadResult<number> {
     return parseNumberF64_2(ctx.bytes, index)
 }
 
@@ -30,7 +30,7 @@ const conversionU32 = new Uint32Array(bufferConversion)
 const conversionU64 = new BigUint64Array(bufferConversion)
 const conversionF64 = new Float64Array(bufferConversion)
 
-export function parseNumberF64(bytes: Uint8Array, start: number): ConvertResult<number> {
+export function parseNumberF64(bytes: Uint8Array, start: number): ReadResult<number> {
     let i = start
 
     const STATE_NEGATIVE = 0x01

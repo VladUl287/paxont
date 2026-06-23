@@ -1,7 +1,7 @@
-import { BaseMeta, ConvertCtx, ConvertResult } from "../metadata/types"
+import { BaseMeta, ConvertCtx, ReadResult } from "../metadata/types"
 import { isDigitUnsafe } from "../utils/utf8constants"
 
-export function toBigInt(ctx: ConvertCtx, _m: BaseMeta<bigint>, i: number, _d: number): ConvertResult<bigint> {
+export function toBigInt(ctx: ConvertCtx, _m: BaseMeta<bigint>, i: number, _d: number): ReadResult<bigint> {
     const b = ctx.bytes
     const len = b.length
 

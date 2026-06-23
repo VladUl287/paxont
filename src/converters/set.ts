@@ -1,8 +1,8 @@
-import { CollectionMeta, ConvertCtx, ConvertResult, MapMeta } from "../metadata/types"
+import { CollectionMeta, ConvertCtx, ReadResult, MapMeta } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
 
-export function toSet<V>(ctx: ConvertCtx, m: CollectionMeta<Set<V>, V>, i: number, d: number): ConvertResult<Set<V>> {
+export function toSet<V>(ctx: ConvertCtx, m: CollectionMeta<Set<V>, V>, i: number, d: number): ReadResult<Set<V>> {
     const b = ctx.bytes
 
     if (b[i] !== SQUARE_OPEN)

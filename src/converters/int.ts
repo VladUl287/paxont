@@ -1,7 +1,7 @@
-import { BaseMeta, ConvertCtx, ConvertResult } from "../metadata/types"
+import { BaseMeta, ConvertCtx, ReadResult } from "../metadata/types"
 import { parseInt16, parseInt32, parseInt64, parseInt8, parseUint16, parseUint32, parseUint64, parseUint8 } from "../utils/number"
 
-export const toInt = (ctx: ConvertCtx, m: BaseMeta<number>, i: number, _d: number): ConvertResult<number> => {
+export const toInt = (ctx: ConvertCtx, m: BaseMeta<number>, i: number, _d: number): ReadResult<number> => {
     const b = ctx.bytes
 
     switch (m.type) {
@@ -18,8 +18,8 @@ export const toInt = (ctx: ConvertCtx, m: BaseMeta<number>, i: number, _d: numbe
     }
 }
 
-export const toInt64 = (ctx: ConvertCtx, _m: BaseMeta<bigint>, i: number, _d: number): ConvertResult<bigint> =>
+export const toInt64 = (ctx: ConvertCtx, _m: BaseMeta<bigint>, i: number, _d: number): ReadResult<bigint> =>
     parseInt64(ctx.bytes, i)
 
-export const toUInt64 = (ctx: ConvertCtx, _m: BaseMeta<bigint>, i: number, _d: number): ConvertResult<bigint> =>
+export const toUInt64 = (ctx: ConvertCtx, _m: BaseMeta<bigint>, i: number, _d: number): ReadResult<bigint> =>
     parseUint64(ctx.bytes, i)

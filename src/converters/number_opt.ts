@@ -1,8 +1,8 @@
-import { ConvertCtx, ConvertResult } from "../metadata/types"
+import { ConvertCtx, ReadResult } from "../metadata/types"
 import { DOT, E, isDigitUnsafe, MINUS, PLUS, ZERO } from "../utils/utf8constants"
 import { ConvertMeta } from "./types"
 
-export function convertNumber(ctx: ConvertCtx, _metadata: ConvertMeta, index: number, _depth: number): ConvertResult<number> {
+export function convertNumber(ctx: ConvertCtx, _metadata: ConvertMeta, index: number, _depth: number): ReadResult<number> {
     return parseNumberF64_2(ctx.bytes, index)
 }
 
@@ -256,7 +256,7 @@ const POW10_TABLE = new Float64Array(2 * MAX_FAST_EXPONENT + 1)
 for (let exp = -MAX_FAST_EXPONENT; exp <= MAX_FAST_EXPONENT; exp++)
     POW10_TABLE[exp + MAX_FAST_EXPONENT] = 10 ** exp
 
-export function parseNumberF64_2(b: Uint8Array, i: number): ConvertResult<number> {
+export function parseNumberF64_2(b: Uint8Array, i: number): ReadResult<number> {
     const negative = b[i] === MINUS
     if (negative) i++
 
