@@ -28,10 +28,10 @@ export function skipWhitespace(b: Uint8Array, i: number): number {
             i++
             continue
         }
-        else if (lookup[b[i]]) { i++ }
-        else if (b[i] < SPACE) { throw new Error('Syntax error') }
+        else if (lookup[b[i]]) i++
         else break
     }
 
+    if (b[i] < SPACE) throw new Error('Syntax error')
     return i
 }
