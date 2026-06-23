@@ -1,8 +1,8 @@
-import { CollectionMeta, ConvertCtx, TypeName } from "../metadata/types"
-import { TypedArray } from "../utils/typedArray"
-import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
-import { skipWhitespace } from "./utils"
-import { ReadResult } from "../utils/types"
+import { CollectionMeta, ConvertCtx, TypeName } from "../../metadata/types"
+import { TypedArray } from "../../utils/typedArray"
+import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../../utils/utf8constants"
+import { skipWhitespace } from "../utils"
+import { ReadResult } from "../../utils/types"
 
 type ArrayLike<T> = T[] | TypedArray
 

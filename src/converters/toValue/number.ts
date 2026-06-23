@@ -1,7 +1,8 @@
-import { ConvertCtx } from "../metadata/types"
-import { DOT, E, isDigitUnsafe, MINUS, PLUS, ZERO } from "../utils/utf8constants"
-import { ConvertMeta } from "./types"
-import { ReadResult } from "../utils/types"
+import { ConvertMeta } from "../types"
+import { ReadResult } from "../../utils/types"
+import { parseNumberF64_2 } from "./number_opt"
+import { ConvertCtx } from "../../metadata/types"
+import { DOT, E, E_UPPER, MINUS, PLUS, ZERO } from "../../utils/utf8constants"
 
 export function convertNumber(ctx: ConvertCtx, _metadata: ConvertMeta, index: number, _depth: number): ReadResult<number> {
     return parseNumberF64_2(ctx.bytes, index)
@@ -22,7 +23,7 @@ for (let exp = -1022; exp <= 1023; exp++) {
 
 const MAX_DIGITS_COUNT = 753
 
-const bufferMantissa = new ArrayBuffer(16)
+const bufferMantissa = new ArrayBuffer(8)
 const mantissaU32 = new Uint32Array(bufferMantissa)
 
 const bufferConversion = new ArrayBuffer(8)
@@ -30,379 +31,293 @@ const conversionU32 = new Uint32Array(bufferConversion)
 const conversionU64 = new BigUint64Array(bufferConversion)
 const conversionF64 = new Float64Array(bufferConversion)
 
-const decoder = new TextDecoder('ascii', { fatal: true })
+export function parseNumberF64(bytes: Uint8Array, start: number): ReadResult<number> {
+    let i = start
 
-type Store = {
-    mantissa: number,
-    mantissaU32: Uint32Array,
-    digitsCount: number,
-    exponent: number,
-    index: number
-}
+    const STATE_NEGATIVE = 0x01
+    const STATE_DECIMAL = 0x02
+    const STATE_END = 0x04
+    const STATE_NONZERO = 0x08
 
-const MAX_SAFE_INTEGER = 9007199254740992
-const MAX_SAFE_INT_DIGITS = 16
-const MAX_SAFE_LONG_DIGITS = 19
-const MAX_FAST_EXPONENT = 22
-const MIN_FAST_EXPONENT = -22
-const MIN_SAFE_EXPONENT = -342
-const MAX_SAFE_EXPONENT = 308
-const DENORMAL_MANTISSA_BITS = 52
-const MIN_EXP_ROUND_TO_EVEN = -27
-const MAX_EXP_ROUND_TO_EVEN = 55
-const MAX_BINARY_EXPONENT = 1023
-const INFINITY_EXPONENT = 2047
+    let state = 0 >>> 0
 
-function tryFastParse(b: Uint8Array, s: Store): boolean {
-    return tryParseInteger(b, s) &&
-        (b[s.index] !== DOT || tryParseDecimal(b, s)) &&
-        (((b[s.index] | 32) !== E) || tryParseExponent(b, s))
-}
-
-function tryParseInteger(b: Uint8Array, s: Store): boolean {
-    let i = s.index
-
-    const st = i
-    const len = Math.min(b.length, st + MAX_SAFE_INT_DIGITS)
-
-    let m = 0
-    while (i < len - 4) {
-        const d = b[i], d2 = b[i + 1], d3 = b[i + 2], d4 = b[i + 3]
-
-        const w = (d | d2 << 8 | d3 << 16 | d4 << 24) - 0x30303030
-        const nonDigit = ((w + 0x76767676) | w) & 0x80808080
-        if (nonDigit !== 0) break
-
-        m = m * 10000 + ((d & 0x0F) * 1000 + (d2 & 0x0F) * 100 + (d3 & 0x0F) * 10 + (d4 & 0x0F))
-        i += 4
+    if (bytes[i] === MINUS) {
+        state ^= STATE_NEGATIVE
+        i++
     }
 
-    if (isDigitUnsafe(b[i])) {
-        m = m * 10 + (b[i++] & 0x0F)
+    let scale = 0
 
-        if (isDigitUnsafe(b[i])) {
-            m = m * 10 + (b[i++] & 0x0F)
+    let digitsCount = 0
+    let mantissa = 0
+    let trailingZeros = 0
 
-            if (isDigitUnsafe(b[i])) {
-                m = m * 10 + (b[i++] & 0x0F)
+    const MAX_SAFE_INT_DIGITS = 16
+    const MAX_SAFE_LONG_DIGITS = 19
 
-                if (i < len && isDigitUnsafe(b[i]))
-                    return tryParseLong(b, s)
+    const length = bytes.length
+    while (i < length && digitsCount < 20) {
+        if (i <= length - 4 && digitsCount <= 16) {
+            const a = bytes[i]
+            const b = bytes[i + 1]
+            const c = bytes[i + 2]
+            const d = bytes[i + 3]
+
+            const word = (a << 0 | b << 8 | c << 16 | d << 24) - 0x30303030
+            const hasNonDigit = ((word + 0x76767676) | word) & 0x80808080
+
+            if (hasNonDigit === 0) {
+                const chunk = ((a & 0x0F) * 1000) + ((b & 0x0F) * 100) + ((c & 0x0F) * 10) + (d & 0x0F)
+                if (chunk !== 0 || (state & STATE_NONZERO)) {
+                    digitsCount += 4
+
+                    if ((state & STATE_DECIMAL) === 0)
+                        scale += 4
+
+                    state |= STATE_NONZERO
+
+                    if (digitsCount < MAX_SAFE_INT_DIGITS) {
+                        mantissa = mantissa * 10000 + chunk
+                    }
+                    else {
+                        const high = Math.floor(mantissa / 0x100000000)
+                        const low = (mantissa >>> 0) * 10000 + chunk
+                        mantissaU32[0] = low >>> 0
+                        mantissaU32[1] = high * 10000 + Math.floor(low / 0x100000000)
+                    }
+
+                    if (d === ZERO) {
+                        if (c === ZERO) {
+                            if (b === ZERO) {
+                                if (a === ZERO) {
+                                    trailingZeros++
+                                }
+                                else {
+                                    trailingZeros = 0
+                                }
+                                trailingZeros++
+                            }
+                            else {
+                                trailingZeros = 0
+                            }
+                            trailingZeros++
+                        }
+                        else {
+                            trailingZeros = 0
+                        }
+                        trailingZeros++
+                    }
+                    else {
+                        trailingZeros = 0
+                    }
+                }
+                else if (state & STATE_DECIMAL) {
+                    scale -= 4
+                }
+                i += 4
+                continue
             }
         }
-    }
 
-    s.index = i
-    s.mantissa = m
-    s.digitsCount = i - st
-    return true
-}
+        const segment_length = Math.min(length, i + 4)
+        while (i < segment_length) {
+            const byte = bytes[i]
 
-function tryParseLong(b: Uint8Array, s: Store): boolean {
-    let i = s.index
-    let m = s.mantissa
-    let m32 = s.mantissaU32
-    let dc = s.digitsCount
+            if (isDigit(byte)) {
+                if (byte !== ZERO || (state & STATE_NONZERO)) {
+                    const digit = byte & 0x0F
 
-    const len = b.length
-    if (i < len && ((b[i] - 48) >>> 0) > 9)
-        return true
+                    digitsCount++
+                    trailingZeros = (digit === 0 ? trailingZeros + 1 : 0)
 
-    splitTo32(m, m32)
-    m = 0
+                    state |= STATE_NONZERO
 
-    let localDc = 0
-    while (i < len && dc < MAX_SAFE_LONG_DIGITS) {
-        const d = (b[i] - 48) >>> 0
-        if (d > 9) break
+                    if ((state & STATE_DECIMAL) === 0)
+                        scale++
 
-        m = m * 10 + d
-        localDc++
-        dc++
-        i++
-    }
-
-    if (dc === MAX_SAFE_LONG_DIGITS && ((b[i] - 48) >>> 0) <= 9) {
-        return false //too many digits, go to slow path
-    }
-
-    if (localDc > 0) {
-        const pow = POS_POW10[localDc]
-        const low = m32[0] * pow + m
-        m32[0] = low >>> 0
-        m32[1] = m32[1] * pow + Math.floor(low / 0x100000000)
-        m = 0
-    }
-
-    s.index = i
-    s.mantissa = m
-    s.digitsCount = dc
-    return true
-}
-
-function tryParseDecimal(b: Uint8Array, s: Store): boolean {
-    let i = s.index + 1
-    let m = s.mantissa
-    let dc = 0
-
-    const start = i
-    const length = b.length
-    if (s.digitsCount === 0)
-        while (i < length && b[i] === ZERO) i++
-
-    while (i < length && dc < MAX_SAFE_INT_DIGITS - 1) {
-        const d = (b[i] - 48) >>> 0
-        if (d > 9) break
-
-        m = m * 10 + d
-        dc++
-        i++
-    }
-
-    if (i < length && dc >= MAX_SAFE_INT_DIGITS - 1) {
-        const d = (b[i] - 48) >>> 0
-        if (d <= 9) {
-            const tempM = m * 10 + d
-            if (tempM <= MAX_SAFE_INTEGER) {
-                m = tempM
-                dc++
+                    if (digitsCount < MAX_SAFE_INT_DIGITS) {
+                        mantissa = mantissa * 10 + digit
+                    }
+                    else if (digitsCount === MAX_SAFE_INT_DIGITS) {
+                        const high = Math.floor(mantissa / 0x100000000)
+                        const low = (mantissa >>> 0) * 10 + digit
+                        mantissaU32[0] = low >>> 0
+                        mantissaU32[1] = high * 10 + Math.floor(low / 0x100000000)
+                    }
+                    else if (digitsCount <= MAX_SAFE_LONG_DIGITS) {
+                        const low = mantissaU32[0] * 10 + digit
+                        mantissaU32[0] = low >>> 0
+                        mantissaU32[1] = mantissaU32[1] * 10 + Math.floor(low / 0x100000000)
+                    }
+                }
+                else if (state & STATE_DECIMAL) {
+                    scale--
+                }
                 i++
+                continue
+            }
+            else if (byte === DOT) {
+                state |= STATE_DECIMAL
+                i++
+                continue
+            }
+            else if (byte === E || byte === E_UPPER) {
+                i++
+
+                let signExp = 1
+                if (bytes[i] === MINUS) {
+                    signExp = -1
+                    i++
+                }
+                else if (bytes[i] === PLUS) {
+                    i++
+                }
+
+                let exponent = 0
+                while (isDigit(bytes[i])) {
+                    exponent = exponent * 10 + (bytes[i] - 48)
+                    i++
+                }
+
+                exponent *= signExp
+                scale += exponent
             }
 
-            s.index = i
-            s.mantissa = m
-
-            return tryParseDecimalLong(b, s, dc, start)
+            state |= STATE_END
+            break
         }
+
+        if (state & STATE_END)
+            break
     }
 
-    s.index = i
-    s.mantissa = m
-    s.exponent = start - i
-    s.digitsCount = dc
-    return true
-}
+    let originalDigitsCount = digitsCount
+    if (digitsCount <= MAX_SAFE_LONG_DIGITS) {
+        const numberOfFractionalDigits = digitsCount - scale
+        if (numberOfFractionalDigits > 0) {
+            trailingZeros = Math.min(trailingZeros, numberOfFractionalDigits)
+            digitsCount -= trailingZeros
 
-function tryParseDecimalLong(b: Uint8Array, s: Store, dc: number, start: number): boolean {
-    let i = s.index
-    let m = s.mantissa
-    let m32 = s.mantissaU32
+            const divisorCount = (digitsCount - (digitsCount - trailingZeros))
+            if (digitsCount < MAX_SAFE_INT_DIGITS) {
+                if (originalDigitsCount >= MAX_SAFE_INT_DIGITS) {
+                    const low = mantissaU32[0]
+                    const high = mantissaU32[1]
 
-    const length = b.length
-    if (i < length && ((b[i] - 48) >>> 0) > 9)
-        return true
+                    const divisor = 10 ** divisorCount
+                    let newHigh = Math.floor(high / divisor)
+                    let remainder = high % divisor
 
-    splitTo32(m, m32)
-    m = 0
+                    let combinedLow = remainder * 0x100000000 + low
+                    let newLow = Math.floor(combinedLow / divisor)
 
-    let localDc = 0
-    while (i < length && dc < MAX_SAFE_LONG_DIGITS) {
-        const d = (b[i] - 48) >>> 0
-        if (d > 9) break
+                    const carry = Math.floor(newLow / 0x100000000)
+                    newHigh += carry
+                    newLow = newLow % 0x100000000
 
-        m = m * 10 + d
-        localDc++
-        dc++
-        i++
-    }
+                    mantissaU32[0] = newLow
+                    mantissaU32[1] = newHigh
 
-    if (dc === MAX_SAFE_LONG_DIGITS && ((b[i] - 48) >>> 0) <= 9) {
-        return false
-    }
+                    mantissa = combine53(mantissaU32[1], mantissaU32[0])
+                }
+                else {
+                    mantissa /= 10 ** divisorCount
+                }
+            }
+            else if (digitsCount <= MAX_SAFE_LONG_DIGITS) {
+                const low = mantissaU32[0]
+                const high = mantissaU32[1]
 
-    if (localDc > 0) {
-        const pow = POS_POW10[localDc]
-        const low = m32[0] * pow + m
-        m32[0] = low >>> 0
-        m32[1] = m32[1] * pow + Math.floor(low / 0x100000000)
-        m = 0
-    }
+                const divisor = 10 ** divisorCount
+                let newHigh = Math.floor(high / divisor)
+                let remainder = high % divisor
 
-    s.index = i
-    s.mantissa = m
-    s.exponent = start - i
-    s.digitsCount = dc
+                let combinedLow = remainder * 0x100000000 + low
+                let newLow = Math.floor(combinedLow / divisor)
 
-    return true
-}
+                const carry = Math.floor(newLow / 0x100000000)
+                newHigh += carry
+                newLow = newLow % 0x100000000
 
-function tryParseExponent(b: Uint8Array, s: Store): boolean {
-    let i = s.index + 1
+                mantissaU32[0] = newLow
+                mantissaU32[1] = newHigh
+            }
+        }
 
-    let sign = 1
-    if (b[i] === MINUS) {
-        sign = -1
-        i++
-    }
-    else if (b[i] === PLUS) {
-        i++
-    }
-
-    let e = 0
-    while (i < b.length) {
-        const d = (b[i] - 48) >>> 0
-        if (d > 9) break
-
-        if (e < 0x10000)
-            e = e * 10 + d
-
-        i++
-    }
-    s.exponent += (e * sign)
-
-    return true
-}
-
-const POW10_TABLE = new Float64Array(2 * MAX_FAST_EXPONENT + 1)
-for (let exp = -MAX_FAST_EXPONENT; exp <= MAX_FAST_EXPONENT; exp++)
-    POW10_TABLE[exp + MAX_FAST_EXPONENT] = 10 ** exp
-
-export function parseNumberF64_2(b: Uint8Array, i: number): ReadResult<number> {
-    const negative = b[i] === MINUS
-    if (negative) i++
-
-    const s: Store = {
-        index: i,
-        exponent: 0,
-        mantissa: 0,
-        mantissaU32: mantissaU32,
-        digitsCount: 0,
-    }
-
-    if (tryFastParse(b, s)) {
-        i = s.index
-
-        let m = s.mantissa
-        const e = s.exponent
-        const eabs = Math.abs(e)
-
-        if (m > 0 && eabs <= MAX_FAST_EXPONENT) {
-            if (eabs > 0) m *= POW10_TABLE[eabs]
+        const MIN_DECIMAL_EXPONENT = -324
+        if ((digitsCount >= 0 && mantissa === 0 && mantissaU32[0] === 0 && mantissaU32[1] === 0) ||
+            scale < MIN_DECIMAL_EXPONENT) {
             return {
-                value: negative ? -m : m,
+                value: (state & STATE_NEGATIVE) ? -0 : 0,
                 nextIndex: i
             }
         }
 
-        if (m > 0) splitTo32(m, s.mantissaU32)
+        const positiveExponent = Math.max(0, scale)
+        const integerDigitsPresent = Math.min(positiveExponent, digitsCount)
+        const fractionalDigitsPresent = digitsCount - integerDigitsPresent
 
-        const f64 = toFloat64(s.mantissaU32, e)
-        if (f64) return {
-            value: f64,
-            nextIndex: i
+        const exponent = scale - integerDigitsPresent - fractionalDigitsPresent
+        const fastExponent = Math.abs(exponent)
+
+        const MAX_FAST_EXPONENT = 22
+        if (fastExponent <= MAX_FAST_EXPONENT && digitsCount < MAX_SAFE_INT_DIGITS) {
+            const expScale = POS_POW10[fastExponent]
+            if (fractionalDigitsPresent !== 0)
+                mantissa /= expScale
+            else
+                mantissa *= expScale
+
+            if (state & STATE_NEGATIVE)
+                return {
+                    value: -mantissa,
+                    nextIndex: i
+                }
+
+            return {
+                value: mantissa,
+                nextIndex: i
+            }
+        }
+        else if (digitsCount <= MAX_SAFE_LONG_DIGITS) {
+            if (digitsCount < MAX_SAFE_INT_DIGITS) {
+                mantissaU32[0] = mantissa >>> 0
+                mantissaU32[1] = Math.floor(mantissa / 0x100000000)
+            }
+
+            const mantissaBig = combine(mantissaU32[1], mantissaU32[0])
+
+            const result = toFloat64(mantissaU32, exponent)
+            const result1 = computeFloat(exponent, mantissaBig, defaultFloatInfo)
+
+            if (result1 && !result) {
+                return {
+                    value: undefined as any,
+                    nextIndex: i
+                }
+            }
+
+            if (result) {
+                return {
+                    value: result,
+                    nextIndex: i
+                }
+            }
         }
     }
+
+    const isNumberByte = (b: number) =>
+        isDigit(b) || b === DOT || b === E || b === E_UPPER || PLUS || MINUS
+
+    while (i < length && isNumberByte(bytes[i]))
+        i++
+
+    const result = new TextDecoder().decode(bytes.subarray(start, i))
 
     return {
-        value: Number(fastDecode(b, i)),
+        value: Number(result),
         nextIndex: i
     }
-}
-
-const c = new Array(1024).fill(0)
-function fastDecode(b: Uint8Array, i: number) {
-    let j = 0
-    let dc = 0
-
-    const len = b.length
-
-    while (i < len - 4) {
-        const a1 = b[i]
-        const a2 = b[i + 1]
-        const a3 = b[i + 2]
-        const a4 = b[i + 3]
-
-        const word = (a1 | a2 << 8 | a3 << 16 | a4 << 24) - 0x30303030
-        const hasNonDigit = ((word + 0x76767676) | word) & 0x80808080
-
-        if (hasNonDigit !== 0) break
-
-        const chunk = (a1 & 0x0F) * 1000 + (a2 & 0x0F) * 100 + (a3 & 0x0F) * 10 + (a4 & 0x0F)
-        c[j] = c[j] * 10000 + chunk
-        dc += 4
-        i += 4
-
-        if (dc === MAX_SAFE_INT_DIGITS - 4) {
-            while (i < len) {
-                const d = (b[i] - 48) >>> 0
-                if (d <= 9) {
-                    c[j] = c[j] * 10 + d
-                    dc++
-
-                    if (dc === MAX_SAFE_INT_DIGITS - 1) {
-                        dc = 0
-                        j++
-                        i++
-                        break
-                    }
-                }
-                i++
-            }
-        }
-    }
-
-    while (i < len) {
-        const d = (b[i] - 48) >>> 0
-
-        if (d <= 9) {
-            c[j] = c[j] * 10 + d
-            dc++
-
-            if (dc === MAX_SAFE_INT_DIGITS - 1) {
-                j++
-                dc = 0
-            }
-        }
-
-        i++
-    }
-
-    const builder = literalBuilder(j)
-    return builder(c)
-}
-
-type LiteralFunc = (arr: Array<any>) => string
-const literalCache = new Array<LiteralFunc>(70)
-function genLiteralFunc(length: number): LiteralFunc {
-    if (length === 0)
-        throw new Error('')
-
-    let literal = '`${c[0]}'
-    for (let i = 1; i <= length; i++)
-        literal += '${c[' + i + ']}'
-    literal += '`'
-
-    return new Function('c', `return ${literal}`) as LiteralFunc
-}
-function literalBuilder(length: number): LiteralFunc {
-    return literalCache[length] ??= genLiteralFunc(length)
-}
-
-function decodeNumber1(b: Uint8Array, offset: number) {
-    let i = offset
-
-    const len = b.length
-    while (i < len - 4) {
-        const a1 = b[i]
-        const a2 = b[i + 1]
-        const a3 = b[i + 2]
-        const a4 = b[i + 3]
-
-        const word = (a1 | a2 << 8 | a3 << 16 | a4 << 24) - 0x30303030
-        const hasNonDigit = ((word + 0x76767676) | word) & 0x80808080
-        if (hasNonDigit !== 0) break
-
-        i += 4
-    }
-
-    while (i < len) {
-        const d = (b[i] - 48) >>> 0
-        if (d > 9) break
-
-        i++
-    }
-
-    return decoder.decode(b.subarray(offset, i))
 }
 
 function shiftRight(value: Uint32Array, bits: number): Uint32Array {
@@ -451,7 +366,7 @@ function shiftLeft(value: Uint32Array, bits: number): Uint32Array {
     return value
 }
 
-function shiftLeft3(value: Uint32Array, bits: number): Uint32Array {
+function shiftLeft2(value: Uint32Array, bits: number): Uint32Array {
     const low = value[0]
     const high = value[1]
 
@@ -476,24 +391,49 @@ function shiftLeft3(value: Uint32Array, bits: number): Uint32Array {
     return result
 }
 
-function shiftRight2(low: number, high: number, bits: number, result: Uint32Array): Uint32Array {
-    if (bits === 0) return result
+function shiftRight2(low: number, high: number, bits: number): Uint32Array {
+    const value = new Uint32Array(2)
+
+    if (bits === 0) return value
 
     if (bits < 32) {
-        result[0] = (low >>> bits) | (high << (32 - bits))
-        result[1] = high >>> bits
-        return result
+        value[0] = (low >>> bits) | (high << (32 - bits))
+        value[1] = high >>> bits
+        return value
     }
 
     if (bits < 64) {
-        result[0] = high >>> (bits - 32)
-        result[1] = 0
-        return result
+        value[0] = high >>> (bits - 32)
+        value[1] = 0
+        return value
     }
 
-    result[0] = 0
-    result[1] = 0
-    return result
+    value[0] = 0
+    value[1] = 0
+    return value
+}
+
+function shiftRight3(value: Uint32Array, bits: number, index: number): Uint32Array {
+    const low = value[index]
+    const high = value[index + 1]
+
+    if (bits === 0) return value
+
+    if (bits < 32) {
+        value[index] = (low >>> bits) | (high << (32 - bits))
+        value[index + 1] = high >>> bits
+        return value
+    }
+
+    if (bits < 64) {
+        value[index] = high >>> (bits - 32)
+        value[index + 1] = 0
+        return value
+    }
+
+    value[index] = 0
+    value[index + 1] = 0
+    return value
 }
 
 function isGreaterThan(al: number, ah: number, bl: number, bh: number) {
@@ -528,26 +468,33 @@ const POW_2 = new Array<number>(2048); // Adjust size as needed
 for (let i = -1024; i <= 1024; i++) {
     POW_2[i + 1024] = Math.pow(2, i);
 }
-
 const product = new Uint32Array(4)
 
 const maxValue = split64(9007199254740992n)
 const halfValue = split64(4503599627370496n)
-
 export function toFloat64(m: Uint32Array, e: number): number | undefined {
-    const m32 = m
-    const low = m32[0]
-    const high = m32[1]
+    const low = m[0]
+    const high = m[1]
 
+    product[0] = 0
+    product[1] = 0
+    product[2] = 0
+    product[3] = 0
+
+    const MIN_SAFE_EXPONENT = -342
     if ((low === 0 && high === 0) || e < MIN_SAFE_EXPONENT)
         return undefined
 
+    const MAX_SAFE_EXPONENT = 308
     if (e > MAX_SAFE_EXPONENT)
         return NaN
 
-    const lz = clz1(m32)
-    const normalizedM = shiftLeft(m32, lz)
+    const lz = clz1(m)
+    const normalizedM = shiftLeft(m, lz)
 
+    const test = combine(normalizedM[1], normalizedM[0])
+
+    const DENORMAL_MANTISSA_BITS = 52
     computeProduct(normalizedM, e, DENORMAL_MANTISSA_BITS + 3, product)
 
     const alow = product[0]
@@ -555,15 +502,27 @@ export function toFloat64(m: Uint32Array, e: number): number | undefined {
     const ahigh = product[2]
     const bhigh = product[3]
 
+    const test1 = combine32(bhigh, ahigh, blow, alow) //170141183460469225374508428468124369920n
+
+    const MIN_EXP_ROUND_TO_EVEN = -27
+    const MAX_EXP_ROUND_TO_EVEN = 55
     const insideSafeExponent = e >= MIN_EXP_ROUND_TO_EVEN && e <= MAX_EXP_ROUND_TO_EVEN
     if (alow === 0xFFFFFFFF && blow === 0xFFFFFFFF && !insideSafeExponent)
         return undefined
 
-    const upperBit = bhigh >>> 31
+    const test3 = bhigh.toString(2)
+    // const upperBit = (bhigh >>> (31 - Math.clz32(bhigh)))
+    const upperBit = (bhigh >>> 31)
+
     const shiftAmount = upperBit + 64 - DENORMAL_MANTISSA_BITS - 3
-    const mantissaU32 = shiftRight2(ahigh, bhigh, shiftAmount, m32)
+    const mantissaU32 = shiftRight2(ahigh, bhigh, shiftAmount)
+
+    const test2 = combine(mantissaU32[1], mantissaU32[0])
+
+    const MAX_BINARY_EXPONENT = 1023
     let exponent = calculatePower(e) + upperBit - lz + MAX_BINARY_EXPONENT
 
+    const INFINITY_EXPONENT = 2047
     if (exponent <= 0) {
         if (-exponent + 1 >= 64)
             return undefined
@@ -584,12 +543,14 @@ export function toFloat64(m: Uint32Array, e: number): number | undefined {
 
         shiftRight(mantissaU32, 1)
 
+        const test = combine(mantissaU32[1], mantissaU32[0])
+
         exponent = isLessThan(mantissaU32[0], mantissaU32[1], halfValue.low, halfValue.high) ? 0 : 1
     }
     else {
         const lessOrEqualToOne = blow === 0 && ((alow >>> 0) <= 1)
-        if (lessOrEqualToOne && insideSafeExponent && (m32[0] & 3) === 1) {
-            const check = shiftLeft3(mantissaU32, shiftAmount)
+        if (lessOrEqualToOne && insideSafeExponent && (mantissaU32[0] & 3) === 1) {
+            const check = shiftLeft2(mantissaU32, shiftAmount)
             if (check[0] === ahigh && check[1] === bhigh) {
                 mantissaU32[0] &= ~1
             }
@@ -626,8 +587,9 @@ export function toFloat64(m: Uint32Array, e: number): number | undefined {
     if (exponent <= 0)
         return undefined
 
-    // const mantissa = Number(((BigInt(mantissaU32[1]) & 0xFFFFFn) << 32n) | BigInt(mantissaU32[0]))
-    const mantissa = combine53(mantissaU32[1], mantissaU32[0])
+    const mantissa = Number(((BigInt(mantissaU32[1]) & 0xFFFFFn) << 32n) | BigInt(mantissaU32[0]))
+    // const mantissa = combine53(mantissaU32[1], mantissaU32[0])
+    // const mantissa = ((mantissaU32[1] & 0xFFFFF) >>> 0) | mantissaU32[0]
 
     if (exponent === INFINITY_EXPONENT && mantissa === 0)
         return Infinity
@@ -643,24 +605,23 @@ export function toFloat64(m: Uint32Array, e: number): number | undefined {
 const precisionMasks = new Array(64).fill(0).map((_, i) => split64(0xFFFFFFFFFFFFFFFFn >> BigInt(i + 1)))
 const precisionMaskAll = split64(0xFFFFFFFFFFFFFFFFn)
 
-function computeProduct(m: Uint32Array, e: number, bits: number, r: Uint32Array): void {
-    const mlow = m[0] >>> 0
-    const mhigh = m[1] >>> 0
+function computeProduct(m: Uint32Array, e: number, bits: number, result: Uint32Array): void {
+    const mlow = m[0]
+    const mhigh = m[1]
 
     const index = 2 * (e + 342)
-    const plow = POW5_64_LOW[index]
-    const phigh = POW5_64_HIGH[index]
+    const { low: plow, high: phigh } = POW5_64[index]
 
-    const bhigh = wasm.mul(mlow, mhigh, plow >>> 0, phigh >>> 0) >>> 0
+    const bhigh = wasm.mul(mlow >>> 0, mhigh >>> 0, plow >>> 0, phigh >>> 0) >>> 0
     const ahigh = wasm.get_mhigh() >>> 0
     const blow = wasm.get_mlow() >>> 0
     const alow = wasm.get_low() >>> 0
 
-    const preciseMask = bits < 64 ? precisionMasks[bits] : precisionMaskAll
+    const precisionMask = bits < 64 ? precisionMasks[bits] : precisionMaskAll
 
-    if ((ahigh & preciseMask.low) === preciseMask.low && (bhigh & preciseMask.high) === preciseMask.high) {
-        const plow = POW5_64_LOW[index + 1]
-        const phigh = POW5_64_HIGH[index + 1]
+    if (((ahigh & precisionMask.low) === precisionMask.low) &&
+        ((bhigh & precisionMask.high) === precisionMask.high)) {
+        const { low: plow, high: phigh } = POW5_64[index + 1]
 
         const bhigh2 = wasm.mul(mlow, mhigh, plow, phigh) >>> 0
         const ahigh2 = wasm.get_mhigh() >>> 0
@@ -677,19 +638,24 @@ function computeProduct(m: Uint32Array, e: number, bits: number, r: Uint32Array)
 
             if ((newHighLow >>> 0) < ahigh)
                 newHighHigh++
+
+            // if (newHighLow > 0xFFFFFFFF) {
+            //     newHighLow = 0
+            //     newHighHigh++
+            // }
         }
 
-        r[0] = newLow
-        r[1] = newLowHigh
-        r[2] = newHighLow
-        r[3] = newHighHigh
+        result[0] = newLow
+        result[1] = newLowHigh
+        result[2] = newHighLow
+        result[3] = newHighHigh
         return
     }
 
-    r[0] = alow
-    r[1] = blow
-    r[2] = ahigh
-    r[3] = bhigh
+    result[0] = alow
+    result[1] = blow
+    result[2] = ahigh
+    result[3] = bhigh
 }
 
 export function computeFloat(e: number, m: bigint, info: IFloatInfo): number | undefined {
@@ -897,11 +863,6 @@ function split64(value: bigint) {
     return { high, low }
 }
 
-function splitTo32(value: number, result: Uint32Array): void {
-    result[0] = value >>> 0
-    result[1] = Math.floor(value / 0x100000000)
-}
-
 function combine(high: number, low: number) {
     return (BigInt(high >>> 0) << 32n) | BigInt(low >>> 0)
 }
@@ -944,7 +905,9 @@ function clz1(value: Uint32Array): number {
     const high = value[1]
     if (high !== 0)
         return Math.clz32(high)
-    return 32 + Math.clz32(value[0])
+
+    const low = value[0]
+    return 32 + Math.clz32(low)
 }
 
 function clz(x: bigint): number {
@@ -2091,5 +2054,3 @@ const POW5_128 =
     ]
 
 const POW5_64 = POW5_128.map(value => split64(value))
-const POW5_64_LOW = POW5_128.map(value => split64(value).low)
-const POW5_64_HIGH = POW5_128.map(value => split64(value).high)
