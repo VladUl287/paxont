@@ -32,6 +32,6 @@ export function skipWhitespace(b: Uint8Array, i: number): number {
         else break
     }
 
-    if (b[i] < SPACE) throw new Error('Syntax error')
+    if (b[i] < SPACE) throw new Error(`Unexpected token ${String.fromCharCode(b[i])} at index ${i}`)
     return i
 }
