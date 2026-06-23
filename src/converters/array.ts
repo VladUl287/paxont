@@ -2,7 +2,7 @@ import { CollectionMeta, ConvertCtx, ConvertResult } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
 
-const buffer = new Array(1024)
+const buffer = new Array(2048)
 
 export function toArray<V>(ctx: ConvertCtx, m: CollectionMeta<Array<V>, V>, i: number, d: number): ConvertResult<Array<V>> {
     const b = ctx.bytes
@@ -23,8 +23,9 @@ export function toArray<V>(ctx: ConvertCtx, m: CollectionMeta<Array<V>, V>, i: n
         i = result.nextIndex
         j++
 
-        if (j > buffer.length)
-            buffer.length = buffer.length * 2
+        if (j >= buffer.length) {
+            buffer.length = Math.min(buffer.length * 2, b.length)
+        }
 
         i = skipWhitespace(b, i)
 
