@@ -1,18 +1,21 @@
 import { BaseMeta, ConvertCtx, ConvertResult } from "../metadata/types"
-import { A, E, F, L, R, S, T, U } from "../utils/utf8constants"
+import { E } from "../utils/utf8constants"
 
-export function toBoolean(ctx: ConvertCtx, meta: BaseMeta<boolean>, index: number, _depth: number): ConvertResult<boolean> {
-    const i = index
+export function toBoolean(ctx: ConvertCtx, _m: BaseMeta<boolean>, i: number, _d: number): ConvertResult<boolean> {
     const b = ctx.bytes
     const len = b.length
 
-    if (i + 3 < len && b[i] === T && b[i + 1] === R && b[i + 2] === U && b[i + 3] === E)
+    let ch = 0
+
+    const TRUE = 0x65757274
+    if (i + 3 < len && (ch = (b[i] | b[i + 1] << 8 | b[i + 2] << 16 | b[i + 3] << 24)) === TRUE)
         return {
             value: true,
             nextIndex: i + 4
         }
 
-    if (i + 4 < len && b[i] === F && b[i + 1] === A && b[i + 2] === L && b[i + 3] === S && b[i + 4] === E)
+    const FALSE = 0x736c6166
+    if (i + 4 < len && ch === FALSE && b[i + 4] === E)
         return {
             value: false,
             nextIndex: i + 5
