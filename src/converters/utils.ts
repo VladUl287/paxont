@@ -10,9 +10,6 @@ export const isWhitespace = (b: number) => lookup[b]
 
 export function skipWhitespace(bytes: Uint8Array, i: number): number {
     if (bytes[i] > SPACE) return i
-    
-    // while (b[i] <= 32) i++
-    // while (lookup[b[i]]) i++
 
     const FOUR_SPACES = 0x20202020
     const TWO_SPACES = 0x20202020
@@ -20,7 +17,7 @@ export function skipWhitespace(bytes: Uint8Array, i: number): number {
     while (true) {
         const b = bytes[i]
         if (b === SPACE) {
-            const word = bytes[i] | bytes[i + 1] << 8 | bytes[i] << 16 | bytes[i] << 24
+            const word = bytes[i] | bytes[i + 1] << 8 | bytes[i + 2] << 16 | bytes[i + 3] << 24
 
             if (word === FOUR_SPACES) {
                 i += 4
