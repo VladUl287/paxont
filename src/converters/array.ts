@@ -1,8 +1,9 @@
-import { CollectionMeta, ConvertCtx, ConvertResult, MapMeta } from "../metadata/types"
+import { CollectionMeta, ConvertCtx, ConvertResult } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
 
-const temp = new Array(1024)
+const buffer = new Array(1024)
+
 export function toArray<V>(ctx: ConvertCtx, m: CollectionMeta<Array<V>, V>, i: number, d: number): ConvertResult<Array<V>> {
     const b = ctx.bytes
 
@@ -18,9 +19,12 @@ export function toArray<V>(ctx: ConvertCtx, m: CollectionMeta<Array<V>, V>, i: n
         i = skipWhitespace(b, i)
 
         const result = toValue(ctx, meta, i, d)
-        temp[j] = result.value
+        buffer[j] = result.value
         i = result.nextIndex
         j++
+
+        if (j > buffer.length)
+            buffer.length = buffer.length * 2
 
         i = skipWhitespace(b, i)
 
@@ -30,7 +34,7 @@ export function toArray<V>(ctx: ConvertCtx, m: CollectionMeta<Array<V>, V>, i: n
     }
 
     return {
-        value: temp.slice(0, j),
+        value: buffer.slice(0, j),
         nextIndex: ++i
     }
 }
