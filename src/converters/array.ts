@@ -14,7 +14,7 @@ export function toArray<V>(ctx: ConvertCtx, m: CollectionMeta<Array<V>, V>, i: n
     const toValue = meta.toValue
 
     let j = 0
-    while (i < b.length && b[i] !== SQUARE_CLOSE) {
+    while (true) {
         i = skipWhitespace(b, i)
 
         const result = toValue(ctx, meta, i, d)
@@ -24,8 +24,9 @@ export function toArray<V>(ctx: ConvertCtx, m: CollectionMeta<Array<V>, V>, i: n
 
         i = skipWhitespace(b, i)
 
-        if (b[i] === COMMA)
-            i++
+        if (b[i] === COMMA) i++
+        else if (b[i] === SQUARE_CLOSE) break
+        else throw new Error()
     }
 
     return {
