@@ -12,13 +12,20 @@ type ObjectFromMeta<T extends ObjectFieldMeta<any, any>[]> = Expand<{
 const string = (): BaseMeta<string> => ({
     type: 'string',
     toValue: toString,
-    toJson: (s, _m) => s
+    toJson: (s, _) => s
 })
 
 const number = (): BaseMeta<number> => ({
     type: 'number',
     toValue: toFloat64,
-    toJson: (s, _m) => s.toString()
+    toJson: (s, _) => s.toString()
+})
+
+const array = <T>(value: BaseMeta<T>): CollectionMeta<Array<T>, T> => ({
+    type: 'array',
+    toValue: toArray,
+    toJson: (s, _) => `[${s.join(',')}]`,
+    value: value
 })
 
 const field = <K extends string, M extends BaseMeta<any>>(
@@ -34,6 +41,7 @@ export const object = <M extends ObjectFieldMeta<any, any>[]>(...fields: M): Obj
 const obj = object(
     field("id", number()),
     field("name", string()),
+    field("coordinates", array(number())),
     field("role", object(
         field("id", number()),
         field("value", string())
