@@ -1,5 +1,5 @@
 import { generateTrieSwitch } from "../code_gen/field"
-import { genObjectFactory } from "../code_gen/object"
+import { genObjectFactory, genObjectToJsonFactory } from "../code_gen/object"
 import { convertObject } from "../converters/toValue/object"
 import { isPlainObject } from "../utils/object"
 import { ObjectFieldMeta, ObjectMeta } from "./types"
@@ -30,26 +30,27 @@ const field = <T>(name: string) => {
     return builder<ObjectFieldMeta<T, any>>((state) => ({ ...state, name: { value: name, bytes: new Uint8Array() } }))
 }
 
-const encoder = new TextEncoder()
-
-export const object = <T extends object>(value: T): ObjectMeta<T> => {
-    if (!isPlainObject(value)) throw new Error('')
-
-    const keys = Object.keys(value)
-    const keysBytes = keys.map(k => encoder.encode(k))
+export const object = <T extends Record<string, any>>(
+    ...fieldMetas: { [K in keyof T]: ObjectFieldMeta<T, K> }[keyof T][]
+): ObjectMeta<T> => {
+    const keys = fieldMetas.map(f => f.name.value as string)
     const factory = genObjectFactory(keys) as (values: T[keyof T][]) => T
+
+    const keysBytes = fieldMetas.map(f => f.name.bytes)
     const fieldIndex = generateTrieSwitch(keysBytes, {
         pack: true
     }) as any
 
-    const result: ObjectMeta<T> = {
+    const result = {
         type: 'object',
+        fields: fieldMetas,
         factory: factory,
         fieldIndexResolver: fieldIndex,
-        fields: [],
         toValue: convertObject as any,
-        toJson: {} as any,
+        toJson: (() => { }) as any,
     }
+
+    result.toJson = genObjectToJsonFactory<T>(result)
 
     return result
 }

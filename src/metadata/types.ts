@@ -22,7 +22,7 @@ export type ConvertCtx = {
 }
 
 export type toValueConverter<T> = (ctx: ConvertCtx, meta: BaseMeta<T>, index: number, depth: number) => ReadResult<T>
-export type toJsonConverter<T> = (value: T) => string
+export type toJsonConverter<T> = (value: T, meta: BaseMeta<T>) => string
 
 export interface BaseMeta<T> {
     readonly toValue: toValueConverter<T>,
@@ -82,7 +82,7 @@ export function useMetadata(): UseMetadata {
         metadata.addType<object, ObjectMeta<object>>({
             name: 'object',
             check: (data): data is object => isPlainObject(data),
-            process: (data) => object(data),
+            process: (data) => ({} as any),
             priority: 50
         })
         metadata.addType<any[], CollectionMeta<any[], any>>({
