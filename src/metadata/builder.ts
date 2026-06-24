@@ -23,7 +23,7 @@ const instance = obj1(
     { key: 'name', value: 1 } as Test<'name', number>
 )
 
-const field = <T, K extends string>(name: K, value: BaseMeta<T>): ObjectFieldMeta<T, K> => {
+const field = <K extends string, T>(name: K, value: BaseMeta<T>): ObjectFieldMeta<K, T> => {
     return {} as any
 }
 
@@ -38,9 +38,6 @@ const number = (): BaseMeta<number> => ({
     toValue: toFloat64,
     toJson: (s, _m) => s.toString()
 })
-
-type FieldValue<M> = M extends ObjectFieldMeta<infer V, any> ? V : never
-type FieldKey<M> = M extends ObjectFieldMeta<any, infer K> ? string : never
 
 type ObjectFromMetas<T extends ObjectFieldMeta<any, any>[]> = Expand<{
     [E in T[number]as E['name']['value']]: E['toValue'] extends toValueConverter<infer U> ? U : never

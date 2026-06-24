@@ -40,9 +40,7 @@ export interface ObjectMeta<T> extends BaseMeta<T> {
     readonly fieldIndexResolver: (field: Uint8Array, index: number) => number
 }
 
-export type ObjectFieldMeta<T, K> = BaseMeta<T> & WithName<K>
-
-export type WithName<K> = {
+export type ObjectFieldMeta<K, T> = BaseMeta<T> & {
     readonly name: {
         value: K
         bytes: Uint8Array
@@ -205,7 +203,7 @@ export function toMeta1<T>(data: T, meta: BaseMeta<any>): BaseMeta<T> {
     return {} as any
 }
 
-export function isObjectFieldMeta(obj: unknown): obj is ObjectFieldMeta<any> {
+export function isObjectFieldMeta(obj: unknown): obj is ObjectFieldMeta<any, any> {
     if (!obj || typeof obj !== 'object')
         return false
 
