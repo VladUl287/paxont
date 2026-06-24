@@ -23,7 +23,7 @@ const number = (): BaseMeta<number> => ({
 
 const array = <T>(value: BaseMeta<T>): CollectionMeta<Array<T>, T> => ({
     type: 'array',
-    toValue: toArray,
+    toValue: toArray as any,
     toJson: (s, _) => `[${s.join(',')}]`,
     value: value
 })

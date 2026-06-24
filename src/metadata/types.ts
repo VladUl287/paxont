@@ -20,13 +20,11 @@ export type ConvertCtx = {
     readonly options: JsonOptions
 }
 
-export type toValueConverter<T, S extends BaseMeta<T, S> = any> =
-    (ctx: ConvertCtx, meta: S, index: number, depth: number) => ReadResult<T>
-    
+export type toValueConverter<T> = (ctx: ConvertCtx, meta: BaseMeta<T>, index: number, depth: number) => ReadResult<T>
 export type toJsonConverter<T> = (value: T, meta: BaseMeta<T>) => string
 
-export interface BaseMeta<T, S extends BaseMeta<T, S> = any> {
-    readonly toValue: toValueConverter<T, S>,
+export interface BaseMeta<T> {
+    readonly toValue: toValueConverter<T>,
     readonly toJson: toJsonConverter<T>,
     readonly type: TypeName
 }
@@ -48,7 +46,7 @@ export type ObjectFieldMeta<K, T> = BaseMeta<T> & {
     }
 }
 
-export interface CollectionMeta<T, V> extends BaseMeta<T, CollectionMeta<T, V>> {
+export interface CollectionMeta<T, V> extends BaseMeta<T> {
     readonly value: BaseMeta<V>
 }
 
