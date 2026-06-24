@@ -6,7 +6,7 @@ import { ReadResult } from "../../utils/types"
 
 type ArrayLike<T> = T[] | TypedArray
 
-export function toArray<V>(ctx: ConvertCtx, m: CollectionMeta<ArrayLike<V>, V>, i: number, d: number): ReadResult<ArrayLike<V>> {
+export function toArray<T extends ArrayLike<V>, V>(ctx: ConvertCtx, m: CollectionMeta<T, V>, i: number, d: number): ReadResult<T> {
     const b = ctx.bytes
 
     if (b[i] !== SQUARE_OPEN)
