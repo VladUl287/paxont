@@ -2,7 +2,6 @@ import { JsonOptions } from "../options"
 import { isPlainObject } from "../utils/object"
 import { isTypedArray } from "../utils/typedArray"
 import { ReadResult } from "../utils/types"
-import { object } from "./builder"
 
 export type BuiltInType =
     | "string" | "number" | "bigint" | "boolean"
@@ -49,7 +48,7 @@ export type ObjectFieldMeta<K, T> = BaseMeta<T> & {
     }
 }
 
-export interface CollectionMeta<T, V> extends BaseMeta<T, CollectionMeta<T, any>> {
+export interface CollectionMeta<T, V> extends BaseMeta<T, CollectionMeta<T, V>> {
     readonly value: BaseMeta<V>
 }
 
