@@ -2,7 +2,7 @@ import { generateTrieSwitch } from "../code_gen/field"
 import { genObjectFactory, genObjectToJsonFactory } from "../code_gen/object"
 import { convertObject } from "../converters/toValue/object"
 import { isPlainObject } from "../utils/object"
-import { ObjectFieldMeta, ObjectMeta } from "./types"
+import { ObjectFieldMeta, ObjectFields, ObjectMeta } from "./types"
 
 type Builder<T, R> = (state: T) => R
 
@@ -26,13 +26,12 @@ function builder<T, R = T>(fn: (state: T) => R) {
     return new FunctionalBuilder(fn)
 }
 
-const field = <T>(name: string) => {
-    return builder<ObjectFieldMeta<T, any>>((state) => ({ ...state, name: { value: name, bytes: new Uint8Array() } }))
+const field = <K extends string>(name: K): ObjectFieldMeta<K> => {
+
+    return {} as any
 }
 
-export const object = <T extends Record<string, any>>(
-    ...fieldMetas: { [K in keyof T]: ObjectFieldMeta<T, K> }[keyof T][]
-): ObjectMeta<T> => {
+export const object = <T extends Record<string, any>>(...fieldMetas: ObjectFields<T>): ObjectMeta<T> => {
     const keys = fieldMetas.map(f => f.name.value as string)
     const factory = genObjectFactory(keys) as (values: T[keyof T][]) => T
 

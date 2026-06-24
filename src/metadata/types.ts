@@ -30,15 +30,17 @@ export interface BaseMeta<T> {
     readonly type: TypeName
 }
 
+export type ObjectFields<T> = {
+    [K in keyof T]: ObjectFieldMeta<K>
+}[keyof T][]
+
 export interface ObjectMeta<T> extends BaseMeta<T> {
-    readonly fields: {
-        [K in keyof T]: ObjectFieldMeta<T, K>
-    }[keyof T][]
+    readonly fields: ObjectFields<T>
     readonly factory: (values: T[keyof T][]) => T
     readonly fieldIndexResolver: (field: Uint8Array, index: number) => number
 }
 
-export type ObjectFieldMeta<T, K extends keyof T> = BaseMeta<T[K]> & WithName<K>
+export type ObjectFieldMeta<K> = BaseMeta<K> & WithName<K>
 
 export type WithName<K> = {
     readonly name: {
@@ -203,7 +205,7 @@ export function toMeta1<T>(data: T, meta: BaseMeta<any>): BaseMeta<T> {
     return {} as any
 }
 
-export function isObjectFieldMeta(obj: unknown): obj is ObjectFieldMeta<any, any> {
+export function isObjectFieldMeta(obj: unknown): obj is ObjectFieldMeta<any> {
     if (!obj || typeof obj !== 'object')
         return false
 
