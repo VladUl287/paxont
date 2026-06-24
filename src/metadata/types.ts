@@ -31,7 +31,7 @@ export interface BaseMeta<T> {
 }
 
 export type ObjectFields<T> = {
-    [K in keyof T]: ObjectFieldMeta<K>
+    [K in keyof T]: ObjectFieldMeta<T[K], K>
 }[keyof T][]
 
 export interface ObjectMeta<T> extends BaseMeta<T> {
@@ -40,7 +40,7 @@ export interface ObjectMeta<T> extends BaseMeta<T> {
     readonly fieldIndexResolver: (field: Uint8Array, index: number) => number
 }
 
-export type ObjectFieldMeta<K> = BaseMeta<K> & WithName<K>
+export type ObjectFieldMeta<T, K> = BaseMeta<T> & WithName<K>
 
 export type WithName<K> = {
     readonly name: {

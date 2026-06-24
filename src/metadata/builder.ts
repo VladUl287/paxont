@@ -1,55 +1,79 @@
 import { generateTrieSwitch } from "../code_gen/field"
 import { genObjectFactory, genObjectToJsonFactory } from "../code_gen/object"
+import { toFloat64 } from "../converters/toValue/float"
 import { convertObject } from "../converters/toValue/object"
-import { isPlainObject } from "../utils/object"
-import { ObjectFieldMeta, ObjectFields, ObjectMeta } from "./types"
+import { toString } from "../converters/toValue/string"
+import { BaseMeta, ObjectFieldMeta, ObjectFields, ObjectMeta, toValueConverter, TypeName } from "./types"
 
-type Builder<T, R> = (state: T) => R
+type Test<K, T> = { key: K; value: T }
 
-class FunctionalBuilder<T, R = T> {
-    constructor(private readonly buildFn: Builder<T, R>) { }
+type ObjectFromTests<T extends Test<any, any>[]> = {
+    // [E in T[number]as E['key']]: E['value']
+    [E in T[number]as E['key']]: E['value']
+};
 
-    map<U>(fn: (value: R) => U): FunctionalBuilder<T, U> {
-        return new FunctionalBuilder((state: T) => fn(this.buildFn(state)))
-    }
+type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
 
-    chain<U>(fn: (value: R) => FunctionalBuilder<T, U>): FunctionalBuilder<T, U> {
-        return new FunctionalBuilder((state: T) => fn(this.buildFn(state)).buildFn(state))
-    }
-
-    run(state: T): R {
-        return this.buildFn(state)
-    }
-}
-
-function builder<T, R = T>(fn: (state: T) => R) {
-    return new FunctionalBuilder(fn)
-}
-
-const field = <K extends string>(name: K): ObjectFieldMeta<K> => {
-
+const obj1 = <M extends Test<any, any>[]>(...tests: M): Expand<ObjectFromTests<M>> => {
     return {} as any
 }
 
-export const object = <T extends Record<string, any>>(...fieldMetas: ObjectFields<T>): ObjectMeta<T> => {
-    const keys = fieldMetas.map(f => f.name.value as string)
-    const factory = genObjectFactory(keys) as (values: T[keyof T][]) => T
+const instance = obj1(
+    { key: 'id', value: 'value' } as Test<'id', string>,
+    { key: 'name', value: 1 } as Test<'name', number>
+)
 
-    const keysBytes = fieldMetas.map(f => f.name.bytes)
-    const fieldIndex = generateTrieSwitch(keysBytes, {
-        pack: true
-    }) as any
-
-    const result = {
-        type: 'object',
-        fields: fieldMetas,
-        factory: factory,
-        fieldIndexResolver: fieldIndex,
-        toValue: convertObject as any,
-        toJson: (() => { }) as any,
-    }
-
-    result.toJson = genObjectToJsonFactory<T>(result)
-
-    return result
+const field = <T, K extends string>(name: K, value: BaseMeta<T>): ObjectFieldMeta<T, K> => {
+    return {} as any
 }
+
+const string = (): BaseMeta<string> => ({
+    type: 'string',
+    toValue: toString,
+    toJson: (s, _m) => s
+})
+
+const number = (): BaseMeta<number> => ({
+    type: 'number',
+    toValue: toFloat64,
+    toJson: (s, _m) => s.toString()
+})
+
+type FieldValue<M> = M extends ObjectFieldMeta<infer V, any> ? V : never
+type FieldKey<M> = M extends ObjectFieldMeta<any, infer K> ? string : never
+
+type ObjectFromMetas<T extends ObjectFieldMeta<any, any>[]> = Expand<{
+    [E in T[number]as E['name']['value']]: E['toValue'] extends toValueConverter<infer U> ? U : never
+}>
+
+// export const object = <T extends Record<string, any>>(...fieldMetas: ObjectFields<T>): ObjectMeta<T> => {
+export const object = <M extends ObjectFieldMeta<any, any>[]>(...fieldMetas: M): ObjectMeta<ObjectFromMetas<M>> => {
+    return {} as any
+    // const keys = fieldMetas.map(f => f.name.value as string)
+    // const factory = genObjectFactory(keys) as (values: T[keyof T][]) => T
+
+    // const keysBytes = fieldMetas.map(f => f.name.bytes)
+    // const fieldIndex = generateTrieSwitch(keysBytes, {
+    //     pack: true
+    // }) as any
+
+    // const result = {
+    //     type: 'object',
+    //     fields: fieldMetas,
+    //     factory: factory,
+    //     fieldIndexResolver: fieldIndex,
+    //     toValue: convertObject as any,
+    //     toJson: (() => { }) as any,
+    // }
+
+    // result.toJson = genObjectToJsonFactory<T>(result)
+
+    // return result
+}
+
+
+
+const obj = object(
+    field("id", number()),
+    field("name", string())
+)
