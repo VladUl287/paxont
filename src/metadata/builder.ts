@@ -14,7 +14,9 @@ import { generateTrieSwitch } from "../code_gen/field"
 import { toObject } from "../converters/toValue/object"
 
 type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
-type Extract<M> = M extends BaseMeta<infer U, any> ? U : never
+
+export type ExtractType<M> = M extends BaseMeta<infer U, any> ? U : never
+
 type ObjectFromMeta<T extends ObjectFieldMeta<any, any>[]> = Expand<{
     [E in T[number]as E['name']['value']]: E['toValue'] extends toValueConverter<infer U, any> ? U : never
 }>
@@ -43,7 +45,7 @@ const primitive = <T extends Object>(type: Base.BaseTypes, toValue: toValueConve
     toJson: (s, _) => s.toString()
 })
 
-const array = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Array<Extract<T>>, Extract<T>> => ({
+const array = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Array<ExtractType<T>>, ExtractType<T>> => ({
     type: Base.JSONT_ARRAY,
     toValue: toArray,
     toJson: (s, m) => {
@@ -81,7 +83,7 @@ const bigintArray = <T extends TypedArray>(type: Base.BaseTypes, value: Primitiv
     value: value
 })
 
-const map = <T extends BaseMeta<any, any>>(value: T): MapMeta<Extract<T>> => ({
+const map = <T extends BaseMeta<any, any>>(value: T): MapMeta<ExtractType<T>> => ({
     type: Base.JSONT_MAP,
     key: string(),
     value: value,
@@ -93,7 +95,7 @@ const map = <T extends BaseMeta<any, any>>(value: T): MapMeta<Extract<T>> => ({
     }
 })
 
-const set = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Set<Extract<T>>, Extract<T>> => ({
+const set = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Set<ExtractType<T>>, ExtractType<T>> => ({
     type: Base.JSONT_SET,
     value: value,
     toValue: toSet,
@@ -105,9 +107,9 @@ const set = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Set<Extract
 })
 
 const encoder = new TextEncoder()
-const field = <K extends string, M extends BaseMeta<any, any>>(
+export const field = <K extends string, M extends BaseMeta<any, any>>(
     name: K, value: M
-): ObjectFieldMeta<K, Extract<M>> => ({
+): ObjectFieldMeta<K, ExtractType<M>> => ({
     name: {
         value: name,
         bytes: encoder.encode(name)
