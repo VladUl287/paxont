@@ -1,15 +1,26 @@
 import { JsonOptions } from "../options"
 import { ReadResult } from "../utils/types"
 
+export type U8Array = 'u8[]'
+export type U16Array = 'u16[]'
+export type U32Array = 'u32[]'
+export type U64Array = 'u64[]'
+export type I8Array = 'i8[]'
+export type I16Array = 'i16[]'
+export type I32Array = 'i32[]'
+export type I64Array = 'i64[]'
+export type F32Array = 'f32[]'
+export type F64Array = 'f64[]'
+
 export type BuiltInType =
-    | "string" | "number" | "bigint" | "boolean"
-    | "object" | "array" | "date" | "map" | "set"
+    | "string" | "bigint" | "boolean" | "object"
+    | "array" | "date" | "map" | "set"
     | "u8" | "u16" | "u32" | "u64"
     | "i8" | "i16" | "i32" | "i64"
-    | "f32" | "f64"
-    | "u8[]" | "u16[]" | "u32[]" | "u64[]"
-    | "i8[]" | "i16[]" | "i32[]" | "i64[]"
-    | "f32[]" | "f64[]"
+    | "f32" | "number"
+    | U8Array | U16Array | U32Array | U64Array
+    | I8Array | I16Array | I32Array | I64Array
+    | F32Array | F64Array
 
 export type TypeName = BuiltInType | (string & {})
 
