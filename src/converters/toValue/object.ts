@@ -1,73 +1,57 @@
-import { ConvertCtx } from "../../metadata/types"
-import * as JsonCodes from "../../utils/utf8constants"
-import { ConvertMeta, isMultiMeta, isSingleMeta } from "../types"
 import { skipWhitespace } from "../utils"
 import { ReadResult } from "../../utils/types"
+import { ConvertCtx, ObjectMeta } from "../../metadata/types"
+import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../../utils/utf8constants"
 
-const fields = new Array<any>(16)
-export function convertObject(
-    ctx: ConvertCtx, metadata: ConvertMeta, index: number, depth: number): ReadResult<object> {
-    const bytes = ctx.bytes
+const fieldsBuffer = new Array<any>(16)
 
-    if (isMultiMeta(metadata))
-        throw new Error('invalid metadata for object')
+export function toObject<T>(ctx: ConvertCtx, m: ObjectMeta<T>, i: number, d: number): ReadResult<T> {
+    const b = ctx.bytes
 
-    index = skipWhitespace(bytes, index)
+    if (b[i] !== CURLY_OPEN)
+        throw new Error(``)
+    i++
 
-    if (bytes[index] !== JsonCodes.CURLY_OPEN)
-        throw new Error(`object open not found at position ${index}. depth ${depth}`)
+    const getFieldIndex = m.fieldIndexResolver
+    const fields = m.fields
 
-    index++
+    let j = 0
+    while (j < fields.length) {
+        i = skipWhitespace(b, i)
 
-    const getFieldIndex = metadata.getFieldIndex!
+        if (b[i] !== DOUBLE_QUOTE)
+            throw new Error(``)
+        i++
 
-    const metaFields = metadata.value
-    if (!metaFields || isSingleMeta(metaFields))
-        throw new Error('invalid metadata value for object')
+        const index = getFieldIndex(b, i)
+        if (index === -1)
+            throw new Error(``)
 
-    for (let i = 0; i < metaFields.length; i++) {
-        const metaField = metaFields[i]
+        const field = fields[index]
+        i += field.name.bytes.length + 1
 
-        index = skipWhitespace(bytes, index)
+        if (b[i] !== COLON)
+            throw new Error(``)
+        i++
 
-        if (bytes[index] !== JsonCodes.DOUBLE_QUOTE)
-            throw new Error(`not start of property ${index}`)
-        index++
+        i = skipWhitespace(b, i)
 
-        const fieldIndex = getFieldIndex(bytes, index)
-        if (fieldIndex === -1)
-            throw new Error(`not correct property ${metaField.name}`)
+        const result = field.toValue(ctx, field, i, d)
+        i = result.nextIndex
 
-        index += metaField.name!.bytes.length + 1
+        if (b[i] === COMMA) i++
 
-        if (bytes[index] !== JsonCodes.COLON)
-            throw new Error(`not end of property`)
-        index++
-
-        index = skipWhitespace(bytes, index)
-
-        const parseResult = metaField.convert(ctx, metaField, index, depth)
-        index = parseResult.nextIndex
-
-        if (bytes[index] === JsonCodes.COMMA) {
-            index++
-        }
-
-        fields[fieldIndex] = parseResult.value
+        fieldsBuffer[index] = result.value
+        j++
     }
 
-    if (!metadata.creator)
-        throw new Error('metadata object creator not presented')
+    i = skipWhitespace(b, i)
 
-    index = skipWhitespace(bytes, index)
-
-    if (bytes[index] !== JsonCodes.CURLY_CLOSE)
-        throw new Error(`object close not found ${index}. depth ${depth}`)
-
-    const result = metadata.creator(fields)
+    if (b[i] !== CURLY_CLOSE)
+        throw new Error(``)
 
     return {
-        value: result,
-        nextIndex: index
+        value: m.factory(fieldsBuffer),
+        nextIndex: i
     }
 }

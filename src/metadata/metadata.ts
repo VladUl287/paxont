@@ -3,9 +3,9 @@ import { toArray } from "../converters/toValue/array"
 import { toBigInt } from "../converters/toValue/bigint"
 import { toBoolean } from "../converters/toValue/boolean"
 import { toDate } from "../converters/toValue/date"
+import { toFloat64 } from "../converters/toValue/number"
 import { convertNumber } from "../converters/toValue/number_old"
-import { toFloat64 } from "../converters/toValue/number_opt"
-import { convertObject } from "../converters/toValue/object"
+import { toObject } from "../converters/toValue/object"
 import { toSet } from "../converters/toValue/set"
 import { toString } from "../converters/toValue/string"
 import { Converter } from "../converters/types"
@@ -70,7 +70,7 @@ export function objectLiteralFactory(fields: string[]): (values: unknown[]) => o
 const converters: any = {
     number: convertNumber,
     string: toString,
-    object: convertObject,
+    object: toObject,
     date: toDate,
     boolean: toBoolean,
     bigint: toBigInt,
@@ -94,7 +94,7 @@ export function toMetadata(object: unknown): Metadata {
     const creator = objectLiteralFactory((value as Metadata[]).map(c => c.name!.value))
 
     return {
-        convert: convertObject,
+        convert: toObject as any,
         defaultValue: object,
         type: getType(object),
         value: toValue(object),

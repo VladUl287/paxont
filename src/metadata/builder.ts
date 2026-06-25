@@ -9,6 +9,9 @@ import { toDate } from "../converters/toValue/date"
 import { toFloat32, toFloat64, toInt16, toInt32, toInt64, toInt8, toUint16, toUint32, toUInt64, toUInt8 } from "../converters/toValue/number"
 import { toMap } from "../converters/toValue/map"
 import { toSet } from "../converters/toValue/set"
+import { genObjectFactory, genObjectToJsonFactory1 } from "../code_gen/object"
+import { generateTrieSwitch } from "../code_gen/field"
+import { toObject } from "../converters/toValue/object"
 
 type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
 type Extract<M> = M extends BaseMeta<infer U, any> ? U : never
@@ -115,7 +118,24 @@ const field = <K extends string, M extends BaseMeta<any, any>>(
 })
 
 export const object = <M extends ObjectFieldMeta<any, any>[]>(...fields: M): ObjectMeta<ObjectFromMeta<M>> => {
-    return {} as any
+    const keys = fields.map(f => f.name.value as string)
+    const factory = genObjectFactory(keys) as any
+
+    const keysBytes = fields.map(f => f.name.bytes)
+    const fieldIndex = generateTrieSwitch(keysBytes, {
+        pack: true
+    }) as any
+
+    const result = {
+        type: 'object',
+        fields: fields,
+        factory: factory,
+        fieldIndexResolver: fieldIndex,
+        toValue: toObject as any,
+        toJson: genObjectToJsonFactory1(...fields) as any
+    }
+
+    return result
 }
 
 const obj = object(

@@ -1,4 +1,4 @@
-import { ObjectMeta } from "../metadata/types"
+import { ObjectFieldMeta, ObjectMeta } from "../metadata/types"
 
 export function genObjectFactory(fields: string[]): (values: unknown[]) => object {
     const assignments = fields
@@ -7,10 +7,10 @@ export function genObjectFactory(fields: string[]): (values: unknown[]) => objec
     return new Function("v", `return {${assignments}}`) as (values: unknown[]) => object
 }
 
-export function genObjectToJsonFactory<T extends Record<string, any>>(value: ObjectMeta<T>) {
+export function genObjectToJsonFactory1(...fields: ObjectFieldMeta<any, any>[]) {
     let body = 'var f = m.fields'
     body += 'return `{'
-    body += value.fields
+    body += fields
         .map((field, i) => {
             const key = field.name.value
 
@@ -21,5 +21,5 @@ export function genObjectToJsonFactory<T extends Record<string, any>>(value: Obj
         })
         .join(',')
     body += '}`'
-    return new Function('o', 'm', body) as (o: T, m: ObjectMeta<T>) => string
+    return new Function('o', 'm', body) as <T>(o: T, m: ObjectMeta<T>) => string
 }
