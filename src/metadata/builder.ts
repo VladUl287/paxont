@@ -101,11 +101,18 @@ const set = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Set<Extract
     }
 })
 
+const encoder = new TextEncoder()
 const field = <K extends string, M extends BaseMeta<any, any>>(
     name: K, value: M
-): ObjectFieldMeta<K, Extract<M>> => {
-    return {} as any
-}
+): ObjectFieldMeta<K, Extract<M>> => ({
+    name: {
+        value: name,
+        bytes: encoder.encode(name)
+    },
+    type: value.type,
+    toJson: value.toJson,
+    toValue: value.toValue
+})
 
 export const object = <M extends ObjectFieldMeta<any, any>[]>(...fields: M): ObjectMeta<ObjectFromMeta<M>> => {
     return {} as any
