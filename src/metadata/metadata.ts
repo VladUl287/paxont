@@ -8,12 +8,11 @@ import { convertNumber } from "../converters/number_old"
 import { toObject } from "../converters/object"
 import { toSet } from "../converters/set"
 import { toString } from "../converters/string"
-import { Converter } from "../converters/types"
 import { isTypedArray, TypedArray } from "../utils/typedArray"
-import { TypeName } from "./types"
+import { toValueConverter, TypeName } from "./types"
 
 export type Metadata = {
-    readonly convert: Converter<any>,
+    readonly convert: toValueConverter<any, any>,
     readonly type: TypeName
     readonly name?: {
         value: string,
