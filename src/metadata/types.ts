@@ -1,6 +1,16 @@
 import { JsonOptions } from "../options"
 import { ReadResult } from "../utils/types"
 
+export const JSON_TYPE_STRING = 'string'
+export const JSON_TYPE_NUMBER = 'number'
+export const JSON_TYPE_BIGINT = 'bigint'
+export const JSON_TYPE_BOOL = 'boolean'
+export const JSON_TYPE_OBJECT = 'object'
+export const JSON_TYPE_ARRAY = 'array'
+export const JSON_TYPE_DATE = 'date'
+export const JSON_TYPE_MAP = 'map'
+export const JSON_TYPE_SET = 'set'
+
 export const JSON_TYPE_U8 = 'u8'
 export const JSON_TYPE_U16 = 'u16'
 export const JSON_TYPE_U32 = 'u32'
@@ -9,6 +19,8 @@ export const JSON_TYPE_I8 = 'i8'
 export const JSON_TYPE_I16 = 'i16'
 export const JSON_TYPE_I32 = 'i32'
 export const JSON_TYPE_I64 = 'i64'
+export const JSON_TYPE_F32 = 'f32'
+
 export const JSON_TYPE_U8_ARRAY = 'u8[]'
 export const JSON_TYPE_U16_ARRAY = 'u16[]'
 export const JSON_TYPE_U32_ARRAY = 'u32[]'
@@ -21,11 +33,11 @@ export const JSON_TYPE_F32_ARRAY = 'f32[]'
 export const JSON_TYPE_F64_ARRAY = 'f64[]'
 
 export type BuiltInType =
-    | "string" | "bigint" | "boolean" | "object"
-    | "array" | "date" | "map" | "set"
+    | typeof JSON_TYPE_STRING | typeof JSON_TYPE_BIGINT | typeof JSON_TYPE_BOOL | typeof JSON_TYPE_OBJECT
+    | typeof JSON_TYPE_ARRAY | typeof JSON_TYPE_DATE | typeof JSON_TYPE_MAP | typeof JSON_TYPE_SET
     | typeof JSON_TYPE_U8 | typeof JSON_TYPE_U16 | typeof JSON_TYPE_U32 | typeof JSON_TYPE_U64
     | typeof JSON_TYPE_I8 | typeof JSON_TYPE_I16 | typeof JSON_TYPE_I32 | typeof JSON_TYPE_I64
-    | "f32" | "number"
+    | typeof JSON_TYPE_F32 | typeof JSON_TYPE_NUMBER
     | typeof JSON_TYPE_U8_ARRAY | typeof JSON_TYPE_U16_ARRAY | typeof JSON_TYPE_U32_ARRAY | typeof JSON_TYPE_U64_ARRAY
     | typeof JSON_TYPE_I8_ARRAY | typeof JSON_TYPE_I16_ARRAY | typeof JSON_TYPE_I32_ARRAY | typeof JSON_TYPE_I64_ARRAY
     | typeof JSON_TYPE_F32_ARRAY | typeof JSON_TYPE_F64_ARRAY
