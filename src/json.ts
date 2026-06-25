@@ -5,14 +5,13 @@ import { BaseMeta } from "./metadata/types"
 
 const optionsCache = createCache<Partial<JsonOptions>, JsonOptions>()
 
-export function deserialize2<T, M extends BaseMeta<T> = BaseMeta<T>>(
-    json: Uint8Array,
-    meta: M | T,
+export function deserialize2<T, U = T>(
+    json: Uint8Array | string,
+    type: T,
     options?: Partial<JsonOptions>
-): T {
+): T extends BaseMeta<infer V, any> ? V : U {
     return {} as any
 }
-
 
 export function deserialize1<T>(json: string, meta: Metadata, options?: Partial<JsonOptions>): T {
     const opts = !!options ?
@@ -40,6 +39,6 @@ export function deserialize<T>(json: Uint8Array, meta: Metadata, options?: Parti
     return result.value as T
 }
 
-export function serialize<T, M extends BaseMeta<T>>(value: T, metadata: M, options?: Partial<JsonOptions>): string {
+export function serialize<T, M extends BaseMeta<T, any>>(value: T, metadata: M, options?: Partial<JsonOptions>): string {
     return ''
 }
