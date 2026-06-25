@@ -1,7 +1,7 @@
-import { ConvertCtx, MapMeta } from "../../metadata/types"
-import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../../utils/utf8constants"
-import { skipWhitespace } from "../utils"
-import { ReadResult } from "../../utils/types"
+import { ConvertCtx, MapMeta } from "../metadata/types"
+import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/utf8constants"
+import { skipWhitespace } from "./utils"
+import { ReadResult } from "../utils/types"
 
 export function toMap<V>(ctx: ConvertCtx, meta: MapMeta<V>, index: number, depth: number): ReadResult<Map<string, V>> {
     const b = ctx.bytes

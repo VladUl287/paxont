@@ -1,6 +1,6 @@
-import { ReadResult } from "../../utils/types"
-import { ConvertCtx, PrimitiveMeta } from "../../metadata/types"
-import { parseFloat32, parseFloat64, parseInt16, parseInt32, parseInt64, parseInt8, parseUint16, parseUint32, parseUint64, parseUint8 } from "../../utils/number"
+import { ReadResult } from "../utils/types"
+import { ConvertCtx, PrimitiveMeta } from "../metadata/types"
+import { parseFloat32, parseFloat64, parseInt16, parseInt32, parseInt64, parseInt8, parseUint16, parseUint32, parseUint64, parseUint8 } from "../utils/number"
 
 export const toInt8 = (ctx: ConvertCtx, m: PrimitiveMeta<number>, i: number, _d: number): ReadResult<number> =>
     parseInt8(ctx.bytes, i)
