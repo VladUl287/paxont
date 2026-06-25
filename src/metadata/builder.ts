@@ -21,7 +21,7 @@ const number = (): BaseMeta<number> => ({
     toJson: (s, _) => s.toString()
 })
 
-const array = <T>(value: BaseMeta<T>): CollectionMeta<Array<T>, T> => ({
+const array = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Array<Extract<T>>, Extract<T>> => ({
     type: 'array',
     toValue: toArray,
     toJson: (s, _) => `[${s.join(',')}]`,
@@ -42,7 +42,10 @@ const obj = object(
     field("id", number()),
     field("name", string()),
     field("coordinates", array(
-        number()
+        object(
+            field("id", number()),
+            field("value", string())
+        )
     )),
     field("role", object(
         field("id", number()),
