@@ -21,23 +21,23 @@ type ObjectFromMeta<T extends ObjectFieldMeta<any, any>[]> = Expand<{
     [E in T[number]as E['name']['value']]: E['toValue'] extends toValueConverter<infer U, any> ? U : never
 }>
 
-const string = () => primitive(Base.JSONT_STRING, toString)
-const number = () => primitive(Base.JSONT_NUMBER, toFloat64)
-const bigInt = () => primitive(Base.JSONT_BIGINT, toBigInt)
-const bool = () => primitive(Base.JSONT_BOOL, toBoolean)
-const date = () => primitive(Base.JSONT_DATE, toDate)
+export const string = () => primitive(Base.JSONT_STRING, toString)
+export const number = () => primitive(Base.JSONT_NUMBER, toFloat64)
+export const bigInt = () => primitive(Base.JSONT_BIGINT, toBigInt)
+export const bool = () => primitive(Base.JSONT_BOOL, toBoolean)
+export const date = () => primitive(Base.JSONT_DATE, toDate)
 
-const u8 = () => primitive(Base.JSONT_U8, toUInt8)
-const u16 = () => primitive(Base.JSONT_U16, toUint16)
-const u32 = () => primitive(Base.JSONT_U32, toUint32)
-const i8 = () => primitive(Base.JSONT_I8, toInt8)
-const i16 = () => primitive(Base.JSONT_I16, toInt16)
-const i32 = () => primitive(Base.JSONT_I32, toInt32)
+export const u8 = () => primitive(Base.JSONT_U8, toUInt8)
+export const u16 = () => primitive(Base.JSONT_U16, toUint16)
+export const u32 = () => primitive(Base.JSONT_U32, toUint32)
+export const i8 = () => primitive(Base.JSONT_I8, toInt8)
+export const i16 = () => primitive(Base.JSONT_I16, toInt16)
+export const i32 = () => primitive(Base.JSONT_I32, toInt32)
 
-const u64 = () => primitive(Base.JSONT_U64, toUInt64)
-const i64 = () => primitive(Base.JSONT_I64, toInt64)
+export const u64 = () => primitive(Base.JSONT_U64, toUInt64)
+export const i64 = () => primitive(Base.JSONT_I64, toInt64)
 
-const f32 = () => primitive(Base.JSONT_F32, toFloat32)
+export const f32 = () => primitive(Base.JSONT_F32, toFloat32)
 
 const primitive = <T extends Object>(type: Base.BaseTypes, toValue: toValueConverter<T, PrimitiveMeta<T>>): PrimitiveMeta<T> => ({
     type: type,
@@ -45,7 +45,7 @@ const primitive = <T extends Object>(type: Base.BaseTypes, toValue: toValueConve
     toJson: (s, _) => s.toString()
 })
 
-const array = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Array<ExtractType<T>>, ExtractType<T>> => ({
+export const array = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Array<ExtractType<T>>, ExtractType<T>> => ({
     type: Base.JSONT_ARRAY,
     toValue: toArray,
     toJson: (s, m) => {
@@ -56,18 +56,18 @@ const array = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Array<Ext
     value: value
 })
 
-const u8Array = () => typedArray<Uint8Array>(Base.JSONT_U8_ARRAY, u8())
-const u16Array = () => typedArray<Uint16Array>(Base.JSONT_U16_ARRAY, u16())
-const u32Array = () => typedArray<Uint32Array>(Base.JSONT_U32_ARRAY, u32())
-const u64Array = () => bigintArray<BigUint64Array>(Base.JSONT_U32_ARRAY, u64())
+export const u8Array = () => typedArray<Uint8Array>(Base.JSONT_U8_ARRAY, u8())
+export const u16Array = () => typedArray<Uint16Array>(Base.JSONT_U16_ARRAY, u16())
+export const u32Array = () => typedArray<Uint32Array>(Base.JSONT_U32_ARRAY, u32())
+export const u64Array = () => bigintArray<BigUint64Array>(Base.JSONT_U32_ARRAY, u64())
 
-const i8Array = () => typedArray<Int8Array>(Base.JSONT_I8_ARRAY, i8())
-const i16Array = () => typedArray<Int16Array>(Base.JSONT_I16_ARRAY, i16())
-const i32Array = () => typedArray<Int32Array>(Base.JSONT_I32_ARRAY, i32())
-const i64Array = () => bigintArray<BigInt64Array>(Base.JSONT_I64_ARRAY, i64())
+export const i8Array = () => typedArray<Int8Array>(Base.JSONT_I8_ARRAY, i8())
+export const i16Array = () => typedArray<Int16Array>(Base.JSONT_I16_ARRAY, i16())
+export const i32Array = () => typedArray<Int32Array>(Base.JSONT_I32_ARRAY, i32())
+export const i64Array = () => bigintArray<BigInt64Array>(Base.JSONT_I64_ARRAY, i64())
 
-const f32Array = () => typedArray<Float32Array>(Base.JSONT_F32_ARRAY, f32())
-const f64Array = () => typedArray<Float64Array>(Base.JSONT_F64_ARRAY, number())
+export const f32Array = () => typedArray<Float32Array>(Base.JSONT_F32_ARRAY, f32())
+export const f64Array = () => typedArray<Float64Array>(Base.JSONT_F64_ARRAY, number())
 
 const typedArray = <T extends TypedArray>(type: Base.BaseTypes, value: PrimitiveMeta<number>): CollectionMeta<T, number> => ({
     type: type,
