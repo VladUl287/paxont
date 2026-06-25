@@ -4,7 +4,6 @@ export type JsonOptions = {
     readonly maxDepth: number
     readonly allowTrailingCommas: boolean,
     readonly fieldCaseInsensitive: boolean
-    readonly allowDuplicateProperties: boolean
 }
 
 export const defaultOptions: JsonOptions = {
@@ -14,8 +13,7 @@ export const defaultOptions: JsonOptions = {
     }),
     maxDepth: 64,
     allowTrailingCommas: false,
-    fieldCaseInsensitive: false,
-    allowDuplicateProperties: false
+    fieldCaseInsensitive: false
 }
 
 export function mergeOptions(base: JsonOptions, add: Partial<JsonOptions>): JsonOptions {
