@@ -11,7 +11,12 @@ export abstract class BaseWrapper<T> {
     }
 }
 
-export class Nullable<T> extends BaseWrapper<T> { }
+export class Nullable<T> extends BaseWrapper<T> {
+    static new<T>(value: T) {
+        return new Nullable<T>(value)
+    }
+}
+
 export class Int8 extends BaseWrapper<number> { }
 export class Int16 extends BaseWrapper<number> { }
 export class Int32 extends BaseWrapper<number> { }
