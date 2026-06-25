@@ -4,9 +4,9 @@ import { toString } from "../converters/toValue/string"
 import { BaseMeta, CollectionMeta, ObjectFieldMeta, ObjectMeta, toValueConverter } from "./types"
 
 type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
-type Extract<M> = M extends BaseMeta<infer U> ? U : never
+type Extract<M> = M extends BaseMeta<infer U, any> ? U : never
 type ObjectFromMeta<T extends ObjectFieldMeta<any, any>[]> = Expand<{
-    [E in T[number]as E['name']['value']]: E['toValue'] extends toValueConverter<infer U> ? U : never
+    [E in T[number]as E['name']['value']]: E['toValue'] extends toValueConverter<infer U, any> ? U : never
 }>
 
 const string = (): BaseMeta<string> => ({
@@ -23,12 +23,12 @@ const number = (): BaseMeta<number> => ({
 
 const array = <T>(value: BaseMeta<T>): CollectionMeta<Array<T>, T> => ({
     type: 'array',
-    toValue: toArray as any,
+    toValue: toArray,
     toJson: (s, _) => `[${s.join(',')}]`,
     value: value
 })
 
-const field = <K extends string, M extends BaseMeta<any>>(
+const field = <K extends string, M extends BaseMeta<any, any>>(
     name: K, value: M
 ): ObjectFieldMeta<K, Extract<M>> => {
     return {} as any
@@ -41,7 +41,9 @@ export const object = <M extends ObjectFieldMeta<any, any>[]>(...fields: M): Obj
 const obj = object(
     field("id", number()),
     field("name", string()),
-    field("coordinates", array(number())),
+    field("coordinates", array(
+        number()
+    )),
     field("role", object(
         field("id", number()),
         field("value", string())

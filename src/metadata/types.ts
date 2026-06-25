@@ -20,11 +20,12 @@ export type ConvertCtx = {
     readonly options: JsonOptions
 }
 
-export type toValueConverter<T> = (ctx: ConvertCtx, meta: BaseMeta<T>, index: number, depth: number) => ReadResult<T>
+export type toValueConverter<T, M extends BaseMeta<T, any>> =
+    (ctx: ConvertCtx, meta: M, index: number, depth: number) => ReadResult<T>
 export type toJsonConverter<T> = (value: T, meta: BaseMeta<T>) => string
 
-export interface BaseMeta<T> {
-    readonly toValue: toValueConverter<T>,
+export interface BaseMeta<T, M extends BaseMeta<T, M> = BaseMeta<T, any>> {
+    readonly toValue: toValueConverter<T, M>,
     readonly toJson: toJsonConverter<T>,
     readonly type: TypeName
 }
@@ -33,7 +34,7 @@ export type ObjectFields<T> = {
     [K in keyof T]: ObjectFieldMeta<T[K], K>
 }[keyof T][]
 
-export interface ObjectMeta<T> extends BaseMeta<T> {
+export type ObjectMeta<T> = BaseMeta<T, ObjectMeta<T>> & {
     readonly fields: ObjectFields<T>
     readonly factory: (values: T[keyof T][]) => T
     readonly fieldIndexResolver: (field: Uint8Array, index: number) => number
@@ -46,7 +47,7 @@ export type ObjectFieldMeta<K, T> = BaseMeta<T> & {
     }
 }
 
-export interface CollectionMeta<T, V> extends BaseMeta<T> {
+export type CollectionMeta<T, V> = BaseMeta<T, CollectionMeta<T, V>> & {
     readonly value: BaseMeta<V>
 }
 
