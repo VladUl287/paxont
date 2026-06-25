@@ -7,6 +7,7 @@ import { TypedArray } from "../utils/typedArray"
 import { BaseMeta, CollectionMeta, ObjectFieldMeta, ObjectMeta, PrimitiveMeta, toValueConverter, TypeName } from "./types"
 import * as Base from "./baseTypes"
 import { toBoolean } from "../converters/toValue/boolean"
+import { toDate } from "../converters/toValue/date"
 
 type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
 type Extract<M> = M extends BaseMeta<infer U, any> ? U : never
@@ -18,6 +19,7 @@ const string = () => primitive(Base.JSONT_STRING, toString)
 const number = () => primitive(Base.JSONT_NUMBER, toFloat64)
 const bigInt = () => primitive(Base.JSONT_BIGINT, toBigInt)
 const bool = () => primitive(Base.JSONT_BOOL, toBoolean)
+const date = () => primitive(Base.JSONT_DATE, toDate)
 
 const u8 = () => integer(Base.JSONT_U8)
 const u16 = () => integer(Base.JSONT_U16)
@@ -69,6 +71,7 @@ export const object = <M extends ObjectFieldMeta<any, any>[]>(...fields: M): Obj
 const obj = object(
     field("id", number()),
     field("name", string()),
+    field("createdAt", date()),
     field("deleted", bool()),
     field("mantissa", bigInt()),
     field("timestamps", u32Array()),
