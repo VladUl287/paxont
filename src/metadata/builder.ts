@@ -8,6 +8,7 @@ import { toBoolean } from "../converters/toValue/boolean"
 import { toDate } from "../converters/toValue/date"
 import { toFloat64, toInt16, toInt32, toInt8, toUint16, toUint32, toUInt8 } from "../converters/toValue/number"
 import { toMap } from "../converters/toValue/map"
+import { toSet } from "../converters/toValue/set"
 
 type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
 type Extract<M> = M extends BaseMeta<infer U, any> ? U : never
@@ -72,6 +73,17 @@ const map = <T extends BaseMeta<any, any>>(value: T): MapMeta<Extract<T>> => ({
     }
 })
 
+const set = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Set<Extract<T>>, Extract<T>> => ({
+    type: Base.JSONT_SET,
+    value: value,
+    toValue: toSet,
+    toJson: (v, m) => {
+        const meta = m.value
+        const toJson = meta.toJson
+        return `{${[...v.values()].map(v => toJson(v, meta)).join(',')}}`
+    }
+})
+
 const field = <K extends string, M extends BaseMeta<any, any>>(
     name: K, value: M
 ): ObjectFieldMeta<K, Extract<M>> => {
@@ -90,6 +102,7 @@ const obj = object(
     field("mantissa", bigInt()),
     field("timestamps", u32Array()),
     field('enter_timestamps', map(date())),
+    field('tags', set(string())),
     field("coordinates", array(
         object(
             field("x", u8()),
