@@ -2,11 +2,12 @@ import { toArray } from "../converters/toValue/array"
 import { toBigInt } from "../converters/toValue/bigint"
 import { toString } from "../converters/toValue/string"
 import { TypedArray } from "../utils/typedArray"
-import { BaseMeta, CollectionMeta, ObjectFieldMeta, ObjectMeta, PrimitiveMeta, toValueConverter, TypeName } from "./types"
+import { BaseMeta, CollectionMeta, MapMeta, ObjectFieldMeta, ObjectMeta, PrimitiveMeta, toValueConverter, TypeName } from "./types"
 import * as Base from "./baseTypes"
 import { toBoolean } from "../converters/toValue/boolean"
 import { toDate } from "../converters/toValue/date"
 import { toFloat64, toInt16, toInt32, toInt8, toUint16, toUint32, toUInt8 } from "../converters/toValue/number"
+import { toMap } from "../converters/toValue/map"
 
 type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
 type Extract<M> = M extends BaseMeta<infer U, any> ? U : never
@@ -59,6 +60,14 @@ const typedArray = <T extends TypedArray>(type: Base.BaseTypes, value: Primitive
     value: value
 })
 
+const map = <T extends BaseMeta<any, any>>(value: T): MapMeta<Extract<T>> => ({
+    type: Base.JSONT_MAP,
+    key: string(),
+    value: value,
+    toValue: toMap,
+    toJson: (v, m) => 'map'
+})
+
 const field = <K extends string, M extends BaseMeta<any, any>>(
     name: K, value: M
 ): ObjectFieldMeta<K, Extract<M>> => {
@@ -76,6 +85,7 @@ const obj = object(
     field("deleted", bool()),
     field("mantissa", bigInt()),
     field("timestamps", u32Array()),
+    field('enter_timestamps', map(date())),
     field("coordinates", array(
         object(
             field("x", u8()),
