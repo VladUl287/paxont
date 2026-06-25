@@ -1,26 +1,34 @@
 import { JsonOptions } from "../options"
 import { ReadResult } from "../utils/types"
 
-export const U8Array = 'u8[]'
-export const U16Array = 'u16[]'
-export const U32Array = 'u32[]'
-export const U64Array = 'u64[]'
-export const I8Array = 'i8[]'
-export const I16Array = 'i16[]'
-export const I32Array = 'i32[]'
-export const I64Array = 'i64[]'
-export const F32Array = 'f32[]'
-export const F64Array = 'f64[]'
+export const JSON_TYPE_U8 = 'u8'
+export const JSON_TYPE_U16 = 'u16'
+export const JSON_TYPE_U32 = 'u32'
+export const JSON_TYPE_U64 = 'u64'
+export const JSON_TYPE_I8 = 'i8'
+export const JSON_TYPE_I16 = 'i16'
+export const JSON_TYPE_I32 = 'i32'
+export const JSON_TYPE_I64 = 'i64'
+export const JSON_TYPE_U8_ARRAY = 'u8[]'
+export const JSON_TYPE_U16_ARRAY = 'u16[]'
+export const JSON_TYPE_U32_ARRAY = 'u32[]'
+export const JSON_TYPE_U64_ARRAY = 'u64[]'
+export const JSON_TYPE_I8_ARRAY = 'i8[]'
+export const JSON_TYPE_I16_ARRAY = 'i16[]'
+export const JSON_TYPE_I32_ARRAY = 'i32[]'
+export const JSON_TYPE_I64_ARRAY = 'i64[]'
+export const JSON_TYPE_F32_ARRAY = 'f32[]'
+export const JSON_TYPE_F64_ARRAY = 'f64[]'
 
 export type BuiltInType =
     | "string" | "bigint" | "boolean" | "object"
     | "array" | "date" | "map" | "set"
-    | "u8" | "u16" | "u32" | "u64"
-    | "i8" | "i16" | "i32" | "i64"
+    | typeof JSON_TYPE_U8 | typeof JSON_TYPE_U16 | typeof JSON_TYPE_U32 | typeof JSON_TYPE_U64
+    | typeof JSON_TYPE_I8 | typeof JSON_TYPE_I16 | typeof JSON_TYPE_I32 | typeof JSON_TYPE_I64
     | "f32" | "number"
-    | typeof U8Array | typeof U16Array | typeof U32Array | typeof U64Array
-    | typeof I8Array | typeof I16Array | typeof I32Array | typeof I64Array
-    | typeof F32Array | typeof F64Array
+    | typeof JSON_TYPE_U8_ARRAY | typeof JSON_TYPE_U16_ARRAY | typeof JSON_TYPE_U32_ARRAY | typeof JSON_TYPE_U64_ARRAY
+    | typeof JSON_TYPE_I8_ARRAY | typeof JSON_TYPE_I16_ARRAY | typeof JSON_TYPE_I32_ARRAY | typeof JSON_TYPE_I64_ARRAY
+    | typeof JSON_TYPE_F32_ARRAY | typeof JSON_TYPE_F64_ARRAY
 
 export type TypeName = BuiltInType | (string & {})
 
