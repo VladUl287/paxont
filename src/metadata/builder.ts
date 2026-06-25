@@ -65,7 +65,11 @@ const map = <T extends BaseMeta<any, any>>(value: T): MapMeta<Extract<T>> => ({
     key: string(),
     value: value,
     toValue: toMap,
-    toJson: (v, m) => 'map'
+    toJson: (v, m) => {
+        const meta = m.value
+        const toJson = meta.toJson
+        return `{${[...v.entries()].map(c => `"${c[0]}": ${toJson(c[1], meta)}`).join(',')}}`
+    }
 })
 
 const field = <K extends string, M extends BaseMeta<any, any>>(
