@@ -5,7 +5,8 @@ import { toInt } from "../converters/toValue/int"
 import { toString } from "../converters/toValue/string"
 import { TypedArray } from "../utils/typedArray"
 import { BaseMeta, CollectionMeta, ObjectFieldMeta, ObjectMeta, PrimitiveMeta, toValueConverter, TypeName } from "./types"
-import { JSONT_I16, JSONT_I16_ARRAY, JSONT_I32, JSONT_I32_ARRAY, JSONT_I8, JSONT_I8_ARRAY, JSONT_U16, JSONT_U16_ARRAY, JSONT_U32, JSONT_U32_ARRAY, JSONT_U8, JSONT_U8_ARRAY } from "./baseTypes"
+import { JSONT_BOOL, JSONT_I16, JSONT_I16_ARRAY, JSONT_I32, JSONT_I32_ARRAY, JSONT_I8, JSONT_I8_ARRAY, JSONT_U16, JSONT_U16_ARRAY, JSONT_U32, JSONT_U32_ARRAY, JSONT_U8, JSONT_U8_ARRAY } from "./baseTypes"
+import { toBoolean } from "../converters/toValue/boolean"
 
 type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
 type Extract<M> = M extends BaseMeta<infer U, any> ? U : never
@@ -28,6 +29,12 @@ const number = (): PrimitiveMeta<number> => ({
 const bigInt = (): PrimitiveMeta<bigint> => ({
     type: 'bigint',
     toValue: toBigInt,
+    toJson: (s, _) => s.toString()
+})
+
+const bool = (): PrimitiveMeta<boolean> => ({
+    type: JSONT_BOOL,
+    toValue: toBoolean,
     toJson: (s, _) => s.toString()
 })
 
@@ -79,6 +86,7 @@ export const object = <M extends ObjectFieldMeta<any, any>[]>(...fields: M): Obj
 const obj = object(
     field("id", number()),
     field("name", string()),
+    field("deleted", bool()),
     field("timestamps", u32Array()),
     field("coordinates", array(
         object(
