@@ -1,13 +1,12 @@
 import { toArray } from "../converters/toValue/array"
 import { toBigInt } from "../converters/toValue/bigint"
-import { toFloat64 } from "../converters/toValue/float"
-import { toInt } from "../converters/toValue/int"
 import { toString } from "../converters/toValue/string"
 import { TypedArray } from "../utils/typedArray"
 import { BaseMeta, CollectionMeta, ObjectFieldMeta, ObjectMeta, PrimitiveMeta, toValueConverter, TypeName } from "./types"
 import * as Base from "./baseTypes"
 import { toBoolean } from "../converters/toValue/boolean"
 import { toDate } from "../converters/toValue/date"
+import { toFloat64, toInt16, toInt32, toInt8, toUint16, toUint32, toUInt8 } from "../converters/toValue/number"
 
 type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
 type Extract<M> = M extends BaseMeta<infer U, any> ? U : never
@@ -21,14 +20,12 @@ const bigInt = () => primitive(Base.JSONT_BIGINT, toBigInt)
 const bool = () => primitive(Base.JSONT_BOOL, toBoolean)
 const date = () => primitive(Base.JSONT_DATE, toDate)
 
-const u8 = () => integer(Base.JSONT_U8)
-const u16 = () => integer(Base.JSONT_U16)
-const u32 = () => integer(Base.JSONT_U32)
-const i8 = () => integer(Base.JSONT_I8)
-const i16 = () => integer(Base.JSONT_I16)
-const i32 = () => integer(Base.JSONT_I32)
-
-const integer = (type: Base.BaseTypes) => primitive<number>(type, toInt)
+const u8 = () => primitive(Base.JSONT_U8, toUInt8)
+const u16 = () => primitive(Base.JSONT_U16, toUint16)
+const u32 = () => primitive(Base.JSONT_U32, toUint32)
+const i8 = () => primitive(Base.JSONT_I8, toInt8)
+const i16 = () => primitive(Base.JSONT_I16, toInt16)
+const i32 = () => primitive(Base.JSONT_I32, toInt32)
 
 const primitive = <T extends Object>(type: Base.BaseTypes, toValue: toValueConverter<T, PrimitiveMeta<T>>): PrimitiveMeta<T> => ({
     type: type,

@@ -3,9 +3,7 @@ import { toArray } from "../converters/toValue/array"
 import { toBigInt } from "../converters/toValue/bigint"
 import { toBoolean } from "../converters/toValue/boolean"
 import { toDate } from "../converters/toValue/date"
-import { toFloat32 } from "../converters/toValue/float"
-import { toInt, toInt64, toUInt64 } from "../converters/toValue/int"
-import { convertNumber } from "../converters/toValue/number"
+import { convertNumber } from "../converters/toValue/number_old"
 import { toFloat64 } from "../converters/toValue/number_opt"
 import { convertObject } from "../converters/toValue/object"
 import { toSet } from "../converters/toValue/set"
@@ -136,18 +134,18 @@ export function toMetadata(object: unknown): Metadata {
 
             function getTypedArrayParser(arr: TypeName) {
                 switch (arr) {
-                    case 'i8[]':
-                    case 'u8[]':
-                    case 'i16[]':
-                    case 'u16[]':
-                    case 'i32[]':
-                    case 'u32[]':
-                        return toInt
+                    // case 'i8[]':
+                    // case 'u8[]':
+                    // case 'i16[]':
+                    // case 'u16[]':
+                    // case 'i32[]':
+                    // case 'u32[]':
+                    //     return toInt
 
-                    case 'i64[]': return toInt64
-                    case 'u64[]': return toUInt64
+                    // case 'i64[]': return toInt64
+                    // case 'u64[]': return toUInt64
 
-                    case 'f32[]': return toFloat32
+                    // case 'f32[]': return toFloat32
                     case 'f64[]': return toFloat64
 
                     default: throw new Error(`error`);

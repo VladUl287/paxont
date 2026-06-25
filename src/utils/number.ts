@@ -639,7 +639,7 @@ const halfValue = splitTo64(4503599627370496n)
 
 const product128 = new Uint32Array(4)
 
-export function toFloat64(m: Uint32Array, e: number, f: NumberFormat): number | undefined {
+function toFloat64(m: Uint32Array, e: number, f: NumberFormat): number | undefined {
     const m32 = m
     const low = m32[0]
     const high = m32[1]
