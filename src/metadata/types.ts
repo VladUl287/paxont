@@ -1,8 +1,11 @@
+import { deserialize2 } from "../json"
 import { JsonOptions } from "../options"
+import { isPlainObject } from "../utils/object"
 import { ReadResult } from "../utils/types"
-import { BaseTypes } from "./baseTypes"
+import * as Base from "./baseTypes"
+import { ExtractType, field, object } from "./builder"
 
-export type TypeName = BaseTypes | (string & {})
+export type TypeName = Base.BaseTypes | (string & {})
 
 export type ConvertCtx = {
     readonly bytes: Uint8Array
@@ -48,117 +51,76 @@ export interface MapMeta<V> extends BaseMeta<Map<string, V>, MapMeta<V>> {
     readonly value: BaseMeta<V, any>
 }
 
-// export type TypeChecker<T = any> = (data: any) => data is T
-// export type TypeProcessor<T = any, R = BaseMeta<T, any>> = (data: T) => R
+export type checkType<T = any> = (data: unknown) => data is T
+export type toMeta<T, M extends BaseMeta<T, any>> = (data: T) => M
 
-// export interface Type<T = any, R = BaseMeta<T, any>> {
-//     name: TypeName
-//     check: TypeChecker<T>
-//     process: TypeProcessor<T, R>
-//     priority: number
-// }
+export interface JType<M extends BaseMeta<any, any> = BaseMeta<any, any>> {
+    type: TypeName,
+    check: checkType<ExtractType<M>>
+    toMeta: toMeta<ExtractType<M>, M>
+    priority: number
+}
 
-// export type UseMetadata = {
-//     addType: <T, R extends BaseMeta<T, any>>(type: Type<T, R>) => void
-//     removeType: (type: string | Type) => Type
-//     getTypes: () => Type[]
-//     clearTypes: () => void
-//     hasType: (name: string) => boolean
-//     toMetadata: <T>(data: T) => BaseMeta<T, any>
-// }
+export type UseMetadata = {
+    addType: <M extends BaseMeta<any, any>>(type: JType<M>) => void
+    deleteType: (type: string | JType) => boolean
+    getTypes: () => JType[]
+    clearTypes: () => void
+    hasType: (name: string) => boolean
+    toMetadata: <T>(data: T) => BaseMeta<T, any>
+}
 
-// export function useMetadata(): UseMetadata {
-//     const types = new Map<string, Type>()
+export function useMetadata(): UseMetadata {
+    const types = new Map<TypeName, JType>()
 
-//     const withDefaultTypes = (metadata: UseMetadata): UseMetadata => {
-//         metadata.addType<object, ObjectMeta<object>>({
-//             name: 'object',
-//             check: (data): data is object => isPlainObject(data),
-//             process: (data) => ({} as any),
-//             priority: 50
-//         })
-//         metadata.addType<any[], CollectionMeta<any[], any>>({
-//             name: 'array',
-//             check: (data): data is any[] => Array.isArray(data),
-//             process: (data) => {
-//                 const collectionItem = metadata.toMetadata(data[0])
-//                 return {
-//                     type: 'array',
-//                     value: collectionItem,
-//                     toJson: {} as any,
-//                     toValue: {} as any,
-//                 }
-//             },
-//             priority: 50
-//         })
-//         metadata.addType<Date, BaseMeta<Date>>({
-//             name: 'date',
-//             check: (data): data is Date => data instanceof Date,
-//             process: (date) => {
-//                 return {
-//                     type: 'date',
-//                     toJson: {} as any,
-//                     toValue: {} as any,
-//                 }
-//             },
-//             priority: 51
-//         })
-//         metadata.addType<number, BaseMeta<number>>({
-//             name: 'number',
-//             check: (data): data is number => typeof data === 'number',
-//             process: (data) => {
-//                 return {
-//                     type: 'number',
-//                     toJson: {} as any,
-//                     toValue: {} as any,
-//                 }
-//             },
-//             priority: 51
-//         })
-//         return metadata
-//     }
+    const withDefaultTypes = (meta: UseMetadata): UseMetadata => {
+        meta.addType<ObjectMeta<object>>({
+            type: Base.JSONT_OBJECT,
+            check: (d): d is object => isPlainObject(d),
+            toMeta: (d) => object(
+                ...Object.entries(d)
+                    .map((c) => field(c[0], meta.toMetadata(c[1])))
+            ),
+            priority: 100
+        })
+        return meta
+    }
 
-//     const addType = <T, R extends BaseMeta<T>>(type: Type<T, R>): void => { types.set(type.name, type) }
+    const addType = <M extends BaseMeta<any, any>>(jtype: JType<M>): void => {
+        types.set(jtype.type, jtype)
+    }
 
-//     const removeType = (type: string | Type): Type => {
-//         const typeToDelete = typeof type === 'string' ? type : type.name
+    const deleteType = (jtype: string | JType): boolean => {
+        const type = typeof jtype === 'string' ? jtype : jtype.type
+        return types.delete(type)
+    }
 
-//         const toDelete = types.get(typeToDelete)
-//         if (!toDelete)
-//             throw new Error()
+    const hasType = (name: string): boolean => types.has(name)
 
-//         if (!types.delete(typeToDelete))
-//             throw new Error()
+    const getTypes = (): JType[] => [...types.values()].sort((a, b) => a.priority - b.priority)
 
-//         return toDelete
-//     }
+    const clearTypes = (): void => types.clear()
 
-//     const hasType = (name: string): boolean => types.has(name)
+    const toMetadata = <T>(data: T): BaseMeta<T, any> => {
+        const types = getTypes()
 
-//     const getTypes = (): Type[] => Array.from(types.values()).sort((a, b) => a.priority - b.priority)
+        for (const type of types) {
+            if (type.check(data))
+                return type.toMeta(data)
+        }
 
-//     const clearTypes = (): void => types.clear()
+        throw new Error(``)
+    }
 
-//     const toMetadata = <T>(data: T): BaseMeta<T> => {
-//         const types = getTypes()
-
-//         for (const type of types) {
-//             if (type.check(data))
-//                 return type.process(data)
-//         }
-
-//         throw new Error(`No type handler found for: ${typeof data}`)
-//     }
-
-//     return withDefaultTypes({
-//         addType,
-//         removeType,
-//         getTypes,
-//         clearTypes,
-//         hasType,
-//         toMetadata
-//     })
-// }
+    return withDefaultTypes({
+        addType,
+        deleteType,
+        hasType,
+        getTypes,
+        clearTypes,
+        toMetadata,
+    })
+}
 
 // export function toMeta<T>(data: T): BaseMeta<T> {
 //     if (data === null || data === undefined)
