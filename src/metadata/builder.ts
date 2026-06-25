@@ -43,15 +43,15 @@ const array = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Array<Ext
     value: value
 })
 
-const u8Array = (): CollectionMeta<Uint8Array, number> => typedArray(Base.JSONT_U8_ARRAY, u8())
-const u16Array = (): CollectionMeta<Uint16Array, number> => typedArray(Base.JSONT_U16_ARRAY, u16())
-const u32Array = (): CollectionMeta<Uint32Array, number> => typedArray(Base.JSONT_U32_ARRAY, u32())
+const u8Array = () => typedArray<Uint8Array>(Base.JSONT_U8_ARRAY, u8())
+const u16Array = () => typedArray<Uint16Array>(Base.JSONT_U16_ARRAY, u16())
+const u32Array = () => typedArray<Uint32Array>(Base.JSONT_U32_ARRAY, u32())
 
-const i8Array = (): CollectionMeta<Int8Array, number> => typedArray(Base.JSONT_I8_ARRAY, i8())
-const i16Array = (): CollectionMeta<Int16Array, number> => typedArray(Base.JSONT_I16_ARRAY, i16())
-const i32Array = (): CollectionMeta<Int32Array, number> => typedArray(Base.JSONT_I32_ARRAY, i32())
+const i8Array = () => typedArray<Int8Array>(Base.JSONT_I8_ARRAY, i8())
+const i16Array = () => typedArray<Int16Array>(Base.JSONT_I16_ARRAY, i16())
+const i32Array = () => typedArray<Int32Array>(Base.JSONT_I32_ARRAY, i32())
 
-const typedArray = <T extends TypedArray>(type: TypeName, value: PrimitiveMeta<number>): CollectionMeta<T, number> => ({
+const typedArray = <T extends TypedArray>(type: Base.BaseTypes, value: PrimitiveMeta<number>): CollectionMeta<T, number> => ({
     type: type,
     toValue: toArray,
     toJson: (s, _) => `[${s.join(',')}]`,
