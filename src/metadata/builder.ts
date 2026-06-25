@@ -14,40 +14,23 @@ type ObjectFromMeta<T extends ObjectFieldMeta<any, any>[]> = Expand<{
     [E in T[number]as E['name']['value']]: E['toValue'] extends toValueConverter<infer U, any> ? U : never
 }>
 
-const string = (): PrimitiveMeta<string> => ({
-    type: Base.JSONT_STRING,
-    toValue: toString,
-    toJson: (s, _) => s
-})
+const string = () => primitive(Base.JSONT_STRING, toString)
+const number = () => primitive(Base.JSONT_NUMBER, toFloat64)
+const bigInt = () => primitive(Base.JSONT_BIGINT, toBigInt)
+const bool = () => primitive(Base.JSONT_BOOL, toBoolean)
 
-const number = (): PrimitiveMeta<number> => ({
-    type: Base.JSONT_NUMBER,
-    toValue: toFloat64,
-    toJson: (s, _) => s.toString()
-})
+const u8 = () => integer(Base.JSONT_U8)
+const u16 = () => integer(Base.JSONT_U16)
+const u32 = () => integer(Base.JSONT_U32)
+const i8 = () => integer(Base.JSONT_I8)
+const i16 = () => integer(Base.JSONT_I16)
+const i32 = () => integer(Base.JSONT_I32)
 
-const bigInt = (): PrimitiveMeta<bigint> => ({
-    type: Base.JSONT_BIGINT,
-    toValue: toBigInt,
-    toJson: (s, _) => s.toString()
-})
+const integer = (type: Base.BaseTypes) => primitive<number>(type, toInt)
 
-const bool = (): PrimitiveMeta<boolean> => ({
-    type: Base.JSONT_BOOL,
-    toValue: toBoolean,
-    toJson: (s, _) => s.toString()
-})
-
-const u8 = (): PrimitiveMeta<number> => integer(Base.JSONT_U8)
-const u16 = (): PrimitiveMeta<number> => integer(Base.JSONT_U16)
-const u32 = (): PrimitiveMeta<number> => integer(Base.JSONT_U32)
-const i8 = (): PrimitiveMeta<number> => integer(Base.JSONT_I8)
-const i16 = (): PrimitiveMeta<number> => integer(Base.JSONT_I16)
-const i32 = (): PrimitiveMeta<number> => integer(Base.JSONT_I32)
-
-const integer = (type: TypeName): PrimitiveMeta<number> => ({
+const primitive = <T extends Object>(type: Base.BaseTypes, toValue: toValueConverter<T, PrimitiveMeta<T>>): PrimitiveMeta<T> => ({
     type: type,
-    toValue: toInt,
+    toValue: toValue,
     toJson: (s, _) => s.toString()
 })
 
