@@ -44,7 +44,7 @@ const primitive = <T extends Object>(type: Base.BaseTypes, toValue: toValueConve
 })
 
 const array = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Array<Extract<T>>, Extract<T>> => ({
-    type: 'array',
+    type: Base.JSONT_ARRAY,
     toValue: toArray,
     toJson: (s, m) => {
         const meta = m.value
