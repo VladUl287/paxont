@@ -1,16 +1,16 @@
 import { JsonOptions } from "../options"
 import { ReadResult } from "../utils/types"
 
-export type U8Array = 'u8[]'
-export type U16Array = 'u16[]'
-export type U32Array = 'u32[]'
-export type U64Array = 'u64[]'
-export type I8Array = 'i8[]'
-export type I16Array = 'i16[]'
-export type I32Array = 'i32[]'
-export type I64Array = 'i64[]'
-export type F32Array = 'f32[]'
-export type F64Array = 'f64[]'
+export const U8Array = 'u8[]'
+export const U16Array = 'u16[]'
+export const U32Array = 'u32[]'
+export const U64Array = 'u64[]'
+export const I8Array = 'i8[]'
+export const I16Array = 'i16[]'
+export const I32Array = 'i32[]'
+export const I64Array = 'i64[]'
+export const F32Array = 'f32[]'
+export const F64Array = 'f64[]'
 
 export type BuiltInType =
     | "string" | "bigint" | "boolean" | "object"
@@ -18,9 +18,9 @@ export type BuiltInType =
     | "u8" | "u16" | "u32" | "u64"
     | "i8" | "i16" | "i32" | "i64"
     | "f32" | "number"
-    | U8Array | U16Array | U32Array | U64Array
-    | I8Array | I16Array | I32Array | I64Array
-    | F32Array | F64Array
+    | typeof U8Array | typeof U16Array | typeof U32Array | typeof U64Array
+    | typeof I8Array | typeof I16Array | typeof I32Array | typeof I64Array
+    | typeof F32Array | typeof F64Array
 
 export type TypeName = BuiltInType | (string & {})
 
