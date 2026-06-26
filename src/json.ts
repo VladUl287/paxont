@@ -5,7 +5,7 @@ import { BaseMeta, isMeta, useMetadata } from "./metadata/types"
 const optionsCache = createCache<Partial<JsonOptions>, JsonOptions>()
 const defaultMetadata = useMetadata()
 
-export function deserialize2<T>(
+export function deserialize<T>(
     json: Uint8Array | string,
     type: T,
     options?: Partial<JsonOptions>
