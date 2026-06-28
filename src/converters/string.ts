@@ -124,7 +124,7 @@ function findNext1(u8: Uint8Array, i: number, s: number): number {
     return u8.length
 }
 
-const MAX_FAST_DECODE = 32
+const MAX_FAST_DECODE = 128
 
 const TEMP_CACHE = new Array<number[]>(MAX_FAST_DECODE)
 for (let i = 1; i <= MAX_FAST_DECODE; i++) {
