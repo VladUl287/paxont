@@ -1,4 +1,3 @@
-import { deserialize2 } from "../json"
 import { JsonOptions } from "../options"
 import { isPlainObject } from "../utils/object"
 import { ReadResult } from "../utils/types"
