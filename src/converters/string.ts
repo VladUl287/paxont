@@ -29,6 +29,8 @@ export function toString(
     }
 }
 
+const isAsciiU32 = (value: number): boolean => (value & 0x80808080) === 0
+
 const findNext = findNextFactory()
 
 function findNextFactory(): (b: Uint8Array, i: number, s: number) => number {
