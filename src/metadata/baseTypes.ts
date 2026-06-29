@@ -7,6 +7,7 @@ export const JSONT_ARRAY = 'array'
 export const JSONT_DATE = 'date'
 export const JSONT_MAP = 'map'
 export const JSONT_SET = 'set'
+export const JSONT_NULLABLE = 'nullable'
 
 export const JSONT_U8 = 'u8'
 export const JSONT_U16 = 'u16'
@@ -32,7 +33,7 @@ export const JSONT_F64_ARRAY = 'f64[]'
 export type BaseTypes =
     | typeof JSONT_STRING | typeof JSONT_NUMBER | typeof JSONT_BIGINT | typeof JSONT_BOOL
     | typeof JSONT_OBJECT | typeof JSONT_ARRAY | typeof JSONT_DATE | typeof JSONT_MAP
-    | typeof JSONT_SET
+    | typeof JSONT_SET | typeof JSONT_NULLABLE
     | typeof JSONT_U8 | typeof JSONT_U16 | typeof JSONT_U32 | typeof JSONT_U64
     | typeof JSONT_I8 | typeof JSONT_I16 | typeof JSONT_I32 | typeof JSONT_I64
     | typeof JSONT_F32
