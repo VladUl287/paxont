@@ -137,24 +137,3 @@ export const object = <M extends ObjectField<any, any>[]>(...fields: M): ObjectM
 
     return result
 }
-
-const obj = object(
-    field("id", number()),
-    field("name", string()),
-    field("createdAt", date()),
-    field("deleted", bool()),
-    field("mantissa", bigInt()),
-    field("timestamps", u32Array()),
-    field('enter_timestamps', map(date())),
-    field('tags', set(string())),
-    field("coordinates", array(
-        object(
-            field("x", u8()),
-            field("y", u8())
-        )
-    )),
-    field("role", object(
-        field("id", number()),
-        field("value", string())
-    ))
-)
