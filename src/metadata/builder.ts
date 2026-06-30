@@ -83,7 +83,7 @@ const bigintArray = <T extends TypedArray>(type: Base.BaseTypes, value: Primitiv
     value: value
 })
 
-const map = <T extends BaseMeta<any, any>>(value: T): MapMeta<ExtractType<T>> => ({
+export const map = <T extends BaseMeta<any, any>>(value: T): MapMeta<ExtractType<T>> => ({
     type: Base.JSONT_MAP,
     key: string(),
     value: value,
@@ -95,7 +95,7 @@ const map = <T extends BaseMeta<any, any>>(value: T): MapMeta<ExtractType<T>> =>
     }
 })
 
-const set = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Set<ExtractType<T>>, ExtractType<T>> => ({
+export const set = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Set<ExtractType<T>>, ExtractType<T>> => ({
     type: Base.JSONT_SET,
     value: value,
     toValue: toSet,
