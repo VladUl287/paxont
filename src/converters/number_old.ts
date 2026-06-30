@@ -1,8 +1,8 @@
-import { ConvertMeta } from "../types"
-import { ReadResult } from "../../utils/types"
+import { ConvertMeta } from "./types"
+import { ReadResult } from "../utils/types"
 import { parseNumberF64_2 } from "./number_opt"
-import { ConvertCtx } from "../../metadata/types"
-import { DOT, E, E_UPPER, MINUS, PLUS, ZERO } from "../../utils/utf8constants"
+import { ConvertCtx } from "../metadata/types"
+import { DOT, E, E_UPPER, MINUS, PLUS, ZERO } from "../utils/utf8constants"
 
 export function convertNumber(ctx: ConvertCtx, _metadata: ConvertMeta, index: number, _depth: number): ReadResult<number> {
     return parseNumberF64_2(ctx.bytes, index)
