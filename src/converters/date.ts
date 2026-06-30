@@ -3,6 +3,7 @@ import { JsonOptions } from "../options"
 import { utc } from "../utils/date"
 import { COLON, DOT, DOUBLE_QUOTE, isDigitUnsafe, MINUS, PLUS, T_UPPER, Z } from "../utils/utf8constants"
 import { ReadResult } from "../utils/types"
+import { parseFloat64 } from "../utils/number"
 
 export function toDate(ctx: ConvertCtx, _m: PrimitiveMeta<Date>, i: number, _d: number): ReadResult<Date> {
     const b = ctx.bytes
@@ -40,13 +41,19 @@ function fromString(b: Uint8Array, i: number, opt: JsonOptions): ReadResult<Date
     if (!isNaN(result.value.valueOf()))
         return result
 
-    throw new Error(`invalid date value, at index ${i}`)
+    throw new Error(`Invalid date value '${b[i]}' at index ${i}`)
 }
 
 function fromTimestamp(b: Uint8Array, i: number): ReadResult<Date> {
+    const result = parseFloat64(b, i)
+    const date = new Date(result.value)
+
+    if (isNaN(date.getTime()))
+        throw new Error(`Invalid date value '${b[i]}' at index ${i}`)
+
     return {
-        value: new Date(),
-        nextIndex: i
+        value: date,
+        nextIndex: result.nextIndex
     }
 }
 
