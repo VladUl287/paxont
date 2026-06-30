@@ -1,14 +1,18 @@
 import { createCache } from "./cache/cache"
 import { defaultOptions, JsonOptions, mergeOptions } from "./options"
 import { BaseMeta, isMeta, useMetadata } from "./metadata/types"
+import { createFactory } from "./utils/array"
+import { getMaxBytesCount } from "./utils/utf8"
 
 const optionsCache = createCache<Partial<JsonOptions>, JsonOptions>()
 const defaultMetadata = useMetadata()
 
+const buffer = createFactory(Uint8Array)
+
+export type BinaryInput = ArrayBuffer | Uint8Array | string
+
 export function deserialize<T>(
-    json: Uint8Array | string,
-    type: T,
-    options?: Partial<JsonOptions>
+    json: BinaryInput, type: T, options?: Partial<JsonOptions>
 ): T extends BaseMeta<infer V, any> ? V : T {
     const fullOptions = !!options ?
         optionsCache.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
@@ -16,7 +20,22 @@ export function deserialize<T>(
 
     const metadata = isMeta(type) ? type : defaultMetadata.toMetadata(type)
 
-    const bytes = json instanceof Uint8Array ? json : fullOptions.encoder.encode(json)
+    let bytes: Uint8Array
+
+    if (typeof json === 'string') {
+        const length = getMaxBytesCount(json.length)
+        bytes = buffer(length)
+        fullOptions.encoder.encodeInto(json, bytes)
+    }
+    else if (json instanceof ArrayBuffer) {
+        bytes = new Uint8Array(json)
+    }
+    else if (json instanceof Uint8Array) {
+        bytes = json
+    }
+    else {
+        throw new Error()
+    }
 
     const result = metadata.toValue({
         bytes,
