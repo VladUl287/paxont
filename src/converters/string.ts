@@ -37,39 +37,54 @@ function findNextFactory(): (b: Uint8Array, i: number, s: number) => number {
     try {
         type WasmModule = {
             memory: WebAssembly.Memory,
-            findNext: (i: number, length: number, symbol: number) => number
+            findNext: (i: number, l: number, s: number) => number
         }
 
-        const wasm = new WebAssembly.Instance(
+        const module = new WebAssembly.Instance(
             new WebAssembly.Module(
-                new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 1, 96, 3, 127, 127, 127, 1, 127, 3, 2, 1, 0, 5, 5, 1, 1, 1, 128, 1, 7, 21, 2, 6, 109, 101, 109, 111, 114, 121, 2, 0, 8, 102, 105, 110, 100, 78, 101, 120, 116, 0, 0, 10, 113, 1, 111, 3, 1, 127, 2, 123, 1, 127, 32, 0, 33, 3, 32, 2, 253, 15, 33, 4, 2, 64, 3, 64, 32, 3, 65, 16, 106, 32, 1, 77, 69, 13, 1, 32, 3, 253, 0, 4, 0, 33, 5, 32, 5, 32, 4, 253, 35, 253, 100, 34, 6, 4, 64, 32, 3, 32, 6, 104, 106, 15, 11, 32, 3, 65, 16, 106, 33, 3, 12, 0, 11, 11, 3, 64, 32, 3, 32, 1, 79, 4, 64, 65, 127, 15, 11, 32, 3, 45, 0, 0, 32, 2, 70, 4, 64, 32, 3, 15, 11, 32, 3, 65, 1, 106, 33, 3, 12, 0, 11, 65, 127, 11])), {},
+                new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 1, 96, 3, 127, 127, 127, 1, 127, 3, 2, 1, 0, 5, 5, 1, 1, 1, 128, 1, 7, 21, 2, 6, 109, 101, 109, 111, 114, 121, 2, 0, 8, 102, 105, 110, 100, 78, 101, 120, 116, 0, 0, 10, 113, 1, 111, 3, 1, 127, 2, 123, 1, 127, 32, 0, 33, 3, 32, 2, 253, 15, 33, 4, 2, 64, 3, 64, 32, 3, 65, 16, 106, 32, 1, 77, 69, 13, 1, 32, 3, 253, 0, 4, 0, 33, 5, 32, 5, 32, 4, 253, 35, 253, 100, 34, 6, 4, 64, 32, 3, 32, 6, 104, 106, 15, 11, 32, 3, 65, 16, 106, 33, 3, 12, 0, 11, 11, 3, 64, 32, 3, 32, 1, 79, 4, 64, 65, 127, 15, 11, 32, 3, 45, 0, 0, 32, 2, 70, 4, 64, 32, 3, 15, 11, 32, 3, 65, 1, 106, 33, 3, 12, 0, 11, 65, 127, 11])
+            ),
+            {},
         )?.exports as WasmModule
 
-        if (wasm) {
-            let u8Wasm = new Uint8Array(wasm.memory.buffer)
+        if (module) {
+            const memorySetFactory = () => {
+                let view = new Uint8Array(module.memory.buffer)
+                let ref: Uint8Array | undefined = undefined
 
-            const u8Resolver = (minLength: number) => {
-                if (u8Wasm.byteLength < minLength) {
-                    const PAGE_SIZE = 65536
-                    const MAX_PAGES_COUNT = 128 //(6.4KB)
+                const PAGE_SIZE = 65536
+                const MAX_PAGES_COUNT = 128 //(6.4KB)
 
-                    const currentPages = u8Wasm.byteLength / PAGE_SIZE
-                    const neededPages = Math.ceil(minLength / PAGE_SIZE)
+                const memory = (module: WasmModule, src: Uint8Array) => {
+                    if (ref === src)
+                        return true
 
-                    if (neededPages > MAX_PAGES_COUNT) {
-                        //partially decode
+                    const minLength = src.length
+
+                    if (view.length < minLength) {
+                        const pages = view.length / PAGE_SIZE
+                        const requiredPages = Math.ceil(minLength / PAGE_SIZE)
+
+                        if (requiredPages > MAX_PAGES_COUNT)
+                            return false
+
+                        module.memory.grow(requiredPages - pages)
+                        view = new Uint8Array(module.memory.buffer)
                     }
 
-                    wasm.memory.grow(neededPages - currentPages)
-                    u8Wasm = new Uint8Array(wasm.memory.buffer)
+                    ref = src
+                    view.set(src)
+                    return true
                 }
-                return u8Wasm
+
+                return memory
             }
 
+            const trySetMemory = memorySetFactory()
+
             return (b: Uint8Array, i: number, s: number) => {
-                const u8 = u8Resolver(b.length)
-                u8.set(b)
-                return wasm.findNext(i, b.length, s)
+                trySetMemory(module, b)
+                return module.findNext(i, b.length, s)
             }
         }
 
