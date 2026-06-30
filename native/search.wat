@@ -1,10 +1,13 @@
 (module
-  (memory (export "memory") 1 100)
+  (memory (export "memory") 1 128)
   (func (export "findNext") (param $ptr i32) (param $len i32) (param $byte i32) (result i32)
     (local $i i32)
     (local $target v128)
     (local $vec v128)
     (local $mask i32)
+
+    local.get $ptr
+    local.set $i
 
     ;; Replicate the byte into all 16 lanes of a 128-bit register
     local.get $byte
@@ -24,9 +27,7 @@
         br_if $done       ;; exit loop when remaining < 16
 
         ;; Load 16 bytes
-        local.get $ptr
         local.get $i
-        i32.add
         v128.load
         local.set $vec
 
@@ -70,9 +71,7 @@
       end
 
       ;; Load one byte (use i32.load8_u)
-      local.get $ptr
       local.get $i
-      i32.add
       i32.load8_u
       local.get $byte
       i32.eq
@@ -87,6 +86,6 @@
       local.set $i
       br $tail
     )
-    i32.const -1   ;; unreachable, but kept for form
+    i32.const -1   ;; unreachable
   )
 )
