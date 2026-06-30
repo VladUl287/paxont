@@ -1,19 +1,20 @@
 import { add, complete, cycle, suite } from 'benny'
 
-const date = "1970-02-01"
-const dateBytes = new TextEncoder().encode(date)
+const date = "2026-06-30T14:51Z"
+const utc = Date.UTC(2026, 6, 30, 14, 51)
 
 suite(
     'decoding',
 
-    add('ctor-methods', () => {
+    add('mutation', () => {
         const date = new Date()
-        date.setUTCFullYear(2000, 0, 1)
-        date.setUTCHours(0, 0, 0, 0)
+        date.setUTCFullYear(2026, 6, 30)
+        date.setUTCHours(14, 51, 0, 0)
         return date
     }),
-    add('utc', () => new Date(Date.UTC(2000))),
-    add('string', () => new Date("2000")),
+    add('utc-precompute', () => new Date(utc)),
+    add('utc', () => new Date(Date.UTC(2026, 6, 30, 14, 51))),
+    add('string', () => new Date(date)),
 
     cycle((result) => {
         const nanoseconds = (1 / result.ops) * 1e9
