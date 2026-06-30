@@ -134,13 +134,15 @@ export const object = <M extends ObjectField<any, any>[]>(...fields: M): ObjectM
         pack: true
     }) as any
 
+    const toJson = genObjectToJsonFactory1(...fields)
+    
     const result = {
         type: 'object',
         fields: fields,
         factory: factory,
         fieldIndexResolver: fieldIndex,
         toValue: toObject as any,
-        toJson: genObjectToJsonFactory1(...fields) as any
+        toJson: toJson
     }
 
     return result

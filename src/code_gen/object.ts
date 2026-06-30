@@ -8,7 +8,7 @@ export function genObjectFactory(fields: string[]): (values: unknown[]) => objec
 }
 
 export function genObjectToJsonFactory1(...fields: ObjectField<any, any>[]) {
-    let body = 'var f = m.fields'
+    let body = 'var f = m.fields;'
     body += 'return `{'
     body += fields
         .map((field, i) => {
@@ -17,7 +17,7 @@ export function genObjectToJsonFactory1(...fields: ObjectField<any, any>[]) {
             if (typeof key !== 'string')
                 return ''
 
-            return `"${key}": \${f[${i}].toJson(o.${key}, f[${i}])},`
+            return `"${key}":\${f[${i}].value.toJson(o.${key}, f[${i}].value)}`
         })
         .join(',')
     body += '}`'
