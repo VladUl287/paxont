@@ -51,7 +51,7 @@ function findNextFactory(): (b: Uint8Array, i: number, s: number) => number {
             const u8Resolver = (minLength: number) => {
                 if (u8Wasm.byteLength < minLength) {
                     const PAGE_SIZE = 65536
-                    const MAX_PAGES_COUNT = 128 //(6.4MB)
+                    const MAX_PAGES_COUNT = 128 //(6.4KB)
 
                     const currentPages = u8Wasm.byteLength / PAGE_SIZE
                     const neededPages = Math.ceil(minLength / PAGE_SIZE)
@@ -80,49 +80,53 @@ function findNextFactory(): (b: Uint8Array, i: number, s: number) => number {
     }
 }
 
-function findNext1(u8: Uint8Array, i: number, s: number): number {
+function findNext1(b: Uint8Array, i: number, s: number): number {
     const mask = s * 0x01010101
+    const len = b.length
 
-    const u32 = new Uint32Array(u8.buffer, i)
+    while (i < len && (i & 3)) {
+        if (b[i] === s) return i
+        i++
+    }
 
-    let j = Math.floor(i / 4) + 1
+    const u32 = new Uint32Array(b.buffer, i, Math.floor((len - i) / 4))
+    const len32 = u32.length
 
-    const len32 = Math.floor(u8.length / 4)
-
-    while (j < len32 - 8) {
+    let j = 0
+    while (j < len32 - 4) {
         const x1 = u32[j] ^ mask
         const x2 = u32[j + 1] ^ mask
         const x3 = u32[j + 2] ^ mask
         const x4 = u32[j + 3] ^ mask
-        const x5 = u32[j + 4] ^ mask
-        const x6 = u32[j + 5] ^ mask
-        const x7 = u32[j + 6] ^ mask
-        const x8 = u32[j + 7] ^ mask
 
-        const c = (x1 & x2 & x3 & x4 & x5 & x6 & x7 & x8)
+        const c = (x1 & x2 & x3 & x4)
         if ((((c - 0x01010101) ^ c) & 0x80808080) !== 0)
             break
 
-        j += 8
+        j += 4
     }
 
-    while (j < u32.length) {
+    while (j < len32) {
         const x1 = u32[j] ^ mask
 
-        const c = ((x1 - 0x01010101) ^ x1) & 0x80808080
-        if (c !== 0) {
-            i = j * 4
-
-            if (u8[i] === s) return i
-            if (u8[++i] === s) return i
-            if (u8[++i] === s) return i
-            if (u8[++i] === s) return i
+        if ((((x1 - 0x01010101) ^ x1) & 0x80808080) !== 0) {
+            i = i + j * 4
+            if (b[i] === s) return i
+            if (b[++i] === s) return i
+            if (b[++i] === s) return i
+            if (b[++i] === s) return i
         }
 
         j++
     }
 
-    return u8.length
+    i = i + j * 4
+    while (i < len) {
+        if (b[i] === s) return i
+        i++
+    }
+
+    return -1
 }
 
 const MAX_FAST_DECODE = 24
