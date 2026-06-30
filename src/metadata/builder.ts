@@ -2,7 +2,7 @@ import { toArray } from "../converters/array"
 import { toBigInt } from "../converters/bigint"
 import { toString } from "../converters/string"
 import { TypedArray } from "../utils/typedArray"
-import { BaseMeta, CollectionMeta, MapMeta, ObjectField, ObjectMeta, PrimitiveMeta, toValueConverter } from "./types"
+import { BaseMeta, CollectionMeta, MapMeta, NullableMeta, ObjectField, ObjectMeta, PrimitiveMeta, toValueConverter } from "./types"
 import * as Base from "./baseTypes"
 import { toBoolean } from "../converters/boolean"
 import { toDate } from "../converters/date"
@@ -12,6 +12,7 @@ import { toSet } from "../converters/set"
 import { genObjectFactory, genObjectToJsonFactory1 } from "../code_gen/object"
 import { generateTrieSwitch } from "../code_gen/field"
 import { toObject } from "../converters/object"
+import { toNullable } from "../converters/nullable"
 
 type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
 
@@ -43,6 +44,13 @@ const primitive = <T extends Object>(type: Base.BaseTypes, toValue: toValueConve
     type: type,
     toValue: toValue,
     toJson: (s, _) => s.toString()
+})
+
+export const nullable = <T extends BaseMeta<any, any>>(value: T): NullableMeta<ExtractType<T> | null> => ({
+    type: Base.JSONT_NULLABLE,
+    toJson: (n, m) => m.value.toJson(n, m.value),
+    toValue: toNullable,
+    value: value,
 })
 
 export const array = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Array<ExtractType<T>>, ExtractType<T>> => ({
