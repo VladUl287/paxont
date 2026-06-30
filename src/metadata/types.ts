@@ -31,14 +31,15 @@ export interface ObjectMeta<T> extends BaseMeta<T, ObjectMeta<T>> {
 }
 
 export type ObjectFields<T> = {
-    [K in keyof T]: ObjectFieldMeta<T[K], K>
+    [K in keyof T]: ObjectField<K, T[K]>
 }[keyof T][]
 
-export type ObjectFieldMeta<K, T> = BaseMeta<T, ObjectFieldMeta<K, T>> & {
+export type ObjectField<K, V> = {
     readonly name: {
         value: K
         bytes: Uint8Array
     }
+    readonly value: BaseMeta<V, any>
 }
 
 export interface CollectionMeta<T, V> extends BaseMeta<T, CollectionMeta<T, V>> {

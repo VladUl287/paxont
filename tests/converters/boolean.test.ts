@@ -1,5 +1,5 @@
 import { toBoolean } from "../../src/converters/boolean"
-import { BaseMeta, ConvertCtx, ObjectFieldMeta } from "../../src/metadata/types"
+import { BaseMeta, ConvertCtx, ObjectField } from "../../src/metadata/types"
 import { A, E, F, L, R, S, T, U } from "../../src/utils/utf8constants"
 
 const createMockCtx = (bytes: number[]): ConvertCtx => ({
@@ -18,7 +18,7 @@ const createMockCtx = (bytes: number[]): ConvertCtx => ({
 
 const createMockMeta = (isObjectField = false, name = 'testField'): BaseMeta<boolean> => {
     if (isObjectField) {
-        return <ObjectFieldMeta<any, any>>{
+        return <ObjectField<any, any>>{
             type: 'boolean',
             toJson: (() => { }) as any,
             toValue: (() => { }) as any,

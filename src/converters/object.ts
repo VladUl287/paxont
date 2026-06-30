@@ -36,7 +36,7 @@ export function toObject<T>(ctx: ConvertCtx, m: ObjectMeta<T>, i: number, d: num
 
         i = skipWhitespace(b, i)
 
-        const result = field.toValue(ctx, field, i, d)
+        const result = field.value.toValue(ctx, field.value, i, d)
         i = result.nextIndex
 
         if (b[i] === COMMA) i++

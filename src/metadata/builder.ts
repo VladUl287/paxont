@@ -2,7 +2,7 @@ import { toArray } from "../converters/array"
 import { toBigInt } from "../converters/bigint"
 import { toString } from "../converters/string"
 import { TypedArray } from "../utils/typedArray"
-import { BaseMeta, CollectionMeta, MapMeta, ObjectFieldMeta, ObjectMeta, PrimitiveMeta, toValueConverter } from "./types"
+import { BaseMeta, CollectionMeta, MapMeta, ObjectField, ObjectMeta, PrimitiveMeta, toValueConverter } from "./types"
 import * as Base from "./baseTypes"
 import { toBoolean } from "../converters/boolean"
 import { toDate } from "../converters/date"
@@ -17,8 +17,8 @@ type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
 
 export type ExtractType<M> = M extends BaseMeta<infer U, any> ? U : never
 
-type ObjectFromMeta<T extends ObjectFieldMeta<any, any>[]> = Expand<{
-    [E in T[number]as E['name']['value']]: E['toValue'] extends toValueConverter<infer U, any> ? U : never
+type ObjectFromMeta<T extends ObjectField<any, any>[]> = Expand<{
+    [E in T[number]as E['name']['value']]: E['value'] extends BaseMeta<infer U, any> ? U : never
 }>
 
 export const string = () => primitive(Base.JSONT_STRING, toString)
@@ -109,17 +109,15 @@ const set = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Set<Extract
 const encoder = new TextEncoder()
 export const field = <K extends string, M extends BaseMeta<any, any>>(
     name: K, value: M
-): ObjectFieldMeta<K, ExtractType<M>> => ({
+): ObjectField<K, ExtractType<M>> => ({
     name: {
         value: name,
         bytes: encoder.encode(name)
     },
-    type: value.type,
-    toJson: value.toJson,
-    toValue: value.toValue
+    value: value
 })
 
-export const object = <M extends ObjectFieldMeta<any, any>[]>(...fields: M): ObjectMeta<ObjectFromMeta<M>> => {
+export const object = <M extends ObjectField<any, any>[]>(...fields: M): ObjectMeta<ObjectFromMeta<M>> => {
     const keys = fields.map(f => f.name.value as string)
     const factory = genObjectFactory(keys) as any
 
