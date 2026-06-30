@@ -15,6 +15,14 @@ export function toString(ctx: ConvertCtx, _m: PrimitiveMeta<string>, i: number, 
     if (i === -1)
         throw new Error(`Unterminated string literal starting at index ${start}: missing closing quote (")`)
 
+    if (ctx.raw) {
+        // TODO: find utf16 index
+        return {
+            value: ctx.raw.substring(start, i),
+            nextIndex: ++i
+        }
+    }
+
     const count = i - start
     if (count <= MAX_FAST_DECODE) {
         return {

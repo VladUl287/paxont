@@ -7,6 +7,7 @@ import { ExtractType, field, object } from "./builder"
 export type TypeName = Base.BaseTypes | (string & {})
 
 export type ConvertCtx = {
+    readonly raw?: string,
     readonly bytes: Uint8Array
     readonly options: JsonOptions
 }

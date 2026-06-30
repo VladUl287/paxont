@@ -22,7 +22,8 @@ export function deserialize<T>(
 
     let bytes: Uint8Array
 
-    if (typeof json === 'string') {
+    const isString = typeof json === 'string'
+    if (isString) {
         const length = getMaxBytesCount(json.length)
         bytes = buffer(length)
         fullOptions.encoder.encodeInto(json, bytes)
@@ -38,6 +39,7 @@ export function deserialize<T>(
     }
 
     const result = metadata.toValue({
+        raw: isString ? json : undefined,
         bytes,
         options: fullOptions
     }, metadata, 0, 0)
