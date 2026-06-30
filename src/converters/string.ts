@@ -2,8 +2,7 @@ import { ConvertCtx, PrimitiveMeta } from "../metadata/types"
 import { ReadResult } from "../utils/types"
 import { DOUBLE_QUOTE } from "../utils/utf8constants"
 
-export function toString(
-    ctx: ConvertCtx, _meta: PrimitiveMeta<string>, i: number, _depth: number): ReadResult<string> {
+export function toString(ctx: ConvertCtx, _m: PrimitiveMeta<string>, i: number, _d: number): ReadResult<string> {
     const b = ctx.bytes
 
     if (b[i] !== DOUBLE_QUOTE)
@@ -12,6 +11,9 @@ export function toString(
 
     let start = i
     i = findNext(b, i, DOUBLE_QUOTE)
+
+    if (i === -1)
+        throw new Error(`Unterminated string literal starting at index ${start}: missing closing quote (")`)
 
     const count = i - start
     if (count <= MAX_FAST_DECODE) {
@@ -22,14 +24,12 @@ export function toString(
     }
 
     const decoder = ctx.options.decoder
-    const view = new Uint8Array(b.buffer, start, i - start)
+    const view = new Uint8Array(b.buffer, start, count)
     return {
         value: decoder.decode(view),
         nextIndex: ++i
     }
 }
-
-const isAsciiU32 = (value: number): boolean => (value & 0x80808080) === 0
 
 const findNext = findNextFactory()
 
@@ -42,8 +42,7 @@ function findNextFactory(): (b: Uint8Array, i: number, s: number) => number {
 
         const wasm = new WebAssembly.Instance(
             new WebAssembly.Module(
-                new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 1, 96, 3, 127, 127, 127, 1, 127, 3, 2, 1, 0, 5, 4, 1, 1, 1, 100, 7, 21, 2, 6, 109, 101, 109, 111, 114, 121, 2, 0, 8, 102, 105, 110, 100, 78, 101, 120, 116, 0, 0, 10, 115, 1, 113, 3, 1, 127, 2, 123, 1, 127, 32, 2, 253, 15, 33, 4, 2, 64, 3, 64, 32, 3, 65, 16, 106, 32, 1, 77, 69, 13, 1, 32, 0, 32, 3, 106, 253, 0, 4, 0, 33, 5, 32, 5, 32, 4, 253, 35, 253, 100, 34, 6, 4, 64, 32, 3, 32, 6, 104, 106, 15, 11, 32, 3, 65, 16, 106, 33, 3, 12, 0, 11, 11, 3, 64, 32, 3, 32, 1, 79, 4, 64, 65, 127, 15, 11, 32, 0, 32, 3, 106, 45, 0, 0, 32, 2, 70, 4, 64, 32, 3, 15, 11, 32, 3, 65, 1, 106, 33, 3, 12, 0, 11, 65, 127, 11]),
-            ), {},
+                new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 1, 96, 3, 127, 127, 127, 1, 127, 3, 2, 1, 0, 5, 5, 1, 1, 1, 128, 1, 7, 21, 2, 6, 109, 101, 109, 111, 114, 121, 2, 0, 8, 102, 105, 110, 100, 78, 101, 120, 116, 0, 0, 10, 113, 1, 111, 3, 1, 127, 2, 123, 1, 127, 32, 0, 33, 3, 32, 2, 253, 15, 33, 4, 2, 64, 3, 64, 32, 3, 65, 16, 106, 32, 1, 77, 69, 13, 1, 32, 3, 253, 0, 4, 0, 33, 5, 32, 5, 32, 4, 253, 35, 253, 100, 34, 6, 4, 64, 32, 3, 32, 6, 104, 106, 15, 11, 32, 3, 65, 16, 106, 33, 3, 12, 0, 11, 11, 3, 64, 32, 3, 32, 1, 79, 4, 64, 65, 127, 15, 11, 32, 3, 45, 0, 0, 32, 2, 70, 4, 64, 32, 3, 15, 11, 32, 3, 65, 1, 106, 33, 3, 12, 0, 11, 65, 127, 11])), {},
         )?.exports as WasmModule
 
         if (wasm) {
@@ -52,7 +51,7 @@ function findNextFactory(): (b: Uint8Array, i: number, s: number) => number {
             const u8Resolver = (minLength: number) => {
                 if (u8Wasm.byteLength < minLength) {
                     const PAGE_SIZE = 65536
-                    const MAX_PAGES_COUNT = 100 //(6.4MB)
+                    const MAX_PAGES_COUNT = 128 //(6.4MB)
 
                     const currentPages = u8Wasm.byteLength / PAGE_SIZE
                     const neededPages = Math.ceil(minLength / PAGE_SIZE)
@@ -70,7 +69,7 @@ function findNextFactory(): (b: Uint8Array, i: number, s: number) => number {
             return (b: Uint8Array, i: number, s: number) => {
                 const u8 = u8Resolver(b.length)
                 u8.set(b)
-                return wasm.findNext(i, b.length, DOUBLE_QUOTE)
+                return wasm.findNext(i, b.length, s)
             }
         }
 
@@ -126,44 +125,44 @@ function findNext1(u8: Uint8Array, i: number, s: number): number {
     return u8.length
 }
 
-const MAX_FAST_DECODE = 128
+const MAX_FAST_DECODE = 24
 
 const TEMP_CACHE = new Array<number[]>(MAX_FAST_DECODE)
 for (let i = 1; i <= MAX_FAST_DECODE; i++) {
     TEMP_CACHE[i] = new Array<number>(i).fill(0)
 }
 
-function decode(bytes: Uint8Array, start: number, end: number) {
-    const length = end - start
+function decode(b: Uint8Array, i: number, end: number) {
+    const length = end - i
     const result = TEMP_CACHE[length]
 
-    let finalLength = result.length
+    let resultLength = result.length
     let j = 0
 
-    while (start < end) {
-        const byte = bytes[start++]
+    while (i < end) {
+        const byte = b[i++]
         if (byte < 0x80) {
             result[j] = byte
         }
         else if (byte < 0xE0) {
-            const byte2 = bytes[start++]
+            const byte2 = b[i++]
             result[j] = ((byte & 0x1F) << 6) | (byte2 & 0x3F)
-            finalLength--
+            resultLength--
         }
         else if (byte < 0xF0) {
-            const byte2 = bytes[start++]
-            const byte3 = bytes[start++]
+            const byte2 = b[i++]
+            const byte3 = b[i++]
             result[j] = (
                 ((byte & 0x0F) << 12) |
                 ((byte2 & 0x3F) << 6) |
                 ((byte3 & 0x3F))
             )
-            finalLength -= 2
+            resultLength -= 2
         }
         else {
-            const byte2 = bytes[start++]
-            const byte3 = bytes[start++]
-            const byte4 = bytes[start++]
+            const byte2 = b[i++]
+            const byte3 = b[i++]
+            const byte4 = b[i++]
             const codePoint = (
                 ((byte & 0x07) << 18) |
                 ((byte2 & 0x3F) << 12) |
@@ -172,11 +171,11 @@ function decode(bytes: Uint8Array, start: number, end: number) {
             )
             result[j] = Math.floor((codePoint - 0x10000) / 0x400) + 0xD800
             result[++j] = ((codePoint - 0x10000) % 0x400) + 0xDC00
-            finalLength -= 2
+            resultLength -= 2
         }
         j++
     }
 
     return String.fromCharCode.apply(String, result)
-        .substring(0, finalLength)
+        .substring(0, resultLength)
 }
