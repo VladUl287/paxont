@@ -42,10 +42,40 @@
 
         ;; If any bit is set, we found it
         if
-          ;; Compute exact index: current offset + trailing zeros of mask
-          local.get $i
+          ;; Get the offset within the block
           local.get $mask
           i32.ctz
+          local.tee $mask  ;; reuse $mask as offset
+
+          ;; Check if this is the first byte in memory or if previous byte is not '\'
+          local.get $i
+          i32.const 0
+          i32.gt_u
+          if
+            ;; Check byte at position (i + offset - 1)
+            local.get $i
+            local.get $mask
+            i32.add
+            i32.const 1
+            i32.sub
+            i32.load8_u
+            i32.const 92   ;; ASCII code for '\'
+            i32.eq
+            if
+              ;; Found a match but it's escaped - continue searching
+              local.get $i
+              local.get $mask
+              i32.add
+              i32.const 1
+              i32.add
+              local.set $i
+              br $main
+            end
+          end
+
+          ;; Not escaped (or at start) - return the index
+          local.get $i
+          local.get $mask
           i32.add
           return
         end
