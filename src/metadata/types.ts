@@ -1,7 +1,6 @@
 import { JsonOptions } from "../options"
 import { ReadResult } from "../utils/types"
 import { BaseType } from "./baseTypes"
-import { ExtractType } from "./builder"
 
 export type TypeName = BaseType | (string & { __typeName: never })
 
@@ -52,14 +51,4 @@ export interface CollectionMeta<T, V> extends BaseMeta<T, CollectionMeta<T, V>> 
 export interface MapMeta<V> extends BaseMeta<Map<string, V>, MapMeta<V>> {
     readonly key: PrimitiveMeta<string>
     readonly value: BaseMeta<V, any>
-}
-
-export type checkType<T = any> = (data: unknown) => data is T
-export type toMeta<T, M extends BaseMeta<T, any>> = (data: T) => M
-
-export interface JType<M extends BaseMeta<any, any> = BaseMeta<any, any>> {
-    type: TypeName,
-    check: checkType<ExtractType<M>>
-    toMeta: toMeta<ExtractType<M>, M>
-    priority: number
 }
