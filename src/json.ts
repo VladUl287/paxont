@@ -1,8 +1,10 @@
 import { createCache } from "./cache/cache"
 import { defaultOptions, JsonOptions, mergeOptions } from "./options"
-import { BaseMeta, isMeta, useMetadata } from "./metadata/types"
+import { BaseMeta } from "./metadata/types"
 import { createFactory } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
+import { isMetadata } from "./metadata/utils"
+import { useMetadata } from "./metadata"
 
 const optionsCache = createCache<Partial<JsonOptions>, JsonOptions>()
 const defaultMetadata = useMetadata()
@@ -18,7 +20,7 @@ export function deserialize<T>(
         optionsCache.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
         defaultOptions
 
-    const metadata = isMeta(type) ? type : defaultMetadata.toMetadata(type)
+    const metadata = isMetadata(type) ? type : defaultMetadata.toMetadata(type)
 
     let bytes: Uint8Array
 
