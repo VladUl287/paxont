@@ -42,6 +42,10 @@
                     )
                   )
                 )
+                local.get $target
+                i32.const 2
+                i32.add
+                local.set $target
             )
             (else 
                 (br $done)
