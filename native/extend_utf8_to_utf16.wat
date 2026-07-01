@@ -1,6 +1,5 @@
 (module
-  (memory $u8 (export "u8") 1 128)
-;;   (memory $u16 (export "u16") 1 128)
+  (memory (export "u8") 1 128)
 
   (func (export "utf8_to_utf16") (param $ptr i32) (param $len i32) (param $target i32) (result i32)
     (local $i i32)
