@@ -3,7 +3,7 @@ import { toBigInt } from "../converters/bigint"
 import { toString } from "../converters/string"
 import { TypedArray } from "../utils/typedArray"
 import { BaseMeta, CollectionMeta, MapMeta, NullableMeta, ObjectFieldMeta, ObjectMeta, PrimitiveMeta, toValueConverter } from "./types"
-import * as Base from "./baseTypes"
+import { BaseType, JSONT } from "./baseTypes"
 import { toBoolean } from "../converters/boolean"
 import { toDate } from "../converters/date"
 import { toFloat32, toFloat64, toInt16, toInt32, toInt64, toInt8, toUint16, toUint32, toUInt64, toUInt8 } from "../converters/number"
@@ -22,39 +22,39 @@ type ObjectFromMeta<T extends ObjectFieldMeta<any, any>[]> = Expand<{
     [E in T[number]as E['name']['value']]: E['toValue'] extends toValueConverter<infer U, any> ? U : never
 }>
 
-export const string = () => primitive(Base.JSONT_STRING, toString)
-export const number = () => primitive(Base.JSONT_NUMBER, toFloat64)
-export const bigInt = () => primitive(Base.JSONT_BIGINT, toBigInt)
-export const bool = () => primitive(Base.JSONT_BOOL, toBoolean)
-export const date = () => primitive(Base.JSONT_DATE, toDate)
+export const string = () => primitive(JSONT.STRING, toString)
+export const number = () => primitive(JSONT.NUMBER, toFloat64)
+export const bigInt = () => primitive(JSONT.BIGINT, toBigInt)
+export const bool = () => primitive(JSONT.BOOL, toBoolean)
+export const date = () => primitive(JSONT.DATE, toDate)
 
-export const u8 = () => primitive(Base.JSONT_U8, toUInt8)
-export const u16 = () => primitive(Base.JSONT_U16, toUint16)
-export const u32 = () => primitive(Base.JSONT_U32, toUint32)
-export const i8 = () => primitive(Base.JSONT_I8, toInt8)
-export const i16 = () => primitive(Base.JSONT_I16, toInt16)
-export const i32 = () => primitive(Base.JSONT_I32, toInt32)
+export const u8 = () => primitive(JSONT.U8, toUInt8)
+export const u16 = () => primitive(JSONT.U16, toUint16)
+export const u32 = () => primitive(JSONT.U32, toUint32)
+export const i8 = () => primitive(JSONT.I8, toInt8)
+export const i16 = () => primitive(JSONT.I16, toInt16)
+export const i32 = () => primitive(JSONT.I32, toInt32)
 
-export const u64 = () => primitive(Base.JSONT_U64, toUInt64)
-export const i64 = () => primitive(Base.JSONT_I64, toInt64)
+export const u64 = () => primitive(JSONT.U64, toUInt64)
+export const i64 = () => primitive(JSONT.I64, toInt64)
 
-export const f32 = () => primitive(Base.JSONT_F32, toFloat32)
+export const f32 = () => primitive(JSONT.F32, toFloat32)
 
-const primitive = <T extends Object>(type: Base.BaseTypes, toValue: toValueConverter<T, PrimitiveMeta<T>>): PrimitiveMeta<T> => ({
+const primitive = <T extends Object>(type: BaseType, toValue: toValueConverter<T, PrimitiveMeta<T>>): PrimitiveMeta<T> => ({
     type: type,
     toValue: toValue,
     toJson: (s, _) => s.toString()
 })
 
 export const nullable = <T extends BaseMeta<any, any>>(value: T): NullableMeta<ExtractType<T> | null> => ({
-    type: Base.JSONT_NULLABLE,
+    type: JSONT.NULLABLE,
     toJson: (n, m) => m.value.toJson(n, m.value),
     toValue: toNullable,
     value: value,
 })
 
 export const array = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Array<ExtractType<T>>, ExtractType<T>> => ({
-    type: Base.JSONT_ARRAY,
+    type: JSONT.ARRAY,
     toValue: toArray,
     toJson: (s, m) => {
         const meta = m.value
@@ -64,27 +64,27 @@ export const array = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Ar
     value: value
 })
 
-export const u8Array = () => typedArray<Uint8Array>(Base.JSONT_U8_ARRAY, u8())
-export const u16Array = () => typedArray<Uint16Array>(Base.JSONT_U16_ARRAY, u16())
-export const u32Array = () => typedArray<Uint32Array>(Base.JSONT_U32_ARRAY, u32())
-export const u64Array = () => bigintArray<BigUint64Array>(Base.JSONT_U32_ARRAY, u64())
+export const u8Array = () => typedArray<Uint8Array>(JSONT.U8_ARRAY, u8())
+export const u16Array = () => typedArray<Uint16Array>(JSONT.U16_ARRAY, u16())
+export const u32Array = () => typedArray<Uint32Array>(JSONT.U32_ARRAY, u32())
+export const u64Array = () => bigintArray<BigUint64Array>(JSONT.U32_ARRAY, u64())
 
-export const i8Array = () => typedArray<Int8Array>(Base.JSONT_I8_ARRAY, i8())
-export const i16Array = () => typedArray<Int16Array>(Base.JSONT_I16_ARRAY, i16())
-export const i32Array = () => typedArray<Int32Array>(Base.JSONT_I32_ARRAY, i32())
-export const i64Array = () => bigintArray<BigInt64Array>(Base.JSONT_I64_ARRAY, i64())
+export const i8Array = () => typedArray<Int8Array>(JSONT.I8_ARRAY, i8())
+export const i16Array = () => typedArray<Int16Array>(JSONT.I16_ARRAY, i16())
+export const i32Array = () => typedArray<Int32Array>(JSONT.I32_ARRAY, i32())
+export const i64Array = () => bigintArray<BigInt64Array>(JSONT.I64_ARRAY, i64())
 
-export const f32Array = () => typedArray<Float32Array>(Base.JSONT_F32_ARRAY, f32())
-export const f64Array = () => typedArray<Float64Array>(Base.JSONT_F64_ARRAY, number())
+export const f32Array = () => typedArray<Float32Array>(JSONT.F32_ARRAY, f32())
+export const f64Array = () => typedArray<Float64Array>(JSONT.F64_ARRAY, number())
 
-const typedArray = <T extends TypedArray>(type: Base.BaseTypes, value: PrimitiveMeta<number>): CollectionMeta<T, number> => ({
+const typedArray = <T extends TypedArray>(type: BaseType, value: PrimitiveMeta<number>): CollectionMeta<T, number> => ({
     type: type,
     toValue: toArray,
     toJson: (s, _) => `[${s.join(',')}]`,
     value: value
 })
 
-const bigintArray = <T extends TypedArray>(type: Base.BaseTypes, value: PrimitiveMeta<bigint>): CollectionMeta<T, bigint> => ({
+const bigintArray = <T extends TypedArray>(type: BaseType, value: PrimitiveMeta<bigint>): CollectionMeta<T, bigint> => ({
     type: type,
     toValue: toArray,
     toJson: (s, _) => `[${s.join(',')}]`,
@@ -92,7 +92,7 @@ const bigintArray = <T extends TypedArray>(type: Base.BaseTypes, value: Primitiv
 })
 
 export const map = <T extends BaseMeta<any, any>>(value: T): MapMeta<ExtractType<T>> => ({
-    type: Base.JSONT_MAP,
+    type: JSONT.MAP,
     key: string(),
     value: value,
     toValue: toMap,
@@ -104,7 +104,7 @@ export const map = <T extends BaseMeta<any, any>>(value: T): MapMeta<ExtractType
 })
 
 export const set = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Set<ExtractType<T>>, ExtractType<T>> => ({
-    type: Base.JSONT_SET,
+    type: JSONT.SET,
     value: value,
     toValue: toSet,
     toJson: (v, m) => {
