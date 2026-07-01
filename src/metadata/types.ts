@@ -12,7 +12,7 @@ export type ConvertCtx = {
 }
 
 export type toValueConverter<T, M extends BaseMeta<T, M>> =
-    (ctx: ConvertCtx, meta: M, index: number, depth: number) => ReadResult<T>
+    (context: ConvertCtx, metadata: M, index: number, depth: number) => ReadResult<T>
 
 export type toJsonConverter<T, M extends BaseMeta<T, M>> = (value: T, meta: M) => string
 
@@ -26,8 +26,8 @@ export interface PrimitiveMeta<T> extends BaseMeta<T, PrimitiveMeta<T>> { }
 
 export interface ObjectMeta<T> extends BaseMeta<T, ObjectMeta<T>> {
     readonly fields: ObjectFields<T>
-    readonly factory: (values: T[keyof T][]) => T
-    readonly fieldIndexResolver: (field: Uint8Array, index: number) => number
+    readonly build: (values: T[keyof T][]) => T
+    readonly getFieldIndex: (bytes: Uint8Array, offset: number) => number
 }
 
 export type ObjectFields<T> = {

@@ -139,8 +139,8 @@ export const object = <M extends ObjectFieldMeta<any, any>[]>(...fields: M): Obj
     const result: ObjectMeta<ObjectFromMeta<M>> = {
         type: JSONT.OBJECT,
         fields: fields,
-        factory: factory,
-        fieldIndexResolver: fieldIndex,
+        build: factory,
+        getFieldIndex: fieldIndex,
         toValue: toObject as any,
         toJson: toJson
     }

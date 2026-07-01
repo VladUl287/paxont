@@ -12,7 +12,7 @@ export function toObject<T>(ctx: ConvertCtx, m: ObjectMeta<T>, i: number, d: num
         throw new Error(``)
     i++
 
-    const getFieldIndex = m.fieldIndexResolver
+    const getFieldIndex = m.getFieldIndex
     const fields = m.fields
 
     let j = 0
@@ -51,7 +51,7 @@ export function toObject<T>(ctx: ConvertCtx, m: ObjectMeta<T>, i: number, d: num
         throw new Error(``)
 
     return {
-        value: m.factory(fieldsBuffer),
+        value: m.build(fieldsBuffer),
         nextIndex: i
     }
 }
