@@ -3,7 +3,7 @@ import { ReadResult } from "../utils/types"
 import { BaseType } from "./baseTypes"
 import { ExtractType } from "./builder"
 
-export type TypeName = BaseType | (string & {})
+export type TypeName = BaseType | (string & { __typeName: never })
 
 export type ConvertCtx = {
     readonly raw?: string,

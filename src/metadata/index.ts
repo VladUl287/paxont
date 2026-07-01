@@ -6,10 +6,10 @@ import { isPlainObject } from "../utils/object"
 
 type UseMetadata = {
     addType: <M extends BaseMeta<any, any>>(type: JType<M>) => void
-    deleteType: (type: string | JType) => boolean
+    deleteType: (type: TypeName | JType) => boolean
     getTypes: () => JType[]
     clearTypes: () => void
-    hasType: (name: string) => boolean
+    hasType: (name: TypeName) => boolean
     toMetadata: <T>(data: T) => BaseMeta<T, any>
 }
 
@@ -58,12 +58,12 @@ export function useMetadata(): UseMetadata {
         types.set(jtype.type, jtype)
     }
 
-    const deleteType = (jtype: string | JType): boolean => {
+    const deleteType = (jtype: TypeName | JType): boolean => {
         const type = typeof jtype === 'string' ? jtype : jtype.type
         return types.delete(type)
     }
 
-    const hasType = (name: string): boolean => types.has(name)
+    const hasType = (name: TypeName): boolean => types.has(name)
 
     const getTypes = (): JType[] => [...types.values()].sort((a, b) => a.priority - b.priority)
 

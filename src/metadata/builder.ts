@@ -136,8 +136,8 @@ export const object = <M extends ObjectFieldMeta<any, any>[]>(...fields: M): Obj
 
     const toJson = genObjectToJsonFactory1(...fields)
 
-    const result = {
-        type: 'object',
+    const result: ObjectMeta<ObjectFromMeta<M>> = {
+        type: JSONT.OBJECT,
         fields: fields,
         factory: factory,
         fieldIndexResolver: fieldIndex,
