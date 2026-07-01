@@ -13,7 +13,7 @@ export type ConvertCtx = {
 export type toValueConverter<T, M extends BaseMeta<T, M>> =
     (context: ConvertCtx, metadata: M, index: number, depth: number) => ReadResult<T>
 
-export type toJsonConverter<T, M extends BaseMeta<T, M>> = (value: T, meta: M) => string
+export type toJsonConverter<T, M extends BaseMeta<T, M>> = (value: T, metadata: M, options: JsonOptions) => string
 
 export interface BaseMeta<T, M extends BaseMeta<T, M>> {
     readonly toValue: toValueConverter<T, M>,

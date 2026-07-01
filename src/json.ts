@@ -50,5 +50,9 @@ export function deserialize<T>(
 }
 
 export function serialize<T, M extends BaseMeta<T, any>>(value: T, metadata: M, options?: Partial<JsonOptions>): string {
-    return metadata.toJson(value, metadata)
+    const fullOptions = !!options ?
+        optionsCache.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
+        defaultOptions
+
+    return metadata.toJson(value, metadata, fullOptions)
 }

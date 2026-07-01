@@ -48,7 +48,7 @@ const primitive = <T extends Object>(type: BaseType, toValue: toValueConverter<T
 
 export const nullable = <T extends BaseMeta<any, any>>(value: T): NullableMeta<ExtractType<T> | null> => ({
     type: JSONT.NULLABLE,
-    toJson: (n, m) => m.value.toJson(n, m.value),
+    toJson: (n, m, o) => m.value.toJson(n, m.value, o),
     toValue: toNullable,
     value: value,
 })
@@ -56,10 +56,10 @@ export const nullable = <T extends BaseMeta<any, any>>(value: T): NullableMeta<E
 export const array = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Array<ExtractType<T>>, ExtractType<T>> => ({
     type: JSONT.ARRAY,
     toValue: toArray,
-    toJson: (s, m) => {
+    toJson: (s, m, o) => {
         const meta = m.value
         const toJson = meta.toJson
-        return `[${s.map(c => toJson(c, meta)).join(',')}]`
+        return `[${s.map(c => toJson(c, meta, o)).join(',')}]`
     },
     value: value
 })
@@ -96,10 +96,10 @@ export const map = <T extends BaseMeta<any, any>>(value: T): MapMeta<ExtractType
     key: string(),
     value: value,
     toValue: toMap,
-    toJson: (v, m) => {
+    toJson: (v, m, o) => {
         const meta = m.value
         const toJson = meta.toJson
-        return `{${[...v.entries()].map(c => `"${c[0]}": ${toJson(c[1], meta)}`).join(',')}}`
+        return `{${[...v.entries()].map(c => `"${c[0]}": ${toJson(c[1], meta, o)}`).join(',')}}`
     }
 })
 
@@ -107,10 +107,10 @@ export const set = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Set<
     type: JSONT.SET,
     value: value,
     toValue: toSet,
-    toJson: (v, m) => {
+    toJson: (v, m, o) => {
         const meta = m.value
         const toJson = meta.toJson
-        return `{${[...v.values()].map(v => toJson(v, meta)).join(',')}}`
+        return `{${[...v.values()].map(v => toJson(v, meta, o)).join(',')}}`
     }
 })
 
