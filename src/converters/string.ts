@@ -10,26 +10,33 @@ export function toString(ctx: ConvertCtx, _m: PrimitiveMeta<string>, i: number, 
     i++
 
     let start = i
-    i = findNext(b, i, DOUBLE_QUOTE)
+    // i = findNext(b, i, DOUBLE_QUOTE)
+    i += 2048
 
     if (i === -1)
         throw new Error(`Unterminated string literal starting at index ${start}: missing closing quote (")`)
 
-    if (ctx.raw) {
-        // TODO: find utf16 index
-        return {
-            value: ctx.raw.substring(start, i),
-            nextIndex: ++i
-        }
-    }
+    // if (ctx.raw) {
+    //     // TODO: find utf16 index
+    //     return {
+    //         value: ctx.raw.substring(start, i),
+    //         nextIndex: ++i
+    //     }
+    // }
 
     const count = i - start
-    if (count <= MAX_FAST_DECODE) {
-        return {
-            value: decode(b, start, i),
-            nextIndex: ++i
-        }
+
+    return {
+        value: decode(b, start, i),
+        nextIndex: ++i
     }
+
+    // if (count <= MAX_FAST_DECODE) {
+    //     return {
+    //         value: decode(b, start, i),
+    //         nextIndex: ++i
+    //     }
+    // }
 
     const decoder = ctx.options.decoder
     const view = new Uint8Array(b.buffer, start, count)
@@ -152,19 +159,109 @@ function findNext1(b: Uint8Array, i: number, s: number): number {
     return -1
 }
 
-const MAX_FAST_DECODE = 24
+const MAX_FAST_DECODE = 128
 
 const TEMP_CACHE = new Array<number[]>(MAX_FAST_DECODE)
 for (let i = 1; i <= MAX_FAST_DECODE; i++) {
     TEMP_CACHE[i] = new Array<number>(i).fill(0)
 }
 
-function decode(b: Uint8Array, i: number, end: number) {
-    const length = end - i
-    const result = TEMP_CACHE[length]
+function inRangeInclusive(value: number, lowerBound: number, upperBound: number) {
+    return (value - lowerBound) <= (upperBound - lowerBound)
+}
 
-    let resultLength = result.length
+const u32Conversion = new Uint32Array(1)
+const u16Conversion = new Uint16Array(u32Conversion.buffer)
+
+let wasm: any = null
+try {
+    wasm = new WebAssembly.Instance(
+        new WebAssembly.Module(
+            new Uint8Array([
+                0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 1, 96, 3, 127, 127, 127, 1, 127, 3, 2, 1, 0, 5, 5, 1, 1, 1, 128, 1, 7, 22, 2, 2, 117, 56, 2, 0, 13, 117, 116, 102, 56, 95, 116, 111, 95, 117, 116, 102, 49, 54, 0, 0, 10, 103, 1, 101, 1, 2, 127, 32, 0, 33, 3, 2, 64, 3, 64, 32, 3, 65, 4, 106, 32, 1, 77, 69, 13, 1, 32, 3, 40, 0, 0, 33, 4, 32, 4, 65, 224, 129, 131, 135, 124, 113, 65, 192, 129, 130, 134, 120, 70, 4, 64, 32, 2, 32, 4, 65, 128, 254, 128, 248, 3, 113, 65, 8, 118, 32, 4, 65, 159, 128, 252, 0, 113, 65, 6, 116, 114, 54, 0, 0, 32, 2, 65, 2, 106, 33, 2, 5, 12, 2, 11, 32, 3, 65, 4, 106, 33, 3, 12, 0, 11, 11, 32, 3, 11
+            ]),
+        ),
+        {},
+    ).exports
+} catch { }
+
+const wasmU8 = new Uint8Array(wasm.u8.buffer)
+const wasmU16 = new Uint16Array(wasm.u8.buffer)
+
+let set = -1
+
+function decode(b: Uint8Array, i: number, end: number) {
+    // const length = end - i
+
+    // const result = (TEMP_CACHE[length] ??= new Array<number>(length))
+
     let j = 0
+
+    // while (i < end - 4) {
+    //     result[j] = b[i]
+    //     result[j + 1] = b[i + 1]
+    //     result[j + 2] = b[i + 2]
+    //     result[j + 3] = b[i + 3]
+    //     i += 4
+    //     j += 4
+    // }
+
+    // while (i < end) {
+    //     result[j] = b[i]
+    //     i++
+    //     j++
+    // }
+
+    // while (i < end - 4) {
+    //     const b1 = b[i]
+    //     const b2 = b[i + 1]
+    //     const b3 = b[i + 2]
+    //     const b4 = b[i + 3]
+
+    //     const num2 = (b1 | b2 << 8 | b3 << 16 | b4 << 24) >>> 0
+
+    //     if (((num2 & 0xC0E0C0E0) >>> 0) === 0x80C080C0) {
+    //         u32Conversion[j] = ((num2 & 0x3F003F00) >> 8) | ((num2 & 0x1F001F) << 6)
+
+    //         //         // result[j++] = ((b1 & 0x1F) << 6) | (b2 & 0x3F)
+    //         //         // result[j++] = ((b3 & 0x1F) << 6) | (b4 & 0x3F)
+
+    //         //         j += 2
+    //         //         i += 4
+    //         //     }
+
+    //         //     // if (((num2 - 32960) & 0xC0E0) === 0) {
+    //         //     //     if (inRangeInclusive(num2 & 0xC0FF0000, 2160197632, 2162098176)) {
+    //         //     //         u32Conversion[0] = ((num2 & 0x3F003F00) >> 8) | ((num2 & 0x1F001F) << 6)
+    //         //     //         result[j++] = u16Conversion[0]
+    //         //     //         result[j++] = u16Conversion[1]
+    //         //     //         i += 4
+    //         //     //     }
+    //     }
+    // }
+
+    wasmU8.set(b.subarray(i))
+
+    let index = wasm.utf8_to_utf16(0, b.length, 0)
+
+    const length = (index / 4) + 1
+    const result = (TEMP_CACHE[length] ??= new Array<number>(length))
+
+    // while (j < length - 4) {
+    //     result[j] = wasmU16[j]
+    //     result[j + 1] = wasmU16[j + 1]
+    //     result[j + 2] = wasmU16[j + 2]
+    //     result[j + 3] = wasmU16[j + 3]
+    //     j += 4
+    // }
+
+    while (j < length) {
+        result[j] = wasmU16[j]
+        j++
+    }
+
+    return result as any
+    // return String.fromCharCode.apply(String, result)
 
     while (i < end) {
         const byte = b[i++]
@@ -174,7 +271,6 @@ function decode(b: Uint8Array, i: number, end: number) {
         else if (byte < 0xE0) {
             const byte2 = b[i++]
             result[j] = ((byte & 0x1F) << 6) | (byte2 & 0x3F)
-            resultLength--
         }
         else if (byte < 0xF0) {
             const byte2 = b[i++]
@@ -184,7 +280,6 @@ function decode(b: Uint8Array, i: number, end: number) {
                 ((byte2 & 0x3F) << 6) |
                 ((byte3 & 0x3F))
             )
-            resultLength -= 2
         }
         else {
             const byte2 = b[i++]
@@ -198,11 +293,10 @@ function decode(b: Uint8Array, i: number, end: number) {
             )
             result[j] = Math.floor((codePoint - 0x10000) / 0x400) + 0xD800
             result[++j] = ((codePoint - 0x10000) % 0x400) + 0xDC00
-            resultLength -= 2
         }
         j++
     }
 
-    return String.fromCharCode.apply(String, result)
-        .substring(0, resultLength)
+    return j as any
+    // return String.fromCharCode.apply(String, result)
 }
