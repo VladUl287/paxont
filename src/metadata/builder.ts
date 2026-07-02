@@ -2,25 +2,23 @@ import { toArray } from "../converters/array"
 import { toBigInt } from "../converters/bigint"
 import { toString } from "../converters/string"
 import { TypedArray } from "../utils/typedArray"
-import { BaseMeta, CollectionMeta, MapMeta, NullableMeta, ObjectFieldMeta, ObjectMeta, PrimitiveMeta, toValueConverter } from "./types"
+import {
+    BaseMeta, CollectionMeta, ExtractType, MapMeta, NullableMeta, ObjectFieldMeta,
+    ObjectFromMeta, ObjectMeta, PrimitiveMeta, toValueConverter
+} from "./types"
 import { BaseType, JSONT } from "./baseTypes"
 import { toBoolean } from "../converters/boolean"
 import { toDate } from "../converters/date"
-import { toFloat32, toFloat64, toInt16, toInt32, toInt64, toInt8, toUint16, toUint32, toUInt64, toUInt8 } from "../converters/number"
+import {
+    toFloat32, toFloat64, toInt16, toInt32, toInt64, toInt8,
+    toUint16, toUint32, toUInt64, toUInt8
+} from "../converters/number"
 import { toMap } from "../converters/map"
 import { toSet } from "../converters/set"
 import { genObjectFactory, genObjectToJsonFactory1 } from "../code_gen/object"
 import { generateTrieSwitch } from "../code_gen/field"
 import { toObject } from "../converters/object"
 import { toNullable } from "../converters/nullable"
-
-type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
-
-export type ExtractType<M> = M extends BaseMeta<infer U, any> ? U : never
-
-type ObjectFromMeta<T extends ObjectFieldMeta<any, any>[]> = Expand<{
-    [E in T[number]as E['name']['value']]: E['toValue'] extends toValueConverter<infer U, any> ? U : never
-}>
 
 export const string = () => primitive(JSONT.STRING, toString)
 export const number = () => primitive(JSONT.NUMBER, toFloat64)

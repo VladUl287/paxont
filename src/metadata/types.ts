@@ -52,3 +52,11 @@ export interface MapMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<Map<strin
     readonly key: PrimitiveMeta<string>
     readonly value: M
 }
+
+export type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
+
+export type ExtractType<M> = M extends BaseMeta<infer U, any> ? U : never
+
+export type ObjectFromMeta<T extends ObjectFieldMeta<any, any>[]> = Expand<{
+    [E in T[number]as E['name']['value']]: E['toValue'] extends toValueConverter<infer U, any> ? U : never
+}>
