@@ -123,16 +123,17 @@ export const set = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Set<
     }
 })
 
-const encoder = new TextEncoder()
 export const field = <K extends string, M extends BaseMeta<any, any>>(
-    name: K, value: M
-): ObjectFieldMeta<K, ExtractType<M>> => ({
-    name: {
-        value: name,
-        bytes: encoder.encode(name)
-    },
-    ...value,
-})
+    name: K, value: M, encoder: TextEncoder = new TextEncoder()
+): ObjectFieldMeta<K, ExtractType<M>> => {
+    return {
+        name: {
+            value: name,
+            bytes: encoder.encode(name)
+        },
+        ...value,
+    }
+}
 
 export const object = <M extends ObjectFieldMeta<any, any>[]>(...fields: M): ObjectMeta<ObjectFromMeta<M>> => {
     const keys = fields.map(f => f.name.value as string)
