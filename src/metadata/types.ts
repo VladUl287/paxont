@@ -30,15 +30,19 @@ export interface ObjectMeta<T> extends BaseMeta<T, ObjectMeta<T>> {
 }
 
 export type ObjectFields<T> = {
-    [K in keyof T]: ObjectFieldMeta<K, T[K]>
-}[keyof T][]
+    [K in Extract<keyof T, string>]: ObjectFieldMeta<K, T[K], BaseMeta<T[K], any>>
+}[Extract<keyof T, string>][]
 
-export type ObjectFieldMeta<K, T> = BaseMeta<T, ObjectFieldMeta<K, T>> & {
+export type ObjectFieldMeta<K extends string, T, M extends BaseMeta<T, M>> = M & {
     readonly name: {
         value: K
         bytes: Uint8Array
     }
 }
+
+export type ObjectFromMeta<T extends ObjectFieldMeta<any, any, any>[]> = Expand<{
+    [E in T[number]as E['name']['value']]: E['toValue'] extends toValueConverter<infer U, any> ? U : never
+}>
 
 export interface NullableMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<T | null, NullableMeta<T, M>> {
     readonly value: M
@@ -56,7 +60,3 @@ export interface MapMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<Map<strin
 export type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
 
 export type ExtractType<M> = M extends BaseMeta<infer U, any> ? U : never
-
-export type ObjectFromMeta<T extends ObjectFieldMeta<any, any>[]> = Expand<{
-    [E in T[number]as E['name']['value']]: E['toValue'] extends toValueConverter<infer U, any> ? U : never
-}>
