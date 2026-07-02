@@ -1,6 +1,10 @@
 import { JSONT } from "./baseTypes"
-import { BaseMeta, TypeName } from "./types"
-import { array, bigInt, bool, date, ExtractType, field, i16, i16Array, i32, i32Array, i64, i64Array, i8, i8Array, map, nullable, number, object, set, string, u16, u16Array, u32, u32Array, u64, u64Array, u8, u8Array } from "./builder"
+import { BaseMeta, ExtractType, TypeName } from "./types"
+import {
+    array, bigInt, bool, date, field, i16, i16Array, i32, i32Array, i64,
+    i64Array, i8, i8Array, map, nullable, number, object, set, string, u16,
+    u16Array, u32, u32Array, u64, u64Array, u8, u8Array
+} from "./builder"
 import { Int16, Int32, Int64, Int8, Nullable, Uint16, Uint32, Uint64, Uint8 } from "../utils/types"
 import { isPlainObject } from "../utils/object"
 
