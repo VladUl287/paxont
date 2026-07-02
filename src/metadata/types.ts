@@ -48,7 +48,7 @@ export interface CollectionMeta<C, T, M extends BaseMeta<T, M>> extends BaseMeta
     readonly value: M
 }
 
-export interface MapMeta<V> extends BaseMeta<Map<string, V>, MapMeta<V>> {
+export interface MapMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<Map<string, T>, MapMeta<T, M>> {
     readonly key: PrimitiveMeta<string>
-    readonly value: BaseMeta<V, any>
+    readonly value: M
 }

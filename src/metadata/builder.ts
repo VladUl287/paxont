@@ -100,7 +100,7 @@ const typedArray1 = <T extends TypedArray>(
     value: value
 })
 
-export const map = <T extends BaseMeta<any, any>>(value: T): MapMeta<ExtractType<T>> => ({
+export const map = <M extends BaseMeta<ExtractType<M>, M>>(value: M): MapMeta<ExtractType<M>, M> => ({
     type: JSONT.MAP,
     key: string(),
     value: value,
