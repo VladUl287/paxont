@@ -112,7 +112,7 @@ export const map = <M extends BaseMeta<ExtractType<M>, M>>(value: M): MapMeta<Ex
     }
 })
 
-export const set = <T extends BaseMeta<any, any>>(value: T): CollectionMeta<Set<ExtractType<T>>, ExtractType<T>, T> => ({
+export const set = <M extends BaseMeta<ExtractType<M>, M>>(value: M): CollectionMeta<Set<ExtractType<M>>, ExtractType<M>, M> => ({
     type: JSONT.SET,
     value: value,
     toValue: toSet,
