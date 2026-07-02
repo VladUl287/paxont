@@ -44,8 +44,8 @@ export interface NullableMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<T | 
     readonly value: M
 }
 
-export interface CollectionMeta<T, V> extends BaseMeta<T, CollectionMeta<T, V>> {
-    readonly value: BaseMeta<V, any>
+export interface CollectionMeta<C, T, M extends BaseMeta<T, M>> extends BaseMeta<C, CollectionMeta<C, T, M>> {
+    readonly value: M
 }
 
 export interface MapMeta<V> extends BaseMeta<Map<string, V>, MapMeta<V>> {
