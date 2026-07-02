@@ -72,12 +72,12 @@ export const array = <M extends BaseMeta<ExtractType<M>, M>>(
 export const u8Array = () => typedArray<Uint8Array>(JSONT.U8_ARRAY, u8())
 export const u16Array = () => typedArray<Uint16Array>(JSONT.U16_ARRAY, u16())
 export const u32Array = () => typedArray<Uint32Array>(JSONT.U32_ARRAY, u32())
-export const u64Array = () => typedBigIntArray<BigUint64Array>(JSONT.U32_ARRAY, u64())
+export const u64Array = () => typedArray1<BigUint64Array>(JSONT.U32_ARRAY, u64())
 
 export const i8Array = () => typedArray<Int8Array>(JSONT.I8_ARRAY, i8())
 export const i16Array = () => typedArray<Int16Array>(JSONT.I16_ARRAY, i16())
 export const i32Array = () => typedArray<Int32Array>(JSONT.I32_ARRAY, i32())
-export const i64Array = () => typedBigIntArray<BigInt64Array>(JSONT.I64_ARRAY, i64())
+export const i64Array = () => typedArray1<BigInt64Array>(JSONT.I64_ARRAY, i64())
 
 export const f32Array = () => typedArray<Float32Array>(JSONT.F32_ARRAY, f32())
 export const f64Array = () => typedArray<Float64Array>(JSONT.F64_ARRAY, number())
@@ -91,7 +91,7 @@ const typedArray = <T extends TypedArray>(
     value: value
 })
 
-const typedBigIntArray = <T extends TypedArray>(
+const typedArray1 = <T extends TypedArray>(
     type: BaseType, value: PrimitiveMeta<bigint>
 ): CollectionMeta<T, bigint, PrimitiveMeta<bigint>> => ({
     type: type,
