@@ -1,10 +1,10 @@
-import { ConvertCtx, NullableMeta } from "../metadata/types"
+import { BaseMeta, ConvertCtx, NullableMeta } from "../metadata/types"
 import { ReadResult } from "../utils/types"
 import { L, N, U } from "../utils/utf8constants"
 
 const NULL = N | U << 8 | L << 16 | L << 24
 
-export function toNullable<T>(ctx: ConvertCtx, m: NullableMeta<T>, i: number, d: number): ReadResult<T | null> {
+export function toNullable<T, M extends BaseMeta<T, M>>(ctx: ConvertCtx, m: NullableMeta<T, M>, i: number, d: number): ReadResult<T | null> {
     const b = ctx.bytes
     const len = b.length
 

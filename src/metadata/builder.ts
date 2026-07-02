@@ -46,9 +46,12 @@ const primitive = <T extends Object>(type: BaseType, toValue: toValueConverter<T
     toJson: (s, _) => s.toString()
 })
 
-export const nullable = <T extends BaseMeta<any, any>>(value: T): NullableMeta<ExtractType<T> | null> => ({
+export const nullable = <M extends BaseMeta<ExtractType<M>, M>>(value: M): NullableMeta<ExtractType<M>, M> => ({
     type: JSONT.NULLABLE,
-    toJson: (n, m, o) => m.value.toJson(n, m.value, o),
+    toJson: (value, meta, options) => {
+        if (value === null) return 'null'
+        return meta.value.toJson(value, meta.value, options)
+    },
     toValue: toNullable,
     value: value,
 })

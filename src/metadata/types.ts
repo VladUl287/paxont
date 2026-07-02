@@ -40,8 +40,8 @@ export type ObjectFieldMeta<K, T> = BaseMeta<T, ObjectFieldMeta<K, T>> & {
     }
 }
 
-export interface NullableMeta<T> extends BaseMeta<T, NullableMeta<T>> {
-    readonly value: BaseMeta<T, any>
+export interface NullableMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<T | null, NullableMeta<T, M>> {
+    readonly value: M
 }
 
 export interface CollectionMeta<T, V> extends BaseMeta<T, CollectionMeta<T, V>> {
