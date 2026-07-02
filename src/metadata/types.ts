@@ -23,7 +23,7 @@ export interface BaseMeta<T, M extends BaseMeta<T, M>> {
 
 export interface PrimitiveMeta<T> extends BaseMeta<T, PrimitiveMeta<T>> { }
 
-export interface ObjectMeta<T> extends BaseMeta<T, ObjectMeta<T>> {
+export interface ObjectMeta<T extends Record<string, any>> extends BaseMeta<T, ObjectMeta<T>> {
     readonly fields: ObjectFields<T>
     readonly build: (values: T[keyof T][]) => T
     readonly getFieldIndex: (bytes: Uint8Array, offset: number) => number

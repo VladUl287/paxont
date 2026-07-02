@@ -5,7 +5,7 @@ import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/ut
 
 const fieldsBuffer = new Array<any>(16)
 
-export function toObject<T>(ctx: ConvertCtx, m: ObjectMeta<T>, i: number, d: number): ReadResult<T> {
+export function toObject<T extends Record<string, any>>(ctx: ConvertCtx, m: ObjectMeta<T>, i: number, d: number): ReadResult<T> {
     const b = ctx.bytes
 
     if (b[i] !== CURLY_OPEN)
