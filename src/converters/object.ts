@@ -1,13 +1,13 @@
 import { skipWhitespace } from "./utils"
 import { ReadResult } from "../utils/types"
-import { BaseMeta, ConvertCtx, ExtractType, ObjectFieldMeta, ObjectFromMeta1, ObjectFromMeta2, ObjectMeta } from "../metadata/types"
+import { ConvertCtx, ObjectFromMeta, ObjectMeta } from "../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/utf8constants"
 
 const fieldsBuffer = new Array<any>(16)
 
 export function toObject<T extends Record<string, any>>(
     ctx: ConvertCtx, m: ObjectMeta<T>, i: number, d: number
-): ReadResult<ObjectFromMeta2<T>> {
+): ReadResult<ObjectFromMeta<T>> {
     const b = ctx.bytes
 
     if (b[i] !== CURLY_OPEN)
