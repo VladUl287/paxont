@@ -4,7 +4,7 @@ import { toString } from "../converters/string"
 import { TypedArray } from "../utils/typedArray"
 import {
     BaseMeta, CollectionMeta, ExtractType, MapMeta, NullableMeta, ObjectFieldMeta,
-    ObjectFromMeta, ObjectMeta, PrimitiveMeta, toValueConverter
+    ObjectFromMeta, ObjectFromMeta1, ObjectMeta, PrimitiveMeta, toValueConverter
 } from "./types"
 import { BaseType, JSONT } from "./baseTypes"
 import { toBoolean } from "../converters/boolean"
@@ -129,11 +129,11 @@ export const field = <K extends string, M extends BaseMeta<ExtractType<M>, M>>(
             value: name,
             bytes: encoder.encode(name)
         },
-        ...value
+        value: value
     }
 }
 
-export const object = <M extends ObjectFieldMeta<any, any, any>[]>(...fields: M): ObjectMeta<ObjectFromMeta<M>> => {
+export const object = <M extends ObjectFieldMeta<any, any, any>[]>(...fields: M): ObjectMeta<ObjectFromMeta1<M>> => {
     const keys = fields.map(f => f.name.value as string)
     const factory = genObjectFactory(keys) as any
 
@@ -144,12 +144,12 @@ export const object = <M extends ObjectFieldMeta<any, any, any>[]>(...fields: M)
 
     const toJson = genObjectToJsonFactory1(...fields)
 
-    const result: ObjectMeta<ObjectFromMeta<M>> = {
+    const result: ObjectMeta<ObjectFromMeta1<M>> = {
         type: JSONT.OBJECT,
         fields: fields,
         build: factory,
         getFieldIndex: fieldIndex,
-        toValue: toObject as any,
+        toValue: toObject,
         toJson: toJson
     }
 
