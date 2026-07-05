@@ -41,7 +41,6 @@ export function deserialize<T>(
     }
 
     const result = metadata.toValue({
-        raw: isString ? json : undefined,
         bytes,
         options: fullOptions
     }, metadata, 0, 0)

@@ -5,7 +5,6 @@ import { BaseType } from "./baseTypes"
 export type TypeName = BaseType | (string & { __typeName: never })
 
 export type ConvertCtx = {
-    readonly raw?: string,
     readonly bytes: Uint8Array
     readonly options: JsonOptions
 }
