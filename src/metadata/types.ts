@@ -25,9 +25,8 @@ export interface PrimitiveMeta<T> extends BaseMeta<T, PrimitiveMeta<T>> { }
 
 export interface ObjectMeta<M extends Record<string, BaseMeta<any, any>>>
     extends BaseMeta<ObjectFromMeta<M>, ObjectMeta<M>> {
-
     readonly fields: ObjectFields<M>
-    readonly build: (values: any[]) => ObjectFromMeta<M>
+    readonly build: (values: ObjectFieldsValues<M>) => ObjectFromMeta<M>
     readonly getFieldIndex: (bytes: Uint8Array, offset: number) => number
 }
 
@@ -39,14 +38,13 @@ export type ObjectFieldMeta<K extends string, T, M extends BaseMeta<T, M>> = {
     readonly value: M
 }
 
-export type ObjectFields<T extends Record<string, any>> = {
-    [K in Extract<keyof T, string>]: ObjectFieldMeta<K, ExtractType<T[K]>, T[K]>
-}[Extract<keyof T, string>][]
+export type ObjectFieldsValues<T extends Record<string, BaseMeta<any, any>>, Keys extends (keyof T)[] = (keyof T)[]> = {
+    [K in keyof Keys]: ExtractType<T[Keys[K] & keyof T]>
+}
 
-export type ObjectFromFields<T extends ObjectFieldMeta<string, any, any>[]> =
-    Expand<{
-        [E in T[number]as E['name']['value']]: E['value']
-    }>
+export type ObjectFields<T extends Record<string, BaseMeta<any, any>>, Keys extends (keyof T)[] = (keyof T)[]> = {
+    [K in keyof Keys]: ObjectFieldMeta<Keys[K] & string, ExtractType<T[Keys[K] & keyof T]>, T[Keys[K] & keyof T]>
+}
 
 export type ObjectFromMeta<T extends Record<string, BaseMeta<any, any>>> =
     Expand<{

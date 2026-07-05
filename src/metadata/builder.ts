@@ -1,10 +1,10 @@
 import { toArray } from "../converters/array"
 import { toBigInt } from "../converters/bigint"
-import { toString } from "../converters/string"
+import { toParseString } from "../converters/string"
 import { TypedArray } from "../utils/typedArray"
 import {
-    BaseMeta, CollectionMeta, ExtractType, MapMeta, NullableMeta, ObjectFieldMeta,
-    ObjectFromFields, ObjectMeta, PrimitiveMeta, toValueConverter
+    BaseMeta, CollectionMeta, Expand, ExtractType, MapMeta, NullableMeta, ObjectFieldMeta,
+    ObjectMeta, PrimitiveMeta, toValueConverter
 } from "./types"
 import { BaseType, JSONT } from "./baseTypes"
 import { toBoolean } from "../converters/boolean"
@@ -20,7 +20,7 @@ import { generateTrieSwitch } from "../code_gen/field"
 import { toObject } from "../converters/object"
 import { toNullable } from "../converters/nullable"
 
-export const string = () => primitive(JSONT.STRING, toString)
+export const string = () => primitive(JSONT.STRING, toParseString)
 export const number = () => primitive(JSONT.NUMBER, toFloat64)
 export const bigInt = () => primitive(JSONT.BIGINT, toBigInt)
 export const bool = () => primitive(JSONT.BOOL, toBoolean)
@@ -132,6 +132,11 @@ export const field = <K extends string, M extends BaseMeta<ExtractType<M>, M>>(
         value: value
     }
 }
+
+export type ObjectFromFields<T extends ObjectFieldMeta<string, any, any>[]> =
+    Expand<{
+        [E in T[number]as E['name']['value']]: E['value']
+    }>
 
 export const object = <M extends ObjectFieldMeta<any, any, any>[]>(...fields: M): ObjectMeta<ObjectFromFields<M>> => {
     const keys = fields.map(f => f.name.value as string)
