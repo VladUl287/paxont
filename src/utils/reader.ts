@@ -10,8 +10,8 @@ export default class JsonReader {
         return 1
     }
 
-    get length() {
-        return 1
+    public read(count: number): void {
+
     }
 
     public write(buffer: Uint8Array): void {
