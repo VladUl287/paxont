@@ -11,9 +11,16 @@ export function toArray<C extends ArrayLike<T>, T, M extends BaseMeta<T, M>>(
 ): ReadResult<C> {
     const b = ctx.bytes
 
-    if (b[i] !== SQUARE_OPEN)
-        throw new Error(`Expected '[' at index ${i}, but found '${b[i]}' while parsing array`)
-    i++
+    if (i >= b.length) {
+        if (ctx.finished) throw new Error(``)
+        return { nextIndex: i }
+    }
+
+    if (b[i] !== SQUARE_OPEN) {
+        if (!state?.processing)
+            throw new Error(`Expected '[' at index ${i}, but found '${b[i]}' while parsing array`)
+    }
+    else i++
 
     const factory = getFactory(m.type)
 
