@@ -1,6 +1,5 @@
 import { toArray } from "../converters/array"
 import { toBigInt } from "../converters/bigint"
-import { toParseString } from "../converters/string"
 import { TypedArray } from "../utils/typedArray"
 import {
     BaseMeta, CollectionMeta, Expand, ExtractType, MapMeta, NullableMeta, ObjectFieldMeta,
@@ -19,8 +18,9 @@ import { genObjectFactory, genObjectToJsonFactory1 } from "../code_gen/object"
 import { generateTrieSwitch } from "../code_gen/field"
 import { toObject } from "../converters/object"
 import { toNullable } from "../converters/nullable"
+import { toString } from "../converters/string"
 
-export const string = () => primitive(JSONT.STRING, toParseString)
+export const string = () => primitive(JSONT.STRING, toString)
 export const number = () => primitive(JSONT.NUMBER, toFloat64)
 export const bigInt = () => primitive(JSONT.BIGINT, toBigInt)
 export const bool = () => primitive(JSONT.BOOL, toBoolean)
