@@ -3,8 +3,6 @@ import { ReadResult } from "../utils/types"
 import { ConvertCtx, ObjectFromMeta, ObjectMeta } from "../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/utf8constants"
 
-const fieldsBuffer = new Array<any>(16)
-
 export function toObject<T extends Record<string, any>>(
     ctx: ConvertCtx, m: ObjectMeta<T>, i: number, d: number, state?: Record<string, any>
 ): ReadResult<ObjectFromMeta<T>> {
@@ -17,10 +15,10 @@ export function toObject<T extends Record<string, any>>(
     if (state)
         state.processing = true
 
-    let buffer = state?.buffer ?? fieldsBuffer
-
     const getFieldIndex = m.getFieldIndex
     const fields = m.fields
+
+    let buffer = state?.buffer ?? new Array(fields.length)
 
     let j = state?.bufferIndex ?? 0
     while (j < fields.length) {
