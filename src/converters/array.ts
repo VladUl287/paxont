@@ -7,7 +7,7 @@ import { ReadResult } from "../utils/types"
 type ArrayLike<T> = T[] | TypedArray
 
 export function toArray<C extends ArrayLike<T>, T, M extends BaseMeta<T, M>>(
-    ctx: ConvertCtx, m: CollectionMeta<C, T, M>, i: number, d: number
+    ctx: ConvertCtx, m: CollectionMeta<C, T, M>, i: number, d: number, state: Record<string, any>
 ): ReadResult<C> {
     const b = ctx.bytes
 
@@ -22,11 +22,23 @@ export function toArray<C extends ArrayLike<T>, T, M extends BaseMeta<T, M>>(
     const meta = m.value
     const toValue = meta.toValue
 
+    const initialState = state?.lastState
+
     let j = 0
     while (true) {
         i = skipWhitespace(b, i)
 
-        const result = toValue(ctx, meta, i, d)
+        const valueState = initialState ?? {}
+        const result = toValue(ctx, meta, i, d, valueState)
+
+        if (result.value === undefined) {
+            if (state)
+                state.lastState = valueState
+            return {
+                nextIndex: i
+            }
+        }
+
         buffer[j] = result.value
         i = result.nextIndex
         j++

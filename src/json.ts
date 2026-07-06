@@ -42,8 +42,13 @@ export function deserialize<T>(
 
     const result = metadata.toValue({
         bytes,
-        options: fullOptions
+        options: fullOptions,
+        finished: true,
     }, metadata, 0, 0)
+
+    if(result.value === undefined) {
+        throw new Error('')
+    }
 
     return result.value
 }

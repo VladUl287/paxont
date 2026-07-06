@@ -2,7 +2,9 @@ import { ConvertCtx, PrimitiveMeta } from "../metadata/types"
 import { E } from "../utils/utf8constants"
 import { ReadResult } from "../utils/types"
 
-export function toBoolean(ctx: ConvertCtx, _m: PrimitiveMeta<boolean>, i: number, _d: number): ReadResult<boolean> {
+export function toBoolean(
+    ctx: ConvertCtx, _m: PrimitiveMeta<boolean>, i: number, _d: number, state: Record<string, undefined>
+): ReadResult<boolean> {
     const b = ctx.bytes
     const len = b.length
 
@@ -22,5 +24,11 @@ export function toBoolean(ctx: ConvertCtx, _m: PrimitiveMeta<boolean>, i: number
             nextIndex: i + 5
         }
 
-    throw new Error(`invalid boolean, at index ${i}`)
+    if (ctx.finished) {
+        throw new Error(`invalid boolean, at index ${i}`)
+    }
+
+    return {
+        nextIndex: i
+    }
 }
