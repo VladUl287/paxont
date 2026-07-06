@@ -44,7 +44,7 @@ export function deserialize<T>(
         bytes,
         options: fullOptions,
         finished: true,
-    }, metadata, 0, 0)
+    }, metadata, 0, 0, undefined)
 
     if(result.value === undefined) {
         throw new Error('')
