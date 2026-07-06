@@ -17,23 +17,25 @@ export function toArray<C extends ArrayLike<T>, T, M extends BaseMeta<T, M>>(
 
     const factory = getFactory(m.type)
 
-    let buffer = factory(Math.min(1024, b.length - i))
+    let buffer = state?.buffer ?? factory(Math.min(1024, b.length - i))
 
     const meta = m.value
     const toValue = meta.toValue
 
-    const initialState = state?.lastState
+    const valueState = state?.lastState ?? {}
 
-    let j = 0
+    let j = state?.bufferIndex ?? 0
     while (true) {
         i = skipWhitespace(b, i)
 
-        const valueState = initialState ?? {}
         const result = toValue(ctx, meta, i, d, valueState)
 
         if (result.value === undefined) {
-            if (state)
+            if (state) {
+                state.bufferIndex = j
+                state.buffer = buffer
                 state.lastState = valueState
+            }
             return {
                 nextIndex: i
             }
