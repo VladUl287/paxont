@@ -9,10 +9,6 @@ export class Nullable<T> {
     public get value() {
         return this._value
     }
-
-    static new<T>(value: T) {
-        return new Nullable<T>(value)
-    }
 }
 
 export class Int8 { }
