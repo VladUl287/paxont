@@ -27,7 +27,7 @@ export function toObject<T extends Record<string, any>>(
         let start = i
 
         if (b[i] !== DOUBLE_QUOTE) {
-            if (ctx.finished || i < b.length) throw new Error(``)
+            if (ctx.writable || i < b.length) throw new Error(``)
 
             return { nextIndex: i }
         }
@@ -35,7 +35,7 @@ export function toObject<T extends Record<string, any>>(
 
         const index = getFieldIndex(b, i)
         if (index === -1) {
-            if (ctx.finished || i < b.length) throw new Error(``)
+            if (ctx.writable || i < b.length) throw new Error(``)
 
             return { nextIndex: start }
         }
@@ -44,7 +44,7 @@ export function toObject<T extends Record<string, any>>(
         i += field.name.bytes.length + 1
 
         if (b[i] !== COLON) {
-            if (ctx.finished || i < b.length) throw new Error(``)
+            if (ctx.writable || i < b.length) throw new Error(``)
 
             return { nextIndex: start }
         }
@@ -56,7 +56,7 @@ export function toObject<T extends Record<string, any>>(
         i = result.nextIndex
 
         if (result.value === undefined || i >= b.length) {
-            if (ctx.finished) throw new Error(``)
+            if (ctx.writable) throw new Error(``)
             if (!state) throw new Error()
 
             state.bufferIndex = j
@@ -73,7 +73,7 @@ export function toObject<T extends Record<string, any>>(
     i = skipWhitespace(b, i)
 
     if (b[i] !== CURLY_CLOSE) {
-        if (ctx.finished || i < b.length) throw new Error(``)
+        if (ctx.writable || i < b.length) throw new Error(``)
         if (!state) throw new Error()
 
         state.bufferIndex = j

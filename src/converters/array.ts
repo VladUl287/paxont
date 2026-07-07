@@ -12,7 +12,7 @@ export function toArray<C extends ArrayLike<T>, T, M extends BaseMeta<T, M>>(
     const b = ctx.bytes
 
     if (i >= b.length) {
-        if (ctx.finished) throw new Error(``)
+        if (ctx.writable) throw new Error(``)
         return { nextIndex: i }
     }
 

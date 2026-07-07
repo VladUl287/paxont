@@ -24,7 +24,7 @@ export function toBoolean(
             nextIndex: i + 5
         }
 
-    if (ctx.finished) {
+    if (ctx.writable) {
         throw new Error(`invalid boolean, at index ${i}`)
     }
 

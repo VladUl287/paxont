@@ -6,7 +6,7 @@ export type TypeName = BaseType | (string & { __typeName: never })
 
 export type ConvertCtx = {
     bytes: Uint8Array
-    finished: boolean
+    writable: boolean
     readonly options: JsonOptions
 }
 
