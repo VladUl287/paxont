@@ -1,5 +1,5 @@
 import { toDate } from "../../src/converters/date"
-import { ConvertCtx } from "../../src/metadata/types"
+import { JsonReader } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 
 describe('toDate', () => {
@@ -9,7 +9,7 @@ describe('toDate', () => {
 
     function callToDate(bytes: Uint8Array, i: number) {
         const meta: any = {}
-        const ctx: ConvertCtx = { bytes: bytes, options: defaultOptions }
+        const ctx: JsonReader = { bytes: bytes, options: defaultOptions }
         return toDate(ctx, meta, i, 0)
     }
 

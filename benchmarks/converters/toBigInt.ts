@@ -1,6 +1,6 @@
 import { add, complete, cycle, suite } from 'benny'
 import { toBigInt } from '../../src/converters/bigint'
-import { ConvertCtx } from '../../src/metadata/types'
+import { JsonReader } from '../../src/metadata/types'
 import { defaultOptions } from '../../src/options'
 
 const encoder = new TextEncoder()
@@ -8,7 +8,7 @@ const decoder = new TextDecoder()
 
 const bytes = encoder.encode("'1123456789123456789123456789112345678912345678912345678911234567891234567891234567891123456789123456789123456789112345678912345678912345678911234567891234567891234567891123456789123456789123456789'")
 
-const ctx: ConvertCtx = { bytes: bytes, options: defaultOptions }
+const ctx: JsonReader = { bytes: bytes, options: defaultOptions }
 
 const metaMock: any = {}
 

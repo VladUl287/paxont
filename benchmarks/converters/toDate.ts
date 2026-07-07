@@ -1,6 +1,6 @@
 import { add, complete, cycle, suite } from 'benny'
 import { toDate } from '../../src/converters/date'
-import { ConvertCtx } from '../../src/metadata/types'
+import { JsonReader } from '../../src/metadata/types'
 import { defaultOptions } from '../../src/options'
 
 const decoder = new TextDecoder()
@@ -15,9 +15,9 @@ const dateOnlyBytes = encoder.encode(dateOnly)
 const dateTimeUtcOnly = "\"1970-06-25T12:32:12.123Z\""
 const dateTimeUtcBytes = encoder.encode(dateTimeUtcOnly)
 
-const yearOnlyCtx: ConvertCtx = { bytes: yearOnlyBytes, options: defaultOptions }
-const dateOnlyCtx: ConvertCtx = { bytes: dateOnlyBytes, options: defaultOptions }
-const dateTimeUtcCtx: ConvertCtx = { bytes: dateTimeUtcBytes, options: defaultOptions }
+const yearOnlyCtx: JsonReader = { bytes: yearOnlyBytes, options: defaultOptions }
+const dateOnlyCtx: JsonReader = { bytes: dateOnlyBytes, options: defaultOptions }
+const dateTimeUtcCtx: JsonReader = { bytes: dateTimeUtcBytes, options: defaultOptions }
 
 const metaMock: any = {}
 

@@ -4,14 +4,14 @@ import { BaseType } from "./baseTypes"
 
 export type TypeName = BaseType | (string & { __typeName: never })
 
-export type ConvertCtx = {
+export type JsonReader = {
     bytes: Uint8Array
     writable: boolean
     readonly options: JsonOptions
 }
 
 export type toValueConverter<T, M extends BaseMeta<T, M>> =
-    (context: ConvertCtx, metadata: M, index: number, depth: number, state?: Record<string, undefined>) => ReadResult<T>
+    (reader: JsonReader, metadata: M, index: number, depth: number, state?: Record<string, undefined>) => ReadResult<T>
 
 export type toJsonConverter<T, M extends BaseMeta<T, M>> = (value: T, metadata: M, options: JsonOptions) => string
 

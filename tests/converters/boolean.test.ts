@@ -1,8 +1,8 @@
 import { toBoolean } from "../../src/converters/boolean"
-import { BaseMeta, ConvertCtx, ObjectFieldMeta } from "../../src/metadata/types"
+import { BaseMeta, JsonReader, ObjectFieldMeta } from "../../src/metadata/types"
 import { A, E, F, L, R, S, T, U } from "../../src/utils/utf8constants"
 
-const createMockCtx = (bytes: number[]): ConvertCtx => ({
+const createMockCtx = (bytes: number[]): JsonReader => ({
     bytes: Uint8Array.from(bytes),
     options: {
         encoder: new TextEncoder(),

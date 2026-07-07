@@ -1,10 +1,10 @@
 import { skipWhitespace } from "./utils"
 import { ReadResult } from "../utils/types"
-import { ConvertCtx, ObjectFromMeta, ObjectMeta } from "../metadata/types"
+import { JsonReader, ObjectFromMeta, ObjectMeta } from "../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/utf8constants"
 
 export function toObject<T extends Record<string, any>>(
-    ctx: ConvertCtx, m: ObjectMeta<T>, i: number, d: number, state?: Record<string, any>
+    ctx: JsonReader, m: ObjectMeta<T>, i: number, d: number, state?: Record<string, any>
 ): ReadResult<ObjectFromMeta<T>> {
     const b = ctx.bytes
 

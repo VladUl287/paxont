@@ -1,9 +1,9 @@
 import { ReadResult } from "../utils/types"
 import { parseNumberF64_2 } from "./number_opt"
-import { ConvertCtx } from "../metadata/types"
+import { JsonReader } from "../metadata/types"
 import { DOT, E, E_UPPER, MINUS, PLUS, ZERO } from "../utils/utf8constants"
 
-export function convertNumber(ctx: ConvertCtx, _metadata: any, index: number, _depth: number): ReadResult<number> {
+export function convertNumber(ctx: JsonReader, _metadata: any, index: number, _depth: number): ReadResult<number> {
     return parseNumberF64_2(ctx.bytes, index)
 }
 

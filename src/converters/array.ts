@@ -1,4 +1,4 @@
-import { BaseMeta, CollectionMeta, ConvertCtx, TypeName } from "../metadata/types"
+import { BaseMeta, CollectionMeta, JsonReader, TypeName } from "../metadata/types"
 import { TypedArray } from "../utils/typedArray"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
@@ -7,7 +7,7 @@ import { ReadResult } from "../utils/types"
 type ArrayLike<T> = T[] | TypedArray
 
 export function toArray<C extends ArrayLike<T>, T, M extends BaseMeta<T, M>>(
-    ctx: ConvertCtx, m: CollectionMeta<C, T, M>, i: number, d: number, state?: Record<string, any>
+    ctx: JsonReader, m: CollectionMeta<C, T, M>, i: number, d: number, state?: Record<string, any>
 ): ReadResult<C> {
     const b = ctx.bytes
 

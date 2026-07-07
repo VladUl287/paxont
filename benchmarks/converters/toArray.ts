@@ -1,5 +1,5 @@
 import { add, complete, cycle, suite } from 'benny'
-import { ConvertCtx } from '../../src/metadata/types'
+import { JsonReader } from '../../src/metadata/types'
 import { defaultOptions } from '../../src/options'
 import { array, bool } from '../../src/metadata/builder'
 import { toArray } from '../../src/converters/array'
@@ -9,7 +9,7 @@ const encoder = new TextEncoder()
 const json = JSON.stringify(new Array(100).fill(true))
 const bytes = encoder.encode(json)
 
-const ctx: ConvertCtx = { bytes: bytes, options: defaultOptions }
+const ctx: JsonReader = { bytes: bytes, options: defaultOptions }
 const meta = array(bool())
 
 suite(

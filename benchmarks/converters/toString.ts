@@ -1,23 +1,27 @@
 import { add, complete, cycle, suite } from 'benny'
-import { BaseMeta, ConvertCtx } from '../../src/metadata/types'
+import { BaseMeta, JsonReader, PrimitiveMeta } from '../../src/metadata/types'
 import { defaultOptions } from '../../src/options'
-import { toString } from '../../src/converters/string'
+import { toParseString } from '../../src/converters/string'
 import { DOUBLE_QUOTE } from '../../src/utils/utf8constants'
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
-const bytes = encoder.encode('"' + new Array(150).fill(0).join('') + '"' + new Array(150).fill(0).join(''))
+const str = '"' + new Array(1024).fill('а').join('') + '"'
+const bytes = encoder.encode(str)
 
-const ctx: ConvertCtx = { bytes: bytes, options: defaultOptions }
+const ctx: JsonReader = {
+    raw: str,
+    bytes: bytes, options: defaultOptions 
+}
 
 const metaMock: any = {}
 
 suite(
     'decoding',
 
-    add('toString', () => toString(ctx, metaMock, 0, 0)),
-    add('decode', () => direct(ctx, metaMock, 0, 0)),
+    add('toString', () => toParseString(ctx, metaMock, 0, 0)),
+    // add('decode', () => direct(ctx, metaMock, 0, 0)),
 
     cycle((result) => {
         const nanoseconds = (1 / result.ops) * 1e9
@@ -31,7 +35,7 @@ suite(
     complete(),
 )
 
-function direct(ctx: ConvertCtx, _meta: BaseMeta<string>, i: number, _depth: number) {
+function direct(ctx: JsonReader, _meta: PrimitiveMeta<string>, i: number, _depth: number) {
     const b = ctx.bytes
 
     if (b[i] !== DOUBLE_QUOTE) throw new Error("")

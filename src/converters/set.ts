@@ -1,9 +1,9 @@
-import { CollectionMeta, ConvertCtx } from "../metadata/types"
+import { CollectionMeta, JsonReader } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
 import { ReadResult } from "../utils/types"
 
-export function toSet<V>(ctx: ConvertCtx, m: CollectionMeta<Set<V>, V, any>, i: number, d: number): ReadResult<Set<V>> {
+export function toSet<V>(ctx: JsonReader, m: CollectionMeta<Set<V>, V, any>, i: number, d: number): ReadResult<Set<V>> {
     const b = ctx.bytes
 
     if (b[i] !== SQUARE_OPEN)
