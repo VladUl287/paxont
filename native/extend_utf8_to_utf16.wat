@@ -76,6 +76,45 @@
           br $non_ascii_loop
         end
 
+        ;; check if the first byte is ascii
+        (if (i32.eqz (i32.and (local.get $mask) (i32.const 0x80))) 
+          (then
+            (i32.store (local.get $utf16_ptr) (i32.and (local.get $mask) (i32.const 0xFF)))
+            (local.set $i (i32.add (local.get $i) (i32.const 1)))
+            (local.set $ascii_length (i32.add (local.get $ascii_length) (i32.const 1)))
+
+            (if (i32.eqz (i32.and (local.get $mask) (i32.const 0x8000))) 
+              (then
+                (i32.store 
+                  (local.get $utf16_ptr) 
+                  (i32.and 
+                    (i32.shr_u 
+                      (local.get $mask) 
+                      (i32.const 8)) 
+                    (i32.const 0xFF)))
+                (local.set $i (i32.add (local.get $i) (i32.const 1)))
+                (local.set $ascii_length (i32.add (local.get $ascii_length) (i32.const 1)))
+
+                (if (i32.eqz (i32.and (local.get $mask) (i32.const 0x800000))) 
+                  (then
+                    (i32.store 
+                      (local.get $utf16_ptr) 
+                      (i32.and 
+                        (i32.shr_u 
+                          (local.get $mask) 
+                          (i32.const 16)) 
+                        (i32.const 0xFF)))
+                    (local.set $i (i32.add (local.get $i) (i32.const 1)))
+                    (local.set $ascii_length (i32.add (local.get $ascii_length) (i32.const 1)))
+                  )
+                )
+              )
+            )
+
+            (local.set $mask (i32.load offset=0 align=1 (local.get $i)))
+          )
+        )
+
         ;; two byte value
         (i32.eq 
           (i32.and 
