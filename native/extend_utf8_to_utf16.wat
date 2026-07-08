@@ -199,14 +199,23 @@
             (i32.const 12632304))
           (i32.const 0)
         )
-        if
-          (i32.store 
-            (local.get $utf16_ptr) 
-            (call $get_char_from_three_byte_seq (local.get $mask)))
 
-          (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
-          (local.set $i (i32.add (local.get $i) (i32.const 3)))
-          br $non_ascii_loop
+        if
+          (i32.eqz
+            (i32.or
+              (i32.eqz (i32.and (local.get $mask) (i32.const 0x200F)))
+              (i32.eqz (i32.and (i32.sub (local.get $mask) (i32.const 8205)) (i32.const 0x200F)))
+            )
+          )
+          if
+            (i32.store 
+              (local.get $utf16_ptr) 
+              (call $get_char_from_three_byte_seq (local.get $mask)))
+  
+            (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
+            (local.set $i (i32.add (local.get $i) (i32.const 3)))
+            br $non_ascii_loop
+          end
         end
 
         ;; four byte value
