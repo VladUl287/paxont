@@ -72,10 +72,12 @@ function useDecode() {
             }
         }
 
+        const unsafeDecoder = new TextDecoder('utf-8', { fatal: false })
+
         const decode = (reader: JsonReader, i: number): ReadResult<string> => {
             const b = reader.bytes
             const options = reader.options
-            const dataLength = b.length - i
+            const dataLength = b.length
 
             if (dataLength <= 16) {
                 //use native js implementation
@@ -84,10 +86,10 @@ function useDecode() {
 
             if (ensureMemory(module, dataLength)) {
                 const memory = new Uint8Array(module.u8.buffer)
-                memory.set(b.subarray(i))
+                // memory.set(b.subarray(i))
+                memory.set(b)
 
-                const index = module.utf8_to_utf16(0, dataLength, dataLength + 1)
-
+                const index = module.utf8_to_utf16(i, dataLength, dataLength + 1)
                 if (index === -1) {
                     if (!reader.writable) throw new Error('invalid string value')
                     return {} as any
@@ -96,9 +98,8 @@ function useDecode() {
                 const ascii_only = module.ascii_only.value as number
                 if (ascii_only === 1) {
                     const view = new Uint8Array(b.buffer, i, index)
-
                     return {
-                        value: options.decoder.decode(view),
+                        value: unsafeDecoder.decode(view), //70
                         nextIndex: index + 1
                     }
                 }
