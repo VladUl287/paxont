@@ -1,6 +1,7 @@
 (module
   (memory (export "u8") 1 128)
 
+  (global $ascii_only (mut i32) (i32.const 0))
   (global $ascii_length (mut i32) (i32.const 0))
   (global $ascii_prefix_length (mut i32) (i32.const 0))
   (global $length (mut i32) (i32.const 0))
@@ -33,16 +34,15 @@
       (call $parse_ascii_prefix (local.get $i) (local.get $utf8_len))
     )
 
-    ;; check if ascii prefix is end of string 
     if
-      (if (global.get $length) 
+      (if (global.get $ascii_only) 
         (then
           (global.set $ascii_length (local.get $ascii_length))
           (global.set $ascii_prefix_length (local.get $ascii_length))
         )
       )
 
-      (i32.eq (global.get $length) (local.get $utf8_len))
+      (i32.eq (local.get $ascii_length) (local.get $utf8_len))
       if (return (i32.const -1)) end
     end
 
@@ -66,7 +66,7 @@
           (i32.const 0))
         if
           (local.set $temp (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (i32.const 4))))
-          (if (i32.ge_u (local.get $temp) (i32.const -1)) 
+          (if (i32.ge_u (local.get $temp) (i32.const 0)) 
             (then (return (local.get $i)))
           )
           
@@ -211,12 +211,13 @@
 
         ;; scan the chunk to find the first unescaped quote
         (if (i32.ge_s 
-          (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (i32.const 16)))
+          (local.tee $byte 
+            (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (i32.const 16))))
           (i32.const 0)
         )
           (then 
-            (global.set $length (local.get $i))
-            (return (local.get $i))
+            (global.set $ascii_only (i32.const 1))
+            (return (i32.add (local.get $i) (local.get $byte)))
           )
         )
         
@@ -260,6 +261,7 @@
 
             (if (i32.eqz (local.get $is_escaped))
               (then
+                (global.set $ascii_only (i32.const 1))
                 (return (local.get $i))
               )
             )
@@ -271,7 +273,7 @@
       )
     )
 
-    (return (local.get $len))
+    local.get $i
   )
 
   (func $find_unescaped_quote (param $i i32) (param $len i32) (result i32)
@@ -320,10 +322,7 @@
 
             ;; if not escaped, the prefix ends here
             (if (i32.eqz (local.get $is_escaped))
-              (then 
-                (global.set $length (local.get $i))
-                (return (local.get $i))
-              )
+              (then (return (local.get $i)))
             )
           )
         )
