@@ -15,6 +15,11 @@
     (local $mask i32)
     (local $temp i32)
 
+    (global.set $ascii_only (i32.const 0))
+    (global.set $ascii_length (i32.const 0))
+    (global.set $ascii_prefix_length (i32.const 0))
+    (global.set $length (i32.const 0))
+
     i32.const 34  ;; ASCII code for '"'
     i8x16.splat
     local.set $double_quote
