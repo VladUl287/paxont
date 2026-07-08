@@ -1,48 +1,156 @@
-import { ConvertCtx, PrimitiveMeta } from "../metadata/types"
+import { JsonReader, PrimitiveMeta } from "../metadata/types"
 import { ReadResult } from "../utils/types"
 import { DOUBLE_QUOTE } from "../utils/utf8constants"
 
-export function toString(ctx: ConvertCtx, _m: PrimitiveMeta<string>, i: number, _d: number): ReadResult<string> {
-    const b = ctx.bytes
+const { decode: decodeSlow } = useDecode()
 
-    if (b[i] !== DOUBLE_QUOTE)
-        throw new Error(`Expected " at index ${i}, but found '${b[i]}' while parsing string`)
-    i++
+export function tryParseString(
+    reader: JsonReader,
+    m: PrimitiveMeta<string>,
+    i: number,
+    d: number,
+    state: {
+        isContinued?: boolean
+    }
+): ReadResult<string> {
+    const b = reader.bytes
 
-    let start = i
-    // i = findNext(b, i, DOUBLE_QUOTE)
-    i += 2048
+    if (b[i] !== DOUBLE_QUOTE) {
+        if (i >= b.length && reader.writable)
+            return { nextIndex: i }
 
-    if (i === -1)
-        throw new Error(`Unterminated string literal starting at index ${start}: missing closing quote (")`)
+        if (i < b.length && !state.isContinued)
+            throw new Error(`Expected " at index ${i}, but found '${b[i]}' while parsing string`)
+    }
+    else i++
 
-    // if (ctx.raw) {
-    //     // TODO: find utf16 index
-    //     return {
-    //         value: ctx.raw.substring(start, i),
-    //         nextIndex: ++i
-    //     }
-    // }
+    return decodeSlow(reader, i)
+}
 
-    const count = i - start
+function useDecode() {
+    try {
+        type DecodeModule = {
+            u8: WebAssembly.Memory,
+            ascii_only: WebAssembly.Global,
+            ascii_length: WebAssembly.Global,
+            ascii_prefix_length: WebAssembly.Global,
+            length: WebAssembly.Global,
+            utf8_to_utf16: (index: number, length: number, target: number) => number
+        }
 
-    return {
-        value: decode(b, start, i),
-        nextIndex: ++i
+        const instance = new WebAssembly.Instance(
+            new WebAssembly.Module(
+                new Uint8Array([
+                    0, 97, 115, 109, 1, 0, 0, 0, 1, 19, 3, 96, 3, 127, 127, 127, 1, 127, 96, 2, 127, 127, 1, 127, 96, 1, 127, 1, 127, 3, 10, 9, 0, 1, 1, 1, 2, 2, 2, 2, 0, 5, 5, 1, 1, 1, 128, 1, 6, 21, 4, 127, 1, 65, 0, 11, 127, 1, 65, 0, 11, 127, 1, 65, 0, 11, 127, 1, 65, 0, 11, 7, 81, 6, 2, 117, 56, 2, 0, 10, 97, 115, 99, 105, 105, 95, 111, 110, 108, 121, 3, 0, 12, 97, 115, 99, 105, 105, 95, 108, 101, 110, 103, 116, 104, 3, 1, 19, 97, 115, 99, 105, 105, 95, 112, 114, 101, 102, 105, 120, 95, 108, 101, 110, 103, 116, 104, 3, 2, 6, 108, 101, 110, 103, 116, 104, 3, 3, 13, 117, 116, 102, 56, 95, 116, 111, 95, 117, 116, 102, 49, 54, 0, 0, 10, 230, 9, 9, 132, 5, 3, 2, 127, 3, 123, 2, 127, 65, 0, 36, 0, 65, 0, 36, 1, 65, 0, 36, 2, 65, 0, 36, 3, 65, 34, 253, 15, 33, 7, 32, 0, 33, 3, 65, 128, 1, 253, 15, 33, 5, 65, 0, 253, 15, 33, 6, 32, 3, 32, 1, 16, 1, 34, 4, 4, 64, 35, 0, 4, 64, 32, 4, 36, 1, 32, 4, 36, 2, 32, 4, 15, 11, 32, 4, 32, 1, 70, 4, 64, 65, 127, 15, 11, 11, 2, 64, 3, 64, 32, 3, 65, 4, 106, 32, 1, 75, 13, 1, 32, 3, 40, 0, 0, 33, 8, 32, 8, 65, 128, 129, 130, 132, 120, 113, 65, 0, 70, 4, 64, 32, 8, 65, 162, 196, 136, 145, 2, 115, 34, 9, 65, 129, 130, 132, 8, 107, 32, 9, 115, 65, 128, 129, 130, 132, 120, 113, 4, 64, 32, 3, 32, 3, 65, 4, 106, 16, 2, 33, 9, 32, 9, 65, 0, 79, 4, 64, 32, 3, 15, 11, 11, 32, 2, 32, 8, 54, 2, 0, 32, 3, 65, 4, 106, 33, 3, 32, 4, 65, 4, 106, 33, 4, 12, 1, 11, 32, 8, 65, 128, 1, 113, 69, 4, 64, 32, 8, 65, 255, 1, 113, 33, 9, 32, 9, 65, 34, 70, 4, 64, 32, 3, 32, 3, 16, 2, 65, 0, 79, 4, 64, 32, 3, 15, 11, 11, 32, 2, 32, 9, 54, 2, 0, 32, 3, 65, 1, 106, 33, 3, 32, 4, 65, 1, 106, 33, 4, 32, 8, 65, 128, 128, 2, 113, 69, 4, 64, 32, 8, 65, 8, 118, 65, 255, 1, 113, 33, 9, 32, 9, 65, 34, 70, 4, 64, 32, 3, 32, 3, 16, 2, 65, 0, 79, 4, 64, 32, 3, 15, 11, 11, 32, 2, 32, 9, 54, 2, 0, 32, 3, 65, 1, 106, 33, 3, 32, 4, 65, 1, 106, 33, 4, 32, 8, 65, 128, 128, 128, 4, 113, 69, 4, 64, 32, 8, 65, 16, 118, 65, 255, 1, 113, 33, 9, 32, 9, 65, 34, 70, 4, 64, 32, 3, 32, 3, 16, 2, 65, 0, 79, 4, 64, 32, 3, 15, 11, 11, 32, 2, 32, 9, 54, 2, 0, 32, 3, 65, 1, 106, 33, 3, 32, 4, 65, 1, 106, 33, 4, 11, 11, 32, 3, 40, 0, 0, 33, 8, 11, 32, 8, 65, 192, 129, 2, 107, 65, 224, 129, 3, 113, 65, 0, 70, 4, 64, 32, 8, 65, 128, 128, 252, 135, 124, 113, 65, 128, 128, 136, 134, 120, 65, 128, 128, 252, 134, 120, 16, 8, 4, 64, 32, 2, 32, 8, 16, 5, 54, 2, 0, 32, 2, 65, 4, 106, 33, 2, 32, 3, 65, 4, 106, 33, 3, 12, 2, 11, 32, 2, 32, 8, 16, 4, 54, 2, 0, 32, 2, 65, 2, 106, 33, 2, 32, 3, 65, 2, 106, 33, 3, 12, 1, 11, 32, 8, 65, 224, 129, 130, 4, 107, 65, 240, 129, 131, 6, 113, 65, 0, 70, 4, 64, 32, 8, 65, 143, 192, 0, 113, 69, 32, 8, 65, 141, 192, 0, 107, 65, 143, 192, 0, 113, 69, 114, 69, 4, 64, 32, 2, 32, 8, 16, 6, 54, 2, 0, 32, 2, 65, 2, 106, 33, 2, 32, 3, 65, 3, 106, 33, 3, 12, 2, 11, 11, 32, 8, 65, 240, 129, 130, 132, 120, 107, 65, 248, 129, 131, 134, 124, 113, 65, 0, 70, 4, 64, 32, 8, 65, 255, 255, 3, 113, 65, 8, 16, 3, 65, 144, 129, 128, 128, 127, 65, 143, 129, 128, 160, 127, 16, 8, 4, 64, 32, 2, 32, 8, 16, 7, 54, 2, 0, 32, 2, 65, 2, 106, 33, 2, 32, 3, 65, 3, 106, 33, 3, 12, 2, 11, 11, 12, 1, 11, 11, 65, 127, 11, 236, 1, 3, 1, 127, 3, 123, 4, 127, 32, 0, 33, 2, 65, 128, 1, 253, 15, 33, 4, 65, 34, 253, 15, 33, 5, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 3, 32, 3, 32, 4, 253, 44, 253, 100, 34, 6, 4, 64, 32, 0, 32, 6, 104, 106, 15, 11, 32, 3, 32, 5, 253, 35, 253, 100, 69, 4, 64, 32, 0, 65, 16, 106, 33, 0, 12, 1, 11, 32, 0, 32, 0, 65, 16, 106, 16, 2, 34, 7, 65, 0, 78, 4, 64, 65, 1, 36, 0, 32, 0, 32, 7, 106, 15, 11, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 32, 1, 79, 13, 1, 32, 0, 45, 0, 0, 33, 7, 32, 7, 65, 128, 1, 79, 4, 64, 32, 0, 15, 11, 32, 7, 65, 34, 70, 4, 64, 32, 0, 33, 8, 65, 0, 33, 9, 2, 64, 3, 64, 32, 8, 65, 1, 107, 33, 8, 32, 8, 32, 2, 72, 13, 1, 32, 8, 45, 0, 0, 65, 220, 0, 71, 13, 1, 32, 9, 69, 33, 9, 12, 0, 11, 11, 32, 9, 69, 4, 64, 65, 1, 36, 0, 32, 0, 15, 11, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 32, 0, 11, 102, 1, 4, 127, 32, 0, 33, 2, 2, 64, 3, 64, 32, 0, 32, 1, 79, 13, 1, 32, 0, 45, 0, 0, 33, 3, 32, 3, 65, 34, 70, 4, 64, 32, 0, 33, 4, 65, 0, 33, 5, 2, 64, 3, 64, 32, 4, 65, 1, 107, 33, 4, 32, 4, 32, 2, 72, 13, 1, 32, 4, 45, 0, 0, 65, 220, 0, 71, 13, 1, 32, 5, 69, 33, 5, 12, 0, 11, 11, 32, 5, 69, 4, 64, 32, 0, 15, 11, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 11, 16, 0, 32, 0, 32, 1, 118, 32, 0, 65, 32, 32, 0, 107, 116, 114, 11, 30, 0, 32, 0, 65, 8, 118, 65, 255, 1, 113, 32, 0, 65, 6, 116, 65, 255, 1, 113, 106, 65, 128, 224, 0, 107, 65, 128, 1, 107, 11, 26, 0, 32, 0, 65, 128, 254, 128, 248, 3, 113, 65, 8, 118, 32, 0, 65, 159, 128, 252, 0, 113, 65, 6, 116, 114, 11, 33, 0, 32, 0, 65, 128, 128, 252, 1, 113, 65, 16, 118, 32, 0, 65, 128, 254, 0, 113, 65, 2, 118, 114, 32, 0, 65, 15, 113, 65, 12, 116, 114, 11, 141, 1, 1, 3, 127, 32, 0, 65, 255, 1, 113, 33, 2, 32, 2, 65, 8, 116, 33, 3, 32, 3, 33, 1, 32, 0, 65, 128, 254, 0, 113, 65, 6, 118, 33, 3, 32, 1, 32, 3, 114, 33, 1, 32, 0, 65, 128, 128, 192, 1, 113, 65, 20, 118, 33, 3, 32, 1, 32, 3, 114, 33, 1, 32, 0, 65, 128, 128, 128, 248, 3, 113, 65, 8, 118, 33, 3, 32, 1, 32, 3, 114, 33, 1, 32, 0, 65, 128, 128, 60, 113, 65, 6, 116, 33, 3, 32, 1, 32, 3, 114, 33, 1, 32, 1, 65, 192, 0, 107, 33, 1, 32, 1, 65, 128, 192, 0, 107, 33, 1, 32, 1, 65, 128, 16, 106, 33, 1, 32, 1, 65, 128, 128, 128, 224, 125, 106, 33, 1, 32, 1, 15, 11, 13, 0, 32, 0, 32, 1, 107, 32, 2, 32, 1, 107, 76, 11
+                ])
+            ), {})
+
+        const module = instance.exports as DecodeModule
+
+        const PAGE_SIZE_BYTES = 65536
+        const MAX_PAGES_COUNT = 128
+
+        const ensureMemory = (module: DecodeModule, requiredLength: number): boolean => {
+            try {
+                const currentLength = module.u8.buffer.byteLength
+
+                if (requiredLength > currentLength) {
+                    const pages = requiredLength / PAGE_SIZE_BYTES
+                    const requiredPages = Math.ceil(requiredLength / PAGE_SIZE_BYTES)
+
+                    if (requiredPages > MAX_PAGES_COUNT)
+                        return false
+
+                    module.u8.grow(requiredPages - pages)
+                    return true
+                }
+                return true
+            }
+            catch (error) {
+                console.error(error)
+                return false
+            }
+        }
+
+        const decode = (reader: JsonReader, i: number): ReadResult<string> => {
+            const b = reader.bytes
+            const options = reader.options
+            const dataLength = b.length - i
+
+            if (dataLength <= 16) {
+                //use native js implementation
+                return {} as any
+            }
+
+            if (ensureMemory(module, dataLength)) {
+                const memory = new Uint8Array(module.u8.buffer)
+                memory.set(b.subarray(i))
+
+                const index = module.utf8_to_utf16(0, dataLength, dataLength + 1)
+
+                if (index === -1) {
+                    if (!reader.writable) throw new Error('invalid string value')
+                    return {} as any
+                }
+
+                const ascii_only = module.ascii_only.value as number
+                if (ascii_only === 1) {
+                    const view = new Uint8Array(b.buffer, i, index)
+
+                    return {
+                        value: options.decoder.decode(view),
+                        nextIndex: index + 1
+                    }
+                }
+
+                const ascii_length = module.ascii_length.value as number
+                const ascii_prefix_length = module.ascii_prefix_length.value as number
+                const write_end = module.length.value as number
+                const utf16_length = write_end - dataLength
+
+                const full_length = ascii_prefix_length + utf16_length
+                const ascii_percentage = ascii_length * 100 / full_length
+
+                if (ascii_percentage >= 50) {
+                    const view = new Uint8Array(b.buffer, i, index) //need to get double quote index
+                    return {} as any
+                }
+
+                const result = new Array<number>(full_length)
+
+                let j = 0
+                while (j < ascii_prefix_length) {
+                    result[j] = memory[j]
+                    j++
+                }
+
+                const memoryU16 = new Uint16Array(module.u8.buffer, ascii_prefix_length, write_end)
+                let c = 0
+                while (j < utf16_length) {
+                    result[j] = memoryU16[c]
+                    j++
+                    c++
+                }
+
+                return {} as any
+            }
+
+            return {} as any
+        }
+
+        return {
+            decode: decode
+        }
+    } catch (error) {
+        console.error(error)
     }
 
-    // if (count <= MAX_FAST_DECODE) {
-    //     return {
-    //         value: decode(b, start, i),
-    //         nextIndex: ++i
-    //     }
-    // }
+    function decode(reader: JsonReader, i: number): ReadResult<string> {
+        return {} as any
+    }
 
-    const decoder = ctx.options.decoder
-    const view = new Uint8Array(b.buffer, start, count)
     return {
-        value: decoder.decode(view),
-        nextIndex: ++i
+        decode: decode
     }
 }
 
@@ -67,7 +175,7 @@ function findNextFactory(): (b: Uint8Array, i: number, s: number) => number {
                 let view = new Uint8Array(module.memory.buffer)
                 let ref: Uint8Array | undefined = undefined
 
-                const PAGE_SIZE = 65536
+                const PAGE_SIZE_BYTES = 65536
                 const MAX_PAGES_COUNT = 128 //(6.4KB)
 
                 const memory = (module: WasmModule, src: Uint8Array) => {
@@ -77,8 +185,8 @@ function findNextFactory(): (b: Uint8Array, i: number, s: number) => number {
                     const minLength = src.length
 
                     if (view.length < minLength) {
-                        const pages = view.length / PAGE_SIZE
-                        const requiredPages = Math.ceil(minLength / PAGE_SIZE)
+                        const pages = view.length / PAGE_SIZE_BYTES
+                        const requiredPages = Math.ceil(minLength / PAGE_SIZE_BYTES)
 
                         if (requiredPages > MAX_PAGES_COUNT)
                             return false
