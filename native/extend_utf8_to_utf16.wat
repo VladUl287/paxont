@@ -312,107 +312,153 @@
   )
 
   (func $parse_ascii_prefix (param $i i32) (param $len i32) (result i32)
+    (local $start i32)
     (local $data_vec v128)
-    (local $zero_vec v128)
-    (local $ascii_vec v128)
+    (local $ascii_vec v128)          
     (local $quote_vec v128)
-    (local $bitmask i32)
+    (local $non_ascii_mask i32)
+    (local $pos i32)
+    (local $byte i32)
     (local $j i32)
     (local $is_escaped i32)
-    
-    (local.set $zero_vec (i8x16.splat (i32.const 0)))
-    (local.set $quote_vec (i8x16.splat (i32.const 34)))
+  
+    (local.set $start (local.get $i))
     (local.set $ascii_vec (i8x16.splat (i32.const 128)))
-
+    (local.set $quote_vec (i8x16.splat (i32.const 34)))
+  
     (block $done
-      (loop $loop
-        ;; i <= length - 16
-        (br_if $done 
-          (i32.eqz (i32.le_u 
-            (i32.add (local.get $i) (i32.const 16)) 
+      (loop $chunk_loop
+        ;; i + 16 < length
+        (br_if $done
+          (i32.gt_u
+            (i32.add (local.get $i) (i32.const 16))
             (local.get $len)
-          ))
+          )
         )
-
-        ;; any non ascii byte
-        (v128.any_true (
-          v128.not (
-            i8x16.eq 
-              (v128.and 
-                (local.tee $data_vec (v128.load (local.get $i))) 
-                (local.get $ascii_vec))
-              (local.get $zero_vec)
-          )
-        ))
-        if (return (local.get $i)) end
-
-        ;; contains double quote
-        (local.tee $bitmask (
-          i8x16.bitmask (
-            i8x16.eq 
-              (local.get $data_vec) 
-              (local.get $quote_vec)
-          )
-        ))
+  
+        (local.set $data_vec (v128.load (local.get $i)))
+  
+        ;; non‑ASCII bytes (>= 128)
+        (local.tee $non_ascii_mask
+          (i8x16.bitmask
+            (i8x16.ge_u (local.get $data_vec) (local.get $ascii_vec))
+          ))
+        if (return (i32.add (local.get $i) (i32.ctz (local.get $non_ascii_mask)))) end
+  
+        ;; double quotes
+        (i32.eqz 
+          (i8x16.bitmask
+            (i8x16.eq (local.get $data_vec) (local.get $quote_vec))
+          ))
         
+        ;; nothing found, skip the whole chunk
         if
-          (block $quote_block
-            (loop $quote_loop        
-              ;; i >= length
-              (br_if $quote_block
-                (i32.ge_u (local.get $i) (local.get $len))
-              )
+          (local.set $i (i32.add (local.get $i) (i32.const 16)))
+          (br $chunk_loop)
+        end
   
-              ;; current char is double quote (34)
-              (if (i32.eq (i32.load8_u (local.get $i)) (i32.const 34))
-                (then
-                  (local.set $j (local.get $i))
-                  (local.set $is_escaped (i32.const 0))
-
-                  (block $backslash_block
-                    (loop $backslash_loop
-                      ;; --j
-                      (local.set $j (i32.sub (local.get $j) (i32.const 1)))
-
-                      ;; j > 0
-                      (br_if $backslash_block (
-                        i32.eqz (i32.gt_u (local.get $j) (i32.const -1)))
-                      )
-                      
-                      ;; check for backslash (92)
-                      (if (i32.eq (i32.load8_u (local.get $j)) (i32.const 92))
-                        (then
-                          ;; is_escaped = !is_escaped
-                          (local.set $is_escaped (i32.eqz (local.get $is_escaped)))
-                        )
-                        (else
-                          ;; Not a backslash, stop counting
-                          (br $backslash_block)
-                        )
-                      )
+        ;; scan the chunk byte by byte to find the first unescaped quote
+        (local.set $pos (local.get $i))
+        (block $scan_done
+          (loop $scan_loop
+            (br_if $scan_done
+              (i32.ge_u (local.get $pos) (i32.add (local.get $i) (i32.const 16)))
+            )
+  
+            (local.set $byte (i32.load8_u (local.get $pos)))
+  
+            ;; quote -> check if escaped
+            (if (i32.eq (local.get $byte) (i32.const 34))
+              (then
+                (local.set $j (local.get $pos))
+                (local.set $is_escaped (i32.const 0))
+  
+                ;; count consecutive backslashes before the quote
+                (block $backslash_loop
+                  (loop $backslash
+                    ;; j -= 1
+                    (local.set $j (i32.sub (local.get $j) (i32.const 1)))
+  
+                    ;; if j < start
+                    (br_if $backslash_loop
+                      (i32.lt_s (local.get $j) (local.get $start))
                     )
-                  )
   
-                  ;; if not escaped, return position
-                  (br_if $done
-                    (i32.eqz (local.get $is_escaped))
-                    (return (local.get $i))
+                    ;; stop if current byte is not a backslash
+                    (br_if $backslash_loop
+                      (i32.ne (i32.load8_u (local.get $j)) (i32.const 92))
+                    )
+  
+                    ;; is_escaped != is_escaped
+                    (local.set $is_escaped (i32.eqz (local.get $is_escaped)))
+                    (br $backslash)
                   )
+                )
+  
+                ;; if not escaped, the prefix ends here
+                (if (i32.eqz (local.get $is_escaped))
+                  (then (return (local.get $pos)))
                 )
               )
             )
+  
+            (local.set $pos (i32.add (local.get $pos) (i32.const 1)))
+            (br $scan_loop)
           )
-        end
-
-        ;; i += 16
-        (local.set $i (
-          i32.add (local.get $i) (i32.const 16)
-        ))
-        br $loop
+        )
+  
+        ;; Chunk fully scanned without returning -> advance to next chunk
+        (local.set $i (i32.add (local.get $i) (i32.const 16)))
+        (br $chunk_loop)
       )
     )
-    
-    i32.const 1
+  
+    (block $tail_done
+      (loop $tail_loop
+        (br_if $tail_done (i32.ge_u (local.get $i) (local.get $len)))
+        (local.set $byte (i32.load8_u (local.get $i)))
+  
+        ;; non‑ASCII
+        (if (i32.ge_u (local.get $byte) (i32.const 128))
+          (then
+            (return (local.get $i))
+          )
+        )
+  
+        ;; quote
+        (if (i32.eq (local.get $byte) (i32.const 34))
+          (then
+            (local.set $j (local.get $i))
+            (local.set $is_escaped (i32.const 0))
+  
+            (block $backslash_tail
+              (loop $backslash_tail_loop
+                (local.set $j (i32.sub (local.get $j) (i32.const 1)))
+                (br_if $backslash_tail
+                  (i32.lt_s (local.get $j) (local.get $start))
+                )
+                (br_if $backslash_tail
+                  (i32.ne (i32.load8_u (local.get $j)) (i32.const 92))
+                )
+                (local.set $is_escaped (i32.eqz (local.get $is_escaped)))
+                (br $backslash_tail_loop)
+              )
+            )
+  
+            (if (i32.eqz (local.get $is_escaped))
+              (then
+                (return (local.get $i))
+              )
+            )
+          )
+        )
+  
+        (local.set $i (i32.add (local.get $i) (i32.const 1)))
+        (br $tail_loop)
+      )
+    )
+  
+    (return (local.get $len))
   )
 
   (func $find_unescaped_quote (param $value i32) (result i32)
