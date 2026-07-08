@@ -1,19 +1,18 @@
 (module
   (memory (export "u8") 1 128)
 
-  (global $valid_utf8 (mut i32) (i32.const 0))
-  (global $ascii_symbols_count (mut i32) (i32.const 0))
-  (global $ascii_prefix_len (mut i32) (i32.const 0))
-  (global $string_len (mut i32) (i32.const 0))
+  (global $ascii_length (mut i32) (i32.const 0))
+  (global $ascii_prefix_length (mut i32) (i32.const 0))
+  (global $length (mut i32) (i32.const 0))
 
   (func (export "utf8_to_utf16") (param $utf8_ptr i32) (param $utf8_len i32) (param $utf16_ptr i32) (result i32)
     (local $i i32)
-    (local $prefix_length i32)
+    (local $ascii_length i32)
     (local $ascii v128)
     (local $zero v128)
     (local $double_quote v128)
     (local $mask i32)
-    (local $temp1 i32)
+    (local $temp i32)
 
     i32.const 34  ;; ASCII code for '"'
     i8x16.splat
@@ -30,135 +29,117 @@
     i8x16.splat
     local.set $zero
 
-    (local.tee $prefix_length 
+    (local.tee $ascii_length 
       (call $parse_ascii_prefix (local.get $i) (local.get $utf8_len))
     )
+
+    ;; check if ascii prefix is end of string 
     if
-      (if (global.get $string_len) 
-        (then 
-          (global.set $valid_utf8 (i32.const 1))
-          (global.set $ascii_symbols_count (local.get $prefix_length))
-          (global.set $ascii_prefix_len (local.get $prefix_length))
+      (if (global.get $length) 
+        (then
+          (global.set $ascii_length (local.get $ascii_length))
+          (global.set $ascii_prefix_length (local.get $ascii_length))
         )
       )
 
-      (i32.eq (global.get $string_len) (local.get $utf8_len))
+      (i32.eq (global.get $length) (local.get $utf8_len))
       if (return (i32.const -1)) end
     end
 
-    (block $done
-      (loop $tail
-        local.get $i
-        local.get $utf8_len
-        i32.ge_u
-        if br $done end
+    (block $non_ascii_block
+      (loop $non_ascii_loop
+        ;; i + 4 < length
+        (br_if $non_ascii_block
+          (i32.gt_u
+            (i32.add (local.get $i) (i32.const 4))
+            (local.get $utf8_len)
+          )
+        )
 
-        (i32.load offset=0 align=1 (local.get $i))
-        local.tee $mask
-
+        (local.set $mask (i32.load offset=0 align=1 (local.get $i)))
+        
         ;; all ascii
-        local.get $mask
-        i32.const 0x80808080
-        i32.and
-        i32.const 0
-        i32.eq
+        (i32.eq 
+          (i32.and 
+            (local.get $mask) 
+            (i32.const 0x80808080)) 
+          (i32.const 0))
         if
-          (call $find_unescaped_quote (i32.const 1) (local.get $mask))
-          (local.tee $temp1)
-          i32.const -1
-          i32.gt_u
-          if
-            (i32.ctz (local.get $mask))
-            i32.const 8
-            i32.div_u
-            return
-          end
-
-          ;; increment ascii_symbols_count
+          (local.set $temp (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (i32.const 4))))
+          (if (i32.ge_u (local.get $temp) (i32.const -1)) 
+            (then (return (local.get $i)))
+          )
+          
           (i32.store (local.get $utf16_ptr) (local.get $mask))
-          local.get $i
-          i32.const 4
-          i32.add
-          br $tail
+          (local.set $i (i32.add (local.get $i) (i32.const 4)))
+          (local.set $ascii_length (i32.add (local.get $ascii_length) (i32.const 4)))
+          br $non_ascii_loop
         end
-        ;; else check if first, second and third bytes are ascii 
 
         ;; two byte value
-        local.get $mask
-        i32.const 32960
-        i32.sub
-        i32.const 49376
-        i32.and
-        i32.const 0
-        i32.eq
-
+        (i32.eq 
+          (i32.and 
+            (i32.sub 
+              (local.get $mask) 
+              (i32.const 32960)) 
+            (i32.const 49376))
+          (i32.const 0)
+        )
         if 
-          (call $inRangeInclusive
+          (call $in_range_inclusive
             (i32.and (local.get $mask) (i32.const 0xC0FF0000))
             (i32.const 2160197632)
             (i32.const 2162098176)
           )
-          i32.const 1
-          i32.eq
           if
-            local.get $utf16_ptr
-            (call $extractTwoCharsFromTwoByteSeq (local.get $mask))
-            i32.store
-            local.get $i
-            i32.const 4
-            i32.add
-            local.set $i
-            br $tail
+            (i32.store 
+              (local.get $utf16_ptr) 
+              (call $get_chars_from_two_byte_seq (local.get $mask)))
+            
+            (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 4)))
+            (local.set $i (i32.add (local.get $i) (i32.const 4)))
+            br $non_ascii_loop
           end
 
-          local.get $utf16_ptr
-          (call $extractOneCharFromTwoByteSeq (local.get $mask))
-          i32.store
-          local.get $i
-          i32.const 2
-          i32.add
-          local.set $i
-          br $tail
-          ;; check 2 end bytes manually
+          (i32.store 
+            (local.get $utf16_ptr) 
+            (call $get_char_two_byte_seq (local.get $mask)))
+      
+          (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
+          (local.set $i (i32.add (local.get $i) (i32.const 2)))
+          br $non_ascii_loop
         end
 
         ;; three byte value
-        local.get $mask
-        i32.const 8421600
-        i32.sub
-        i32.const 12632304
-        i32.and
-        i32.const 0
-        i32.eq
+        (i32.eq
+          (i32.and 
+            (i32.sub 
+              (local.get $mask) 
+              (i32.const 8421600)) 
+            (i32.const 12632304))
+          (i32.const 0)
+        )
+        if
+          (i32.store 
+            (local.get $utf16_ptr) 
+            (call $get_char_from_three_byte_seq (local.get $mask)))
 
-        if 
-          ;; if ((num2 & 0x200F) == 0 || ((num2 - 8205) & 0x200F) == 0)
-          ;; {
-          ;; 				break;
-          ;; }
-
-          local.get $utf16_ptr
-          (call $extractCharFromThreeByteSeq (local.get $mask))
-          i32.store
-          local.get $i
-          i32.const 3
-          i32.add
-          local.set $i
-          br $tail
+          (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
+          (local.set $i (i32.add (local.get $i) (i32.const 3)))
+          br $non_ascii_loop
         end
 
         ;; four byte value
-        local.get $mask
-        i32.const 2155905264
-        i32.sub
-        i32.const 3233857784
-        i32.and
-        i32.const 0
-        i32.eq
-
+        (i32.eq
+          (i32.and 
+            (i32.sub 
+              (local.get $mask) 
+              (i32.const 2155905264)) 
+            (i32.const 3233857784))
+          (i32.const 0))
         if
-          (call $inRangeInclusive
-            (call $rotateRight 
+          (call $in_range_inclusive
+            (call $rotate_r 
               (i32.and (local.get $mask) (i32.const 0xFFFF))
               (i32.const 8)
             )
@@ -166,27 +147,21 @@
             (i32.const 4093640847)
           )
           if
-            local.get $utf16_ptr
-            (call $extractCharsFromFourByteSeq (local.get $mask))
-            i32.store
-            local.get $i
-            i32.const 4
-            i32.add
-            local.set $i
-            br $tail
+            (i32.store 
+              (local.get $utf16_ptr) 
+              (call $get_chars_from_four_byte_seq (local.get $mask)))
+  
+            (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
+            (local.set $i (i32.add (local.get $i) (i32.const 3)))
+            br $non_ascii_loop
           end
-          ;; if not in range then not valid utf8 do return and mark as not valid
         end
 
-        local.get $i
-        i32.const 1
-        i32.add
-        local.set $i
-        br $tail
+        br $non_ascii_block
       )
     )
     
-    local.get $i
+    i32.const -1
   )
 
   (func $parse_ascii_prefix (param $i i32) (param $len i32) (result i32)
@@ -240,7 +215,7 @@
           (i32.const 0)
         )
           (then 
-            (global.set $string_len (local.get $i))
+            (global.set $length (local.get $i))
             (return (local.get $i))
           )
         )
@@ -346,7 +321,7 @@
             ;; if not escaped, the prefix ends here
             (if (i32.eqz (local.get $is_escaped))
               (then 
-                (global.set $string_len (local.get $i))
+                (global.set $length (local.get $i))
                 (return (local.get $i))
               )
             )
@@ -361,14 +336,14 @@
     i32.const -1
   )
  
-  (func $rotateRight (param $value i32) (param $offset i32) (result i32)
+  (func $rotate_r (param $value i32) (param $offset i32) (result i32)
     (i32.or
       (i32.shr_u (local.get $value) (local.get $offset))
       (i32.shl (local.get $value) (i32.sub (i32.const 32) (local.get $value)))
     )
   )
 
-  (func $extractOneCharFromTwoByteSeq (param $value i32) (result i32)
+  (func $get_char_two_byte_seq (param $value i32) (result i32)
     (i32.sub
       (i32.sub
         (i32.add
@@ -381,7 +356,7 @@
     )
   )
 
-  (func $extractTwoCharsFromTwoByteSeq (param $value i32) (result i32)
+  (func $get_chars_from_two_byte_seq (param $value i32) (result i32)
     (i32.or
       (i32.shr_u
         (i32.and (local.get $value) (i32.const 0x3F003F00))
@@ -394,7 +369,7 @@
     )
   )
 
-  (func $extractCharFromThreeByteSeq (param $value i32) (result i32)
+  (func $get_char_from_three_byte_seq (param $value i32) (result i32)
     (i32.or
       (i32.or
         (i32.shr_u (i32.and (local.get $value) (i32.const 0x3F0000)) (i32.const 16))
@@ -404,7 +379,7 @@
     )
   )
 
-  (func $extractCharsFromFourByteSeq (param $value i32) (result i32)
+  (func $get_chars_from_four_byte_seq (param $value i32) (result i32)
     (local $result i32)
     (local $byteValue i32)
     (local $temp i32)
@@ -441,11 +416,10 @@
     (return (local.get $result))
   )
 
-  (func $inRangeInclusive (param $value i32) (param $lowerBound i32) (param $upperBound i32) (result i32)
+  (func $in_range_inclusive (param $value i32) (param $lowerBound i32) (param $upperBound i32) (result i32)
     (i32.le_s
       (i32.sub (local.get $value) (local.get $lowerBound))
       (i32.sub (local.get $upperBound) (local.get $lowerBound))
     )
   )
-  (export "inRangeInclusive" (func $inRangeInclusive))
 )
