@@ -1,10 +1,10 @@
 (module
   (memory (export "u8") 1 128)
 
-  (global $ascii_only (mut i32) (i32.const 0))
-  (global $ascii_length (mut i32) (i32.const 0))
-  (global $ascii_prefix_length (mut i32) (i32.const 0))
-  (global $length (mut i32) (i32.const 0))
+  (global $ascii_only (export "ascii_only") (mut i32) (i32.const 0))
+  (global $ascii_length (export "ascii_length") (mut i32) (i32.const 0))
+  (global $ascii_prefix_length (export "ascii_prefix_length") (mut i32) (i32.const 0))
+  (global $length (export "length") (mut i32) (i32.const 0))
 
   (func (export "utf8_to_utf16") (param $utf8_ptr i32) (param $utf8_len i32) (param $utf16_ptr i32) (result i32)
     (local $i i32)
