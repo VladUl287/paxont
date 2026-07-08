@@ -7,5 +7,8 @@
     "object-code": "^2.0.0",
     "tinybench": "^6.0.0",
     "ts-jest": "^29.4.6"
+  },
+  "dependencies": {
+    "wabt": "^1.0.39"
   }
 }
