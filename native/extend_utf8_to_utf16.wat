@@ -44,6 +44,7 @@
         (then
           (global.set $ascii_length (local.get $ascii_length))
           (global.set $ascii_prefix_length (local.get $ascii_length))
+          (return (local.get $ascii_length))
         )
       )
 
