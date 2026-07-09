@@ -1,16 +1,22 @@
 (module
-  (memory (export "u8") 1 128)
+  (memory (export "memory") 1 128)
 
   (global $ascii_only (mut i32) (i32.const 0))
   (global $ascii_length (mut i32) (i32.const 0))
-  (global $ascii_prefix_length (export "ascii_prefix_length") (mut i32) (i32.const 0))
-  (global $length (export "length") (mut i32) (i32.const 0))
+  (global $ascii_prefix_length (mut i32) (i32.const 0))
+  (global $utf16_length (mut i32) (i32.const 0))
 
-  (func (export "get_ascii_only") (result i32)
+  (func (export "ascii_only") (result i32)
     (global.get $ascii_only))
 
-  (func (export "get_ascii_length") (result i32)
+  (func (export "ascii_length") (result i32)
     (global.get $ascii_length))
+
+  (func (export "ascii_prefix_length") (result i32)
+    (global.get $ascii_prefix_length))
+
+  (func (export "utf16_length") (result i32)
+    (global.get $utf16_length))
 
   (func (export "utf8_to_utf16") (param $utf8_ptr i32) (param $utf8_len i32) (param $utf16_ptr i32) (result i32)
     (local $i i32)
@@ -24,7 +30,7 @@
     (global.set $ascii_only (i32.const 0))
     (global.set $ascii_length (i32.const 0))
     (global.set $ascii_prefix_length (i32.const 0))
-    (global.set $length (i32.const 0))
+    (global.set $utf16_length (i32.const 0))
 
     i32.const 34  ;; ASCII code for '"'
     i8x16.splat
