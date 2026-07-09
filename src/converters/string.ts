@@ -74,20 +74,19 @@ function useDecode() {
 
         const unsafeDecoder = new TextDecoder('utf-8', { fatal: false })
 
+        const mem = new Uint8Array(module.u8.buffer)
+        let set: Uint8Array | undefined
+
         const decode = (reader: JsonReader, i: number): ReadResult<string> => {
             const b = reader.bytes
             const options = reader.options
             const dataLength = b.length
 
-            if (dataLength <= 16) {
-                //use native js implementation
-                return {} as any
-            }
-
             if (ensureMemory(module, dataLength)) {
-                const memory = new Uint8Array(module.u8.buffer)
-                // memory.set(b.subarray(i))
-                memory.set(b)
+                if (b !== set) {
+                    mem.set(b)
+                    set = b
+                }
 
                 const index = module.utf8_to_utf16(i, dataLength, dataLength + 1)
                 if (index === -1) {
