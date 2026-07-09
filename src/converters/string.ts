@@ -98,16 +98,11 @@ function useDecode() {
                 const ascii_only = module.ascii_only.value as number
                 const ascii_length = module.ascii_length.value as number
                 if (ascii_only === 1) {
-                    if (ascii_length <= 32) {
-                        const result = TEMP_CACHE[ascii_length]
-
-                        let j = 0
-                        while (j < ascii_length) {
-                            result[j++] = memory[i++]
-                        }
+                    if (ascii_length <= 64) {
+                        const factory = factories[ascii_length - 1]
 
                         return {
-                            value: String.fromCharCode.apply(String, result),
+                            value: factory(b, i),
                             nextIndex: index + 1
                         }
                     }
@@ -167,6 +162,16 @@ function useDecode() {
     return {
         decode: decode
     }
+}
+
+function genUnrolledFromCharCode(length: number): (data: Uint8Array, i: number) => string {
+    return new Function('a', 'i', `return String.fromCharCode(${new Array(length).fill(0).map((_, i) => `a[i + ${i}]`)})`) as any
+}
+
+const maxcount = 128
+const factories = new Array<(data: Uint8Array, i: number) => string>(maxcount)
+for (let i = 1; i <= maxcount; i++) {
+    factories[i] = genUnrolledFromCharCode(i)
 }
 
 const findNext = findNextFactory()
