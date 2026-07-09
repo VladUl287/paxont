@@ -72,7 +72,8 @@ function useDecode() {
             }
         }
 
-        const unsafeDecoder = new TextDecoder('utf-8', { fatal: false })
+        const unsafeDecoder8 = new TextDecoder('utf-8', { fatal: false })
+        const unsafeDecoder16 = new TextDecoder('utf-16le', { fatal: false })
 
         const mem = new Uint8Array(module.memory.buffer)
         let set: Uint8Array | undefined
@@ -81,6 +82,8 @@ function useDecode() {
         const get_ascii_length = module.ascii_length
         const get_ascii_prefix_length = module.ascii_prefix_length
         const get_utf16_length = module.utf16_length
+
+        const result = new Array<number>(500).fill(1072)
 
         const decode = (reader: JsonReader, i: number): ReadResult<string> => {
             const b = reader.bytes
@@ -114,14 +117,14 @@ function useDecode() {
 
                     const view = new Uint8Array(b.buffer, i, index - 1)
                     return {
-                        value: unsafeDecoder.decode(view),
+                        value: unsafeDecoder8.decode(view),
                         nextIndex: index + 1
                     }
                 }
 
                 // const view = new Uint8Array(b.buffer, i, index - 1)
                 // return {
-                //     value: unsafeDecoder.decode(view),
+                //     value: unsafeDecoder8.decode(view),
                 //     nextIndex: index + 1
                 // }
 
@@ -137,16 +140,20 @@ function useDecode() {
                 }
 
                 const utf16count = Math.ceil((utf16_length - b.length - 1) / 2)
-                const result = new Array<number>(utf16count)
-
-                let j = 0
-                while (j < ascii_prefix_length)
-                    result[j++] = mem[i++]
+                // const result = new Array<number>(utf16count)
 
                 const view16 = new Uint16Array(mem.buffer, b.length, utf16count)
-                let c = 0
-                while(c < view16.length)
-                    result[j++] = view16[c++]
+
+                // return {
+                //     value: unsafeDecoder16.decode(view16),
+                //     nextIndex: index + 1
+                // }
+
+                let j = 0
+                while (j < view16.length) {
+                    result[j] = view16[j]
+                    j++
+                }
 
                 return {
                     value: String.fromCharCode.apply(String, result),
@@ -397,8 +404,7 @@ function decode(b: Uint8Array, i: number, end: number) {
         j++
     }
 
-    return result as any
-    // return String.fromCharCode.apply(String, result)
+    return String.fromCharCode.apply(String, result)
 
     while (i < end) {
         const byte = b[i++]
