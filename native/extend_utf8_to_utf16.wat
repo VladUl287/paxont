@@ -93,8 +93,10 @@
             (i32.const 0x80808080))
           if
             (local.set $temp (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (i32.const 4))))
-            (if (i32.ge_u (local.get $temp) (i32.const 0)) 
-              (then (return (local.get $i)))
+            (if (i32.ge_u (local.get $temp) (i32.const 0))
+              (then 
+                (global.set $utf16_length (local.get $utf16_ptr))
+                (return (local.get $i)))
             )
           end
           
@@ -114,7 +116,9 @@
             (if (i32.eq (local.get $temp) (i32.const 34)) 
               (then
                 (if (i32.ge_u (call $find_unescaped_quote (local.get $i) (local.get $i)) (i32.const 0))
-                  (then (return (local.get $i)))
+                  (then
+                    (global.set $utf16_length (local.get $utf16_ptr)) 
+                    (return (local.get $i)))
                 )
               )
             )
@@ -133,7 +137,9 @@
                 (if (i32.eq (local.get $temp) (i32.const 34)) 
                   (then
                     (if (i32.ge_u (call $find_unescaped_quote (local.get $i) (local.get $i)) (i32.const 0))
-                      (then (return (local.get $i)))
+                      (then 
+                        (global.set $utf16_length (local.get $utf16_ptr))
+                        (return (local.get $i)))
                     )
                   )
                 )
@@ -152,7 +158,9 @@
                     (if (i32.eq (local.get $temp) (i32.const 34)) 
                       (then
                         (if (i32.ge_u (call $find_unescaped_quote (local.get $i) (local.get $i)) (i32.const 0))
-                          (then (return (local.get $i)))
+                          (then 
+                            (global.set $utf16_length (local.get $utf16_ptr))
+                            (return (local.get $i)))
                         )
                       )
                     )
@@ -278,7 +286,9 @@
             (if (i32.eq (local.get $temp) (i32.const 34)) 
               (then
                 (if (i32.ge_u (call $find_unescaped_quote (local.get $i) (local.get $i)) (i32.const 0))
-                  (then (return (local.get $i)))
+                  (then 
+                    (global.set $utf16_length (local.get $utf16_ptr))
+                    (return (local.get $i)))
                 )
               )
             )
@@ -302,7 +312,6 @@
             
             (i32.store16
               (local.get $utf16_ptr)
-              ;; result[j] = ((byte & 0x1F) << 6) | (byte2 & 0x3F)
               (i32.or
                 (i32.shl (i32.and (local.get $temp) (i32.const 0x1F)) (i32.const 6))
                 (i32.and 
@@ -344,62 +353,6 @@
             br $non_ascii_loop_tail
           )
         )
-
-        (if (i32.le_u (local.get $temp) (i32.const 244))
-          (then
-            (if (i32.ge_u (i32.add (local.get $i) (i32.const 3)) (local.get $utf8_len)) 
-              (then (return (i32.const -1)))
-            )
-            (if (i32.gt_u (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 191))
-              (then (return (i32.const -1)))
-            )
-            (if (i32.gt_u (i32.load8_u (i32.add (local.get $i) (i32.const 2))) (i32.const 191))
-              (then (return (i32.const -1)))
-            )
-            (if (i32.gt_u (i32.load8_u (i32.add (local.get $i) (i32.const 3))) (i32.const 191))
-              (then (return (i32.const -1)))
-            )
-            
-            (i32.sub
-              (i32.or
-                (i32.or
-                  (i32.or
-                    (i32.shl (i32.and (local.get $temp) (i32.const 0x07)) (i32.const 18))
-                    (i32.shl (i32.and (i32.add (local.get $i) (i32.const 1)) (i32.const 0x3F)) (i32.const 12))
-                  )
-                  (i32.shl (i32.and (i32.add (local.get $i) (i32.const 2)) (i32.const 0x3F)) (i32.const 6))
-                )
-                (i32.and (i32.add (local.get $i) (i32.const 3)) (i32.const 0x3F))
-              )
-              (i32.const 0x10000)
-            )
-            local.tee $temp
-
-            (i32.store16
-              (local.get $utf16_ptr)
-              (i32.add
-                (i32.const 0xD800)
-                (i32.shr_u (local.get $temp) (i32.const 10))
-              )
-            )
-
-            (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 1)))
-
-            (i32.store16
-              (local.get $utf16_ptr)
-              (i32.add
-                (i32.const 0xDC00)
-                (i32.and (local.get $temp) (i32.const 0x3FF))
-              )
-            )
-
-            (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 1)))
-            (local.set $i (i32.add (local.get $i) (i32.const 4)))
-            br $non_ascii_loop_tail
-          )
-        )
-
-        (return (i32.const -1))
       )
     )
 
