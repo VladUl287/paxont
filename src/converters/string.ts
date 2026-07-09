@@ -96,15 +96,29 @@ function useDecode() {
                 }
 
                 const ascii_only = module.ascii_only.value as number
+                const ascii_length = module.ascii_length.value as number
                 if (ascii_only === 1) {
-                    const view = new Uint8Array(b.buffer, i, index)
+                    if (ascii_length <= 32) {
+                        const result = TEMP_CACHE[ascii_length]
+
+                        let j = 0
+                        while (j < ascii_length) {
+                            result[j++] = memory[i++]
+                        }
+
+                        return {
+                            value: String.fromCharCode.apply(String, result),
+                            nextIndex: index + 1
+                        }
+                    }
+
+                    const view = new Uint8Array(b.buffer, i, index - 1)
                     return {
-                        value: unsafeDecoder.decode(view), //70
+                        value: unsafeDecoder.decode(view),
                         nextIndex: index + 1
                     }
                 }
 
-                const ascii_length = module.ascii_length.value as number
                 const ascii_prefix_length = module.ascii_prefix_length.value as number
                 const write_end = module.length.value as number
                 const utf16_length = write_end - dataLength
