@@ -85,6 +85,10 @@ function useDecode() {
 
         const result = new Array<number>(500).fill(1072)
 
+        // 1) use fromcharcode with combination of utf8 and utf16 and try optimize wasm
+        // 2) use textdecoder with utf16 encoding and extend all bytes to utf16 if found at least one utf16 byte in wasm
+        // 3) use textdecoder with utf16 always and extend all bytes to utf16 always
+        
         const decode = (reader: JsonReader, i: number): ReadResult<string> => {
             const b = reader.bytes
             const options = reader.options
