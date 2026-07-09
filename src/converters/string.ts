@@ -142,12 +142,13 @@ function useDecode() {
                 const utf16count = Math.ceil((utf16_length - b.length - 1) / 2)
                 // const result = new Array<number>(utf16count)
 
-                const view16 = new Uint16Array(mem.buffer, b.length, utf16count)
+                const view = new Uint8Array(b.buffer, i, index - 1)
+                return {
+                    value: unsafeDecoder16.decode(view),
+                    nextIndex: index + 1
+                }
 
-                // return {
-                //     value: unsafeDecoder16.decode(view16),
-                //     nextIndex: index + 1
-                // }
+                const view16 = new Uint16Array(mem.buffer, b.length, utf16count)
 
                 let j = 0
                 while (j < view16.length) {
