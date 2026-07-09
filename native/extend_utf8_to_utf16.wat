@@ -295,6 +295,7 @@
 
             (i32.store8 (local.get $utf16_ptr) (local.get $temp))
             (local.set $i (i32.add (local.get $i) (i32.const 1)))
+            (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 1)))
             (local.set $ascii_length (i32.add (local.get $ascii_length) (i32.const 1)))
             br $non_ascii_loop_tail
           )
@@ -320,7 +321,7 @@
                 ))
             )
             
-            (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 1)))
+            (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
             (local.set $i (i32.add (local.get $i) (i32.const 2)))
             br $non_ascii_loop_tail
           )
@@ -348,7 +349,7 @@
               )
             )
             
-            (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 1)))
+            (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
             (local.set $i (i32.add (local.get $i) (i32.const 3)))
             br $non_ascii_loop_tail
           )
