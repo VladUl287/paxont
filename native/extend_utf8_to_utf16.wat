@@ -216,8 +216,9 @@
               )
             )
 
-            (i32.store (local.get $utf16_ptr) (local.get $temp))
+            (i32.store16 (local.get $utf16_ptr) (i32.load8_u (local.get $i)))
             (local.set $i (i32.add (local.get $i) (i32.const 1)))
+            (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
             (local.set $ascii_length (i32.add (local.get $ascii_length) (i32.const 1)))
 
             ;; check if the second byte is ascii
@@ -237,8 +238,9 @@
                   )
                 )
             
-                (i32.store (local.get $utf16_ptr) (local.get $temp))
+                (i32.store16 (local.get $utf16_ptr) (i32.load8_u (local.get $i)))
                 (local.set $i (i32.add (local.get $i) (i32.const 1)))
+                (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
                 (local.set $ascii_length (i32.add (local.get $ascii_length) (i32.const 1)))
 
                 ;; check if the third byte is ascii
@@ -258,8 +260,9 @@
                       )
                     )
 
-                    (i32.store (local.get $utf16_ptr) (local.get $temp))
+                    (i32.store16 (local.get $utf16_ptr) (i32.load8_u (local.get $i)))
                     (local.set $i (i32.add (local.get $i) (i32.const 1)))
+                    (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
                     (local.set $ascii_length (i32.add (local.get $ascii_length) (i32.const 1)))
                   )
                 )
@@ -295,7 +298,7 @@
             br $non_ascii_loop
           end
 
-          (i32.store 
+          (i32.store16 
             (local.get $utf16_ptr) 
             (call $get_char_two_byte_seq (local.get $mask)))
       
@@ -634,13 +637,14 @@
     (i32.sub
       (i32.sub
         (i32.add
-          (i32.and (i32.shr_u (local.get $value) (i32.const 8)) (i32.const 0xFF))
-          (i32.and (i32.shl (local.get $value) (i32.const 6)) (i32.const 0xFF))
-        )
-        (i32.const 12288)
-      )
-      (i32.const 128)
-    )
+          (i32.and 
+            (i32.shr_u (local.get $value) (i32.const 8)) 
+            (i32.const 0xFF))
+          (i32.shl
+            (i32.and (local.get $value) (i32.const 0xFF))
+            (i32.const 6)))
+      (i32.const 12288))
+    (i32.const 128))
   )
 
   (func $get_chars_from_two_byte_seq (param $value i32) (result i32)
