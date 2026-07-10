@@ -23,7 +23,7 @@ export function tryParseString(
             throw new Error(`Expected " at index ${i}, but found '${b[i]}' while parsing string`)
     }
     else i++
-    
+
     return decodeSlow(reader, i)
 
     let start = i
@@ -111,11 +111,11 @@ function useDecode() {
                 }
 
                 const ascii_only = get_ascii_only()
-                const ascii_length = get_ascii_length()
+                const ascii_prefix_length = get_ascii_prefix_length()
 
                 if (ascii_only === 1) {
-                    if (ascii_length <= 64) {
-                        const factory = factories[ascii_length - 1]
+                    if (ascii_prefix_length <= 64) {
+                        const factory = factories[ascii_prefix_length - 1]
 
                         return {
                             value: factory(b, i),
@@ -126,6 +126,18 @@ function useDecode() {
                     const view = new Uint8Array(b.buffer, i, index - 1)
                     return {
                         value: unsafeDecoder8.decode(view),
+                        nextIndex: index + 1
+                    }
+                }
+
+                const utf16_length = get_utf16_length()
+
+                const utf16count = Math.ceil((utf16_length - b.length - 1) / 2)
+                if (utf16count <= 64) {
+                    const factory = factories[utf16count - 1]
+
+                    return {
+                        value: factory(b, i),
                         nextIndex: index + 1
                     }
                 }
