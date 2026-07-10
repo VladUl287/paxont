@@ -1,4 +1,5 @@
 import { JsonReader, PrimitiveMeta } from "../metadata/types"
+import { TypedArray } from "../utils/typedArray"
 import { ReadResult } from "../utils/types"
 import { DOUBLE_QUOTE } from "../utils/utf8constants"
 
@@ -132,17 +133,19 @@ function useDecode() {
 
                 const utf16_length = get_utf16_length()
 
-                const utf16count = Math.ceil((utf16_length - b.length - 1) / 2)
+                const utf16count = Math.ceil((utf16_length - b.length) / 2)
+                
                 if (utf16count <= 64) {
                     const factory = factories[utf16count - 1]
 
+                    const view = new Uint16Array(memory.buffer, b.length, utf16count)
                     return {
-                        value: factory(b, i),
+                        value: factory(view, 0),
                         nextIndex: index + 1
                     }
                 }
 
-                const view = new Uint8Array(memory.buffer, b.length, Math.ceil((utf16_length - b.length) / 2))
+                const view = new Uint8Array(memory.buffer, b.length, utf16count)
                 return {
                     value: unsafeDecoder16.decode(view),
                     nextIndex: index + 1
@@ -168,12 +171,12 @@ function useDecode() {
     }
 }
 
-function genUnrolledFromCharCode(length: number): (data: Uint8Array, i: number) => string {
+function genUnrolledFromCharCode(length: number): (data: TypedArray, i: number) => string {
     return new Function('a', 'i', `return String.fromCharCode(${new Array(length).fill(0).map((_, i) => `a[i + ${i}]`)})`) as any
 }
 
 const maxcount = 128
-const factories = new Array<(data: Uint8Array, i: number) => string>(maxcount)
+const factories = new Array<(data: TypedArray, i: number) => string>(maxcount)
 for (let i = 1; i <= maxcount; i++) {
     factories[i] = genUnrolledFromCharCode(i)
 }
