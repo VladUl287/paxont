@@ -86,15 +86,12 @@ function useDecode() {
         const unsafeDecoder8 = new TextDecoder('utf-8', { fatal: false })
         const unsafeDecoder16 = new TextDecoder('utf-16le', { fatal: false })
 
-        const mem = new Uint8Array(module.memory.buffer)
-        let set: Uint8Array | undefined
+        const memory = new Uint8Array(module.memory.buffer)
 
         const get_ascii_only = module.ascii_only
         const get_ascii_length = module.ascii_length
         const get_ascii_prefix_length = module.ascii_prefix_length
         const get_utf16_length = module.utf16_length
-
-        const result = new Array<number>(500).fill(1072)
 
         // 1) use fromcharcode with combination of utf8 and utf16 and try optimize wasm
         // 2) use textdecoder with utf16 encoding and extend all bytes to utf16 if found at least one utf16 byte in wasm
@@ -102,17 +99,12 @@ function useDecode() {
 
         const decode = (reader: JsonReader, i: number): ReadResult<string> => {
             const b = reader.bytes
-            const options = reader.options
             const dataLength = b.length
 
             if (ensureMemory(module, dataLength)) {
-                if (b !== set) {
-                    mem.set(b)
-                    set = b
-                }
+                memory.set(b.subarray(i))
 
-                // const index = module.utf8_to_utf16(i, dataLength, dataLength)
-                const index: number = 1001
+                const index = module.utf8_to_utf16(0, dataLength, dataLength)
                 if (index === -1) {
                     if (!reader.writable) throw new Error('invalid string value')
                     return {} as any
@@ -138,44 +130,10 @@ function useDecode() {
                     }
                 }
 
-                // const view = new Uint8Array(b.buffer, i, index - 1)
-                // return {
-                //     value: unsafeDecoder8.decode(view),
-                //     nextIndex: index + 1
-                // }
-
-                const ascii_prefix_length = get_ascii_prefix_length()
-                // const utf16_length = get_utf16_length()
-                const utf16_length: number = 2002
-
-                const full_length = ascii_prefix_length + utf16_length
-                const ascii_percentage = ascii_length * 100 / full_length
-
-                if (ascii_percentage >= 50) {
-                    const view = new Uint8Array(b.buffer, i, index) //need to get double quote index
-                    return {} as any
-                }
-
-                const utf16count = Math.ceil((utf16_length - b.length - 1) / 2)
-                // const result = new Array<number>(utf16count)
-
-                // const view = new Uint8Array(b.buffer, i, index - 1)
-                // return {
-                //     value: unsafeDecoder16.decode(view),
-                //     nextIndex: index + 1
-                // }
-
-                const view16 = new Uint16Array(mem.buffer, b.length, utf16count)
-
-                let j = 0
-                while (j < view16.length) {
-                    result[j] = view16[j]
-                    j++
-                }
-
+                const view = new Uint8Array(b.buffer, i, index - 1)
                 return {
-                    value: String.fromCharCode.apply(String, result),
-                    nextIndex: 1
+                    value: unsafeDecoder16.decode(view),
+                    nextIndex: index + 1
                 }
             }
 
