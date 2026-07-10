@@ -399,7 +399,7 @@
             (if (i32.ge_u (i32.add (local.get $i) (i32.const 1)) (local.get $utf8_len)) 
               (then (return (i32.const -1)))
             )
-            (if (i32.gt_u (i32.add (local.get $i) (i32.const 1)) (i32.const 191)) 
+            (if (i32.gt_u (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 191)) 
               (then (return (i32.const -1)))
             )
 
