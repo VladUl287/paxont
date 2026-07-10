@@ -126,6 +126,40 @@
           (br $non_ascii_loop)
         end
 
+        (i32.eq 
+          (i32.and 
+            (local.get $mask) 
+            (i32.const 0x80808080)) 
+          (i32.const 0))
+        if
+          (i32.and 
+            (i32.xor 
+              (i32.sub 
+                (local.tee $temp 
+                  (i32.xor (local.get $mask) (i32.const 0x22222222)))
+                (i32.const 0x01010101))
+              (local.get $temp))
+            (i32.const 0x80808080))
+          if
+            (local.set $temp (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (i32.const 4))))
+            (if (i32.ge_u (local.get $temp) (i32.const 0))
+              (then 
+                (global.set $utf16_length (local.get $utf16_ptr))
+                (return (local.get $i)))
+            )
+          end
+          
+          ;; store 8 bytes
+          (local.set $temp_v128 (i32x4.splat (local.get $mask)))
+          (local.set $utf16_v128 (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
+          (v128.store64_lane 0 (local.get $utf16_ptr) (local.get $utf16_v128))
+
+          (local.set $i (i32.add (local.get $i) (i32.const 4)))
+          (local.set $utf16_ptr (i32.add (local.get $i) (i32.const 8)))
+          (local.set $ascii_length (i32.add (local.get $ascii_length) (i32.const 4)))
+          br $non_ascii_loop
+        end
+
         ;; check if the first byte is ascii
         (if (i32.eqz (i32.and (local.get $mask) (i32.const 0x80))) 
           (then
