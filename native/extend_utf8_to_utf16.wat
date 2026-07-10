@@ -230,15 +230,15 @@
         ;; two byte value
         (block $two_byte_block
           (loop $two_byte_loop 
-            (i32.eqz
-              (i32.eq 
-                (i32.and 
-                  (i32.sub 
-                    (local.get $mask) 
-                    (i32.const 32960)) 
-                  (i32.const 49376))
-                (i32.const 0)))
-            br_if $two_byte_block
+            (br_if $two_byte_block
+              (i32.ne
+                (i32.and
+                  (i32.sub (local.get $mask) (i32.const 0x80C0))   ;; 32960
+                  (i32.const 0xC0E0)                              ;; 49376
+                )
+                (i32.const 0)
+              )
+            )
 
             (call $in_range_inclusive
               (i32.and (local.get $mask) (i32.const 0xC0FF0000))
