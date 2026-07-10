@@ -23,8 +23,19 @@ export function tryParseString(
             throw new Error(`Expected " at index ${i}, but found '${b[i]}' while parsing string`)
     }
     else i++
-
+    
     return decodeSlow(reader, i)
+
+    let start = i
+    i = findNext(b, i, DOUBLE_QUOTE)
+
+    if (i === -1)
+        throw new Error(`Unterminated string literal starting at index ${start}: missing closing quote (")`)
+
+    return {
+        value: decode(b, start, i),
+        nextIndex: ++i
+    }
 }
 
 function useDecode() {
@@ -88,7 +99,7 @@ function useDecode() {
         // 1) use fromcharcode with combination of utf8 and utf16 and try optimize wasm
         // 2) use textdecoder with utf16 encoding and extend all bytes to utf16 if found at least one utf16 byte in wasm
         // 3) use textdecoder with utf16 always and extend all bytes to utf16 always
-        
+
         const decode = (reader: JsonReader, i: number): ReadResult<string> => {
             const b = reader.bytes
             const options = reader.options
@@ -100,7 +111,8 @@ function useDecode() {
                     set = b
                 }
 
-                const index = module.utf8_to_utf16(i, dataLength, dataLength)
+                // const index = module.utf8_to_utf16(i, dataLength, dataLength)
+                const index: number = 1001
                 if (index === -1) {
                     if (!reader.writable) throw new Error('invalid string value')
                     return {} as any
@@ -133,7 +145,8 @@ function useDecode() {
                 // }
 
                 const ascii_prefix_length = get_ascii_prefix_length()
-                const utf16_length = get_utf16_length()
+                // const utf16_length = get_utf16_length()
+                const utf16_length: number = 2002
 
                 const full_length = ascii_prefix_length + utf16_length
                 const ascii_percentage = ascii_length * 100 / full_length
@@ -146,11 +159,11 @@ function useDecode() {
                 const utf16count = Math.ceil((utf16_length - b.length - 1) / 2)
                 // const result = new Array<number>(utf16count)
 
-                const view = new Uint8Array(b.buffer, i, index - 1)
-                return {
-                    value: unsafeDecoder16.decode(view),
-                    nextIndex: index + 1
-                }
+                // const view = new Uint8Array(b.buffer, i, index - 1)
+                // return {
+                //     value: unsafeDecoder16.decode(view),
+                //     nextIndex: index + 1
+                // }
 
                 const view16 = new Uint16Array(mem.buffer, b.length, utf16count)
 
@@ -340,69 +353,15 @@ const wasmU16 = new Uint16Array(wasm.u8.buffer)
 let set = -1
 
 function decode(b: Uint8Array, i: number, end: number) {
-    // const length = end - i
-
-    // const result = (TEMP_CACHE[length] ??= new Array<number>(length))
-
     let j = 0
-
-    // while (i < end - 4) {
-    //     result[j] = b[i]
-    //     result[j + 1] = b[i + 1]
-    //     result[j + 2] = b[i + 2]
-    //     result[j + 3] = b[i + 3]
-    //     i += 4
-    //     j += 4
-    // }
-
-    // while (i < end) {
-    //     result[j] = b[i]
-    //     i++
-    //     j++
-    // }
-
-    // while (i < end - 4) {
-    //     const b1 = b[i]
-    //     const b2 = b[i + 1]
-    //     const b3 = b[i + 2]
-    //     const b4 = b[i + 3]
-
-    //     const num2 = (b1 | b2 << 8 | b3 << 16 | b4 << 24) >>> 0
-
-    //     if (((num2 & 0xC0E0C0E0) >>> 0) === 0x80C080C0) {
-    //         u32Conversion[j] = ((num2 & 0x3F003F00) >> 8) | ((num2 & 0x1F001F) << 6)
-
-    //         //         // result[j++] = ((b1 & 0x1F) << 6) | (b2 & 0x3F)
-    //         //         // result[j++] = ((b3 & 0x1F) << 6) | (b4 & 0x3F)
-
-    //         //         j += 2
-    //         //         i += 4
-    //         //     }
-
-    //         //     // if (((num2 - 32960) & 0xC0E0) === 0) {
-    //         //     //     if (inRangeInclusive(num2 & 0xC0FF0000, 2160197632, 2162098176)) {
-    //         //     //         u32Conversion[0] = ((num2 & 0x3F003F00) >> 8) | ((num2 & 0x1F001F) << 6)
-    //         //     //         result[j++] = u16Conversion[0]
-    //         //     //         result[j++] = u16Conversion[1]
-    //         //     //         i += 4
-    //         //     //     }
-    //     }
-    // }
 
     wasmU8.set(b.subarray(i))
 
-    let index = wasm.utf8_to_utf16(0, b.length, 0)
+    // let index = wasm.utf8_to_utf16(0, b.length, 0)
+    let index = 1000
 
     const length = (index / 4) + 1
     const result = (TEMP_CACHE[length] ??= new Array<number>(length))
-
-    // while (j < length - 4) {
-    //     result[j] = wasmU16[j]
-    //     result[j + 1] = wasmU16[j + 1]
-    //     result[j + 2] = wasmU16[j + 2]
-    //     result[j + 3] = wasmU16[j + 3]
-    //     j += 4
-    // }
 
     while (j < length) {
         result[j] = wasmU16[j]
