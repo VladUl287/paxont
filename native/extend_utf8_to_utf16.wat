@@ -68,6 +68,45 @@
       if (return (i32.const -1)) end
     end
 
+    (block $extend_ascii_block
+      (loop $extend_ascii_simd
+        ;; i + 16 < length
+        (br_if $extend_ascii_block
+          (i32.gt_u
+            (i32.add (local.get $i) (i32.const 16))
+            (local.get $ascii_length)
+          ))
+
+        (local.set $temp_v128 (v128.load (local.get $i)))
+    
+        ;; store lower half extend lanes 0-7
+        (v128.store (local.get $utf16_ptr) (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
+        (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 16)))
+
+        ;; store upper half extend lanes 8-15
+        (v128.store (local.get $utf16_ptr) (i16x8.extend_high_i8x16_u (local.get $temp_v128)))
+        (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 16)))
+
+        (local.set $i (i32.add (local.get $i) (i32.const 16)))
+        (br $extend_ascii_simd)
+      )
+    )
+
+    (block $extend_ascii_block
+      (loop $extend_ascii_scalar
+        ;; i + 1 < length
+        (br_if $extend_ascii_block
+          (i32.gt_u
+            (i32.add (local.get $i) (i32.const 1))
+            (local.get $ascii_length)
+          ))
+
+        (i32.store16 (local.get $utf16_ptr) (i32.load8_u (local.get $i)))
+        (local.set $i (i32.add (local.get $i) (i32.const 1)))
+        (br $extend_ascii_scalar)
+      )
+    )
+
     ;; non ascii block
     (block $non_ascii_block
       (loop $non_ascii_loop
