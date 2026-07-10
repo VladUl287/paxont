@@ -274,38 +274,50 @@
         )
 
         ;; two byte value
-        (i32.eq 
-          (i32.and 
-            (i32.sub 
-              (local.get $mask) 
-              (i32.const 32960)) 
-            (i32.const 49376))
-          (i32.const 0)
-        )
-        if 
-          (call $in_range_inclusive
-            (i32.and (local.get $mask) (i32.const 0xC0FF0000))
-            (i32.const 2160197632)
-            (i32.const 2162098176)
-          )
-          if
-            (i32.store 
-              (local.get $utf16_ptr) 
-              (call $get_chars_from_two_byte_seq (local.get $mask)))
-            
-            (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 4)))
-            (local.set $i (i32.add (local.get $i) (i32.const 4)))
-            br $non_ascii_loop
-          end
+        (block $two_byte_block
+          (loop $two_byte_loop 
+            (i32.eqz
+              (i32.eq 
+                (i32.and 
+                  (i32.sub 
+                    (local.get $mask) 
+                    (i32.const 32960)) 
+                  (i32.const 49376))
+                (i32.const 0)))
+            br_if $two_byte_block
 
-          (i32.store16 
-            (local.get $utf16_ptr) 
-            (call $get_char_two_byte_seq (local.get $mask)))
-      
-          (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
-          (local.set $i (i32.add (local.get $i) (i32.const 2)))
-          br $non_ascii_loop
-        end
+            (call $in_range_inclusive
+              (i32.and (local.get $mask) (i32.const 0xC0FF0000))
+              (i32.const 2160197632)
+              (i32.const 2162098176)
+            )
+            if
+              (i32.store 
+                (local.get $utf16_ptr) 
+                (call $get_chars_from_two_byte_seq (local.get $mask)))
+
+              (local.set $i (i32.add (local.get $i) (i32.const 4)))
+              (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 4)))
+              (local.set $mask (i32.load offset=0 align=1 (local.get $i)))
+
+              (br_if $non_ascii_loop
+                (i32.gt_u
+                  (i32.add (local.get $i) (i32.const 4))
+                  (local.get $utf8_len)
+                )
+              )
+
+              br $two_byte_loop
+            end
+
+            (i32.store16 
+              (local.get $utf16_ptr) 
+              (call $get_char_two_byte_seq (local.get $mask)))
+
+            (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
+            (local.set $i (i32.add (local.get $i) (i32.const 2)))
+            br $non_ascii_loop
+          ))
 
         ;; three byte value
         (i32.eq
