@@ -142,7 +142,7 @@ function useDecode() {
                     }
                 }
 
-                const view = new Uint8Array(b.buffer, i, index - 1)
+                const view = new Uint8Array(memory.buffer, b.length, Math.ceil((utf16_length - b.length) / 2))
                 return {
                     value: unsafeDecoder16.decode(view),
                     nextIndex: index + 1
