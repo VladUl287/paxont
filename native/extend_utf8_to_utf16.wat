@@ -26,6 +26,10 @@
     (local $double_quote v128)
     (local $mask i32)
     (local $temp i32)
+    (local $chunk i64)
+    (local $t0 i64)
+    (local $temp_v128 v128)
+    (local $utf16_v128 v128)
 
     (global.set $ascii_only (i32.const 0))
     (global.set $ascii_length (i32.const 0))
@@ -64,46 +68,62 @@
       if (return (i32.const -1)) end
     end
 
+    ;; non ascii block
     (block $non_ascii_block
       (loop $non_ascii_loop
-        ;; i + 4 < length
+        ;; i + 8 < length
         (br_if $non_ascii_block
           (i32.gt_u
-            (i32.add (local.get $i) (i32.const 4))
+            (i32.add (local.get $i) (i32.const 8))
             (local.get $utf8_len)
           )
         )
 
+        (local.set $chunk (i64.load offset=0 align=1 (local.get $i)))
         (local.set $mask (i32.load offset=0 align=1 (local.get $i)))
         
         ;; all ascii
-        (i32.eq 
-          (i32.and 
-            (local.get $mask) 
-            (i32.const 0x80808080)) 
-          (i32.const 0))
+        (i64.eq 
+          (i64.and 
+            (local.get $chunk) 
+            (i64.const 0x8080808080808080)) 
+          (i64.const 0))
         if
-          (i32.and 
-            (i32.xor 
-              (i32.sub 
-                (local.tee $temp 
-                  (i32.xor (local.get $mask) (i32.const 0x22222222)))
-                (i32.const 0x01010101))
-              (local.get $temp))
-            (i32.const 0x80808080))
-          if
-            (local.set $temp (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (i32.const 4))))
-            (if (i32.ge_u (local.get $temp) (i32.const 0))
-              (then 
-                (global.set $utf16_length (local.get $utf16_ptr))
-                (return (local.get $i)))
+          ;; detect quotes: byte == 0x22
+          (local.set $t0 (i64.xor (local.get $chunk) (i64.const 0x2222222222222222)))
+          (local.set $t0 (i64.and (i64.sub (local.get $t0) (i64.const 0x0101010101010101)) (i64.const 0x8080808080808080)))
+
+          ;; no quotes at all, write UTF-16 and continue
+          (if (i64.eqz (local.get $t0))
+            (then
+              (local.set $temp_v128 (i8x16.splat (i32.const 0)))
+              (local.set $temp_v128 (i64x2.replace_lane 0 (local.get $temp_v128) (local.get $chunk)))
+              (local.set $utf16_v128 (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
+              (v128.store (local.get $utf16_ptr) (local.get $utf16_v128))
+              
+              (local.set $i (i32.add (local.get $i) (i32.const 8)))
+              (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 16)))
+              (local.set $ascii_length (i32.add (local.get $ascii_length) (i32.const 8)))
+              (br $non_ascii_loop)
             )
-          end
-          
-          (i32.store (local.get $utf16_ptr) (local.get $mask))
-          (local.set $i (i32.add (local.get $i) (i32.const 4)))
-          (local.set $ascii_length (i32.add (local.get $ascii_length) (i32.const 4)))
-          br $non_ascii_loop
+          )
+
+          (local.set $temp (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (i32.const 8))))
+          (if (i32.ge_u (local.get $temp) (i32.const 0))
+            (then
+              (global.set $utf16_length (i32.add (local.get $utf16_ptr) (local.get $temp)))
+              (return (i32.add (local.get $i) (local.get $temp))))
+          )
+
+          (local.set $temp_v128 (i8x16.splat (i32.const 0)))
+          (local.set $temp_v128 (i64x2.replace_lane 0 (local.get $temp_v128) (local.get $chunk)))
+          (local.set $utf16_v128 (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
+          (v128.store (local.get $utf16_ptr) (local.get $utf16_v128))
+
+          (local.set $i (i32.add (local.get $i) (i32.const 8)))
+          (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 16)))
+          (local.set $ascii_length (i32.add (local.get $ascii_length) (i32.const 8)))
+          (br $non_ascii_loop)
         end
 
         ;; check if the first byte is ascii
@@ -310,7 +330,6 @@
               (then (return (i32.const -1)))
             )
 
-            
             (i32.store16
               (local.get $utf16_ptr)
               (i32.or
