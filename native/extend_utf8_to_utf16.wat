@@ -27,6 +27,9 @@
     (local $mask i32)
     (local $temp i32)
     (local $temp_v128 v128)
+    (local $valid_mask i32)
+    (local $count i32)
+    (local $masked_v128 v128)
     (local $utf16_v128 v128)
 
     (global.set $ascii_only (i32.const 0))
@@ -230,15 +233,50 @@
         ;; two byte value
         (block $two_byte_block
           (loop $two_byte_loop 
-            (br_if $two_byte_block
-              (i32.ne
-                (i32.and
-                  (i32.sub (local.get $mask) (i32.const 0x80C0))   ;; 32960
-                  (i32.const 0xC0E0)                              ;; 49376
-                )
-                (i32.const 0)
+            (i32.lt_u
+              (i32.add (local.get $i) (i32.const 16))
+              (local.get $utf8_len)
+            )
+            if
+              (local.set $temp_v128 (v128.load (local.get $i)))
+
+              (local.set $masked_v128
+                (v128.and (local.get $temp_v128) (v128.const i16x8 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0)))
+
+              (local.set $masked_v128 
+                (i16x8.eq (local.get $masked_v128) (v128.const i16x8 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0)))
+
+              (local.set $valid_mask (i8x16.bitmask (local.get $masked_v128)))
+
+              (local.tee $count (i32.ctz (i32.xor (local.get $valid_mask) (i32.const 0xFF))))
+              (i32.eqz)
+              (br_if $non_ascii_loop)
+
+              (v128.store
+                (local.get $utf16_ptr) (call $decode_8_two_byte_sequences (local.get $temp_v128)))
+
+              (local.set $i (i32.add (local.get $i) (i32.shl (local.get $count) (i32.const 1))))
+              (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.shl (local.get $count) (i32.const 1))))
+
+              (br $two_byte_loop)
+            end
+
+            (br_if $non_ascii_block
+              (i32.gt_u
+                (i32.add (local.get $i) (i32.const 4))
+                (local.get $utf8_len)
               )
             )
+
+            (i32.eqz
+              (i32.eq 
+                (i32.and 
+                  (i32.sub 
+                    (local.get $mask) 
+                    (i32.const 32960)) 
+                  (i32.const 49376))
+                (i32.const 0)))
+            br_if $two_byte_block
 
             (call $in_range_inclusive
               (i32.and (local.get $mask) (i32.const 0xC0FF0000))
@@ -419,6 +457,25 @@
     )
 
     i32.const -1
+  )
+
+  (func $decode_8_two_byte_sequences (param $input v128) (result v128)  
+    (local $leads v128)
+    (local $conts v128)
+  
+    (local.set $leads
+      (v128.and (local.get $input) (v128.const i16x8 0x001F 0x001F 0x001F 0x001F 0x001F 0x001F 0x001F 0x001F)))
+  
+    (local.set $leads
+      (i16x8.shl (local.get $leads) (i32.const 6)))
+  
+    (local.set $conts
+      (i16x8.shr_u (local.get $input) (i32.const 8)))
+  
+    (local.set $conts
+      (v128.and (local.get $conts) (v128.const i16x8 0x003F 0x003F 0x003F 0x003F 0x003F 0x003F 0x003F 0x003F)))
+  
+    (v128.or (local.get $leads) (local.get $conts))
   )
 
   (func $parse_ascii_prefix (param $i i32) (param $len i32) (result i32)
