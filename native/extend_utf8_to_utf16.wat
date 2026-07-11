@@ -31,6 +31,9 @@
     (local $count i32)
     (local $masked_v128 v128)
     (local $utf16_v128 v128)
+    (local $inv_mask i32)
+    (local $trailing i32)
+    (local $byte_count i32)
 
     (global.set $ascii_only (i32.const 0))
     (global.set $ascii_length (i32.const 0))
@@ -241,14 +244,33 @@
               (local.set $temp_v128 (v128.load (local.get $i)))
 
               (local.set $masked_v128
-                (v128.and (local.get $temp_v128) (v128.const i16x8 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0)))
+                (v128.and
+                  (local.get $temp_v128)
+                  (v128.const i16x8 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0)
+                )
+              )
 
-              (local.set $masked_v128 
-                (i16x8.eq (local.get $masked_v128) (v128.const i16x8 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0)))
+              (local.set $masked_v128
+                (i16x8.eq
+                  (local.get $masked_v128)
+                  (v128.const i16x8 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0)
+                )
+              )
 
               (local.set $valid_mask (i8x16.bitmask (local.get $masked_v128)))
 
-              (local.tee $count (i32.ctz (i32.xor (local.get $valid_mask) (i32.const 0xFF))))
+              (local.set $inv_mask (i32.xor (local.get $valid_mask) (i32.const 0xFFFF)))
+
+              (local.tee $trailing (i32.ctz (local.get $inv_mask)))
+
+              (i32.eq (local.get $trailing) (i32.const 32))
+              if
+                (local.set $byte_count (i32.const 16))
+              else
+                (local.set $byte_count (local.get $trailing))
+              end
+
+              (local.tee $count (i32.shr_u (local.get $byte_count) (i32.const 1)))
               (i32.eqz)
               (br_if $non_ascii_loop)
 
