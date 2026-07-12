@@ -18,12 +18,10 @@
   (func (export "utf16_length") (result i32)
     (global.get $utf16_length))
 
-  (func (export "utf8_to_utf16") (param $utf8_ptr i32) (param $utf8_len i32) (param $utf16_ptr i32) (result i32)
-    (local $i i32)
+  (func (export "utf8_to_utf16") (param $i i32) (param $len i32) (param $utf16_ptr i32) (result i32)
     (local $ascii_length i32)
     (local $ascii v128)
     (local $zero v128)
-    (local $double_quote v128)
     (local $mask i32)
     (local $temp i32)
     (local $temp_v128 v128)
@@ -37,13 +35,6 @@
     (global.set $ascii_prefix_length (i32.const 0))
     (global.set $utf16_length (i32.const 0))
 
-    i32.const 34  ;; ASCII code for '"'
-    i8x16.splat
-    local.set $double_quote
-
-    local.get $utf8_ptr
-    local.set $i
-
     i32.const 128
     i8x16.splat
     local.set $ascii
@@ -53,7 +44,7 @@
     local.set $zero
 
     (local.tee $ascii_length 
-      (call $parse_ascii_prefix (local.get $i) (local.get $utf8_len))
+      (call $parse_ascii_prefix (local.get $i) (local.get $len))
     )
 
     if
@@ -65,7 +56,7 @@
         )
       )
 
-      (i32.eq (local.get $ascii_length) (local.get $utf8_len))
+      (i32.eq (local.get $ascii_length) (local.get $len))
       if (return (i32.const -1)) end
     end
 
@@ -115,7 +106,7 @@
         (br_if $non_ascii_block
           (i32.gt_u
             (i32.add (local.get $i) (i32.const 4))
-            (local.get $utf8_len)
+            (local.get $len)
           )
         )
 
@@ -235,7 +226,7 @@
           (loop $two_byte_loop 
             (i32.lt_u
               (i32.add (local.get $i) (i32.const 16))
-              (local.get $utf8_len)
+              (local.get $len)
             )
             if
               (local.set $valid_mask
@@ -269,7 +260,7 @@
             (br_if $non_ascii_block
               (i32.gt_u
                 (i32.add (local.get $i) (i32.const 4))
-                (local.get $utf8_len)
+                (local.get $len)
               )
             )
 
@@ -300,7 +291,7 @@
               (br_if $non_ascii_loop
                 (i32.gt_u
                   (i32.add (local.get $i) (i32.const 4))
-                  (local.get $utf8_len)
+                  (local.get $len)
                 )
               )
 
@@ -382,7 +373,7 @@
         (br_if $non_ascii_tail
           (i32.gt_u
             (i32.add (local.get $i) (i32.const 1))
-            (local.get $utf8_len)
+            (local.get $len)
           )
         )
         
@@ -408,7 +399,7 @@
 
         (if (i32.lt_u (local.get $temp) (i32.const 224))
           (then
-            (if (i32.ge_u (i32.add (local.get $i) (i32.const 1)) (local.get $utf8_len)) 
+            (if (i32.ge_u (i32.add (local.get $i) (i32.const 1)) (local.get $len)) 
               (then (return (i32.const -1)))
             )
             (if (i32.gt_u (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 191)) 
@@ -433,7 +424,7 @@
 
         (if (i32.lt_u (local.get $temp) (i32.const 240))
           (then
-            (if (i32.ge_u (i32.add (local.get $i) (i32.const 2)) (local.get $utf8_len)) 
+            (if (i32.ge_u (i32.add (local.get $i) (i32.const 2)) (local.get $len)) 
               (then (return (i32.const -1)))
             )
             (if (i32.or 
