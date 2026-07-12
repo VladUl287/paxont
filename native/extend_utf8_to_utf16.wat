@@ -28,10 +28,7 @@
     (local $temp i32)
     (local $temp_v128 v128)
     (local $valid_mask i32)
-    (local $count i32)
-    (local $masked_v128 v128)
     (local $utf16_v128 v128)
-    (local $inv_mask i32)
     (local $trailing i32)
     (local $byte_count i32)
 
@@ -241,44 +238,30 @@
               (local.get $utf8_len)
             )
             if
-              (local.set $temp_v128 (v128.load (local.get $i)))
+              (local.set $valid_mask
+                (i8x16.bitmask
+                  (i16x8.eq
+                    (v128.and
+                      (local.tee $temp_v128 (v128.load (local.get $i)))
+                      (v128.const i16x8 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0))
+                    (v128.const i16x8 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0))))
 
-              (local.set $masked_v128
-                (v128.and
-                  (local.get $temp_v128)
-                  (v128.const i16x8 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0)
-                )
+              (local.set $trailing
+                (i32.ctz
+                  (i32.xor (local.get $valid_mask) (i32.const 0xFFFF))))
+
+              (if (i32.eq (local.get $trailing) (i32.const 32))
+                (then (local.set $byte_count (i32.const 16)))
+                (else (local.set $byte_count (local.get $trailing)))
               )
-
-              (local.set $masked_v128
-                (i16x8.eq
-                  (local.get $masked_v128)
-                  (v128.const i16x8 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0)
-                )
-              )
-
-              (local.set $valid_mask (i8x16.bitmask (local.get $masked_v128)))
-
-              (local.set $inv_mask (i32.xor (local.get $valid_mask) (i32.const 0xFFFF)))
-
-              (local.tee $trailing (i32.ctz (local.get $inv_mask)))
-
-              (i32.eq (local.get $trailing) (i32.const 32))
-              if
-                (local.set $byte_count (i32.const 16))
-              else
-                (local.set $byte_count (local.get $trailing))
-              end
-
-              (local.tee $count (i32.shr_u (local.get $byte_count) (i32.const 1)))
-              (i32.eqz)
-              (br_if $non_ascii_loop)
+              
+              (br_if $non_ascii_loop (i32.eqz (local.get $byte_count)))
 
               (v128.store
                 (local.get $utf16_ptr) (call $decode_8_two_byte_sequences (local.get $temp_v128)))
 
-              (local.set $i (i32.add (local.get $i) (i32.shl (local.get $count) (i32.const 1))))
-              (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.shl (local.get $count) (i32.const 1))))
+              (local.set $i (i32.add (local.get $i) (local.get $byte_count)))
+              (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (local.get $byte_count)))
 
               (br $two_byte_loop)
             end
