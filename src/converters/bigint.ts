@@ -2,12 +2,15 @@ import { JsonReader, PrimitiveMeta } from "../metadata/types"
 import { isDigitUnsafe } from "../utils/utf8constants"
 import { ReadResult } from "../utils/types"
 
+type State = { lastIndex?: number }
+
 export function tryParseBigInt(
-    ctx: JsonReader, _m: PrimitiveMeta<bigint>, i: number, _d: number): ReadResult<bigint> {
+    ctx: JsonReader, _m: PrimitiveMeta<bigint>, i: number, _d: number, state: State): ReadResult<bigint> {
     const b = ctx.bytes
     const len = b.length
 
     let start = i
+    i = state.lastIndex ?? i
 
     while (i < len - 4) {
         const a1 = b[i], a2 = b[i + 1], a3 = b[i + 2], a4 = b[i + 3]
@@ -22,8 +25,10 @@ export function tryParseBigInt(
 
     while (i < len && isDigitUnsafe(b[i])) i++
 
-    if (i === len && ctx.writable)
+    if (i === len && ctx.writable) {
+        state.lastIndex = i
         return { nextIndex: start }
+    }
 
     const view = new Uint8Array(b.buffer, start, i - start)
     return {
