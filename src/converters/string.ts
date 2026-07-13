@@ -94,14 +94,18 @@ function useDecode() {
         const get_ascii_prefix_length = module.ascii_prefix_length
         const get_utf16_length = module.utf16_length
 
+        let set: Uint8Array | undefined
+
         const decode = (reader: JsonReader, i: number): ReadResult<string> => {
             const b = reader.bytes
             const dataLength = b.length
 
             if (ensureMemory(module, dataLength)) {
-                memory.set(b.subarray(i))
+                if(set !== b) {
+                    memory.set(b)
+                }
 
-                const index = module.utf8_to_utf16(0, dataLength, dataLength)
+                const index = module.utf8_to_utf16(i, dataLength, dataLength)
                 if (index === -1) {
                     if (!reader.writable) throw new Error('invalid string value')
                     return {} as any
