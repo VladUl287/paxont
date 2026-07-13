@@ -237,6 +237,18 @@
                       (v128.const i16x8 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0))
                     (v128.const i16x8 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0))))
 
+              (if (i32.eq (local.get $valid_mask) (i32.const 0xFFFF))
+                (then
+                  (v128.store
+                    (local.get $utf16_ptr) (call $decode_8_two_byte_sequences (local.get $temp_v128)))
+
+                  (local.set $i (i32.add (local.get $i) (i32.const 16)))
+                  (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 16)))
+
+                  (br $two_byte_loop)
+                )
+              )
+
               (local.set $trailing
                 (i32.ctz
                   (i32.xor (local.get $valid_mask) (i32.const 0xFFFF))))
@@ -253,6 +265,14 @@
 
               (local.set $i (i32.add (local.get $i) (local.get $byte_count)))
               (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (local.get $byte_count)))
+
+              (if (i32.lt_u (i32.load8_u (local.get $i)) (i32.const 128)) 
+                (then
+                  (i32.store16 (local.get $utf16_ptr) (i32.load8_u (local.get $i)))
+                  (local.set $i (i32.add (local.get $i) (i32.const 1)))
+                  (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
+                  (local.set $ascii_length (i32.add (local.get $ascii_length) (i32.const 1)))
+                ))
 
               (br $two_byte_loop)
             end
