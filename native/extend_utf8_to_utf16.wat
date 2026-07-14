@@ -94,7 +94,9 @@
           ))
 
         (i32.store16 (local.get $utf16_ptr) (i32.load8_u (local.get $i)))
+
         (local.set $i (i32.add (local.get $i) (i32.const 1)))
+        (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
         (br $extend_ascii_scalar)
       )
     )
@@ -142,7 +144,7 @@
           (v128.store64_lane 0 (local.get $utf16_ptr) (local.get $utf16_v128))
 
           (local.set $i (i32.add (local.get $i) (i32.const 4)))
-          (local.set $utf16_ptr (i32.add (local.get $i) (i32.const 8)))
+          (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 8)))
           (local.set $ascii_length (i32.add (local.get $ascii_length) (i32.const 4)))
           br $non_ascii_loop
         end
