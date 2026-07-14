@@ -587,6 +587,8 @@
     (local $j i32)
     (local $is_escaped i32)
 
+    (global.set $ascii_only (i32.const 0))
+
     (local.set $start (local.get $i))
     (local.set $ascii_vec (i8x16.splat (i32.const 128)))
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
