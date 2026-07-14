@@ -418,7 +418,6 @@
             (i32.const 12632304))
           (i32.const 0)
         )
-
         if
           (i32.eqz
             (i32.or
@@ -459,13 +458,13 @@
               (local.get $utf16_ptr) 
               (call $get_chars_from_four_byte_seq (local.get $mask)))
   
-            (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
-            (local.set $i (i32.add (local.get $i) (i32.const 3)))
+            (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 4)))
+            (local.set $i (i32.add (local.get $i) (i32.const 4)))
             br $non_ascii_loop
           end
         end
 
-        br $non_ascii_block
+        (return (i32.const -1))
       )
     )
     
@@ -826,9 +825,7 @@
     (local.set $result (i32.sub (local.get $result) (i32.const 64)))
     (local.set $result (i32.sub (local.get $result) (i32.const 8192)))
     (local.set $result (i32.add (local.get $result) (i32.const 2048)))
-    (local.set $result (i32.add (local.get $result) (i32.const 3690987520)))
-    
-    (return (local.get $result))
+    (return (i32.add (local.get $result) (i32.const 0xDC000000)))
   )
 
   (func $in_range_inclusive (param $value i32) (param $lowerBound i32) (param $upperBound i32) (result i32)
