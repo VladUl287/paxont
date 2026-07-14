@@ -156,7 +156,7 @@
                     ))
                 end
     
-                (br_if $non_ascii_loop (i32.eqz (local.get $byte_count)))
+                (br_if $ascii_byte_block (i32.eqz (local.get $byte_count)))
 
                 ;; store lower half extend lanes 0-7
                 (v128.store (local.get $utf16_ptr) (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
@@ -169,7 +169,7 @@
                 (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.shl (local.get $byte_count) (i32.const 1))))
 
                 (br_if $ascii_byte_loop (i32.eq (local.get $byte_count) (i32.const 16)))
-                (br $non_ascii_loop)
+                (br $ascii_byte_block)
               end
 
               (br_if $non_ascii_block
@@ -464,7 +464,7 @@
           end
         end
 
-        (return (i32.const -1))
+        (br $non_ascii_block)
       )
     )
     
