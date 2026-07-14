@@ -131,26 +131,37 @@ function useDecode() {
                     }
                 }
 
-                const utf16_length = get_utf16_length()
-                const utf16count = utf16_length - b.length
-                if (utf16count <= 64) {
-                    const factory = factories[utf16count]
-
-                    const view = new Uint16Array(memory.buffer, b.length, utf16count)
-                    return {
-                        value: factory(view, 0),
-                        nextIndex: index + 1
-                    }
-                }
-
                 if (Buffer) {
-                    const buffer = Buffer.from(memory.buffer, b.length, utf16count)
+                    const utf16_length = get_utf16_length()
+                    const buffer = Buffer.from(memory.buffer, b.length, utf16_length - b.length)
                     return {
                         value: buffer.toString('utf16le'),
                         nextIndex: index + 1
                     }
                 }
 
+                const ascii_length = get_ascii_length()
+                const percentage = ascii_length * 100 / dataLength
+
+                if (percentage >= 50) {
+                    let chunks = ''
+                    let start = i
+                    while(start < index) {
+                        const nonAsciiIndex = parse_ascii_prefix(start, index - 1)
+                        const view = new Uint8Array(b.buffer, start, (nonAsciiIndex - start))
+                        const value = unsafeDecoder8.decode(view)
+                        chunks = chunks.concat(value)
+                        start = nonAsciiIndex + 3
+                        chunks += String.fromCharCode(memory[nonAsciiIndex])
+                    }
+                    return {
+                        value: chunks,
+                        nextIndex: index + 1
+                    }
+                }
+
+                const utf16_length = get_utf16_length()
+                const utf16count = utf16_length - b.length
                 const view = new Uint8Array(memory.buffer, b.length, utf16count)
                 return {
                     value: unsafeDecoder16.decode(view),
