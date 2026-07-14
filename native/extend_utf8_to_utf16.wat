@@ -51,9 +51,10 @@
     )
 
     if
+      (global.set $ascii_length (local.get $ascii_length))
+      
       (if (global.get $ascii_only) 
         (then
-          (global.set $ascii_length (local.get $ascii_length))
           (global.set $ascii_prefix_length (local.get $ascii_length))
           (return (local.get $ascii_length))
         )
@@ -150,7 +151,7 @@
                       (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 16)))
       
                       (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.shl (local.get $byte_count) (i32.const 1))))
-
+                      (global.set $ascii_length (i32.add (local.get $ascii_length) (local.get $byte_count)))
                       (return (local.get $temp))
                     ))
                 end
@@ -164,6 +165,7 @@
                 (v128.store (i32.add (local.get $utf16_ptr) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $temp_v128)))
 
                 (local.set $i (i32.add (local.get $i) (local.get $byte_count)))
+                (local.set $ascii_length (i32.add (local.get $ascii_length) (local.get $byte_count)))
                 (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.shl (local.get $byte_count) (i32.const 1))))
 
                 (br_if $ascii_byte_loop (i32.eq (local.get $byte_count) (i32.const 16)))
@@ -196,6 +198,7 @@
                   (if (i32.ge_u (local.get $temp) (i32.const 0))
                     (then 
                       (global.set $utf16_length (local.get $utf16_ptr))
+                      (global.set $ascii_length (local.get $ascii_length))
                       (return (local.get $i)))
                   )
                 end
@@ -483,6 +486,7 @@
                 (if (i32.ge_u (call $find_unescaped_quote (local.get $i) (local.get $i)) (i32.const 0))
                   (then 
                     (global.set $utf16_length (local.get $utf16_ptr))
+                    (global.set $ascii_length (local.get $ascii_length))
                     (return (local.get $i)))
                 )
               )
