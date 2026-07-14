@@ -577,7 +577,7 @@
     (v128.or (local.get $leads) (local.get $conts))
   )
 
-  (func $parse_ascii_prefix (param $i i32) (param $len i32) (result i32)
+  (func $parse_ascii_prefix (export "parse_ascii_prefix") (param $i i32) (param $len i32) (result i32)
     (local $start i32)
     (local $data_vec v128)
     (local $ascii_vec v128)          
