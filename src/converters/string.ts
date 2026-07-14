@@ -143,6 +143,14 @@ function useDecode() {
                     }
                 }
 
+                if (Buffer) {
+                    const buffer = Buffer.from(memory.buffer, b.length, utf16count)
+                    return {
+                        value: buffer.toString('utf16le'),
+                        nextIndex: index + 1
+                    }
+                }
+
                 const view = new Uint8Array(memory.buffer, b.length, utf16count)
                 return {
                     value: unsafeDecoder16.decode(view),
