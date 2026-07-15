@@ -42,21 +42,24 @@
     i8x16.splat
     local.set $zero
 
-    (if (local.tee $ascii_length (call $parse_ascii_prefix (local.get $i) (local.get $len) (i32.const -1)))
+    (if (i32.gt_u
+      (local.tee $temp (call $parse_ascii_prefix (local.get $i) (local.get $len) (i32.const -1)))
+      (local.get $i))
       (then
-        (global.set $ascii_length (local.get $ascii_length))
-      
-        (if (global.get $dq_index) 
-          (then 
-            (global.set $ascii_only (i32.const 1))
-            (return (local.get $ascii_length))))
+        (local.set $ascii_length (i32.sub (local.get $temp) (local.get $i)))
 
-        (if (i32.eq (local.get $ascii_length) (local.get $len))
+        (if (global.get $dq_index)
+          (then 
+            (global.set $ascii_length (local.get $ascii_length))
+            (global.set $ascii_only (i32.const 1))
+            (return (global.get $dq_index))))
+
+        (if (i32.eq (local.get $temp) (local.get $len))
           (then (return (i32.const -1))))
+
+        (call $extend_ascii_block (local.get $i) (local.get $temp) (local.get $utf16_ptr))
       ))
 
-    (call $extend_ascii_block (local.get $i) (local.get $ascii_length) (local.get $utf16_ptr))
-    
     ;; non ascii block
     (block $non_ascii_block
       (loop $non_ascii_loop
