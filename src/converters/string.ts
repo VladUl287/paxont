@@ -151,7 +151,7 @@ function useDecode(options: UseDecodeOptions) {
                 const utf16_end = get_utf16_length()
                 const utf16Length = utf16_end - multipleOfTwo
 
-                if (utf16Length <= 64) {
+                if (utf16Length <= 128) {
                     const view = new Uint16Array(memory.buffer, multipleOfTwo, utf16Length / 2)
                     const factory = factories[view.length]
                     return {
