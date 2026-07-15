@@ -64,9 +64,9 @@
             (local.set $temp (call $parse_ascii_prefix (local.get $i) (local.get $len) (local.get $utf16_ptr)))
 
             (local.set $utf16_ptr 
-              (i32.shl
-                (i32.add (local.get $utf16_ptr) (i32.sub (local.get $temp) (local.get $i)))
-                (i32.const 1)))
+                (i32.add 
+                  (local.get $utf16_ptr) 
+                  (i32.shl (i32.sub (local.get $temp) (local.get $i)) (i32.const 1))))
             (local.set $i (local.get $temp))
 
             (if (global.get $dq_index)
