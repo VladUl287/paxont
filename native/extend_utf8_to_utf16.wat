@@ -61,11 +61,19 @@
       (loop $non_ascii_loop
         (if (i32.lt_u (i32.load8_u (local.get $i)) (i32.const 128)) 
           (then
-            (local.set $i (call $parse_ascii_prefix (local.get $i) (local.get $len) (local.get $utf16_ptr)))
+            (local.set $temp (call $parse_ascii_prefix (local.get $i) (local.get $len) (local.get $utf16_ptr)))
 
-            (if (global.get $dq_index) (then (return (local.get $i))))
+            (local.set $utf16_ptr 
+              (i32.shl
+                (i32.add (local.get $utf16_ptr) (i32.sub (local.get $temp) (local.get $i)))
+                (i32.const 1)))
+            (local.set $i (local.get $temp))
 
-            (local.set $utf16_ptr (global.get $utf16_length))
+            (if (global.get $dq_index)
+              (then 
+                (global.set $utf16_length (local.get $utf16_ptr))
+                (return (local.get $i))
+              ))
           ))
 
         ;; two byte value
@@ -454,8 +462,7 @@
                       (then
                         (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
                         (v128.store (i32.add (local.get $target) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $temp_v128)))
-                        (local.tee $target (i32.add (local.get $target) (i32.shl (local.get $byte_count) (i32.const 1))))
-                        (global.set $utf16_length)
+                        (local.set $target (i32.add (local.get $target) (i32.shl (local.get $byte_count) (i32.const 1))))
                       ))
 
                     (return (local.get $temp))
@@ -467,8 +474,7 @@
               (then
                 (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
                 (v128.store (i32.add (local.get $target) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $temp_v128)))
-                (local.tee $target (i32.add (local.get $target) (i32.shl (local.get $byte_count) (i32.const 1))))
-                (global.set $utf16_length)
+                (local.set $target (i32.add (local.get $target) (i32.shl (local.get $byte_count) (i32.const 1))))
               ))
           
             (local.set $i (i32.add (local.get $i) (local.get $byte_count)))
@@ -495,8 +501,7 @@
                         (local.set $temp_v128 (i32x4.splat (local.get $byte_mask)))
                         (local.set $temp_v128 (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
                         (v128.store64_lane 0 (local.get $target) (local.get $temp_v128))
-                        (local.tee $target (i32.add (local.get $target) (i32.const 8)))
-                        (global.set $utf16_length)
+                        (local.set $target (i32.add (local.get $target) (i32.const 8)))
                       ))
 
                     (return (local.get $temp))
@@ -507,8 +512,7 @@
                     (local.set $temp_v128 (i32x4.splat (local.get $byte_mask)))
                     (local.set $temp_v128 (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
                     (v128.store64_lane 0 (local.get $target) (local.get $temp_v128))
-                    (local.tee $target (i32.add (local.get $target) (i32.const 8)))
-                    (global.set $utf16_length)
+                    (local.set $target (i32.add (local.get $target) (i32.const 8)))
                   ))
 
                 (local.set $i (i32.add (local.get $i) (i32.const 4)))
