@@ -41,7 +41,7 @@ function utf8TestStrings() {
         "\"!@#$%^&*()\"",
         "\"The quick brown fox jumps over the lazy dog\"",
 
-        // Common European characters (2-byte sequences)
+        // (2-byte sequences)
         "\"Café\"",
         "\"résumé\"",
         "\"naïve\"",
@@ -52,15 +52,11 @@ function utf8TestStrings() {
         "\"São Paulo\"",
         "\"Ångström\"",
         "\"Æsop\"",
-
-        // Eastern European characters (2-byte sequences)
         "\"Česká republika\"",
         "\"Polska\"",
-        "\"Россия\"", // Russian
-        "\"Ελλάδα\"", // Greek
-        "\"България\"", // Bulgarian
-
-        // Middle Eastern scripts (2-byte sequences)
+        "\"Россия\"",
+        "\"Ελλάδα\"",
+        "\"България\"",
         "\"العربية\"", // Arabic
         "\"עברית\"", // Hebrew
         "\"فارسی\"", // Persian
