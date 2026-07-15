@@ -702,7 +702,7 @@
   )
 
   (func $in_range_inclusive (param $value i32) (param $lowerBound i32) (param $upperBound i32) (result i32)
-    (i32.le_s
+    (i32.le_u
       (i32.sub (local.get $value) (local.get $lowerBound))
       (i32.sub (local.get $upperBound) (local.get $lowerBound))
     )
