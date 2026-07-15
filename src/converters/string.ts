@@ -3,7 +3,9 @@ import { TypedArray } from "../utils/typedArray"
 import { ReadResult } from "../utils/types"
 import { DOUBLE_QUOTE } from "../utils/utf8constants"
 
-const { decode: decodeSlow } = useDecode()
+const { decode: decodeSlow } = useDecode({
+    maxWasmMemoryPages: 128, //~8MiB
+})
 
 export function tryParseString(
     reader: JsonReader,
@@ -39,17 +41,26 @@ export function tryParseString(
     }
 }
 
-function useDecode() {
-    try {
-        type DecodeModule = {
-            memory: WebAssembly.Memory
-            ascii_only: () => number
-            ascii_length: () => number
-            utf16_length: () => number
-            utf8_to_utf16: (index: number, length: number, target: number) => number
-            parse_ascii_prefix: (index: number, length: number) => number
-        }
+type DecodeModule = {
+    readonly memory: WebAssembly.Memory
+    readonly ascii_only: () => number
+    readonly ascii_length: () => number
+    readonly utf16_length: () => number
+    readonly utf8_to_utf16: (index: number, length: number, target: number) => number
+    readonly parse_ascii_prefix: (index: number, length: number) => number
+}
 
+type UseDecodeOptions = {
+    readonly maxWasmMemoryPages: number
+}
+
+type UseDecode = {
+    readonly options: UseDecodeOptions,
+    readonly module: DecodeModule
+}
+
+function useDecode(options: UseDecodeOptions) {
+    try {
         const instance = new WebAssembly.Instance(
             new WebAssembly.Module(
                 new Uint8Array([
@@ -60,17 +71,19 @@ function useDecode() {
         const module = instance.exports as DecodeModule
 
         const PAGE_SIZE_BYTES = 65536
-        const MAX_PAGES_COUNT = 128
 
-        const ensureMemory = (module: DecodeModule, requiredLength: number): boolean => {
+        const ensureMemory = (parent: UseDecode, requiredLength: number): boolean => {
             try {
+                const module = parent.module
+                const maxPagesCount = parent.options.maxWasmMemoryPages
+
                 const currentLength = module.memory.buffer.byteLength
 
                 if (requiredLength > currentLength) {
                     const pages = requiredLength / PAGE_SIZE_BYTES
                     const requiredPages = Math.ceil(requiredLength / PAGE_SIZE_BYTES)
 
-                    if (requiredPages > MAX_PAGES_COUNT)
+                    if (requiredPages > maxPagesCount)
                         return false
 
                     module.memory.grow(requiredPages - pages)
@@ -96,12 +109,14 @@ function useDecode() {
 
         let set: Uint8Array | undefined
 
+        const current = { module: module, options: options }
+
         const decode = (reader: JsonReader, i: number): ReadResult<string> => {
             const b = reader.bytes
             const dataLength = b.length
             const multipleOfTwo = (dataLength + 1) & ~1
 
-            if (ensureMemory(module, multipleOfTwo)) {
+            if (ensureMemory(current, multipleOfTwo)) {
                 if (set !== b) {
                     memory.set(b)
                 }
