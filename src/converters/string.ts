@@ -164,15 +164,14 @@ function useDecode() {
                 const utf16_length = get_utf16_length()
                 const utf16count = utf16_length - b.length
 
-                // if (utf16count <= 64) {
-                //     const factory = factories[utf16count]
-
-                //     const view = new Uint16Array(memory.buffer, b.length, utf16count)
-                //     return {
-                //         value: factory(view, 0),
-                //         nextIndex: index + 1
-                //     }
-                // }
+                if (utf16count <= 64) {
+                    const view = new Uint16Array(memory.buffer, b.length, utf16count) 
+                    const factory = factories[view.length]
+                    return {
+                        value: factory(view, 0),
+                        nextIndex: index + 1
+                    }
+                }
 
                 const view = new Uint8Array(memory.buffer, b.length, utf16count)
                 return {
