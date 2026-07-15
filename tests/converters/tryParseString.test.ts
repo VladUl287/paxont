@@ -22,7 +22,7 @@ describe('tryParseString', () => {
                     const { value, nextIndex } = tryParseString(reader, metaMock, 0, 0, {})
 
                     expect(value).not.toBeUndefined()
-                    expect(value).toBe(str)
+                    expect(value).toBe(str.substring(1, str.length - 1))
                     expect(nextIndex).toBe(bytes.length)
                 })
             })
