@@ -3,7 +3,6 @@
 
   (global $ascii_only (mut i32) (i32.const 0))
   (global $ascii_length (mut i32) (i32.const 0))
-  (global $ascii_prefix_length (mut i32) (i32.const 0))
   (global $utf16_length (mut i32) (i32.const 0))
 
   (func (export "ascii_only") (result i32)
@@ -11,9 +10,6 @@
 
   (func (export "ascii_length") (result i32)
     (global.get $ascii_length))
-
-  (func (export "ascii_prefix_length") (result i32)
-    (global.get $ascii_prefix_length))
 
   (func (export "utf16_length") (result i32)
     (global.get $utf16_length))
@@ -35,7 +31,6 @@
 
     (global.set $ascii_only (i32.const 0))
     (global.set $ascii_length (i32.const 0))
-    (global.set $ascii_prefix_length (i32.const 0))
     (global.set $utf16_length (i32.const 0))
 
     i32.const 128
@@ -47,15 +42,13 @@
     local.set $zero
 
     (local.tee $ascii_length 
-      (call $parse_ascii_prefix (local.get $i) (local.get $len))
-    )
+      (call $parse_ascii_prefix (local.get $i) (local.get $len)))
 
     if
       (global.set $ascii_length (local.get $ascii_length))
       
       (if (global.get $ascii_only) 
         (then
-          (global.set $ascii_prefix_length (local.get $ascii_length))
           (return (local.get $ascii_length))
         )
       )
