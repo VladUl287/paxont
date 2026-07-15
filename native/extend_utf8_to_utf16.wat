@@ -1,5 +1,6 @@
 (module
-  (memory (export "memory") 1 128)
+  (import "env" "memory" (memory 1 128))
+  (export "memory" (memory 0))
 
   (global $ascii_only (mut i32) (i32.const 0))
   (global $dq_index (mut i32) (i32.const 0))
