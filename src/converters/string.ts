@@ -165,7 +165,7 @@ function useDecode() {
                 const utf16count = utf16_length - b.length
 
                 if (utf16count <= 64) {
-                    const view = new Uint16Array(memory.buffer, b.length, utf16count) 
+                    const view = new Uint16Array(memory.buffer, b.length, utf16count / 2)
                     const factory = factories[view.length]
                     return {
                         value: factory(view, 0),
