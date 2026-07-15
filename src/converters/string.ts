@@ -114,7 +114,7 @@ function useDecode() {
                 const ascii_only = get_ascii_only()
 
                 if (ascii_only === 1) {
-                    const ascii_length = index - i
+                    const ascii_length = index
 
                     if (ascii_length <= 64) {
                         const factory = factories[ascii_length - 1]
