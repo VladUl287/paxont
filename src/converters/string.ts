@@ -133,11 +133,11 @@ function useDecode() {
                     }
                 }
 
-                const utf16_length = get_utf16_length()
-                const utf16count = utf16_length - multipleOfTwo
+                const utf16_end = get_utf16_length()
+                const utf16Length = utf16_end - multipleOfTwo
 
-                if (utf16count <= 64) {
-                    const view = new Uint16Array(memory.buffer, multipleOfTwo, utf16count / 2)
+                if (utf16Length <= 64) {
+                    const view = new Uint16Array(memory.buffer, multipleOfTwo, utf16Length / 2)
                     const factory = factories[view.length]
                     return {
                         value: factory(view, 0),
@@ -145,14 +145,13 @@ function useDecode() {
                     }
                 }
 
-                // if (Buffer) {
-                //     const utf16_length = get_utf16_length()
-                //     const buffer = Buffer.from(memory.buffer, b.length, utf16_length - b.length)
-                //     return {
-                //         value: buffer.toString('utf16le'),
-                //         nextIndex: index + 1
-                //     }
-                // }
+                if (Buffer) {
+                    const buffer = Buffer.from(memory.buffer, multipleOfTwo, utf16Length)
+                    return {
+                        value: buffer.toString('utf16le'),
+                        nextIndex: index + 1
+                    }
+                }
 
                 const ascii_length = get_ascii_length()
                 const percentage = ascii_length * 100 / dataLength
@@ -174,7 +173,7 @@ function useDecode() {
                 //     }
                 // }
 
-                const view = new Uint8Array(memory.buffer, multipleOfTwo, utf16count)
+                const view = new Uint8Array(memory.buffer, multipleOfTwo, utf16Length)
                 return {
                     value: unsafeDecoder16.decode(view),
                     nextIndex: index + 1
