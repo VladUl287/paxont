@@ -625,7 +625,7 @@
   (func $rotate_r (param $value i32) (param $offset i32) (result i32)
     (i32.or
       (i32.shr_u (local.get $value) (local.get $offset))
-      (i32.shl (local.get $value) (i32.sub (i32.const 32) (local.get $value)))
+      (i32.shl (local.get $value) (i32.sub (i32.const 32) (local.get $offset)))
     )
   )
 
