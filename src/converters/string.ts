@@ -205,6 +205,7 @@ function genUnrolledFromCharCode(length: number): (data: TypedArray, i: number) 
 
 const maxcount = 128
 const factories = new Array<(data: TypedArray, i: number) => string>(maxcount)
+factories[0] = (_a, _i) => "" 
 for (let i = 1; i <= maxcount; i++) {
     factories[i] = genUnrolledFromCharCode(i)
 }
