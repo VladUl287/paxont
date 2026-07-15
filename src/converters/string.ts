@@ -132,6 +132,18 @@ function useDecode() {
                     }
                 }
 
+                const utf16_length = get_utf16_length()
+                const utf16count = utf16_length - b.length
+
+                if (utf16count <= 64) {
+                    const view = new Uint16Array(memory.buffer, b.length, utf16count / 2)
+                    const factory = factories[view.length]
+                    return {
+                        value: factory(view, 0),
+                        nextIndex: index + 1
+                    }
+                }
+
                 if (Buffer) {
                     const utf16_length = get_utf16_length()
                     const buffer = Buffer.from(memory.buffer, b.length, utf16_length - b.length)
@@ -157,18 +169,6 @@ function useDecode() {
                     }
                     return {
                         value: chunks,
-                        nextIndex: index + 1
-                    }
-                }
-
-                const utf16_length = get_utf16_length()
-                const utf16count = utf16_length - b.length
-
-                if (utf16count <= 64) {
-                    const view = new Uint16Array(memory.buffer, b.length, utf16count / 2)
-                    const factory = factories[view.length]
-                    return {
-                        value: factory(view, 0),
                         nextIndex: index + 1
                     }
                 }
