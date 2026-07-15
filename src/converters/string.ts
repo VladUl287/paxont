@@ -99,13 +99,14 @@ function useDecode() {
         const decode = (reader: JsonReader, i: number): ReadResult<string> => {
             const b = reader.bytes
             const dataLength = b.length
+            const multipleOfTwo = (dataLength + 1) & ~1
 
-            if (ensureMemory(module, dataLength)) {
+            if (ensureMemory(module, multipleOfTwo)) {
                 if (set !== b) {
                     memory.set(b)
                 }
 
-                const index = module.utf8_to_utf16(i, dataLength, dataLength)
+                const index = module.utf8_to_utf16(i, dataLength, multipleOfTwo)
                 if (index === -1) {
                     if (!reader.writable) throw new Error('invalid string value')
                     return {} as any
@@ -133,16 +134,16 @@ function useDecode() {
                 }
 
                 const utf16_length = get_utf16_length()
-                const utf16count = utf16_length - b.length
+                const utf16count = utf16_length - multipleOfTwo
 
-                // if (utf16count <= 64) {
-                //     const view = new Uint16Array(memory.buffer, b.length, utf16count / 2)
-                //     const factory = factories[view.length]
-                //     return {
-                //         value: factory(view, 0),
-                //         nextIndex: index + 1
-                //     }
-                // }
+                if (utf16count <= 64) {
+                    const view = new Uint16Array(memory.buffer, multipleOfTwo, utf16count / 2)
+                    const factory = factories[view.length]
+                    return {
+                        value: factory(view, 0),
+                        nextIndex: index + 1
+                    }
+                }
 
                 // if (Buffer) {
                 //     const utf16_length = get_utf16_length()
@@ -173,7 +174,7 @@ function useDecode() {
                 //     }
                 // }
 
-                const view = new Uint8Array(memory.buffer, b.length, utf16count)
+                const view = new Uint8Array(memory.buffer, multipleOfTwo, utf16count)
                 return {
                     value: unsafeDecoder16.decode(view),
                     nextIndex: index + 1
