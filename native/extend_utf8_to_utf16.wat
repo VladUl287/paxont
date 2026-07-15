@@ -30,6 +30,7 @@
     
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
 
+    (global.set $ascii_only (i32.const 0))
     (global.set $ascii_length (i32.const 0))
     (global.set $utf16_length (i32.const 0))
 
