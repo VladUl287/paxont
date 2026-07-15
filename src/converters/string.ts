@@ -3,7 +3,7 @@ import { TypedArray } from "../utils/typedArray"
 import { ReadResult } from "../utils/types"
 import { DOUBLE_QUOTE } from "../utils/utf8constants"
 
-const { decode: decodeSlow } = useDecode({
+const { decode: decodeSlow } = useDecoder({
     initialWasmMemoryPages: 1, //~64KiB
     maxWasmMemoryPages: 128, //~8MiB,
 })
@@ -61,7 +61,7 @@ type UseDecode = {
     readonly module: DecodeModule
 }
 
-function useDecode(options: UseDecodeOptions) {
+function useDecoder(options: UseDecodeOptions) {
     try {
         const wasmMemory = new WebAssembly.Memory({
             initial: options.initialWasmMemoryPages,
