@@ -59,6 +59,8 @@
           (then (return (i32.const -1))))
 
         (call $extend_ascii_block (local.get $i) (local.get $temp) (local.get $utf16_ptr))
+        
+        (local.set $i (local.get $temp))
       ))
 
     ;; non ascii block
@@ -72,6 +74,12 @@
                 (i32.add 
                   (local.get $utf16_ptr) 
                   (i32.shl (i32.sub (local.get $temp) (local.get $i)) (i32.const 1))))
+
+            (local.set $ascii_length 
+              (i32.add 
+                (local.get $ascii_length) 
+                (i32.sub (local.get $temp) (local.get $i))))
+
             (local.set $i (local.get $temp))
 
             (if (global.get $dq_index)
