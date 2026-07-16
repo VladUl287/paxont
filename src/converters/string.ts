@@ -178,7 +178,7 @@ function useDecoder(options: UseDecodeOptions) {
                         result = result.concat(value)
                         i = next_non_ascii
 
-                        while (next_non_ascii < index - 1) {
+                        while (i < index - 1) {
                             const byte = b[i]
 
                             if (byte < 0x80) {
