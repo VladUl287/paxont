@@ -3,7 +3,7 @@ import { JsonReader, PrimitiveMeta } from "../metadata/types"
 import { ReadResult } from "../utils/types"
 import { DOUBLE_QUOTE as DQ } from "../utils/utf8constants"
 
-const { decode: decodeSlow } = useDecoder({
+const { decode } = useDecoder({
     initialWasmMemoryPages: 1, //~64KiB
     maxWasmMemoryPages: 128, //~8MiB,
 })
@@ -28,7 +28,7 @@ export function tryParseString(
     }
     else i++
 
-    return decodeSlow(reader, i)
+    return decode(reader, i)
 }
 
 type DecodeModule = {
