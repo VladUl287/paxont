@@ -37,7 +37,7 @@ type DecodeModule = {
     readonly ascii_length: () => number
     readonly utf16_length: () => number
     readonly utf8_to_utf16: (index: number, length: number, target: number) => number
-    readonly parse_ascii_prefix: (index: number, length: number) => number
+    readonly parse_ascii_prefix: (index: number, length: number, target: number) => number
 }
 
 type UseDecodeOptions = {
@@ -148,22 +148,22 @@ function useDecoder(options: UseDecodeOptions) {
                 const utf16_end = get_utf16_length()
                 const utf16Length = utf16_end - multipleOfTwo
 
-                if (utf16Length <= 128) {
-                    const view = new Uint16Array(memory.buffer, multipleOfTwo, utf16Length / 2)
-                    const factory = factories[view.length]
-                    return {
-                        value: factory(view, 0),
-                        nextIndex: index + 1
-                    }
-                }
+                // if (utf16Length <= 128) {
+                //     const view = new Uint16Array(memory.buffer, multipleOfTwo, utf16Length / 2)
+                //     const factory = factories[view.length]
+                //     return {
+                //         value: factory(view, 0),
+                //         nextIndex: index + 1
+                //     }
+                // }
 
-                if (Buffer) {
-                    const buffer = Buffer.from(memory.buffer, multipleOfTwo, utf16Length)
-                    return {
-                        value: buffer.toString('utf16le'),
-                        nextIndex: index + 1
-                    }
-                }
+                // if (Buffer) {
+                //     const buffer = Buffer.from(memory.buffer, multipleOfTwo, utf16Length)
+                //     return {
+                //         value: buffer.toString('utf16le'),
+                //         nextIndex: index + 1
+                //     }
+                // }
 
                 const ascii_length = get_ascii_length()
                 const percentage = ascii_length * 100 / dataLength
@@ -172,7 +172,7 @@ function useDecoder(options: UseDecodeOptions) {
                     let chunks = ''
                     let start = i
                     while (start < index) {
-                        const nonAsciiIndex = parse_ascii_prefix(start, index - 1)
+                        const nonAsciiIndex = parse_ascii_prefix(start, index - 1, -1)
                         const view = new Uint8Array(b.buffer, start, (nonAsciiIndex - start))
                         const value = unsafeDecoder8.decode(view)
                         chunks = chunks.concat(value)
