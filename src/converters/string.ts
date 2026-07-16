@@ -1,5 +1,5 @@
+import { genUnrolledFromCharCode } from "../code_gen/string"
 import { JsonReader, PrimitiveMeta } from "../metadata/types"
-import { TypedArray } from "../utils/typedArray"
 import { ReadResult } from "../utils/types"
 import { DOUBLE_QUOTE as DQ } from "../utils/utf8constants"
 
@@ -258,12 +258,8 @@ function useDecoder(options: UseDecodeOptions) {
     }
 }
 
-function genUnrolledFromCharCode(length: number): (data: TypedArray, i: number) => string {
-    return new Function('a', 'i', `return String.fromCharCode(${new Array(length).fill(0).map((_, i) => `a[i + ${i}]`)})`) as any
-}
-
 const maxcount = 64
-const factories = new Array<(data: TypedArray, i: number) => string>(maxcount)
+const factories = new Array<(data: ArrayLike<number>, i: number) => string>(maxcount)
 factories[0] = (_a, _i) => ""
 for (let i = 1; i <= maxcount; i++) {
     factories[i] = genUnrolledFromCharCode(i)
