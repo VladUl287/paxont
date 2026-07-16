@@ -173,10 +173,12 @@ function useDecoder(options: UseDecodeOptions) {
                     while (i < index - 1) {
                         const next_non_ascii = parse_ascii_prefix(i, index - 1, -1)
 
-                        const view = new Uint8Array(b.buffer, i, next_non_ascii - i)
-                        const value = unsafeDecoder8.decode(view)
-                        result = result.concat(value)
-                        i = next_non_ascii
+                        if (next_non_ascii > i) {
+                            const view = new Uint8Array(b.buffer, i, next_non_ascii - i)
+                            const value = unsafeDecoder8.decode(view)
+                            result = result.concat(value)
+                            i = next_non_ascii
+                        }
 
                         while (i < index - 1) {
                             const byte = b[i]
