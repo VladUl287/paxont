@@ -76,6 +76,7 @@
 
             (if (global.get $dq_index)
               (then 
+                (global.set $ascii_length (local.get $ascii_length))
                 (global.set $utf16_length (local.get $utf16_ptr))
                 (return (local.get $i))
               ))
