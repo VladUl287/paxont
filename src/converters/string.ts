@@ -169,18 +169,48 @@ function useDecoder(options: UseDecodeOptions) {
                 const percentage = ascii_length * 100 / dataLength
 
                 if (percentage > 50) {
-                    let chunks = ''
-                    let start = i
-                    while (start < index) {
-                        const nonAsciiIndex = parse_ascii_prefix(start, index - 1, -1)
-                        const view = new Uint8Array(b.buffer, start, (nonAsciiIndex - start))
+                    let result = ''
+                    while (i < index - 1) {
+                        const next_non_ascii = parse_ascii_prefix(i, index - 1, -1)
+
+                        const view = new Uint8Array(b.buffer, i, next_non_ascii - i)
                         const value = unsafeDecoder8.decode(view)
-                        chunks = chunks.concat(value)
-                        start = nonAsciiIndex + 3
-                        chunks += String.fromCharCode(memory[nonAsciiIndex])
+                        result = result.concat(value)
+                        i = next_non_ascii
+
+                        while (next_non_ascii < index - 1) {
+                            const byte = b[i]
+
+                            if (byte < 0x80) {
+                                break
+                            }
+                            else if (byte < 0xE0) {
+                                result += String.fromCharCode(((byte & 0x1F) << 6) | (b[i + 1] & 0x3F))
+                                i += 2
+                            }
+                            else if (byte < 0xF0) {
+                                result += String.fromCharCode(
+                                    ((byte & 0x0F) << 12) |
+                                    ((b[i + 1] & 0x3F) << 6) |
+                                    ((b[i + 2] & 0x3F)))
+                                i += 3
+                            }
+                            else {
+                                const codePoint = (
+                                    ((byte & 0x07) << 18) |
+                                    ((b[i + 1] & 0x3F) << 12) |
+                                    ((b[i + 2] & 0x3F) << 6) |
+                                    ((b[i + 3] & 0x3F)))
+                                result += String.fromCharCode(
+                                    Math.floor((codePoint - 0x10000) / 0x400) + 0xD800,
+                                    ((codePoint - 0x10000) % 0x400) + 0xDC00
+                                )
+                                i += 4
+                            }
+                        }
                     }
                     return {
-                        value: chunks,
+                        value: result,
                         nextIndex: index + 1
                     }
                 }
