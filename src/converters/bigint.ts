@@ -2,12 +2,10 @@ import { JsonReader, PrimitiveMeta } from "../metadata/types"
 import { isDigitUnsafe } from "../utils/utf8constants"
 import { ReadResult } from "../utils/types"
 
-type State = { lastIndex?: number }
-
-const unsafeDecoder = new TextDecoder('utf-8', { fatal: false })
+type BigIntState = { lastIndex?: number }
 
 export function tryParseBigInt(
-    ctx: JsonReader, _m: PrimitiveMeta<bigint>, i: number, _d: number, state: State): ReadResult<bigint> {
+    ctx: JsonReader, _m: PrimitiveMeta<bigint>, i: number, _d: number, state: BigIntState): ReadResult<bigint> {
     const b = ctx.bytes
     const len = b.length
 
@@ -34,9 +32,10 @@ export function tryParseBigInt(
         }
     }
 
+    const decoder = ctx.options.decoder
     const view = new Uint8Array(b.buffer, start, i - start)
     return {
-        value: BigInt(unsafeDecoder.decode(view)),
+        value: BigInt(decoder.decode(view)),
         nextIndex: i
     }
 }
