@@ -108,18 +108,6 @@ function useDecoder(options: UseDecodeOptions) {
 
         const current = { module: module, options: options }
 
-        const utf8_unsafe = (b: Uint8Array, start: number, end: number): string => {
-            const length = end - start
-
-            if (length > 64) {
-                const view = new Uint8Array(b.buffer, start, end - start)
-                return unsafeDecoder8.decode(view)
-            }
-
-            const factory = factories[length]
-            return factory(b, start)
-        }
-
         function decode(reader: JsonReader, i: number): ReadResult<string> {
             const b = reader.bytes
             const dataLength = b.length
