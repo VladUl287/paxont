@@ -1,5 +1,6 @@
 import { genUnrolledFromCharCode } from "../code_gen/string"
 import { JsonReader, PrimitiveMeta } from "../metadata/types"
+import { IS_NODE } from "../utils/platform"
 import { ReadResult } from "../utils/types"
 import { DOUBLE_QUOTE as DQ } from "../utils/utf8constants"
 
@@ -156,7 +157,7 @@ function useDecoder(options: UseDecodeOptions) {
                     }
                 }
 
-                if (Buffer) {
+                if (IS_NODE) {
                     const buffer = Buffer.from(memory.buffer, multipleOfTwo, utf16Length)
                     return {
                         value: buffer.toString('utf16le'),
