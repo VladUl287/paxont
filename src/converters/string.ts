@@ -143,7 +143,6 @@ function useDecoder(options: UseDecodeOptions) {
 
                     if (ascii_length <= 64) {
                         const factory = factories[ascii_length]
-
                         return {
                             value: factory(b, i),
                             nextIndex: index + 1
@@ -160,70 +159,19 @@ function useDecoder(options: UseDecodeOptions) {
                 const utf16_end = get_utf16_length()
                 const utf16Length = utf16_end - multipleOfTwo
 
-                // if (utf16Length <= 128) {
-                //     const view = new Uint16Array(memory.buffer, multipleOfTwo, utf16Length / 2)
-                //     const factory = factories[view.length]
-                //     return {
-                //         value: factory(view, 0),
-                //         nextIndex: index + 1
-                //     }
-                // }
-
-                // if (Buffer) {
-                //     const buffer = Buffer.from(memory.buffer, multipleOfTwo, utf16Length)
-                //     return {
-                //         value: buffer.toString('utf16le'),
-                //         nextIndex: index + 1
-                //     }
-                // }
-
-                const ascii_length = get_ascii_length()
-                const percentage = ascii_length * 100 / dataLength
-
-                if (percentage > 50) {
-                    let result = ''
-                    
-                    while (i < index - 1) {
-                        const next_non_ascii = parse_ascii_prefix(i, index - 1, -1)
-
-                        if (next_non_ascii > i) {
-                            const value = utf8_unsafe(b, i, next_non_ascii)
-                            result = result.concat(value)
-                            i = next_non_ascii
-                        }
-
-                        while (i < index - 1) {
-                            const byte = b[i]
-
-                            if (byte < 0x80) {
-                                break
-                            }
-                            else if (byte < 0xE0) {
-                                result += String.fromCharCode(((byte & 0x1F) << 6) | (b[i + 1] & 0x3F))
-                                i += 2
-                            }
-                            else if (byte < 0xF0) {
-                                result += String.fromCharCode(
-                                    ((byte & 0x0F) << 12) |
-                                    ((b[i + 1] & 0x3F) << 6) |
-                                    ((b[i + 2] & 0x3F)))
-                                i += 3
-                            }
-                            else {
-                                const codePoint = (
-                                    ((byte & 0x07) << 18) |
-                                    ((b[i + 1] & 0x3F) << 12) |
-                                    ((b[i + 2] & 0x3F) << 6) |
-                                    ((b[i + 3] & 0x3F)))
-                                result += String.fromCharCode(
-                                    Math.floor((codePoint - 0x10000) / 0x400) + 0xD800,
-                                    ((codePoint - 0x10000) % 0x400) + 0xDC00)
-                                i += 4
-                            }
-                        }
-                    }
+                if (utf16Length <= 128) {
+                    const view = new Uint16Array(memory.buffer, multipleOfTwo, utf16Length / 2)
+                    const factory = factories[view.length]
                     return {
-                        value: result,
+                        value: factory(view, 0),
+                        nextIndex: index + 1
+                    }
+                }
+
+                if (Buffer) {
+                    const buffer = Buffer.from(memory.buffer, multipleOfTwo, utf16Length)
+                    return {
+                        value: buffer.toString('utf16le'),
                         nextIndex: index + 1
                     }
                 }
