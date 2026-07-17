@@ -53,6 +53,10 @@ export function deserialize<T>(json: BinaryInput, type: T, options?: Partial<Jso
     return result.value
 }
 
+export function deserializeAsync<T>(json: ReadableStream<Uint8Array>, type: T, options?: Partial<JsonOptions>): Promise<MetaOrObject<T>> {
+    return new Promise(() => { })
+}
+
 export function serialize<T, M extends BaseMeta<T, any>>(value: T, metadata: M, options?: Partial<JsonOptions>): string {
     const fullOptions = !!options ?
         optionsCache.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
