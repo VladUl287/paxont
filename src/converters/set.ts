@@ -7,7 +7,7 @@ export function toSet<V>(ctx: JsonReader, m: CollectionMeta<Set<V>, V, any>, i: 
     const b = ctx.bytes
 
     if (b[i] !== SQUARE_OPEN)
-        throw new Error(`array open not found at position ${i}. depth ${d}`)
+        throw new Error(`Expected '[' at index ${i}, but found '${String.fromCharCode(b[i])}' while parsing Set`)
     i++
 
     const result = new Set<V>()
