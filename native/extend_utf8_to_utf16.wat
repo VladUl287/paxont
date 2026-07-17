@@ -61,6 +61,7 @@
         (call $extend_ascii_block (local.get $i) (local.get $temp) (local.get $utf16_ptr))
         
         (local.set $i (local.get $temp))
+        (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.shl (local.get $ascii_length) (i32.const 1))))
       ))
 
     ;; non ascii block
