@@ -13,9 +13,9 @@ const buffer = createFactory(Uint8Array)
 
 export type BinaryInput = ArrayBuffer | Uint8Array | string
 
-export function deserialize<T>(
-    json: BinaryInput, type: T, options?: Partial<JsonOptions>
-): T extends BaseMeta<infer V, any> ? V : T {
+type MetaOrObject<T> = T extends BaseMeta<infer V, any> ? V : T
+
+export function deserialize<T>(json: BinaryInput, type: T, options?: Partial<JsonOptions>): MetaOrObject<T> {
     const fullOptions = !!options ?
         optionsCache.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
         defaultOptions
@@ -46,7 +46,7 @@ export function deserialize<T>(
         writable: true,
     }, metadata, 0, 0, undefined)
 
-    if(result.value === undefined) {
+    if (result.value === undefined) {
         throw new Error('')
     }
 
