@@ -2,8 +2,8 @@ import { JsonReader, PrimitiveMeta } from "../metadata/types"
 import { E } from "../utils/utf8constants"
 import { ReadResult } from "../utils/types"
 
-export function toBoolean(
-    ctx: JsonReader, _m: PrimitiveMeta<boolean>, i: number, _d: number, state?: Record<string, undefined>
+export function tryParseBoolean(
+    ctx: JsonReader, _m: PrimitiveMeta<boolean>, i: number, _d: number, _s: Record<string, any>
 ): ReadResult<boolean> {
     const b = ctx.bytes
     const len = b.length
@@ -24,11 +24,8 @@ export function toBoolean(
             nextIndex: i + 5
         }
 
-    if (ctx.writable) {
-        throw new Error(`invalid boolean, at index ${i}`)
-    }
+    if (ctx.writable && (i + 3 >= len || i + 4 >= len))
+        return { nextIndex: i }
 
-    return {
-        nextIndex: i
-    }
+    throw new Error(`Expected 'true' or 'false' at index ${i}, but found '${String.fromCharCode(b[i])}' while parsing boolean`)
 }
