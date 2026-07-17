@@ -4,6 +4,8 @@ import { ReadResult } from "../utils/types"
 
 type State = { lastIndex?: number }
 
+const unsafeDecoder = new TextDecoder('utf-8', { fatal: false })
+
 export function tryParseBigInt(
     ctx: JsonReader, _m: PrimitiveMeta<bigint>, i: number, _d: number, state: State): ReadResult<bigint> {
     const b = ctx.bytes
@@ -27,12 +29,14 @@ export function tryParseBigInt(
 
     if (i === len && ctx.writable) {
         state.lastIndex = i
-        return { nextIndex: start }
+        return {
+            nextIndex: start
+        }
     }
 
     const view = new Uint8Array(b.buffer, start, i - start)
     return {
-        value: BigInt(ctx.options.decoder.decode(view)),
+        value: BigInt(unsafeDecoder.decode(view)),
         nextIndex: i
     }
 }
