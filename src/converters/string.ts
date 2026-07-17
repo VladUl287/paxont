@@ -108,6 +108,18 @@ function useDecoder(options: UseDecodeOptions) {
 
         const current = { module: module, options: options }
 
+        const utf8_unsafe = (b: Uint8Array, start: number, end: number): string => {
+            const length = end - start
+
+            if (length > 64) {
+                const view = new Uint8Array(b.buffer, start, end - start)
+                return unsafeDecoder8.decode(view)
+            }
+
+            const factory = factories[length]
+            return factory(b, start)
+        }
+
         function decode(reader: JsonReader, i: number): ReadResult<string> {
             const b = reader.bytes
             const dataLength = b.length
@@ -170,12 +182,12 @@ function useDecoder(options: UseDecodeOptions) {
 
                 if (percentage > 50) {
                     let result = ''
+                    
                     while (i < index - 1) {
                         const next_non_ascii = parse_ascii_prefix(i, index - 1, -1)
 
                         if (next_non_ascii > i) {
-                            const view = new Uint8Array(b.buffer, i, next_non_ascii - i)
-                            const value = unsafeDecoder8.decode(view)
+                            const value = utf8_unsafe(b, i, next_non_ascii)
                             result = result.concat(value)
                             i = next_non_ascii
                         }
