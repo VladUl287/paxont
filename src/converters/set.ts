@@ -3,8 +3,8 @@ import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
 import { ReadResult } from "../utils/types"
 
-export function toSet<V>(
-    ctx: JsonReader, m: CollectionMeta<Set<V>, V, BaseMeta<V, any>>, i: number, d: number
+export function toSet<V, M extends BaseMeta<V, any>>(
+    ctx: JsonReader, m: CollectionMeta<Set<V>, V, M>, i: number, d: number
 ): ReadResult<Set<V>> {
     const b = ctx.bytes
 
