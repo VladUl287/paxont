@@ -9,7 +9,7 @@ export type JsonOptions = {
 export const defaultOptions: JsonOptions = {
     encoder: new TextEncoder(),
     decoder: new TextDecoder('utf-8', {
-        fatal: true
+        fatal: false
     }),
     maxDepth: 64,
     allowTrailingCommas: false,
