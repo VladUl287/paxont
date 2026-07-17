@@ -7,6 +7,7 @@ import { DOUBLE_QUOTE as DQ } from "../utils/utf8constants"
 const { decode } = useDecoder({
     initialWasmMemoryPages: 1, //~64KiB
     maxWasmMemoryPages: 128, //~8MiB,
+    isNode: IS_NODE
 })
 
 export function tryParseString(
@@ -44,6 +45,7 @@ type DecodeModule = {
 type UseDecodeOptions = {
     readonly maxWasmMemoryPages: number
     readonly initialWasmMemoryPages: number
+    readonly isNode: boolean
 }
 
 type UseDecode = {
@@ -157,7 +159,7 @@ function useDecoder(options: UseDecodeOptions) {
                     }
                 }
 
-                if (IS_NODE) {
+                if (options.isNode) {
                     const buffer = Buffer.from(memory.buffer, multipleOfTwo, utf16Length)
                     return {
                         value: buffer.toString('utf16le'),
