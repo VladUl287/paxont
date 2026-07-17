@@ -11,11 +11,9 @@ const defaultMetadata = useMetadata()
 
 const buffer = createFactory(Uint8Array)
 
-export type BinaryInput = ArrayBuffer | Uint8Array | string
-
 type MetaOrObject<T> = T extends BaseMeta<infer V, any> ? V : T
 
-export function deserialize<T>(json: BinaryInput, type: T, options?: Partial<JsonOptions>): MetaOrObject<T> {
+export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T, options?: Partial<JsonOptions>): MetaOrObject<T> {
     const fullOptions = !!options ?
         optionsCache.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
         defaultOptions
