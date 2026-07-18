@@ -1,10 +1,13 @@
 import { BaseMeta, CollectionMeta, JsonReader, TypeName } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
-import { ReadResult } from "../utils/types"
+import { ReadResult, ReadResultType } from "../utils/types"
 
-type ArrayState<T> = {
-    isContinued?: boolean,
+type BaseState = {
+    isPartial: boolean
+}
+
+type ArrayState<T> = BaseState & {
     buffer?: ArrayLike<T>,
     bufferIndex?: number,
     lastState?: Record<string, any>
@@ -17,18 +20,38 @@ export function toArray<T, M extends BaseMeta<T, M>>(
     depth: number,
     state: ArrayState<T>,
 ): ReadResult<ArrayLike<T>> {
-    const b = reader.bytes
+    if (depth > reader.options.maxDepth)
+        return {
+            type: ReadResultType.ERROR,
+            error: new Error(''),
+            nextIndex: index
+        }
 
-    if (index >= b.length) {
-        if (reader.writable) throw new Error(``)
-        return { nextIndex: index }
+    const b = reader.bytes
+    const len = b.length
+
+    let i = index
+    if (i >= len) {
+        if (reader.writable)
+            return {
+                type: ReadResultType.NEEDS_MORE_DATA,
+                nextIndex: i
+            }
+
+        return {
+            type: ReadResultType.ERROR,
+            error: new Error(''),
+            nextIndex: i
+        }
     }
 
-    if (b[index] !== SQUARE_OPEN) {
-        if (!state?.isContinued)
+    if (b[i] !== SQUARE_OPEN) {
+        if (!state.isPartial)
             throw new Error(`Expected '[' at index ${index}, but found '${b[index]}' while parsing array`)
     }
-    else index++
+    else if (!state?.isPartial) {
+        i++
+    }
 
     const factory = getFactory(metadata.type)
 
