@@ -40,9 +40,9 @@ export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T,
 
     const result = metadata.toValue({
         bytes,
+        writable: false,
         options: fullOptions,
-        writable: true,
-    }, metadata, 0, 0, undefined)
+    }, metadata, 0, 0, {})
 
     if (result.value === undefined) {
         throw new Error('')
