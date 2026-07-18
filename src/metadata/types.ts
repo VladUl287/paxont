@@ -1,4 +1,5 @@
 import { JsonOptions } from "../options"
+import { ArrayRecycler, Indexable } from "../utils/array"
 import { ReadResult } from "../utils/types"
 import { BaseType } from "./baseTypes"
 
@@ -55,8 +56,14 @@ export interface NullableMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<T | 
     readonly value: M
 }
 
-export interface CollectionMeta<C, T, M extends BaseMeta<T, M>> extends BaseMeta<C, CollectionMeta<C, T, M>> {
+export interface ArrayMeta<T, A extends Indexable<T>, M extends BaseMeta<T, M>> extends BaseMeta<A, ArrayMeta<T, A, M>> {
     readonly value: M
+    readonly recycler: ArrayRecycler<A, T>
+}
+
+export interface SetMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<Set<T>, SetMeta<T, M>> {
+    readonly value: M,
+    readonly getIdentity?: (value: T) => any
 }
 
 export interface MapMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<Map<string, T>, MapMeta<T, M>> {
