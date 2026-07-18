@@ -1,5 +1,5 @@
 import { JsonOptions } from "../options"
-import { ArrayRecycler, Indexable } from "../utils/array"
+import { ArrayRecycler, IndexableArray } from "../utils/array"
 import { ReadResult } from "../utils/types"
 import { BaseType } from "./baseTypes"
 
@@ -56,7 +56,7 @@ export interface NullableMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<T | 
     readonly value: M
 }
 
-export interface ArrayMeta<T, A extends Indexable<T>, M extends BaseMeta<T, M>> extends BaseMeta<A, ArrayMeta<T, A, M>> {
+export interface ArrayMeta<T, A extends IndexableArray<T>, M extends BaseMeta<T, M>> extends BaseMeta<A, ArrayMeta<T, A, M>> {
     readonly value: M
     readonly recycler: ArrayRecycler<A, T>
 }

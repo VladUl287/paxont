@@ -1,8 +1,8 @@
 import { BaseMeta, ArrayMeta, JsonReader, TypeName } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
-import { ReadResult, ReadResultType } from "../utils/types"
-import { Indexable } from "../utils/array"
+import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
+import { IndexableArray } from "../utils/array"
 
 type BaseState = {
     isContinued: boolean
@@ -15,7 +15,7 @@ type ArrayState<T> = BaseState & {
 }
 
 export function toArray<T, M extends BaseMeta<T, M>>(
-    metadata: ArrayMeta<T, Indexable<T>, M>,
+    metadata: ArrayMeta<T, IndexableArray<T>, M>,
     reader: JsonReader,
     index: number,
     depth: number,
@@ -52,8 +52,8 @@ export function toArray<T, M extends BaseMeta<T, M>>(
         i++
     }
 
-    const recycle = metadata.recycler.acquire 
-    const buffer = recycle(1024)
+    const recycle = metadata.recycler.acquire
+    let buffer = recycle(1024)
 
     const meta = metadata.value
     const toValue = meta.toValue
@@ -62,27 +62,19 @@ export function toArray<T, M extends BaseMeta<T, M>>(
 
     let j = state?.bufferIndex ?? 0
     while (true) {
-        index = skipWhitespace(b, index)
+        i = skipWhitespace(b, i)
 
-        const result = toValue(reader, meta, index, depth, valueState)
+        const result = toValue(reader, meta, i, depth, valueState)
 
-        if (result.value === undefined) {
-            if (state) {
-                state.bufferIndex = j
-                state.buffer = buffer
-                state.lastState = valueState
-            }
-            return {
-                nextIndex: index
-            }
-        }
+        if (isError(result) || isNeedsMoreData(result))
+            return result
 
         buffer[j] = result.value
         index = result.nextIndex
         j++
 
-        // if (j >= buffer.length)
-        //     buffer = factory(buffer.length * 2, buffer)
+        if (j >= buffer.length)
+            buffer = recycle(buffer.length * 2, buffer)
 
         index = skipWhitespace(b, index)
 
@@ -90,9 +82,10 @@ export function toArray<T, M extends BaseMeta<T, M>>(
         else if (b[index] === SQUARE_CLOSE) break
         else throw new Error()
     }
-
+    
     return {
-        value: buffer.slice(0, j) as any,
+        type: ReadResultType.COMPLETE,
+        value: buffer.slice(0, j),
         nextIndex: ++index
     }
 }

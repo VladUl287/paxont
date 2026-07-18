@@ -1,7 +1,7 @@
 import { createCache } from "./cache/cache"
 import { defaultOptions, JsonOptions, mergeOptions } from "./options"
 import { BaseMeta } from "./metadata/types"
-import { createFactory } from "./utils/array"
+import { useArrayRecycler } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
 import { useMetadata } from "./metadata"
@@ -9,7 +9,7 @@ import { useMetadata } from "./metadata"
 const optionsCache = createCache<Partial<JsonOptions>, JsonOptions>()
 const defaultMetadata = useMetadata()
 
-const buffer = createFactory(Uint8Array)
+const recycler = useArrayRecycler(Uint8Array)
 
 type MetaOrObject<T> = T extends BaseMeta<infer V, any> ? V : T
 
@@ -25,7 +25,7 @@ export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T,
     const isString = typeof json === 'string'
     if (isString) {
         const length = getMaxBytesCount(json.length)
-        bytes = buffer(length)
+        bytes = recycler.acquire(length)
         fullOptions.encoder.encodeInto(json, bytes)
     }
     else if (json instanceof ArrayBuffer) {
@@ -44,11 +44,7 @@ export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T,
         options: fullOptions,
     }, metadata, 0, 0, {})
 
-    if (result.value === undefined) {
-        throw new Error('')
-    }
-
-    return result.value
+    return result as any
 }
 
 export function deserializeAsync<T>(json: ReadableStream<Uint8Array>, type: T, options?: Partial<JsonOptions>): Promise<MetaOrObject<T>> {

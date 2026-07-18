@@ -1,14 +1,15 @@
-type Indexable<V> = {
+export type IndexableArray<V> = {
     length: number
     [index: number]: V
+    slice: (start?: number, end?: number) => IndexableArray<V>
 }
 
-export type ArrayRecycler<T extends Indexable<V>, V> = {
+export type ArrayRecycler<T extends IndexableArray<V>, V> = {
     acquire: (length: number, source?: T) => T,
     dispose(): void
 }
 
-export function useArrayRecycler<T extends Indexable<V>, V>(ctor: new (length: number) => T): ArrayRecycler<T, V> {
+export function useArrayRecycler<T extends IndexableArray<V>, V>(ctor: new (length: number) => T): ArrayRecycler<T, V> {
     let array: T | null = null
 
     const acquire = (newLength: number, source?: T) => {
