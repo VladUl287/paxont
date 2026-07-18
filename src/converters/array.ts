@@ -4,7 +4,7 @@ import { skipWhitespace } from "./utils"
 import { ReadResult, ReadResultType } from "../utils/types"
 
 type BaseState = {
-    isPartial: boolean
+    isContinued: boolean
 }
 
 type ArrayState<T> = BaseState & {
@@ -45,7 +45,7 @@ export function toArray<T, M extends BaseMeta<T, M>>(
         }
     }
 
-    if (!state.isPartial) {
+    if (!state.isContinued) {
         if (b[i] !== SQUARE_OPEN)
             throw new Error(`Expected '[' at index ${index}, but found '${b[index]}' while parsing array`)
         i++
