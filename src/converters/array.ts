@@ -45,11 +45,9 @@ export function toArray<T, M extends BaseMeta<T, M>>(
         }
     }
 
-    if (b[i] !== SQUARE_OPEN) {
-        if (!state.isPartial)
+    if (!state.isPartial) {
+        if (b[i] !== SQUARE_OPEN)
             throw new Error(`Expected '[' at index ${index}, but found '${b[index]}' while parsing array`)
-    }
-    else if (!state?.isPartial) {
         i++
     }
 
