@@ -1,6 +1,30 @@
-export type ReadResult<T> = {
-    readonly value?: T
-    readonly nextIndex: number
+export const ReadResultType = Object.freeze({
+    COMPLETE: 1,
+    NEEDS_MORE_DATA: 2,
+    ERROR: 3,
+})
+
+export type ReadResult<T> =
+    | { type: typeof ReadResultType.COMPLETE, value: T, nextIndex: number }
+    | { type: typeof ReadResultType.NEEDS_MORE_DATA, nextIndex: number }
+    | { type: typeof ReadResultType.ERROR, error: Error, nextIndex: number }
+
+export function isComplete<T>(
+    result: ReadResult<T>
+): result is Extract<ReadResult<T>, { type: typeof ReadResultType.COMPLETE }> {
+    return result.type === ReadResultType.COMPLETE
+}
+
+export function isNeedsMoreData<T>(
+    result: ReadResult<T>
+): result is Extract<ReadResult<T>, { type: typeof ReadResultType.NEEDS_MORE_DATA }> {
+    return result.type === ReadResultType.NEEDS_MORE_DATA
+}
+
+export function isError<T>(
+    result: ReadResult<T>
+): result is Extract<ReadResult<T>, { type: typeof ReadResultType.ERROR }> {
+    return result.type === ReadResultType.ERROR
 }
 
 export class Nullable<T> {
