@@ -1,41 +1,49 @@
 import { BaseMeta, CollectionMeta, JsonReader, TypeName } from "../metadata/types"
-import { TypedArray } from "../utils/typedArray"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
 import { ReadResult } from "../utils/types"
 
-type ArrayLike<T> = T[] | TypedArray
+type ArrayState<T> = {
+    isContinued?: boolean,
+    buffer?: ArrayLike<T>,
+    bufferIndex?: number,
+    lastState?: Record<string, any>
+}
 
-export function toArray<C extends ArrayLike<T>, T, M extends BaseMeta<T, M>>(
-    ctx: JsonReader, m: CollectionMeta<C, T, M>, i: number, d: number, state?: Record<string, any>
-): ReadResult<C> {
-    const b = ctx.bytes
+export function toArray<T, M extends BaseMeta<T, M>>(
+    metadata: CollectionMeta<ArrayLike<T>, T, M>,
+    reader: JsonReader,
+    index: number,
+    depth: number,
+    state: ArrayState<T>,
+): ReadResult<ArrayLike<T>> {
+    const b = reader.bytes
 
-    if (i >= b.length) {
-        if (ctx.writable) throw new Error(``)
-        return { nextIndex: i }
+    if (index >= b.length) {
+        if (reader.writable) throw new Error(``)
+        return { nextIndex: index }
     }
 
-    if (b[i] !== SQUARE_OPEN) {
-        if (!state?.processing)
-            throw new Error(`Expected '[' at index ${i}, but found '${b[i]}' while parsing array`)
+    if (b[index] !== SQUARE_OPEN) {
+        if (!state?.isContinued)
+            throw new Error(`Expected '[' at index ${index}, but found '${b[index]}' while parsing array`)
     }
-    else i++
+    else index++
 
-    const factory = getFactory(m.type)
+    const factory = getFactory(metadata.type)
 
-    let buffer = state?.buffer ?? factory(Math.min(1024, b.length - i))
+    let buffer = state?.buffer ?? factory(Math.min(1024, b.length - index))
 
-    const meta = m.value
+    const meta = metadata.value
     const toValue = meta.toValue
 
     const valueState = state?.lastState ?? {}
 
     let j = state?.bufferIndex ?? 0
     while (true) {
-        i = skipWhitespace(b, i)
+        index = skipWhitespace(b, index)
 
-        const result = toValue(ctx, meta, i, d, valueState)
+        const result = toValue(reader, meta, index, depth, valueState)
 
         if (result.value === undefined) {
             if (state) {
@@ -44,27 +52,27 @@ export function toArray<C extends ArrayLike<T>, T, M extends BaseMeta<T, M>>(
                 state.lastState = valueState
             }
             return {
-                nextIndex: i
+                nextIndex: index
             }
         }
 
         buffer[j] = result.value
-        i = result.nextIndex
+        index = result.nextIndex
         j++
 
         if (j >= buffer.length)
             buffer = factory(buffer.length * 2, buffer)
 
-        i = skipWhitespace(b, i)
+        index = skipWhitespace(b, index)
 
-        if (b[i] === COMMA) i++
-        else if (b[i] === SQUARE_CLOSE) break
+        if (b[index] === COMMA) index++
+        else if (b[index] === SQUARE_CLOSE) break
         else throw new Error()
     }
 
     return {
         value: buffer.slice(0, j) as any,
-        nextIndex: ++i
+        nextIndex: ++index
     }
 }
 
@@ -117,9 +125,6 @@ function createFactory<T extends ArrayLike<any>>(ctor: new (length: number) => T
         }
 
         array = new ctor(length)
-
-        if (source)
-            (array as TypedArray).set(source as any)
 
         return array
     }
