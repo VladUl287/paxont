@@ -20,8 +20,8 @@ export function useArrayPool<T>(minLength: number = 2) {
         const length = Math.max(gloablMinLength, clampLength(minLength))
 
         const linearStore = store.get(length)
-        const array = linearStore?.pop()
-        if (array) return array
+        if (linearStore && linearStore.length > 0) 
+            return linearStore.pop()!
 
         return new Array<T>(length)
     }
