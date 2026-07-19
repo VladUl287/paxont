@@ -12,6 +12,42 @@ export type ArrayRecycler<T extends IndexableArray<V>, V> = {
 export const clampLength = (minLength: number): number =>
     Math.pow(2, Math.ceil(Math.log2(minLength)))
 
+export function useArrayPool<T>(minLength: number = 2) {
+    const gloablMinLength = clampLength(minLength)
+    const store = new Map<number, Array<T[]>>()
+
+    const acquire = (minLength: number): Array<T> => {
+        const length = Math.max(gloablMinLength, clampLength(minLength))
+
+        const linearStore = store.get(length)
+        const array = linearStore?.pop()
+        if (array) return array
+
+        return new Array<T>(length)
+    }
+
+    const release = (array: Array<T>): void => {
+        const length = clampLength(array.length)
+
+        if (length !== array.length) {
+            array.length = length
+        }
+
+        const linearStore = store.get(length)
+        if (linearStore) {
+            linearStore.push(array)
+            return
+        }
+
+        store.set(length, [array])
+    }
+
+    return {
+        acquire,
+        release
+    }
+}
+
 export function useArrayRecycler<T extends IndexableArray<V>, V>(ctor: new (length: number) => T): ArrayRecycler<T, V> {
     let array: T | null = null
 
