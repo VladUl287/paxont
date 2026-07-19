@@ -13,8 +13,8 @@ export const clampLength = (minLength: number): number =>
     Math.pow(2, Math.ceil(Math.log2(minLength)))
 
 class Stack<T> {
-    private readonly stack: Array<T> = [];
-    private length: number = 0;
+    private readonly stack: Array<T> = []
+    private length: number = 0
 
     constructor() { }
 
@@ -65,7 +65,7 @@ export function useArrayPool<T>(minLength = 2) {
             return stack.pop() ?? new Array<T>(len)
         
         return new Array<T>(len)
-    };
+    }
 
     const release = (array: Array<T>): void => {
         let len = array.length | 0
