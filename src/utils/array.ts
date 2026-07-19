@@ -50,20 +50,26 @@ class Stack<T> {
     }
 }
 
+const globalPools = Object.freeze({
+    string: useArrayPool<string>(128),
+    number: useArrayPool<number>(128),
+    object: useArrayPool<object>(128)
+})
+
 export function useArrayPool<T>(minLength = 2) {
     const MAX_LENGTH = 0x3fffffff
     const globalMinLength = Math.max(0, minLength | 0)
     const pool = new Map<number, Stack<Array<T>>>()
 
-    const acquire = (requestedLength: number): Array<T> => {
-        let len = requestedLength >>> 0
+    const acquire = (minLength: number): Array<T> => {
+        let len = minLength >>> 0
         if (len < globalMinLength) len = globalMinLength
         else if (len > MAX_LENGTH) len = MAX_LENGTH
 
         const stack = pool.get(len)
         if (stack !== undefined)
             return stack.pop() ?? new Array<T>(len)
-        
+
         return new Array<T>(len)
     }
 
