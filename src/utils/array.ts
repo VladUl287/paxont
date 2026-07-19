@@ -12,40 +12,78 @@ export type ArrayRecycler<T extends IndexableArray<V>, V> = {
 export const clampLength = (minLength: number): number =>
     Math.pow(2, Math.ceil(Math.log2(minLength)))
 
-export function useArrayPool<T>(minLength: number = 2) {
-    const gloablMinLength = clampLength(minLength)
-    const store = new Map<number, Array<T[]>>()
+class Stack<T> {
+    private readonly stack: Array<T> = [];
+    private length: number = 0;
 
-    const acquire = (minLength: number): Array<T> => {
-        const length = Math.max(gloablMinLength, clampLength(minLength))
+    constructor() { }
 
-        const linearStore = store.get(length)
-        if (linearStore && linearStore.length > 0) 
-            return linearStore.pop()!
-
-        return new Array<T>(length)
+    private ensureLength(length: number): void {
+        const currentCapacity = this.stack.length
+        if (length > currentCapacity) {
+            this.stack.length = currentCapacity * 2
+        }
     }
+
+    push(value: T): void {
+        const idx = this.length
+        if (idx >= this.stack.length) {
+            this.ensureLength(idx + 1)
+        }
+        this.stack[idx] = value
+        this.length = idx + 1
+    }
+
+    pop(): T | undefined {
+        const idx = this.length - 1
+        if (idx >= 0) {
+            const result = this.stack[idx]
+            this.stack[idx] = undefined as any
+            this.length = idx
+            return result
+        }
+        return undefined
+    }
+
+    get isEmpty(): boolean {
+        return this.length === 0
+    }
+}
+
+export function useArrayPool<T>(minLength = 2) {
+    const MAX_LENGTH = 0x3fffffff
+    const globalMinLength = Math.max(0, minLength | 0)
+    const pool = new Map<number, Stack<Array<T>>>()
+
+    const acquire = (requestedLength: number): Array<T> => {
+        let len = requestedLength >>> 0
+        if (len < globalMinLength) len = globalMinLength
+        else if (len > MAX_LENGTH) len = MAX_LENGTH
+
+        const stack = pool.get(len)
+        if (stack !== undefined)
+            return stack.pop() ?? new Array<T>(len)
+        
+        return new Array<T>(len)
+    };
 
     const release = (array: Array<T>): void => {
-        const length = clampLength(array.length)
-
-        if (length !== array.length) {
-            array.length = length
+        let len = array.length | 0
+        if (len > MAX_LENGTH) {
+            array.length = MAX_LENGTH
+            len = MAX_LENGTH
         }
+        if (len < 0) return
 
-        const linearStore = store.get(length)
-        if (linearStore) {
-            linearStore.push(array)
-            return
+        let stack = pool.get(len)
+        if (stack === undefined) {
+            stack = new Stack<Array<T>>()
+            pool.set(len, stack)
         }
-
-        store.set(length, [array])
+        stack.push(array)
     }
 
-    return {
-        acquire,
-        release
-    }
+    return { acquire, release }
 }
 
 export function useArrayRecycler<T extends IndexableArray<V>, V>(ctor: new (length: number) => T): ArrayRecycler<T, V> {
