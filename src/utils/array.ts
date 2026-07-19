@@ -9,6 +9,9 @@ export type ArrayRecycler<T extends IndexableArray<V>, V> = {
     dispose(): void
 }
 
+export const clampLength = (minLength: number): number =>
+    Math.pow(2, Math.ceil(Math.log2(minLength)))
+
 export function useArrayRecycler<T extends IndexableArray<V>, V>(ctor: new (length: number) => T): ArrayRecycler<T, V> {
     let array: T | null = null
 
