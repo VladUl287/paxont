@@ -58,7 +58,7 @@ const globalPools = Object.freeze({
 
 export function useArrayPool<T>(minLength = 2) {
     const MAX_LENGTH = 0x3fffffff
-    const globalMinLength = Math.max(0, minLength | 0)
+    const globalMinLength = Math.max(2, minLength >>> 0)
     const pool = new Map<number, Stack<Array<T>>>()
 
     const acquire = (minLength: number): Array<T> => {
@@ -74,7 +74,7 @@ export function useArrayPool<T>(minLength = 2) {
     }
 
     const release = (array: Array<T>): void => {
-        let len = array.length | 0
+        let len = array.length >>> 0
         if (len > MAX_LENGTH) {
             array.length = MAX_LENGTH
             len = MAX_LENGTH
