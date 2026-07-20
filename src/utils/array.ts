@@ -12,10 +12,8 @@ export type ArrayRecycler<T extends IndexableArray<V>, V> = {
 export const copyArray = <V, T extends IndexableArray<V>>(source: ArrayLike<V>, target: T): T => {
     if (!source || !target) return target
 
-    if (source.length > target.length)
-        target.length = source.length
-
-    for (let i = 0; i < source.length; i++)
+    const length = Math.min(source.length, target.length)
+    for (let i = 0; i < length; i++)
         target[i] = source[i]
 
     return target
