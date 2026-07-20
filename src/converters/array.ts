@@ -1,18 +1,14 @@
-import { BaseMeta, ArrayMeta, JsonReader, TypeName } from "../metadata/types"
+import { BaseMeta, ArrayMeta, JsonReader, TypeName, ConverterState } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
 import { copyArray, IndexableArray } from "../utils/array"
 import { JSONParseError } from "../utils/error"
 
-type BaseState = {
-    isContinued: boolean
-}
-
-type ArrayState<T> = BaseState & {
+type ArrayState<T> = ConverterState & {
     buffer?: IndexableArray<T>,
     bufferIndex?: number,
-    itemState?: Record<string, any>
+    itemState?: ConverterState
 }
 
 export function toArray<T, M extends BaseMeta<T, M>>(
@@ -62,16 +58,27 @@ export function toArray<T, M extends BaseMeta<T, M>>(
         const itemMeta = metadata.value
         const tryParseItemValue = itemMeta.toValue
 
-        const valueState = state.itemState ?? {}
+        const itemState = state.itemState ?? { isContinued: false }
 
         let j = state.bufferIndex ?? 0
         while (true) {
             i = skipWhitespace(b, i)
 
-            const result = tryParseItemValue(reader, itemMeta, i, depth, valueState)
+            const result = tryParseItemValue(reader, itemMeta, i, depth, itemState)
 
-            if (isError(result) || isNeedsMoreData(result))
+            if (isError(result))
                 return result
+
+            if (isNeedsMoreData(result)) {
+                state.isContinued = true
+                state.buffer = buffer
+                state.bufferIndex = j
+                state.itemState = {
+                    ...itemState,
+                    isContinued: true
+                }
+                return result
+            }
 
             buffer[j] = result.value
             i = result.nextIndex
