@@ -5,19 +5,19 @@ import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/t
 import { copyArray, IndexableArray } from "../utils/array"
 import { JSONParseError } from "../utils/error"
 
-type ArrayState<T> = ConvertState & {
-    buffer?: IndexableArray<T>,
+type ArrayState<T, A extends IndexableArray<T>> = ConvertState & {
+    buffer?: A,
     bufferIndex?: number,
     itemState?: ConvertState
 }
 
-export function toArray<T, M extends BaseMeta<T, M>>(
-    metadata: ArrayMeta<T, IndexableArray<T>, M>,
+export function toArray<T, A extends IndexableArray<T>, M extends BaseMeta<T, M>>(
+    metadata: ArrayMeta<T, A, M>,
     reader: JsonReader,
     index: number,
     depth: number,
-    state: ArrayState<T>,
-): ReadResult<ArrayLike<T>> {
+    state: ArrayState<T, A>,
+): ReadResult<A> {
     if (depth > reader.options.maxDepth)
         return {
             type: ReadResultType.ERROR,

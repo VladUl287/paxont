@@ -1,7 +1,7 @@
-export type IndexableArray<V> = {
-    length: number
+export interface IndexableArray<V> {
+    readonly length: number
     [index: number]: V
-    slice: (start?: number, end?: number) => IndexableArray<V>
+    slice: (start?: number, end?: number) => this
 }
 
 export type ArrayRecycler<T extends IndexableArray<V>, V> = {
