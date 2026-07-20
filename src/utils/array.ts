@@ -9,7 +9,7 @@ export type ArrayRecycler<T extends IndexableArray<V>, V> = {
     dispose(): void
 }
 
-export const copyArray = <T>(source: IndexableArray<T>, target: IndexableArray<T>): ArrayLike<T> => {
+export const copyArray = <V, T extends IndexableArray<V>>(source: ArrayLike<V>, target: T): T => {
     if (!source || !target) return target
 
     if (source.length > target.length)
