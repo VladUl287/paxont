@@ -1,5 +1,5 @@
 import { ConvertState, JsonReader, PrimitiveMeta } from "../../metadata/types"
-import { isDigitUnsafe } from "../../utils/utf8constants"
+import { isDigitUnsafe, MINUS } from "../../utils/utf8constants"
 import { ReadResult, ReadResultType } from "../../utils/types"
 import { JSONParseError } from "../../utils/error"
 
@@ -9,111 +9,21 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
+export const tryParseInt64 = (
+    metadata: PrimitiveMeta<bigint>,
+    reader: JsonReader,
+    index: number,
+    depth: number,
+    state: ConvertState
+): ReadResult<bigint> => parseInt64(reader, index, -9223372036854775808n, 9223372036854775807n, true)
 
-const bufferInt = new ArrayBuffer(8)
-const conversionU32 = new Uint32Array(bufferInt)
-const conversionU64 = new BigUint64Array(bufferInt)
-
-export function tryParseInt64(b: Uint8Array, i: number): ReadResult<bigint> {
-    const MAX_DIGITS = 19
-    const MAX_SAFE_INT_DIGITS = 16
-    const MIN_VALUE = -9223372036854775808n
-    const MAX_VALUE = 9223372036854775807n
-
-    const negative = b[i] === MINUS
-    if (negative) i++
-
-    const length = Math.min(b.length, i + MAX_DIGITS)
-
-    let temp = 0
-    let dc = 0
-    while (i < length) {
-        const d = (b[i] - 48) >>> 0
-        if (d > 9) break
-
-        if (dc < MAX_SAFE_INT_DIGITS) {
-            temp = temp * 10 + d
-        }
-        else if (dc === MAX_SAFE_INT_DIGITS) {
-            const high = Math.floor(temp / 0x100000000)
-            const low = (temp) * 10 + temp
-            conversionU32[0] = low >>> 0
-            conversionU32[1] = high * 10 + Math.floor(low / 0x100000000)
-            temp = 0
-        }
-        else {
-            const low = conversionU32[0] * 10 + d
-            conversionU32[0] = low >>> 0
-            conversionU32[1] = conversionU32[1] * 10 + Math.floor(low / 0x100000000)
-        }
-
-        i++
-    }
-
-    if (temp > 0) {
-        conversionU32[0] = temp >>> 0
-        conversionU32[1] = Math.floor(temp / 0x100000000)
-    }
-
-    const value = negative ? -conversionU64[0] : conversionU64[0]
-
-    if (dc === 0 || dc > MAX_DIGITS || value < MIN_VALUE || value > MAX_VALUE)
-        throw new Error(`invalid i64 value ${value}, at index ${i}. valid range ${MIN_VALUE}-${MAX_VALUE}`)
-
-    return {
-        value: value,
-        nextIndex: i
-    }
-}
-
-export function tryParseUint64(b: Uint8Array, i: number): ReadResult<bigint> {
-    const MAX_DIGITS = 20
-    const MAX_SAFE_INT_DIGITS = 16
-    const MIN_VALUE = 0
-    const MAX_VALUE = 18446744073709551615n
-
-    const length = Math.min(b.length, i + MAX_DIGITS)
-
-    let temp = 0
-    let dc = 0
-    while (i < length) {
-        const d = (b[i] - 48) >>> 0
-        if (d > 9) break
-
-        if (dc < MAX_SAFE_INT_DIGITS) {
-            temp = temp * 10 + d
-        }
-        else if (dc === MAX_SAFE_INT_DIGITS) {
-            const high = Math.floor(temp / 0x100000000)
-            const low = (temp) * 10 + temp
-            conversionU32[0] = low >>> 0
-            conversionU32[1] = high * 10 + Math.floor(low / 0x100000000)
-            temp = 0
-        }
-        else {
-            const low = conversionU32[0] * 10 + d
-            conversionU32[0] = low >>> 0
-            conversionU32[1] = conversionU32[1] * 10 + Math.floor(low / 0x100000000)
-        }
-
-        i++
-    }
-
-    if (temp > 0) {
-        conversionU32[0] = temp >>> 0
-        conversionU32[1] = Math.floor(temp / 0x100000000)
-    }
-
-    const value = conversionU64[0]
-
-    if (dc === 0 || dc > MAX_DIGITS || value < MIN_VALUE || value > MAX_VALUE)
-        throw new Error(`invalid u64 value ${value}, at index ${i}. valid range ${MIN_VALUE}-${MAX_VALUE}`)
-
-    return {
-        value: value,
-        nextIndex: i
-    }
-}
+export const tryParseUint64 = (
+    metadata: PrimitiveMeta<bigint>,
+    reader: JsonReader,
+    index: number,
+    depth: number,
+    state: ConvertState
+): ReadResult<bigint> => parseInt64(reader, index, 0n, 18446744073709551615n, false)
 
 export function tryParseBigInt(
     _m: PrimitiveMeta<bigint>, ctx: JsonReader, i: number, _d: number, state: BigIntState): ReadResult<bigint> {
@@ -178,5 +88,66 @@ export function tryParseBigInt(
             state.isContinued = false
             state.lastIndex = 0
         }
+    }
+}
+
+const bufferInt = new ArrayBuffer(8)
+const conversionU32 = new Uint32Array(bufferInt)
+const conversionU64 = new BigUint64Array(bufferInt)
+
+export function parseInt64(reader: JsonReader, i: number, minValue: bigint, maxValue: bigint, signed: boolean): ReadResult<bigint> {
+    const MAX_DIGITS = 19
+    const MAX_SAFE_INT_DIGITS = 16
+
+    const b = reader.bytes
+
+    const negative = signed && b[i] === MINUS
+    if (negative) i++
+
+    const len = Math.min(b.length, i + MAX_DIGITS)
+    const start = i
+
+    let temp = 0
+    let dc = 0
+    while (i < len) {
+        const byte = b[i]
+
+        if (!isDigitUnsafe(byte))
+            break
+
+        const d = byte & 0x0F
+        if (dc < MAX_SAFE_INT_DIGITS) {
+            temp = temp * 10 + d
+        }
+        else if (dc === MAX_SAFE_INT_DIGITS) {
+            const high = Math.floor(temp / 0x100000000)
+            const low = (temp) * 10 + temp
+            conversionU32[0] = low >>> 0
+            conversionU32[1] = high * 10 + Math.floor(low / 0x100000000)
+            temp = 0
+        }
+        else {
+            const low = conversionU32[0] * 10 + d
+            conversionU32[0] = low >>> 0
+            conversionU32[1] = conversionU32[1] * 10 + Math.floor(low / 0x100000000)
+        }
+
+        i++
+    }
+
+    if (temp > 0) {
+        conversionU32[0] = temp >>> 0
+        conversionU32[1] = Math.floor(temp / 0x100000000)
+    }
+
+    const value = negative ? -conversionU64[0] : conversionU64[0]
+
+    if (dc === 0 || value < minValue || value > maxValue)
+        throw new Error(`invalid i64 value ${value}, at index ${i}. valid range ${minValue}-${maxValue}`)
+
+    return {
+        type: COMPLETE,
+        value: value,
+        nextIndex: i
     }
 }
