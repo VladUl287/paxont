@@ -1,8 +1,13 @@
 import { ConvertState, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { isDigitUnsafe } from "../utils/utf8constants"
-import { ReadResult } from "../utils/types"
+import { ReadResult, ReadResultType } from "../utils/types"
+import { JSONParseError } from "../utils/error"
 
 type BigIntState = ConvertState & { lastIndex?: number }
+
+const COMPLETE = ReadResultType.COMPLETE
+const ERROR = ReadResultType.ERROR
+const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function tryParseBigInt(
     _m: PrimitiveMeta<bigint>, ctx: JsonReader, i: number, _d: number, state: BigIntState): ReadResult<bigint> {
@@ -27,14 +32,26 @@ export function tryParseBigInt(
 
     if (i === len && ctx.writable) {
         state.lastIndex = i
+
         return {
+            type: NEEDS_MORE_DATA,
             nextIndex: start
+        }
+    }
+
+    const length = i - start
+    if (length <= 0) {
+        return {
+            type: ERROR,
+            error: new JSONParseError(
+                `Expected at least one digit at index ${i}, but found '${String.fromCharCode(b[i])}' while parsing bigint`, i)
         }
     }
 
     const decoder = ctx.options.decoder
     const view = new Uint8Array(b.buffer, start, i - start)
     return {
+        type: COMPLETE,
         value: BigInt(decoder.decode(view)),
         nextIndex: i
     }
