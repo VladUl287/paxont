@@ -9,6 +9,18 @@ export type ArrayRecycler<T extends IndexableArray<V>, V> = {
     dispose(): void
 }
 
+export const copyArray = <T>(source: IndexableArray<T>, target: IndexableArray<T>): ArrayLike<T> => {
+    if (!source || !target) return target
+
+    if (source.length > target.length)
+        target.length = source.length
+
+    for (let i = 0; i < source.length; i++)
+        target[i] = source[i]
+
+    return target
+}
+
 export const clampLength = (minLength: number): number => {
     const n = (minLength >>> 0) - 1
     if (n <= 0) return 1
