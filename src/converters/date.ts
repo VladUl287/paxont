@@ -81,6 +81,7 @@ function fromTimestamp(b: Uint8Array, i: number): ReadResult<Date> {
 
 function tryParseDefault(b: Uint8Array, i: number, r: TryParseResult, options: JsonOptions): boolean {
     let start = i
+
     const len = b.length
     while (i < len && b[i] !== DOUBLE_QUOTE) i++
 
@@ -92,7 +93,7 @@ function tryParseDefault(b: Uint8Array, i: number, r: TryParseResult, options: J
     r.value = date
     r.nextIndex = ++i
 
-    return isNaN(date.valueOf())
+    return !isNaN(date.valueOf())
 }
 
 const nonDigit = (b: number) => !isDigitUnsafe(b)
