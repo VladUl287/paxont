@@ -4,8 +4,8 @@ export function isMetadata(value: unknown): value is BaseMeta<any, any> {
     if (!value || typeof value !== 'object')
         return false
 
-    const potential = value as Record<string, unknown>
-    return typeof potential.toValue === 'function' &&
+    const potential = value as BaseMeta<any, any>
+    return typeof potential.tryParseValue === 'function' &&
         typeof potential.toJson === 'function' &&
         typeof potential.type === 'string'
 }
