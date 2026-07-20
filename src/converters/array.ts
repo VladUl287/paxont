@@ -3,6 +3,7 @@ import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
 import { copyArray, IndexableArray } from "../utils/array"
+import { JSONParseError } from "../utils/error"
 
 type BaseState = {
     isContinued: boolean
@@ -24,7 +25,7 @@ export function toArray<T, M extends BaseMeta<T, M>>(
     if (depth > reader.options.maxDepth)
         return {
             type: ReadResultType.ERROR,
-            error: new Error('')
+            error: new JSONParseError('', index)
         }
 
     const b = reader.bytes
@@ -40,7 +41,7 @@ export function toArray<T, M extends BaseMeta<T, M>>(
 
         return {
             type: ReadResultType.ERROR,
-            error: new Error('')
+            error: new JSONParseError('', i)
         }
     }
 
@@ -48,7 +49,7 @@ export function toArray<T, M extends BaseMeta<T, M>>(
         if (b[i] !== SQUARE_OPEN) {
             return {
                 type: ReadResultType.ERROR,
-                error: new Error(`Expected '[' at index ${index}, but found '${b[index]}' while parsing array`)
+                error: new JSONParseError(`Expected '[' at index ${index}, but found '${b[index]}' while parsing array`, i)
             }
         }
         i++
@@ -89,7 +90,7 @@ export function toArray<T, M extends BaseMeta<T, M>>(
             else {
                 return {
                     type: ReadResultType.ERROR,
-                    error: new Error('')
+                    error: new JSONParseError('', i)
                 }
             }
         }
