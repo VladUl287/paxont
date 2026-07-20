@@ -52,40 +52,46 @@ export function toArray<T, M extends BaseMeta<T, M>>(
         i++
     }
 
-    const recycle = metadata.recycler.acquire
-    let buffer = recycle(1024)
+    const { rent, release } = metadata.arrayPool
 
-    const meta = metadata.value
-    const toValue = meta.toValue
+    let buffer = rent(b.length - i)
 
-    const valueState = state?.lastState ?? {}
+    try {
+        const meta = metadata.value
+        const toValue = meta.toValue
 
-    let j = state?.bufferIndex ?? 0
-    while (true) {
-        i = skipWhitespace(b, i)
+        const valueState = state?.lastState ?? {}
 
-        const result = toValue(reader, meta, i, depth, valueState)
+        let j = state?.bufferIndex ?? 0
+        while (true) {
+            i = skipWhitespace(b, i)
 
-        if (isError(result) || isNeedsMoreData(result))
-            return result
+            const result = toValue(reader, meta, i, depth, valueState)
 
-        buffer[j] = result.value
-        index = result.nextIndex
-        j++
+            if (isError(result) || isNeedsMoreData(result))
+                return result
 
-        if (j >= buffer.length)
-            buffer = recycle(buffer.length * 2, buffer)
+            buffer[j] = result.value
+            index = result.nextIndex
+            j++
 
-        index = skipWhitespace(b, index)
+            if (j >= buffer.length)
+                buffer = rent(buffer.length * 2)
 
-        if (b[index] === COMMA) index++
-        else if (b[index] === SQUARE_CLOSE) break
-        else throw new Error()
+            index = skipWhitespace(b, index)
+
+            if (b[index] === COMMA) index++
+            else if (b[index] === SQUARE_CLOSE) break
+            else throw new Error()
+        }
+
+        return {
+            type: ReadResultType.COMPLETE,
+            value: buffer.slice(0, j),
+            nextIndex: ++index
+        }
     }
-    
-    return {
-        type: ReadResultType.COMPLETE,
-        value: buffer.slice(0, j),
-        nextIndex: ++index
+    finally {
+        release(buffer)
     }
 }
