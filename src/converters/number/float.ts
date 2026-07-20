@@ -2,13 +2,6 @@ import { DOT, E, isDigitUnsafe, MINUS, PLUS, ZERO } from "../../utils/utf8consta
 import { ReadResult } from "../../utils/types"
 import { ConvertState, JsonReader, PrimitiveMeta } from "../../metadata/types"
 
-export function tryParseFloat32(
-    metadata: PrimitiveMeta<number>,
-    reader: JsonReader,
-    index: number,
-    depth: number,
-    state: ConvertState): ReadResult<number> { return ({} as any) }
-
 export function tryParseFloat64(
     metadata: PrimitiveMeta<number>,
     reader: JsonReader,
@@ -52,29 +45,6 @@ export const f64Format: NumberFormat = {
     minExponentRoundToEven: -27,
     maxExponentRoundToEven: 55,
     infinityExponent: 2047
-}
-
-export const f32Format: NumberFormat = {
-    normalMantissaBits: 53,
-    denormalMantissaBits: 52,
-    exponentBias: 1023,
-    maxBinaryExponent: 1023,
-    minBinaryExponent: -1022,
-    exponentBits: 11,
-    normalMantissaMask: (1n << 53n) - 1n,
-    denormalMantissaMask: (1n << 52n) - 1n,
-    zeroBits: 0,
-    overflowDecimalExponent: 324,
-    maxExponentFastPath: 10,
-    minSafeExponent: -64,
-    maxSafeExponent: 38,
-    minExponentRoundToEven: -27,
-    maxExponentRoundToEven: 55,
-    infinityExponent: 255
-}
-
-export function parseFloat32(b: Uint8Array, i: number): ReadResult<number> {
-    return parseFloat(b, i, f32Format)
 }
 
 export function parseFloat64(b: Uint8Array, i: number): ReadResult<number> {

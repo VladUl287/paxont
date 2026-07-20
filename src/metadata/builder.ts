@@ -7,38 +7,34 @@ import {
 } from "./types"
 import { BaseType, JSONT } from "./baseTypes"
 import { tryParseDate } from "../converters/date"
-import {
-    toFloat32, toFloat64, toInt16, toInt32, toInt64, toInt8,
-    toUint16, toUint32, toUInt64, toUInt8
-} from "../converters/number"
 import { tryParseMap } from "../converters/map"
 import { toSet } from "../converters/set"
 import { genObjectFactory, genObjectToJsonFactory1 } from "../code_gen/object"
 import { generateTrieSwitch } from "../code_gen/field"
 import { toObject } from "../converters/object"
 import { tryParseNullable } from "../converters/nullable"
-import { tryParseBigInt } from "../converters/number/bigint"
+import { tryParseBigInt, tryParseInt64, tryParseUint64 } from "../converters/number/bigint"
 import { tryParseBoolean } from "../converters/boolean"
 import { tryParseString } from "../converters/string"
 import { ArrayPool, useArrayPool } from "../utils/array"
+import { tryParseInt16, tryParseInt32, tryParseInt8, tryParseUint16, tryParseUint32, tryParseUint8 } from "../converters/number/int"
+import { tryParseFloat64 } from "../converters/number/float"
 
 export const string = () => primitive(JSONT.STRING, tryParseString)
-export const number = () => primitive(JSONT.NUMBER, toFloat64)
+export const number = () => primitive(JSONT.NUMBER, tryParseFloat64)
 export const bigInt = () => primitive(JSONT.BIGINT, tryParseBigInt)
 export const bool = () => primitive(JSONT.BOOL, tryParseBoolean)
 export const date = () => primitive(JSONT.DATE, tryParseDate)
 
-export const u8 = () => primitive(JSONT.U8, toUInt8)
-export const u16 = () => primitive(JSONT.U16, toUint16)
-export const u32 = () => primitive(JSONT.U32, toUint32)
-export const i8 = () => primitive(JSONT.I8, toInt8)
-export const i16 = () => primitive(JSONT.I16, toInt16)
-export const i32 = () => primitive(JSONT.I32, toInt32)
+export const u8 = () => primitive(JSONT.U8, tryParseUint8)
+export const u16 = () => primitive(JSONT.U16, tryParseUint16)
+export const u32 = () => primitive(JSONT.U32, tryParseUint32)
+export const i8 = () => primitive(JSONT.I8, tryParseInt8)
+export const i16 = () => primitive(JSONT.I16, tryParseInt16)
+export const i32 = () => primitive(JSONT.I32, tryParseInt32)
 
-export const u64 = () => primitive(JSONT.U64, toUInt64)
-export const i64 = () => primitive(JSONT.I64, toInt64)
-
-export const f32 = () => primitive(JSONT.F32, toFloat32)
+export const u64 = () => primitive(JSONT.U64, tryParseUint64)
+export const i64 = () => primitive(JSONT.I64, tryParseInt64)
 
 const primitive = <T extends Object>(type: BaseType, toValue: tryParseValue<T, PrimitiveMeta<T>>): PrimitiveMeta<T> => ({
     type: type,
@@ -98,7 +94,6 @@ export const i16Array = () => typedArray<Int16Array>(JSONT.I16_ARRAY, i16())
 export const i32Array = () => typedArray<Int32Array>(JSONT.I32_ARRAY, i32())
 export const i64Array = () => typedArray1<BigInt64Array>(JSONT.I64_ARRAY, i64())
 
-export const f32Array = () => typedArray<Float32Array>(JSONT.F32_ARRAY, f32())
 export const f64Array = () => typedArray<Float64Array>(JSONT.F64_ARRAY, number())
 
 const typedArray = <T extends TypedArray>(

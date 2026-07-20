@@ -19,7 +19,6 @@ export const JSONT = Object.freeze({
   I16: 'i16',
   I32: 'i32',
   I64: 'i64',
-  F32: 'f32',
   
   U8_ARRAY: 'u8[]',
   U16_ARRAY: 'u16[]',
@@ -29,7 +28,6 @@ export const JSONT = Object.freeze({
   I16_ARRAY: 'i16[]',
   I32_ARRAY: 'i32[]',
   I64_ARRAY: 'i64[]',
-  F32_ARRAY: 'f32[]',
   F64_ARRAY: 'f64[]',
 })
 
