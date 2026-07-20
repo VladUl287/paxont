@@ -24,8 +24,7 @@ export function toArray<T, M extends BaseMeta<T, M>>(
     if (depth > reader.options.maxDepth)
         return {
             type: ReadResultType.ERROR,
-            error: new Error(''),
-            nextIndex: index
+            error: new Error('')
         }
 
     const b = reader.bytes
@@ -41,8 +40,7 @@ export function toArray<T, M extends BaseMeta<T, M>>(
 
         return {
             type: ReadResultType.ERROR,
-            error: new Error(''),
-            nextIndex: i
+            error: new Error('')
         }
     }
 
@@ -50,8 +48,7 @@ export function toArray<T, M extends BaseMeta<T, M>>(
         if (b[i] !== SQUARE_OPEN) {
             return {
                 type: ReadResultType.ERROR,
-                error: new Error(`Expected '[' at index ${index}, but found '${b[index]}' while parsing array`),
-                nextIndex: i
+                error: new Error(`Expected '[' at index ${index}, but found '${b[index]}' while parsing array`)
             }
         }
         i++
@@ -92,8 +89,7 @@ export function toArray<T, M extends BaseMeta<T, M>>(
             else {
                 return {
                     type: ReadResultType.ERROR,
-                    error: new Error(''),
-                    nextIndex: i
+                    error: new Error('')
                 }
             }
         }
