@@ -54,19 +54,18 @@ export function toArray<T, M extends BaseMeta<T, M>>(
 
     const { rent, release } = metadata.arrayPool
 
-    let buffer = rent(b.length - i)
-
+    let buffer = state.buffer ?? rent(b.length - i)
     try {
-        const meta = metadata.value
-        const toValue = meta.toValue
+        const itemMeta = metadata.value
+        const tryParseItemValue = itemMeta.toValue
 
-        const valueState = state?.itemState ?? {}
+        const valueState = state.itemState ?? {}
 
-        let j = state?.bufferIndex ?? 0
+        let j = state.bufferIndex ?? 0
         while (true) {
             i = skipWhitespace(b, i)
 
-            const result = toValue(reader, meta, i, depth, valueState)
+            const result = tryParseItemValue(reader, itemMeta, i, depth, valueState)
 
             if (isError(result) || isNeedsMoreData(result))
                 return result
