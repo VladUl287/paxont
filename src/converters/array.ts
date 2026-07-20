@@ -9,9 +9,9 @@ type BaseState = {
 }
 
 type ArrayState<T> = BaseState & {
-    buffer?: ArrayLike<T>,
+    buffer?: IndexableArray<T>,
     bufferIndex?: number,
-    lastState?: Record<string, any>
+    itemState?: Record<string, any>
 }
 
 export function toArray<T, M extends BaseMeta<T, M>>(
@@ -60,7 +60,7 @@ export function toArray<T, M extends BaseMeta<T, M>>(
         const meta = metadata.value
         const toValue = meta.toValue
 
-        const valueState = state?.lastState ?? {}
+        const valueState = state?.itemState ?? {}
 
         let j = state?.bufferIndex ?? 0
         while (true) {
