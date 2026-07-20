@@ -21,7 +21,7 @@ export function toArray<T, A extends IndexableArray<T>, M extends BaseMeta<T, M>
     if (depth > reader.options.maxDepth)
         return {
             type: ReadResultType.ERROR,
-            error: new JSONParseError('', index)
+            error: new JSONParseError(`Maximum depth of ${reader.options.maxDepth} exceeded at index ${index}`, index)
         }
 
     const b = reader.bytes
@@ -37,17 +37,16 @@ export function toArray<T, A extends IndexableArray<T>, M extends BaseMeta<T, M>
 
         return {
             type: ReadResultType.ERROR,
-            error: new JSONParseError('', i)
+            error: new JSONParseError(`Unexpected end of input at index ${i} while parsing array`, i)
         }
     }
 
     if (!state.isContinued) {
-        if (b[i] !== SQUARE_OPEN) {
+        if (b[i] !== SQUARE_OPEN)
             return {
                 type: ReadResultType.ERROR,
-                error: new JSONParseError(`Expected '[' at index ${i}, but found '${b[i]}' while parsing array`, i)
+                error: new JSONParseError(`Expected '[' at index ${i}, but found '${String.fromCharCode(b[i])}' while parsing array`, i)
             }
-        }
         i++
     }
 
@@ -97,7 +96,7 @@ export function toArray<T, A extends IndexableArray<T>, M extends BaseMeta<T, M>
             else {
                 return {
                     type: ReadResultType.ERROR,
-                    error: new JSONParseError('', i)
+                    error: new JSONParseError(`Unexpected end of value at index ${i} while parsing array. Expected ']' or ',' as end of value`, i)
                 }
             }
         }
@@ -106,6 +105,14 @@ export function toArray<T, A extends IndexableArray<T>, M extends BaseMeta<T, M>
             type: ReadResultType.COMPLETE,
             value: buffer.slice(0, j),
             nextIndex: ++i
+        }
+    }
+    catch (error) {
+        return {
+            type: ReadResultType.ERROR,
+            error: new JSONParseError(
+                `Unexpected error while parsing array at index ${i}: ${error instanceof Error ? error.message : String(error)}`,
+                i, { cause: error })
         }
     }
     finally {
