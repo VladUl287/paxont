@@ -39,8 +39,10 @@ export function toDate(
     }
 }
 
+type TryParseResult = { value: Date, nextIndex: number }
+
 function fromString(b: Uint8Array, i: number, opt: JsonOptions): ReadResult<Date> {
-    const result = {
+    const result: TryParseResult = {
         value: Date.prototype,
         nextIndex: 0
     }
@@ -77,7 +79,7 @@ function fromTimestamp(b: Uint8Array, i: number): ReadResult<Date> {
     return {} as any
 }
 
-function tryParseDefault(b: Uint8Array, i: number, r: { value: Date, nextIndex: number }, options: JsonOptions): boolean {
+function tryParseDefault(b: Uint8Array, i: number, r: TryParseResult, options: JsonOptions): boolean {
     let start = i
     const len = b.length
     while (i < len && b[i] !== DOUBLE_QUOTE) i++
@@ -113,7 +115,7 @@ function expectTwoDigits(b: Uint8Array, i: number): number {
     return ++i
 }
 
-function tryParseISO8601(b: Uint8Array, i: number, r: { value: Date, nextIndex: number }): boolean {
+function tryParseISO8601(b: Uint8Array, i: number, r: TryParseResult): boolean {
     const len1 = b.length - 1
 
     if ((i = expectFourDigits(b, i)) < 0) //YYYY
