@@ -84,7 +84,13 @@ export function toArray<T, M extends BaseMeta<T, M>>(
 
             if (b[index] === COMMA) index++
             else if (b[index] === SQUARE_CLOSE) break
-            else throw new Error()
+            else {
+                return {
+                    type: ReadResultType.ERROR,
+                    error: new Error(''),
+                    nextIndex: i
+                }
+            }
         }
 
         return {
