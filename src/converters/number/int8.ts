@@ -8,22 +8,37 @@ const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export const tryParseInt8 = (
-    _m: PrimitiveMeta<number>, ctx: JsonReader, i: number, _d: number, _s: ConvertState
+    metadata: PrimitiveMeta<number>,
+    reader: JsonReader,
+    index: number,
+    depth: number,
+    state: ConvertState
 ): ReadResult<number> =>
-    parseInt8(ctx.bytes, i, -128, 127, true)
+    parseInt8(reader, index, -128, 127, true)
 
 export const tryParseUint8 = (
-    _m: PrimitiveMeta<number>, ctx: JsonReader, i: number, _d: number, _s: ConvertState
+    metadata: PrimitiveMeta<number>,
+    reader: JsonReader,
+    index: number,
+    depth: number,
+    state: ConvertState
 ): ReadResult<number> =>
-    parseInt8(ctx.bytes, i, 0, 255, false)
+    parseInt8(reader, index, 0, 255, false)
 
-export function parseInt8(b: Uint8Array, i: number, minValue: number, maxValue: number, signed: boolean): ReadResult<number> {
-    const MAX_DIGITS = 3
+function parseInt8(reader: JsonReader, i: number, minValue: number, maxValue: number, signed: boolean): ReadResult<number> {
+    const b = reader.bytes
+    const len = b.length
+    const start = i
+
+    if (i >= len && reader.writable) {
+        return {
+            type: NEEDS_MORE_DATA,
+            nextIndex: start
+        }
+    }
 
     const negative = signed && b[i] === MINUS
     if (negative) i++
-
-    const len = Math.min(b.length, i + MAX_DIGITS)
 
     let m = 0 >>> 0
     if (i < len && isDigitUnsafe(b[i])) {
@@ -32,15 +47,31 @@ export function parseInt8(b: Uint8Array, i: number, minValue: number, maxValue: 
         if (i < len && isDigitUnsafe(b[i])) {
             m = m * 10 + (b[i++] & 0x0F)
 
-            if (i < len && isDigitUnsafe(b[i]))
+            if (i < len && isDigitUnsafe(b[i])) {
                 m = m * 10 + (b[i++] & 0x0F)
+
+                if (i < len && isDigitUnsafe(b[i]))
+                    return {
+                        type: ERROR,
+                        error: new JSONParseError(``, i)
+                    }
+            }
         }
     }
-    
+
+    if (i >= len && reader.writable)
+        return {
+            type: NEEDS_MORE_DATA,
+            nextIndex: start
+        }
+
     if (negative) m = -m
 
     if (m < minValue || m > maxValue)
-        throw new Error(`invalid i8 value ${m}, valid range ${minValue}-${maxValue}`)
+        return {
+            type: ERROR,
+            error: new JSONParseError(``, i)
+        }
 
     return {
         type: COMPLETE,
