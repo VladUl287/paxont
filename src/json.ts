@@ -43,7 +43,7 @@ export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T,
         bytes,
         writable: false,
         options: fullOptions,
-    }, 0, 0, { isContinued: false })
+    }, 0, 0, {})
 
     if (isComplete(result)) {
         return result.value
