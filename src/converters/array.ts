@@ -47,8 +47,13 @@ export function toArray<T, M extends BaseMeta<T, M>>(
     }
 
     if (!state.isContinued) {
-        if (b[i] !== SQUARE_OPEN)
-            throw new Error(`Expected '[' at index ${index}, but found '${b[index]}' while parsing array`)
+        if (b[i] !== SQUARE_OPEN) {
+            return {
+                type: ReadResultType.ERROR,
+                error: new Error(`Expected '[' at index ${index}, but found '${b[index]}' while parsing array`),
+                nextIndex: i
+            }
+        }
         i++
     }
 
