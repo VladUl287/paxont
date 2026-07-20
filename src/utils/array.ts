@@ -71,7 +71,12 @@ const globalPools = Object.freeze({
     object: useArrayPool<object>(128)
 })
 
-export function useArrayPool<T>(minLength = 2) {
+export type ArrayPool<V, T extends ArrayLike<V>> = {
+    rent: (minLength: number) => T
+    release: (array: T) => void
+}
+
+export function useArrayPool<T>(minLength = 2): ArrayPool<T, Array<T>> {
     const MAX_LENGTH = 0x3fffffff
     const globalMinLength = clampLength(Math.max(2, minLength >>> 0))
     const pool = new Map<number, Stack<Array<T>>>()
