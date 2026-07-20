@@ -2,7 +2,7 @@ import { BaseMeta, ArrayMeta, JsonReader, TypeName } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
-import { IndexableArray } from "../utils/array"
+import { copyArray, IndexableArray } from "../utils/array"
 
 type BaseState = {
     isContinued: boolean
@@ -75,8 +75,11 @@ export function toArray<T, M extends BaseMeta<T, M>>(
             index = result.nextIndex
             j++
 
-            if (j >= buffer.length)
-                buffer = rent(buffer.length * 2)
+            if (j >= buffer.length) {
+                const newBuffer = copyArray(buffer, rent(buffer.length * 2))
+                release(buffer)
+                buffer = newBuffer
+            }
 
             index = skipWhitespace(b, index)
 
