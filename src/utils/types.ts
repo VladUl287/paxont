@@ -9,22 +9,25 @@ export type ReadResult<T> =
     | { type: ReadResultType.NEEDS_MORE_DATA, nextIndex: number }
     | { type: ReadResultType.ERROR, error: Error }
 
+const COMPLETE = ReadResultType.COMPLETE
 export function isComplete<T>(
     result: ReadResult<T>
 ): result is Extract<ReadResult<T>, { type: ReadResultType.COMPLETE }> {
-    return result.type === ReadResultType.COMPLETE
+    return result.type === COMPLETE
 }
 
+const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 export function isNeedsMoreData<T>(
     result: ReadResult<T>
 ): result is Extract<ReadResult<T>, { type: ReadResultType.NEEDS_MORE_DATA }> {
-    return result.type === ReadResultType.NEEDS_MORE_DATA
+    return result.type === NEEDS_MORE_DATA
 }
 
+const ERROR = ReadResultType.ERROR
 export function isError<T>(
     result: ReadResult<T>
 ): result is Extract<ReadResult<T>, { type: ReadResultType.ERROR }> {
-    return result.type === ReadResultType.ERROR
+    return result.type === ERROR
 }
 
 export class Nullable<T> {
