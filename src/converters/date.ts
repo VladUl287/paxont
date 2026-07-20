@@ -2,8 +2,13 @@ import { ConvertState, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { JsonOptions } from "../options"
 import { utc } from "../utils/date"
 import { COLON, DOT, DOUBLE_QUOTE, isDigitUnsafe, MINUS, PLUS, T_UPPER, Z } from "../utils/utf8constants"
-import { ReadResult } from "../utils/types"
+import { isComplete, ReadResult, ReadResultType } from "../utils/types"
 import { parseFloat64 } from "../utils/number"
+import { JSONParseError } from "../utils/error"
+
+const COMPLETE = ReadResultType.COMPLETE
+const ERROR = ReadResultType.ERROR
+const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toDate(_m: PrimitiveMeta<Date>, ctx: JsonReader, i: number, _d: number, _s: ConvertState): ReadResult<Date> {
     const b = ctx.bytes
@@ -17,7 +22,10 @@ export function toDate(_m: PrimitiveMeta<Date>, ctx: JsonReader, i: number, _d: 
             return fromTimestamp(b, i)
     }
 
-    throw new Error(`Invalid date value '${b[i]}' at index ${i}`)
+    return {
+        type: ERROR,
+        error: new JSONParseError(`Expected date value at index ${i}, but found '${String.fromCharCode(b[i])}'`, i)
+    }
 }
 
 function fromString(b: Uint8Array, i: number, opt: JsonOptions): ReadResult<Date> {
@@ -26,35 +34,52 @@ function fromString(b: Uint8Array, i: number, opt: JsonOptions): ReadResult<Date
         nextIndex: 0
     }
 
-    if (tryParseISO8601(b, i, result)) {
-        result.nextIndex += 2
-        return result
+    if (tryParseISO8601(b, i, result) || tryParseDefault(b, i, result, opt)) {
+        return {
+            type: COMPLETE,
+            value: result.value,
+            nextIndex: result.nextIndex
+        }
     }
 
-    let start = i
-    while (i < b.length && b[i] !== DOUBLE_QUOTE) i++
-
-    const dateStr = opt.decoder.decode(b.subarray(start, i))
-    result.value = new Date(dateStr)
-    result.nextIndex = i
-
-    if (!isNaN(result.value.valueOf()))
-        return result
-
-    throw new Error(`Invalid date value '${b[i]}' at index ${i}`)
+    return {
+        type: ERROR,
+        error: new JSONParseError(`Invalid date value '${b[i]}' at index ${i}`, i)
+    }
 }
 
 function fromTimestamp(b: Uint8Array, i: number): ReadResult<Date> {
     const result = parseFloat64(b, i)
-    const date = new Date(result.value)
 
-    if (isNaN(date.getTime()))
-        throw new Error(`Invalid date value '${b[i]}' at index ${i}`)
+    if (isComplete(result)) {
+        const date = new Date(result.value)
 
-    return {
-        value: date,
-        nextIndex: result.nextIndex
+        if (isNaN(date.getTime()))
+            throw new Error(`Invalid date value '${b[i]}' at index ${i}`)
+
+        return {
+            value: date,
+            nextIndex: result.nextIndex
+        } as any
     }
+
+    return {} as any
+}
+
+function tryParseDefault(b: Uint8Array, i: number, r: { value: Date, nextIndex: number }, options: JsonOptions): boolean {
+    let start = i
+    const len = b.length
+    while (i < len && b[i] !== DOUBLE_QUOTE) i++
+
+    const decoder = options.decoder
+    const view = new Uint8Array(b.buffer, start, i - start)
+    const dateString = decoder.decode(view)
+
+    const date = new Date(dateString)
+    r.value = date
+    r.nextIndex = ++i
+
+    return isNaN(date.valueOf())
 }
 
 const nonDigit = (b: number) => !isDigitUnsafe(b)
@@ -77,7 +102,7 @@ function expectTwoDigits(b: Uint8Array, i: number): number {
     return ++i
 }
 
-export function tryParseISO8601(b: Uint8Array, i: number, r: { value: Date, nextIndex: number }): boolean {
+function tryParseISO8601(b: Uint8Array, i: number, r: { value: Date, nextIndex: number }): boolean {
     const len1 = b.length - 1
 
     if ((i = expectFourDigits(b, i)) < 0) //YYYY
