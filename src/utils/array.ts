@@ -9,8 +9,11 @@ export type ArrayRecycler<T extends IndexableArray<V>, V> = {
     dispose(): void
 }
 
-export const clampLength = (minLength: number): number =>
-    Math.pow(2, Math.ceil(Math.log2(minLength)))
+export const clampLength = (minLength: number): number => {
+    const n = (minLength >>> 0) - 1
+    if (n <= 0) return 1
+    return 1 << (32 - Math.clz32(n))
+}
 
 class Stack<T> {
     private readonly stack: Array<T> = []
@@ -58,13 +61,14 @@ const globalPools = Object.freeze({
 
 export function useArrayPool<T>(minLength = 2) {
     const MAX_LENGTH = 0x3fffffff
-    const globalMinLength = Math.max(2, minLength >>> 0)
+    const globalMinLength = clampLength(Math.max(2, minLength >>> 0))
     const pool = new Map<number, Stack<Array<T>>>()
 
     const acquire = (minLength: number): Array<T> => {
         let len = minLength >>> 0
         if (len < globalMinLength) len = globalMinLength
         else if (len > MAX_LENGTH) len = MAX_LENGTH
+        else len = clampLength(len)
 
         const stack = pool.get(len)
         if (stack !== undefined)
@@ -79,7 +83,7 @@ export function useArrayPool<T>(minLength = 2) {
             array.length = MAX_LENGTH
             len = MAX_LENGTH
         }
-        if (len < 0) return
+        if (len & (len - 1)) return
 
         let stack = pool.get(len)
         if (stack === undefined) {
