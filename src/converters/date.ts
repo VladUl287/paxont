@@ -3,7 +3,7 @@ import { JsonOptions } from "../options"
 import { utc } from "../utils/date"
 import { COLON, DOT, DOUBLE_QUOTE, isDigitUnsafe, MINUS, PLUS, T_UPPER, Z } from "../utils/utf8constants"
 import { isComplete, ReadResult, ReadResultType } from "../utils/types"
-import { parseFloat64 } from "../utils/number"
+import { parseFloat64 } from "./number/float"
 import { JSONParseError } from "../utils/error"
 
 const COMPLETE = ReadResultType.COMPLETE
