@@ -64,11 +64,19 @@ export function useArrayPool<T>(minLength = 2) {
     const globalMinLength = clampLength(Math.max(2, minLength >>> 0))
     const pool = new Map<number, Stack<Array<T>>>()
 
+    let hotArray: Array<T> | undefined
+
     const acquire = (minLength: number): Array<T> => {
         let len = minLength >>> 0
         if (len < globalMinLength) len = globalMinLength
         else if (len > MAX_LENGTH) len = MAX_LENGTH
         else len = clampLength(len)
+
+        if (hotArray && hotArray.length >= len) {
+            const arr = hotArray
+            hotArray = undefined
+            return arr
+        }
 
         const stack = pool.get(len)
         if (stack !== undefined)
@@ -84,6 +92,11 @@ export function useArrayPool<T>(minLength = 2) {
             len = MAX_LENGTH
         }
         if (len & (len - 1)) return
+
+        if (hotArray === undefined) {
+            hotArray = array
+            return
+        }
 
         let stack = pool.get(len)
         if (stack === undefined) {
