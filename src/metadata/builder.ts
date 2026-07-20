@@ -20,6 +20,7 @@ import { toNullable } from "../converters/nullable"
 import { tryParseBigInt } from "../converters/bigint"
 import { tryParseBoolean } from "../converters/boolean"
 import { tryParseString } from "../converters/string"
+import { useArrayPool } from "../utils/array"
 
 export const string = () => primitive(JSONT.STRING, tryParseString)
 export const number = () => primitive(JSONT.NUMBER, toFloat64)
@@ -65,7 +66,8 @@ export const array = <M extends BaseMeta<ExtractType<M>, M>>(
         const toJson = metaValue.toJson
         return `[${value.map(c => toJson(metaValue, c, options)).join(',')}]`
     },
-    value: value
+    value: value,
+    arrayPool: useArrayPool(1024)
 })
 
 export const u8Array = () => typedArray<Uint8Array>(JSONT.U8_ARRAY, u8())
