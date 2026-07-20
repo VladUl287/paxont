@@ -1,5 +1,5 @@
 import { BaseMeta, ConvertState, JsonReader, MapMeta } from "../metadata/types"
-import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/utf8constants"
+import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/ascii_symbols"
 import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
 import { JSONParseError } from "../utils/error"

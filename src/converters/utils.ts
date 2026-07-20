@@ -1,4 +1,4 @@
-import { CARRIAGE_RETURN, NEW_LINE, SPACE, TAB } from "../utils/utf8constants"
+import { CARRIAGE_RETURN, NEW_LINE, SPACE, TAB } from "../utils/ascii_symbols"
 
 const lookup = new Uint8Array(256)
 lookup[TAB] = 1

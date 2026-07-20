@@ -2,7 +2,7 @@ import { genUnrolledFromCharCode } from "../code_gen/string"
 import { ConvertState, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { IS_NODE } from "../utils/platform"
 import { ReadResult } from "../utils/types"
-import { DOUBLE_QUOTE as DQ } from "../utils/utf8constants"
+import { DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
 
 const { decode } = useDecoder({
     initialWasmMemoryPages: 1, //~64KiB

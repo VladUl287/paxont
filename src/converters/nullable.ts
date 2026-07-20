@@ -1,6 +1,6 @@
 import { BaseMeta, ConvertState, JsonReader, NullableMeta } from "../metadata/types"
 import { isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
-import { L, N, U } from "../utils/utf8constants"
+import { L, N, U } from "../utils/ascii_symbols"
 
 const NULL = N | U << 8 | L << 16 | L << 24
 

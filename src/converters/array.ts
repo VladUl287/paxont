@@ -1,5 +1,5 @@
 import { BaseMeta, ArrayMeta, JsonReader, TypeName, ConvertState } from "../metadata/types"
-import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
+import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/ascii_symbols"
 import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
 import { copyArray, MutableArray } from "../utils/array"

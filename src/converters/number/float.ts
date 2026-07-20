@@ -1,4 +1,4 @@
-import { DOT, E, isDigitUnsafe, MINUS, PLUS, ZERO } from "../../utils/utf8constants"
+import { DOT, E, MINUS, PLUS, ZERO } from "../../utils/ascii_symbols"
 import { ReadResult, ReadResultType } from "../../utils/types"
 import { ConvertState, JsonReader, PrimitiveMeta } from "../../metadata/types"
 

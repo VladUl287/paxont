@@ -1,7 +1,7 @@
 import { skipWhitespace } from "./utils"
 import { ReadResult } from "../utils/types"
 import { ConvertState, JsonReader, ObjectFromMeta, ObjectMeta } from "../metadata/types"
-import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/utf8constants"
+import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/ascii_symbols"
 
 export function toObject<T extends Record<string, any>>(
     m: ObjectMeta<T>, reader: JsonReader, i: number, d: number, state: ConvertState

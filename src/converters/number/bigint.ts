@@ -1,5 +1,5 @@
 import { ConvertState, JsonReader, PrimitiveMeta } from "../../metadata/types"
-import { isDigitUnsafe, MINUS } from "../../utils/utf8constants"
+import { isDigitUnsafe, MINUS } from "../../utils/ascii_symbols"
 import { ReadResult, ReadResultType } from "../../utils/types"
 import { JSONParseError } from "../../utils/error"
 
