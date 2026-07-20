@@ -1,53 +1,114 @@
-import { ConvertState, JsonReader, MapMeta } from "../metadata/types"
+import { BaseMeta, ConvertState, JsonReader, MapMeta } from "../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
-import { ReadResult } from "../utils/types"
+import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
+import { JSONParseError } from "../utils/error"
 
-export function toMap<V>(
-    metadata: MapMeta<V, any>,
-    ctx: JsonReader,
+const COMPLETE = ReadResultType.COMPLETE
+const ERROR = ReadResultType.ERROR
+const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
+
+type MapState = ConvertState & {
+    keyState?: ConvertState,
+    valueState?: ConvertState
+}
+
+export function toMap<T, M extends BaseMeta<T, M>>(
+    metadata: MapMeta<T, M>,
+    reader: JsonReader,
     index: number,
     depth: number,
-    state: ConvertState
-): ReadResult<Map<string, V>> {
-    const b = ctx.bytes
+    state: MapState
+): ReadResult<Map<string, T>> {
+    const b = reader.bytes
+    const len = b.length
 
-    if (b[index] !== CURLY_OPEN)
-        throw new Error(`object open not found at position ${index}. depth ${depth}`)
+    let i = index
 
-    index++
+    if (!state.isContinued) {
+        if (b[i] !== CURLY_OPEN)
+            return {
+                type: ERROR,
+                error: new JSONParseError(``, i)
+            }
+        i++
+    }
 
-    const map = new Map<string, V>()
+    const result = new Map<string, T>()
+
+    const keyMeta = metadata.key
+    const tryParseKey = metadata.key.tryParseValue
+    const valueMeta = metadata.value
+    const tryParseValue = valueMeta.tryParseValue
 
     while (true) {
-        index = skipWhitespace(b, index)
+        i = skipWhitespace(b, i)
 
-        if (b[index] !== DOUBLE_QUOTE)
-            throw new Error(`not start of property ${index}`)
-        index++
+        let keyState = state.keyState ?? {}
+        if (state.keyState)
+            state.keyState = undefined
 
-        const key = metadata.key.tryParseValue(ctx, metadata.key, index, depth)
-        index = key.nextIndex
+        const keyResult = tryParseKey(keyMeta, reader, i, depth, keyState)
 
-        if (b[index] !== COLON)
-            throw new Error(`not end of property`)
-        index++
+        if (isError(keyResult))
+            return keyResult
 
-        index = skipWhitespace(b, index)
+        if (isNeedsMoreData(keyResult)) {
+            state.isContinued = true
+            state.keyState = keyState
+            return keyResult
+        }
 
-        const value = metadata.value.toValue(ctx, metadata.value, index, depth)
-        index = value.nextIndex
+        i = keyResult.nextIndex
 
-        map.set(key.value, value.value)
+        if (i >= len) {
+            if (reader.writable) {
+                state.isContinued = true
+                return {
+                    type: NEEDS_MORE_DATA,
+                    nextIndex: i
+                }
+            }
+        }
 
-        index = skipWhitespace(b, index)
+        if (b[i] !== COLON) {
+            return {
+                type: ERROR,
+                error: new JSONParseError('', i)
+            }
+        }
+        i++
 
-        if (b[index] === COMMA || b[index] === CURLY_CLOSE)
+        i = skipWhitespace(b, i)
+
+        let valueState = state.valueState ?? {}
+        if (state.valueState)
+            state.valueState = undefined
+
+        const valueResult = tryParseValue(valueMeta, reader, i, depth, valueState)
+
+        if (isError(valueResult))
+            return valueResult
+
+        if (isNeedsMoreData(valueResult)) {
+            state.isContinued = true
+            state.valueState = valueState
+            return valueResult
+        }
+
+        i = valueResult.nextIndex
+
+        result.set(keyResult.value, valueResult.value)
+
+        i = skipWhitespace(b, i)
+
+        if (b[i] === COMMA || b[i] === CURLY_CLOSE)
             break
     }
 
     return {
-        value: map,
-        nextIndex: ++index
+        type: COMPLETE,
+        value: result,
+        nextIndex: ++i
     }
 }
