@@ -11,8 +11,13 @@ export type JsonReader = {
     readonly options: JsonOptions
 }
 
+export type ConverterState = {
+    isContinued: boolean,
+    [key: string]: any
+}
+
 export type toValueConverter<T, M extends BaseMeta<T, M>> =
-    (reader: JsonReader, metadata: M, index: number, depth: number, state?: Record<string, undefined>) => ReadResult<T>
+    (reader: JsonReader, metadata: M, index: number, depth: number, state: ConverterState) => ReadResult<T>
 
 export type toJsonConverter<T, M extends BaseMeta<T, M>> = (value: T, metadata: M, options: JsonOptions) => string
 
