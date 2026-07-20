@@ -20,7 +20,7 @@ import { tryParseNullable } from "../converters/nullable"
 import { tryParseBigInt } from "../converters/number/bigint"
 import { tryParseBoolean } from "../converters/boolean"
 import { tryParseString } from "../converters/string"
-import { useArrayPool } from "../utils/array"
+import { ArrayPool, useArrayPool } from "../utils/array"
 
 export const string = () => primitive(JSONT.STRING, tryParseString)
 export const number = () => primitive(JSONT.NUMBER, toFloat64)
@@ -57,6 +57,13 @@ export const nullable = <M extends BaseMeta<ExtractType<M>, M>>(value: M): Nulla
 })
 
 type Modifier = <M extends BaseMeta<ExtractType<M>, M>>(metadata: M) => M
+
+export const arrayPool =
+    <T, A extends ArrayLike<T>>(pool: ArrayPool<T, A>) =>
+        <M extends ArrayMeta<ExtractType<M>, ExtractType<M>[], any>>(metadata: M): M => ({
+            ...metadata,
+            arrayPool: pool
+        })
 
 export const array = <M extends BaseMeta<ExtractType<M>, M>>(
     value: M,
