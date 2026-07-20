@@ -19,7 +19,7 @@ export function toSet<V, M extends BaseMeta<V, any>>(
     while (true) {
         i = skipWhitespace(b, i)
 
-        const itemResult = valueMeta.toValue(ctx, valueMeta, i, d)
+        const itemResult = valueMeta.tryParseValue(ctx, valueMeta, i, d)
         if (!itemResult.value) {
             if (ctx.writable)
                 return { nextIndex: i }

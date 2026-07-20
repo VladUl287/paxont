@@ -39,7 +39,7 @@ export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T,
         throw new Error()
     }
 
-    const result = metadata.toValue(metadata, {
+    const result = metadata.tryParseValue(metadata, {
         bytes,
         writable: false,
         options: fullOptions,

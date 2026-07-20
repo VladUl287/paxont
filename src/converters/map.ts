@@ -26,7 +26,7 @@ export function toMap<V>(
             throw new Error(`not start of property ${index}`)
         index++
 
-        const key = metadata.key.toValue(ctx, metadata.key, index, depth)
+        const key = metadata.key.tryParseValue(ctx, metadata.key, index, depth)
         index = key.nextIndex
 
         if (b[index] !== COLON)

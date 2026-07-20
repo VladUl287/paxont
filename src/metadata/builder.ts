@@ -3,7 +3,7 @@ import { TypedArray } from "../utils/typedArray"
 import {
     ArrayMeta,
     BaseMeta, Expand, ExtractType, MapMeta, NullableMeta, ObjectFieldMeta,
-    ObjectMeta, PrimitiveMeta, SetMeta, tryConvertValue
+    ObjectMeta, PrimitiveMeta, SetMeta, tryParseValue
 } from "./types"
 import { BaseType, JSONT } from "./baseTypes"
 import { toDate } from "../converters/date"
@@ -40,9 +40,9 @@ export const i64 = () => primitive(JSONT.I64, toInt64)
 
 export const f32 = () => primitive(JSONT.F32, toFloat32)
 
-const primitive = <T extends Object>(type: BaseType, toValue: tryConvertValue<T, PrimitiveMeta<T>>): PrimitiveMeta<T> => ({
+const primitive = <T extends Object>(type: BaseType, toValue: tryParseValue<T, PrimitiveMeta<T>>): PrimitiveMeta<T> => ({
     type: type,
-    toValue: toValue,
+    tryParseValue: toValue,
     toJson: (s, _) => s.toString()
 })
 
@@ -52,7 +52,7 @@ export const nullable = <M extends BaseMeta<ExtractType<M>, M>>(value: M): Nulla
         if (value === null) return 'null'
         return meta.value.toJson(meta.value, value, options)
     },
-    toValue: toNullable,
+    tryParseValue: toNullable,
     value: value,
 })
 
@@ -60,7 +60,7 @@ export const array = <M extends BaseMeta<ExtractType<M>, M>>(
     value: M
 ): ArrayMeta<ExtractType<M>, ExtractType<M>[], M> => ({
     type: JSONT.ARRAY,
-    toValue: toArray,
+    tryParseValue: toArray,
     toJson: (meta, value, options) => {
         const metaValue = meta.value
         const toJson = metaValue.toJson
@@ -87,7 +87,7 @@ const typedArray = <T extends TypedArray>(
     type: BaseType, value: PrimitiveMeta<number>
 ): ArrayMeta<number, T, PrimitiveMeta<number>> => ({
     type: type,
-    toValue: toArray,
+    tryParseValue: toArray,
     toJson: (m, value) => `[${value.join(',')}]`,
     value: value
 })
@@ -96,7 +96,7 @@ const typedArray1 = <T extends TypedArray>(
     type: BaseType, value: PrimitiveMeta<bigint>
 ): ArrayMeta<bigint, T, PrimitiveMeta<bigint>> => ({
     type: type,
-    toValue: toArray,
+    tryParseValue: toArray,
     toJson: (m, value) => `[${value.join(',')}]`,
     value: value
 })
@@ -105,7 +105,7 @@ export const map = <M extends BaseMeta<ExtractType<M>, M>>(value: M): MapMeta<Ex
     type: JSONT.MAP,
     key: string(),
     value: value,
-    toValue: toMap,
+    tryParseValue: toMap,
     toJson: (m, v, o) => {
         const meta = m.value
         const toJson = meta.toJson
@@ -116,7 +116,7 @@ export const map = <M extends BaseMeta<ExtractType<M>, M>>(value: M): MapMeta<Ex
 export const set = <M extends BaseMeta<ExtractType<M>, M>>(value: M): SetMeta<ExtractType<M>, M> => ({
     type: JSONT.SET,
     value: value,
-    toValue: toSet,
+    tryParseValue: toSet,
     toJson: (m, v, o) => {
         const meta = m.value
         const toJson = meta.toJson
@@ -157,7 +157,7 @@ export const object = <M extends ObjectFieldMeta<any, any, any>[]>(...fields: M)
         fields: fields,
         build: factory,
         getFieldIndex: fieldIndex,
-        toValue: toObject,
+        tryParseValue: toObject,
         toJson: toJson
     }
 }

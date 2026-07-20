@@ -20,5 +20,5 @@ export function toNullable<T, M extends BaseMeta<T, M>>(
             nextIndex: i + 4
         }
 
-    return m.value.toValue(reader, m.value, i, d)
+    return m.value.tryParseValue(reader, m.value, i, d)
 }
