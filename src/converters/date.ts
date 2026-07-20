@@ -10,7 +10,7 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toDate(
+export function tryParseDate(
     metadata: PrimitiveMeta<Date>,
     reader: JsonReader,
     index: number,

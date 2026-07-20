@@ -11,7 +11,7 @@ type NullableState = ConvertState & {
     valueState?: ConvertState
 }
 
-export function toNullable<T, M extends BaseMeta<T, M>>(
+export function tryParseNullable<T, M extends BaseMeta<T, M>>(
     metadata: NullableMeta<T, M>,
     reader: JsonReader,
     index: number,

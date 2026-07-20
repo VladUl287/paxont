@@ -6,17 +6,17 @@ import {
     ObjectMeta, PrimitiveMeta, SetMeta, tryParseValue
 } from "./types"
 import { BaseType, JSONT } from "./baseTypes"
-import { toDate } from "../converters/date"
+import { tryParseDate } from "../converters/date"
 import {
     toFloat32, toFloat64, toInt16, toInt32, toInt64, toInt8,
     toUint16, toUint32, toUInt64, toUInt8
 } from "../converters/number"
-import { toMap } from "../converters/map"
+import { tryParseMap } from "../converters/map"
 import { toSet } from "../converters/set"
 import { genObjectFactory, genObjectToJsonFactory1 } from "../code_gen/object"
 import { generateTrieSwitch } from "../code_gen/field"
 import { toObject } from "../converters/object"
-import { toNullable } from "../converters/nullable"
+import { tryParseNullable } from "../converters/nullable"
 import { tryParseBigInt } from "../converters/bigint"
 import { tryParseBoolean } from "../converters/boolean"
 import { tryParseString } from "../converters/string"
@@ -26,7 +26,7 @@ export const string = () => primitive(JSONT.STRING, tryParseString)
 export const number = () => primitive(JSONT.NUMBER, toFloat64)
 export const bigInt = () => primitive(JSONT.BIGINT, tryParseBigInt)
 export const bool = () => primitive(JSONT.BOOL, tryParseBoolean)
-export const date = () => primitive(JSONT.DATE, toDate)
+export const date = () => primitive(JSONT.DATE, tryParseDate)
 
 export const u8 = () => primitive(JSONT.U8, toUInt8)
 export const u16 = () => primitive(JSONT.U16, toUint16)
@@ -52,7 +52,7 @@ export const nullable = <M extends BaseMeta<ExtractType<M>, M>>(value: M): Nulla
         if (value === null) return 'null'
         return meta.value.toJson(meta.value, value, options)
     },
-    tryParseValue: toNullable,
+    tryParseValue: tryParseNullable,
     value: value,
 })
 
@@ -105,7 +105,7 @@ export const map = <M extends BaseMeta<ExtractType<M>, M>>(value: M): MapMeta<Ex
     type: JSONT.MAP,
     key: string(),
     value: value,
-    tryParseValue: toMap,
+    tryParseValue: tryParseMap,
     toJson: (m, v, o) => {
         const meta = m.value
         const toJson = meta.toJson

@@ -13,7 +13,7 @@ type MapState = ConvertState & {
     valueState?: ConvertState
 }
 
-export function toMap<T, M extends BaseMeta<T, M>>(
+export function tryParseMap<T, M extends BaseMeta<T, M>>(
     metadata: MapMeta<T, M>,
     reader: JsonReader,
     index: number,
