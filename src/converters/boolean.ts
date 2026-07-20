@@ -1,8 +1,10 @@
 import { ConvertState, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { E } from "../utils/utf8constants"
 import { ReadResult, ReadResultType } from "../utils/types"
+import { JSONParseError } from "../utils/error"
 
 const COMPLETE = ReadResultType.COMPLETE
+const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function tryParseBoolean(
@@ -35,5 +37,9 @@ export function tryParseBoolean(
             nextIndex: i
         }
 
-    throw new Error(`Expected 'true' or 'false' at index ${i}, but found '${String.fromCharCode(b[i])}' while parsing boolean`)
+    return {
+        type: ERROR,
+        error: new JSONParseError(
+            `Expected 'true' or 'false' at index ${i}, but found '${String.fromCharCode(b[i])}' while parsing boolean`, i)
+    }
 }
