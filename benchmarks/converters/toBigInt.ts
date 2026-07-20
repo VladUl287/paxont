@@ -1,5 +1,5 @@
 import { add, complete, cycle, suite } from 'benny'
-import { toBigInt } from '../../src/converters/bigint'
+import { tryParseBigInt } from '../../src/converters/bigint'
 import { JsonReader } from '../../src/metadata/types'
 import { defaultOptions } from '../../src/options'
 
@@ -19,7 +19,7 @@ suite(
         value: BigInt(decoder.decode(bytes.subarray(1, bytes.length - 1))),
         nextIndex: bytes.length
     })),
-    add('toBigInt', () => toBigInt(ctx, metaMock, 1, 0)),
+    add('toBigInt', () => tryParseBigInt(ctx, metaMock, 1, 0)),
 
     cycle((result) => {
         const nanoseconds = (1 / result.ops) * 1e9

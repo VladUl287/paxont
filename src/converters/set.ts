@@ -1,10 +1,10 @@
-import { BaseMeta, CollectionMeta, JsonReader } from "../metadata/types"
+import { BaseMeta, ArrayMeta, JsonReader, SetMeta, ConvertState } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
 import { ReadResult } from "../utils/types"
 
 export function toSet<V, M extends BaseMeta<V, any>>(
-    ctx: JsonReader, m: CollectionMeta<Set<V>, V, M>, i: number, d: number
+    ctx: JsonReader, m: SetMeta<V, M>, i: number, d: number, state: ConvertState
 ): ReadResult<Set<V>> {
     const b = ctx.bytes
 

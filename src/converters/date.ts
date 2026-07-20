@@ -1,11 +1,11 @@
-import { JsonReader, PrimitiveMeta } from "../metadata/types"
+import { ConvertState, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { JsonOptions } from "../options"
 import { utc } from "../utils/date"
 import { COLON, DOT, DOUBLE_QUOTE, isDigitUnsafe, MINUS, PLUS, T_UPPER, Z } from "../utils/utf8constants"
 import { ReadResult } from "../utils/types"
 import { parseFloat64 } from "../utils/number"
 
-export function toDate(ctx: JsonReader, _m: PrimitiveMeta<Date>, i: number, _d: number): ReadResult<Date> {
+export function toDate(_m: PrimitiveMeta<Date>, ctx: JsonReader, i: number, _d: number, _s: ConvertState): ReadResult<Date> {
     const b = ctx.bytes
     const len = b.length
 

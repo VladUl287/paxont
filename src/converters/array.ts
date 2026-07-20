@@ -1,14 +1,14 @@
-import { BaseMeta, ArrayMeta, JsonReader, TypeName, ConverterState } from "../metadata/types"
+import { BaseMeta, ArrayMeta, JsonReader, TypeName, ConvertState } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
 import { copyArray, IndexableArray } from "../utils/array"
 import { JSONParseError } from "../utils/error"
 
-type ArrayState<T> = ConverterState & {
+type ArrayState<T> = ConvertState & {
     buffer?: IndexableArray<T>,
     bufferIndex?: number,
-    itemState?: ConverterState
+    itemState?: ConvertState
 }
 
 export function toArray<T, M extends BaseMeta<T, M>>(
@@ -64,7 +64,7 @@ export function toArray<T, M extends BaseMeta<T, M>>(
         while (true) {
             i = skipWhitespace(b, i)
 
-            const result = tryParseItemValue(reader, itemMeta, i, depth, itemState)
+            const result = tryParseItemValue(itemMeta, reader, i, depth, itemState)
 
             if (isError(result))
                 return result

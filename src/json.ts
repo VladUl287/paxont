@@ -5,6 +5,7 @@ import { useArrayRecycler } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
 import { useMetadata } from "./metadata"
+import { isComplete } from "./utils/types"
 
 const optionsCache = createCache<Partial<JsonOptions>, JsonOptions>()
 const defaultMetadata = useMetadata()
@@ -38,11 +39,15 @@ export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T,
         throw new Error()
     }
 
-    const result = metadata.toValue({
+    const result = metadata.toValue(metadata, {
         bytes,
         writable: false,
         options: fullOptions,
-    }, metadata, 0, 0, {})
+    }, 0, 0, { isContinued: false })
+
+    if (isComplete(result)) {
+        return result.value
+    }
 
     return result as any
 }
@@ -56,5 +61,5 @@ export function serialize<T, M extends BaseMeta<T, any>>(value: T, metadata: M, 
         optionsCache.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
         defaultOptions
 
-    return metadata.toJson(value, metadata, fullOptions)
+    return metadata.toJson(metadata, value, fullOptions)
 }

@@ -1,12 +1,12 @@
 import { skipWhitespace } from "./utils"
 import { ReadResult } from "../utils/types"
-import { JsonReader, ObjectFromMeta, ObjectMeta } from "../metadata/types"
+import { ConvertState, JsonReader, ObjectFromMeta, ObjectMeta } from "../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/utf8constants"
 
 export function toObject<T extends Record<string, any>>(
-    ctx: JsonReader, m: ObjectMeta<T>, i: number, d: number, state?: Record<string, any>
+    m: ObjectMeta<T>, reader: JsonReader, i: number, d: number, state: ConvertState
 ): ReadResult<ObjectFromMeta<T>> {
-    const b = ctx.bytes
+    const b = reader.bytes
 
     if (i < b.length && b[i] !== CURLY_OPEN && !state?.processing)
         throw new Error(``)
@@ -27,7 +27,7 @@ export function toObject<T extends Record<string, any>>(
         let start = i
 
         if (b[i] !== DOUBLE_QUOTE) {
-            if (ctx.writable || i < b.length) throw new Error(``)
+            if (reader.writable || i < b.length) throw new Error(``)
 
             return { nextIndex: i }
         }
@@ -35,7 +35,7 @@ export function toObject<T extends Record<string, any>>(
 
         const index = getFieldIndex(b, i)
         if (index === -1) {
-            if (ctx.writable || i < b.length) throw new Error(``)
+            if (reader.writable || i < b.length) throw new Error(``)
 
             return { nextIndex: start }
         }
@@ -44,7 +44,7 @@ export function toObject<T extends Record<string, any>>(
         i += field.name.bytes.length + 1
 
         if (b[i] !== COLON) {
-            if (ctx.writable || i < b.length) throw new Error(``)
+            if (reader.writable || i < b.length) throw new Error(``)
 
             return { nextIndex: start }
         }
@@ -52,11 +52,11 @@ export function toObject<T extends Record<string, any>>(
 
         i = skipWhitespace(b, i)
 
-        const result = field.value.toValue(ctx, field.value, i, d)
+        const result = field.value.toValue(reader, field.value, i, d)
         i = result.nextIndex
 
         if (result.value === undefined || i >= b.length) {
-            if (ctx.writable) throw new Error(``)
+            if (reader.writable) throw new Error(``)
             if (!state) throw new Error()
 
             state.bufferIndex = j
@@ -73,7 +73,7 @@ export function toObject<T extends Record<string, any>>(
     i = skipWhitespace(b, i)
 
     if (b[i] !== CURLY_CLOSE) {
-        if (ctx.writable || i < b.length) throw new Error(``)
+        if (reader.writable || i < b.length) throw new Error(``)
         if (!state) throw new Error()
 
         state.bufferIndex = j

@@ -1,5 +1,5 @@
 import { genUnrolledFromCharCode } from "../code_gen/string"
-import { JsonReader, PrimitiveMeta } from "../metadata/types"
+import { ConvertState, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { IS_NODE } from "../utils/platform"
 import { ReadResult } from "../utils/types"
 import { DOUBLE_QUOTE as DQ } from "../utils/utf8constants"
@@ -11,13 +11,11 @@ const { decode } = useDecoder({
 })
 
 export function tryParseString(
-    reader: JsonReader,
     m: PrimitiveMeta<string>,
+    reader: JsonReader,
     i: number,
     d: number,
-    state: {
-        isContinued?: boolean
-    }
+    state: ConvertState
 ): ReadResult<string> {
     const b = reader.bytes
 

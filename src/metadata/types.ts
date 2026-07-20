@@ -11,18 +11,18 @@ export type JsonReader = {
     readonly options: JsonOptions
 }
 
-export type ConverterState = {
+export type ConvertState = {
     isContinued: boolean,
     [key: string]: any
 }
 
-export type toValueConverter<T, M extends BaseMeta<T, M>> =
-    (reader: JsonReader, metadata: M, index: number, depth: number, state: ConverterState) => ReadResult<T>
+export type tryConvertValue<T, M extends BaseMeta<T, M>> =
+    (metadata: M, reader: JsonReader, index: number, depth: number, state: ConvertState) => ReadResult<T>
 
-export type toJsonConverter<T, M extends BaseMeta<T, M>> = (value: T, metadata: M, options: JsonOptions) => string
+export type toJsonConverter<T, M extends BaseMeta<T, M>> = (metadata: M, value: T, options: JsonOptions) => string
 
 export interface BaseMeta<T, M extends BaseMeta<T, M>> {
-    readonly toValue: toValueConverter<T, M>,
+    readonly toValue: tryConvertValue<T, M>,
     readonly toJson: toJsonConverter<T, M>,
     readonly type: TypeName
 }

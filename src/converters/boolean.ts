@@ -1,9 +1,9 @@
-import { JsonReader, PrimitiveMeta } from "../metadata/types"
+import { ConvertState, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { E } from "../utils/utf8constants"
 import { ReadResult } from "../utils/types"
 
 export function tryParseBoolean(
-    ctx: JsonReader, _m: PrimitiveMeta<boolean>, i: number, _d: number, _s: Record<string, any>
+    _m: PrimitiveMeta<boolean>, ctx: JsonReader, i: number, _d: number, _s: ConvertState
 ): ReadResult<boolean> {
     const b = ctx.bytes
     const len = b.length

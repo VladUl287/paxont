@@ -1,11 +1,11 @@
-import { JsonReader, PrimitiveMeta } from "../metadata/types"
+import { ConvertState, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { isDigitUnsafe } from "../utils/utf8constants"
 import { ReadResult } from "../utils/types"
 
-type BigIntState = { lastIndex?: number }
+type BigIntState = ConvertState & { lastIndex?: number }
 
 export function tryParseBigInt(
-    ctx: JsonReader, _m: PrimitiveMeta<bigint>, i: number, _d: number, state: BigIntState): ReadResult<bigint> {
+    _m: PrimitiveMeta<bigint>, ctx: JsonReader, i: number, _d: number, state: BigIntState): ReadResult<bigint> {
     const b = ctx.bytes
     const len = b.length
 

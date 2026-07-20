@@ -1,9 +1,15 @@
-import { JsonReader, MapMeta } from "../metadata/types"
+import { ConvertState, JsonReader, MapMeta } from "../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
 import { ReadResult } from "../utils/types"
 
-export function toMap<V>(ctx: JsonReader, meta: MapMeta<V, any>, index: number, depth: number): ReadResult<Map<string, V>> {
+export function toMap<V>(
+    metadata: MapMeta<V, any>,
+    ctx: JsonReader,
+    index: number,
+    depth: number,
+    state: ConvertState
+): ReadResult<Map<string, V>> {
     const b = ctx.bytes
 
     if (b[index] !== CURLY_OPEN)
@@ -20,7 +26,7 @@ export function toMap<V>(ctx: JsonReader, meta: MapMeta<V, any>, index: number, 
             throw new Error(`not start of property ${index}`)
         index++
 
-        const key = meta.key.toValue(ctx, meta.key, index, depth)
+        const key = metadata.key.toValue(ctx, metadata.key, index, depth)
         index = key.nextIndex
 
         if (b[index] !== COLON)
@@ -29,7 +35,7 @@ export function toMap<V>(ctx: JsonReader, meta: MapMeta<V, any>, index: number, 
 
         index = skipWhitespace(b, index)
 
-        const value = meta.value.toValue(ctx, meta.value, index, depth)
+        const value = metadata.value.toValue(ctx, metadata.value, index, depth)
         index = value.nextIndex
 
         map.set(key.value, value.value)
