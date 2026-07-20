@@ -1,15 +1,8 @@
 import { DOT, E, isDigitUnsafe, MINUS, PLUS, ZERO } from "../../utils/utf8constants"
-import { ReadResult } from "../../utils/types"
+import { ReadResult, ReadResultType } from "../../utils/types"
 import { ConvertState, JsonReader, PrimitiveMeta } from "../../metadata/types"
 
-export function tryParseFloat64(
-    metadata: PrimitiveMeta<number>,
-    reader: JsonReader,
-    index: number,
-    depth: number,
-    state: ConvertState): ReadResult<number> { return ({} as any) }
-
-type NumberFormat = {
+type FloatFormat = {
     normalMantissaBits: number
     denormalMantissaBits: number
     exponentBias: number
@@ -28,7 +21,20 @@ type NumberFormat = {
     infinityExponent: number
 }
 
-export const f64Format: NumberFormat = {
+type Store = {
+    mantissa: number,
+    mantissaU32: Uint32Array,
+    digitsCount: number,
+    exponent: number,
+    index: number
+}
+
+const COMPLETE = ReadResultType.COMPLETE
+const ERROR = ReadResultType.ERROR
+const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
+
+// TODO: move format into metadata to handle f16, f32 and f64 automatically
+export const format: FloatFormat = {
     normalMantissaBits: 53,
     denormalMantissaBits: 52,
     exponentBias: 1023,
@@ -47,11 +53,17 @@ export const f64Format: NumberFormat = {
     infinityExponent: 2047
 }
 
-export function parseFloat64(b: Uint8Array, i: number): ReadResult<number> {
-    return parseFloat(b, i, f64Format)
-}
+const mantissaU32 = new Uint32Array(2)
 
-export function parseFloat(b: Uint8Array, i: number, f: NumberFormat): ReadResult<number> {
+export function tryParseFloat64(
+    metadata: PrimitiveMeta<number>,
+    reader: JsonReader,
+    index: number,
+    depth: number,
+    state: ConvertState): ReadResult<number> {
+    const b = reader.bytes
+
+    let i = index
     const negative = b[i] === MINUS
     if (negative) i++
 
@@ -70,12 +82,13 @@ export function parseFloat(b: Uint8Array, i: number, f: NumberFormat): ReadResul
         const e = s.exponent
         const eabs = Math.abs(e)
 
-        if (m > 0 && eabs <= f.maxExponentFastPath) {
+        if (m > 0 && eabs <= format.maxExponentFastPath) {
             if (e < 0)
                 m /= POW10[eabs]
             else
                 m *= POW10[eabs]
             return {
+                type: COMPLETE,
                 value: negative ? -m : m,
                 nextIndex: i
             }
@@ -83,28 +96,20 @@ export function parseFloat(b: Uint8Array, i: number, f: NumberFormat): ReadResul
 
         if (m > 0) splitTo32(m, s.mantissaU32)
 
-        const f64 = toFloat64(s.mantissaU32, e, f)
+        const f64 = toFloat64(s.mantissaU32, e, format)
         if (f64) return {
+            type: COMPLETE,
             value: f64,
             nextIndex: i
         }
     }
 
     return {
-        value: Number(fastDecode(b, i)),
+        type: COMPLETE,
+        value: Number(decode(b, i)),
         nextIndex: i
     }
 }
-
-type Store = {
-    mantissa: number,
-    mantissaU32: Uint32Array,
-    digitsCount: number,
-    exponent: number,
-    index: number
-}
-
-const mantissaU32 = new Uint32Array(2)
 
 const MAX_SAFE_INTEGER = 9007199254740992
 const MAX_SAFE_INT_DIGITS = 16
@@ -324,7 +329,7 @@ const halfValue = splitTo64(4503599627370496n)
 
 const product128 = new Uint32Array(4)
 
-function toFloat64(m: Uint32Array, e: number, f: NumberFormat): number | undefined {
+function toFloat64(m: Uint32Array, e: number, f: FloatFormat): number | undefined {
     const m32 = m
     const low = m32[0]
     const high = m32[1]
@@ -494,7 +499,7 @@ function computeProduct(m: Uint32Array, e: number, bits: number, r: Uint32Array)
 }
 
 const c = new Array(1024).fill(0)
-function fastDecode(b: Uint8Array, i: number) {
+function decode(b: Uint8Array, i: number) {
     let j = 0
     let dc = 0
 
