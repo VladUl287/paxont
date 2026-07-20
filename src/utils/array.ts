@@ -66,7 +66,7 @@ export function useArrayPool<T>(minLength = 2) {
 
     let hotArray: Array<T> | undefined
 
-    const acquire = (minLength: number): Array<T> => {
+    const rent = (minLength: number): Array<T> => {
         let len = minLength >>> 0
         if (len < globalMinLength) len = globalMinLength
         else if (len > MAX_LENGTH) len = MAX_LENGTH
@@ -106,7 +106,7 @@ export function useArrayPool<T>(minLength = 2) {
         stack.push(array)
     }
 
-    return { acquire, release }
+    return { rent, release }
 }
 
 export function useArrayRecycler<T extends IndexableArray<V>, V>(ctor: new (length: number) => T): ArrayRecycler<T, V> {
