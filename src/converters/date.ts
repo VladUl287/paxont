@@ -10,21 +10,32 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toDate(_m: PrimitiveMeta<Date>, ctx: JsonReader, i: number, _d: number, _s: ConvertState): ReadResult<Date> {
-    const b = ctx.bytes
+export function toDate(
+    metadata: PrimitiveMeta<Date>,
+    reader: JsonReader,
+    index: number,
+    depth: number,
+    state: ConvertState
+): ReadResult<Date> {
+    const b = reader.bytes
     const len = b.length
 
-    if (i < len) {
-        if (b[i] === DOUBLE_QUOTE)
-            return fromString(b, i + 1, ctx.options)
+    if (index < len) {
+        if (b[index] === DOUBLE_QUOTE)
+            return fromString(b, index + 1, reader.options)
 
-        if (isDigitUnsafe(b[i]))
-            return fromTimestamp(b, i)
+        if (isDigitUnsafe(b[index]))
+            return fromTimestamp(b, index)
     }
+    else if (reader.writable)
+        return {
+            type: NEEDS_MORE_DATA,
+            nextIndex: index
+        }
 
     return {
         type: ERROR,
-        error: new JSONParseError(`Expected date value at index ${i}, but found '${String.fromCharCode(b[i])}'`, i)
+        error: new JSONParseError(`Expected date value at index ${index}, but found '${String.fromCharCode(b[index])}'`, index)
     }
 }
 
