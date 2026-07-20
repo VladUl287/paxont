@@ -57,7 +57,7 @@ export function toArray<T, A extends IndexableArray<T>, M extends BaseMeta<T, M>
         const itemMeta = metadata.value
         const tryParseItemValue = itemMeta.toValue
 
-        const itemState = state.itemState ?? { isContinued: false }
+        const itemState = state.itemState ?? {}
 
         let j = state.bufferIndex ?? 0
         while (true) {
@@ -72,10 +72,7 @@ export function toArray<T, A extends IndexableArray<T>, M extends BaseMeta<T, M>
                 state.isContinued = true
                 state.buffer = buffer
                 state.bufferIndex = j
-                state.itemState = {
-                    ...itemState,
-                    isContinued: true
-                }
+                state.itemState = itemState
                 return result
             }
 
