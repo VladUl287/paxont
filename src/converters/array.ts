@@ -49,7 +49,7 @@ export function toArray<T, M extends BaseMeta<T, M>>(
         if (b[i] !== SQUARE_OPEN) {
             return {
                 type: ReadResultType.ERROR,
-                error: new JSONParseError(`Expected '[' at index ${index}, but found '${b[index]}' while parsing array`, i)
+                error: new JSONParseError(`Expected '[' at index ${i}, but found '${b[i]}' while parsing array`, i)
             }
         }
         i++
@@ -74,7 +74,7 @@ export function toArray<T, M extends BaseMeta<T, M>>(
                 return result
 
             buffer[j] = result.value
-            index = result.nextIndex
+            i = result.nextIndex
             j++
 
             if (j >= buffer.length) {
@@ -83,10 +83,10 @@ export function toArray<T, M extends BaseMeta<T, M>>(
                 buffer = newBuffer
             }
 
-            index = skipWhitespace(b, index)
+            i = skipWhitespace(b, i)
 
-            if (b[index] === COMMA) index++
-            else if (b[index] === SQUARE_CLOSE) break
+            if (b[i] === COMMA) i++
+            else if (b[i] === SQUARE_CLOSE) break
             else {
                 return {
                     type: ReadResultType.ERROR,
@@ -98,7 +98,7 @@ export function toArray<T, M extends BaseMeta<T, M>>(
         return {
             type: ReadResultType.COMPLETE,
             value: buffer.slice(0, j),
-            nextIndex: ++index
+            nextIndex: ++i
         }
     }
     finally {
