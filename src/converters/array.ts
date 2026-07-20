@@ -2,16 +2,16 @@ import { BaseMeta, ArrayMeta, JsonReader, TypeName, ConvertState } from "../meta
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/utf8constants"
 import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
-import { copyArray, IndexableArray } from "../utils/array"
+import { copyArray, MutableArray } from "../utils/array"
 import { JSONParseError } from "../utils/error"
 
-type ArrayState<T, A extends IndexableArray<T>> = ConvertState & {
+type ArrayState<T, A extends MutableArray<T>> = ConvertState & {
     buffer?: A,
     bufferIndex?: number,
     itemState?: ConvertState
 }
 
-export function toArray<T, A extends IndexableArray<T>, M extends BaseMeta<T, M>>(
+export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
     metadata: ArrayMeta<T, A, M>,
     reader: JsonReader,
     index: number,

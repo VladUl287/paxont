@@ -1,15 +1,15 @@
-export interface IndexableArray<V> {
+export interface MutableArray<V> {
     readonly length: number
     [index: number]: V
     slice: (start?: number, end?: number) => this
 }
 
-export type ArrayRecycler<T extends IndexableArray<V>, V> = {
+export type ArrayRecycler<T extends MutableArray<V>, V> = {
     acquire: (length: number, source?: T) => T,
     dispose(): void
 }
 
-export const copyArray = <V, T extends IndexableArray<V>>(source: ArrayLike<V>, target: T): T => {
+export const copyArray = <V, T extends MutableArray<V>>(source: ArrayLike<V>, target: T): T => {
     if (!source || !target) return target
 
     const length = Math.min(source.length, target.length)
@@ -124,7 +124,7 @@ export function useArrayPool<T>(minLength = 2): ArrayPool<T, Array<T>> {
     return { rent, release }
 }
 
-export function useArrayRecycler<T extends IndexableArray<V>, V>(ctor: new (length: number) => T): ArrayRecycler<T, V> {
+export function useArrayRecycler<T extends MutableArray<V>, V>(ctor: new (length: number) => T): ArrayRecycler<T, V> {
     let array: T | null = null
 
     const acquire = (newLength: number, source?: T) => {

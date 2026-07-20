@@ -1,5 +1,5 @@
 import { JsonOptions } from "../options"
-import { ArrayPool, IndexableArray, useArrayPool } from "../utils/array"
+import { ArrayPool, MutableArray } from "../utils/array"
 import { ReadResult } from "../utils/types"
 import { BaseType } from "./baseTypes"
 
@@ -61,7 +61,7 @@ export interface NullableMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<T | 
     readonly value: M
 }
 
-export interface ArrayMeta<T, A extends IndexableArray<T>, M extends BaseMeta<T, M>> extends BaseMeta<A, ArrayMeta<T, A, M>> {
+export interface ArrayMeta<T, A extends MutableArray<T>, M extends BaseMeta<T, M>> extends BaseMeta<A, ArrayMeta<T, A, M>> {
     readonly value: M
     readonly arrayPool: ArrayPool<T, A>
 }
