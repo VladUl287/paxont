@@ -7,7 +7,7 @@ export const enum ReadResultType {
 export type ReadResult<T> =
     | { type: ReadResultType.COMPLETE, value: T, nextIndex: number }
     | { type: ReadResultType.NEEDS_MORE_DATA, nextIndex: number }
-    | { type: ReadResultType.ERROR, error: Error, nextIndex: number }
+    | { type: ReadResultType.ERROR, error: Error }
 
 export function isComplete<T>(
     result: ReadResult<T>
