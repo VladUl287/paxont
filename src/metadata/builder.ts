@@ -56,19 +56,30 @@ export const nullable = <M extends BaseMeta<ExtractType<M>, M>>(value: M): Nulla
     value: value,
 })
 
+type Modifier = <M extends BaseMeta<ExtractType<M>, M>>(metadata: M) => M
+
 export const array = <M extends BaseMeta<ExtractType<M>, M>>(
-    value: M
-): ArrayMeta<ExtractType<M>, ExtractType<M>[], M> => ({
-    type: JSONT.ARRAY,
-    tryParseValue: toArray,
-    toJson: (meta, value, options) => {
-        const metaValue = meta.value
-        const toJson = metaValue.toJson
-        return `[${value.map(c => toJson(metaValue, c, options)).join(',')}]`
-    },
-    value: value,
-    arrayPool: useArrayPool(1024)
-})
+    value: M,
+    ...modifiers: Array<Modifier>
+): ArrayMeta<ExtractType<M>, ExtractType<M>[], M> => {
+    let meta: ArrayMeta<ExtractType<M>, ExtractType<M>[], M> = {
+        type: JSONT.ARRAY,
+        tryParseValue: toArray,
+        toJson: (meta, value, options) => {
+            const metaValue = meta.value
+            const toJson = metaValue.toJson
+            return `[${value.map(c => toJson(metaValue, c, options)).join(',')}]`
+        },
+        value: value,
+        arrayPool: useArrayPool(1024)
+    }
+
+    modifiers.forEach(modify => {
+        meta = modify(meta)
+    })
+
+    return meta
+}
 
 export const u8Array = () => typedArray<Uint8Array>(JSONT.U8_ARRAY, u8())
 export const u16Array = () => typedArray<Uint16Array>(JSONT.U16_ARRAY, u16())
