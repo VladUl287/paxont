@@ -219,7 +219,7 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
         i++
     }
 
-    if (dc === MAX_SAFE_LONG_DIGITS && isDigitUnsafe(b[i]))
+    if (dc === MAX_SAFE_LONG_DIGITS) //check if mantissa is bigger than 19 digits max
         return false
 
     if (localDc > 0) {
