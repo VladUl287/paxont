@@ -1,4 +1,4 @@
-import { BaseMeta, ConvertState, JsonReader, NullableMeta } from "../metadata/types"
+import { BaseMeta, JsonContext, NullableMeta } from "../metadata/types"
 import { isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
 import { L, N, U } from "../utils/ascii_symbols"
 
@@ -7,17 +7,13 @@ const NULL = N | U << 8 | L << 16 | L << 24
 const COMPLETE = ReadResultType.COMPLETE
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-type NullableState = ConvertState & {
-    valueState?: ConvertState
-}
-
 export function tryParseNullable<T, M extends BaseMeta<T, M>>(
     metadata: NullableMeta<T, M>,
-    reader: JsonReader,
+    context: JsonContext,
     index: number,
-    depth: number,
-    state: NullableState
+    depth: number
 ): ReadResult<T | null> {
+    const reader = context.reader
     const b = reader.bytes
     const len = b.length
 
@@ -36,13 +32,5 @@ export function tryParseNullable<T, M extends BaseMeta<T, M>>(
         }
 
     const metaValue = metadata.value
-    const valueState = state.valueState ?? {}
-    const result = metaValue.tryParseValue(metaValue, reader, i, depth, valueState)
-
-    if (isNeedsMoreData(result)) {
-        state.isContinued = true
-        state.valueState = valueState
-    }
-
-    return result
+    return metaValue.tryParseValue(metaValue, context, i, depth)
 }

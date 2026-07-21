@@ -1,5 +1,5 @@
-import { BaseMeta, ConvertState, JsonReader, MapMeta } from "../metadata/types"
-import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/ascii_symbols"
+import { BaseMeta, JsonContext, MapMeta } from "../metadata/types"
+import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN } from "../utils/ascii_symbols"
 import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
 import { JSONParseError } from "../utils/error"
@@ -8,24 +8,20 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-type MapState = ConvertState & {
-    keyState?: ConvertState,
-    valueState?: ConvertState
-}
-
 export function tryParseMap<T, M extends BaseMeta<T, M>>(
     metadata: MapMeta<T, M>,
-    reader: JsonReader,
+    context: JsonContext,
     index: number,
     depth: number,
-    state: MapState
 ): ReadResult<Map<string, T>> {
+    const { reader, stack } = context
     const b = reader.bytes
     const len = b.length
 
     let i = index
 
-    if (!state.isContinued) {
+    const state = stack.pop()
+    if (!state || !state.isContinued) {
         if (b[i] !== CURLY_OPEN)
             return {
                 type: ERROR,
@@ -44,18 +40,20 @@ export function tryParseMap<T, M extends BaseMeta<T, M>>(
     while (true) {
         i = skipWhitespace(b, i)
 
-        let keyState = state.keyState ?? {}
-        if (state.keyState)
+        let keyState = state?.keyState ?? {}
+        if (state?.keyState)
             state.keyState = undefined
 
-        const keyResult = tryParseKey(keyMeta, reader, i, depth, keyState)
+        const keyResult = tryParseKey(keyMeta, context, i, depth)
 
         if (isError(keyResult))
             return keyResult
 
         if (isNeedsMoreData(keyResult)) {
-            state.isContinued = true
-            state.keyState = keyState
+            stack.push({
+                isContinued: true,
+                keyState
+            })
             return keyResult
         }
 
@@ -63,7 +61,7 @@ export function tryParseMap<T, M extends BaseMeta<T, M>>(
 
         if (i >= len) {
             if (reader.writable) {
-                state.isContinued = true
+                stack.push({ isContinued: true })
                 return {
                     type: NEEDS_MORE_DATA,
                     nextIndex: i
@@ -81,18 +79,20 @@ export function tryParseMap<T, M extends BaseMeta<T, M>>(
 
         i = skipWhitespace(b, i)
 
-        let valueState = state.valueState ?? {}
-        if (state.valueState)
+        let valueState = state?.valueState ?? {}
+        if (state?.valueState)
             state.valueState = undefined
 
-        const valueResult = tryParseValue(valueMeta, reader, i, depth, valueState)
+        const valueResult = tryParseValue(valueMeta, context, i, depth)
 
         if (isError(valueResult))
             return valueResult
 
         if (isNeedsMoreData(valueResult)) {
-            state.isContinued = true
-            state.valueState = valueState
+            stack.push({
+                isContinued: true,
+                valueState
+            })
             return valueResult
         }
 

@@ -1,4 +1,4 @@
-import { ConvertState, JsonReader, PrimitiveMeta } from "../metadata/types"
+import { JsonContext, PrimitiveMeta } from "../metadata/types"
 import { JsonOptions } from "../options"
 import { utc } from "../utils/date"
 import { COLON, DOT, DOUBLE_QUOTE, isDigitUnsafe, MINUS, PLUS, T_UPPER, Z } from "../utils/ascii_symbols"
@@ -11,17 +11,17 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function tryParseDate(
     metadata: PrimitiveMeta<Date>,
-    reader: JsonReader,
+    context: JsonContext,
     index: number,
     depth: number,
-    state: ConvertState
 ): ReadResult<Date> {
+    const { reader, options } = context
     const b = reader.bytes
     const len = b.length
 
     if (index < len) {
         if (b[index] === DOUBLE_QUOTE)
-            return fromString(b, index + 1, reader.options)
+            return fromString(b, index + 1, options)
 
         if (isDigitUnsafe(b[index]))
             return fromTimestamp(b, index)
