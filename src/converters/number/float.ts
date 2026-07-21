@@ -468,8 +468,8 @@ function toFloat64(m: Uint32Array, e: number, f: FloatFormat): number | undefine
         return (high21 * 0x100000000) + low32
     }
 
-    // const mantissa = Number(((BigInt(mantissaU32[1]) & 0xFFFFFn) << 32n) | BigInt(mantissaU32[0]))
-    const mantissa = combine53(mantissaU32[1], mantissaU32[0])
+    const mantissa = Number(((BigInt(mantissaU32[1]) & 0xFFFFFn) << 32n) | BigInt(mantissaU32[0]))
+    // const mantissa = combine53(mantissaU32[1], mantissaU32[0])
 
     if (exponent === f.infinityExponent && mantissa === 0)
         return Infinity
