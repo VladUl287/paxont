@@ -8,7 +8,7 @@ import {
 import { BaseType, JSONT } from "./baseTypes"
 import { tryParseDate } from "../converters/date"
 import { tryParseMap } from "../converters/map"
-import { toSet } from "../converters/set"
+import { tryParseSet } from "../converters/set"
 import { genObjectFactory, genObjectToJsonFactory1 } from "../code_gen/object"
 import { generateTrieSwitch } from "../code_gen/field"
 import { tryParseObject } from "../converters/object"
@@ -129,7 +129,7 @@ export const map = <M extends BaseMeta<ExtractType<M>, M>>(value: M): MapMeta<Ex
 export const set = <M extends BaseMeta<ExtractType<M>, M>>(value: M): SetMeta<ExtractType<M>, M> => ({
     type: JSONT.SET,
     value: value,
-    tryParseValue: toSet,
+    tryParseValue: tryParseSet,
     toJson: (m, v, o) => {
         const meta = m.value
         const toJson = meta.toJson
