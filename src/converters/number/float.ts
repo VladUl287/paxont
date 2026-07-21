@@ -66,11 +66,15 @@ export function tryParseFloat64(
 
 export function tryParseFloat(reader: JsonReader, index: number, format: FloatFormat): ReadResult<number> {
     const b = reader.bytes
+    const len = b.length
 
     let i = index
+    let start = i
     const negative = b[i] === MINUS
     if (negative) i++
 
+    mantissaU32[0] = 0
+    mantissaU32[1] = 0
     const s: Store = {
         index: i,
         exponent: 0,
@@ -84,7 +88,7 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
 
         let m = s.mantissa
 
-        if (m === 0 && s.digitsCount > 0) {
+        if (m === 0 && s.digitsCount > 0 && s.mantissaU32[0] === 0) {
             return {
                 type: COMPLETE,
                 value: 0,
@@ -117,9 +121,17 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
         }
     }
 
+    const isNumberByte = (b: number) =>
+        isDigitUnsafe(b) || b === DOT || (b | 32) === E || PLUS || MINUS
+
+    while (i < len && isNumberByte(b[i]))
+        i++
+
+    const result = new TextDecoder().decode(b.subarray(start, i))
+
     return {
         type: COMPLETE,
-        value: Number(decode(b, i)),
+        value: Number(result),
         nextIndex: i
     }
 }
@@ -132,10 +144,10 @@ const POW10 = [1]
 for (let i = 1; i <= 308; i++)
     POW10[i] = POW10[i - 1] * 10
 
-const POW2 = new Array<number>(2046)
-for (let exp = -1022; exp <= 1023; exp++)
-    POW2[exp + 1022] = Math.pow(2, exp)
-
+const POW2 = new Array<number>(2048)
+for (let i = -1024; i <= 1024; i++) {
+    POW2[i + 1024] = Math.pow(2, i)
+}
 
 function tryFastParse(b: Uint8Array, s: Store): boolean {
     return tryParseInteger(b, s) &&
@@ -170,8 +182,12 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
             if (i < len && isDigitUnsafe(b[i])) {
                 m = m * 10 + (b[i++] & 0x0F)
 
-                if (i < len && isDigitUnsafe(b[i]))
+                if (i < len && isDigitUnsafe(b[i])) {
+                    s.index = i
+                    s.mantissa = m
+                    s.digitsCount = i - st
                     return tryParseLong(b, s)
+                }
             }
         }
     }
@@ -189,9 +205,6 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
     let dc = s.digitsCount
 
     const len = b.length
-    if (i < len && !isDigitUnsafe(b[i]))
-        return true
-
     splitTo32(m, m32)
     m = 0
 
@@ -206,9 +219,8 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
         i++
     }
 
-    if (dc === MAX_SAFE_LONG_DIGITS && isDigitUnsafe(b[i])) {
+    if (dc === MAX_SAFE_LONG_DIGITS && isDigitUnsafe(b[i]))
         return false
-    }
 
     if (localDc > 0) {
         const pow = POW10[localDc]
@@ -386,7 +398,7 @@ function toFloat64(m: Uint32Array, e: number, f: FloatFormat): number | undefine
         return (((152170 + 65536) * q) >> 16) + 63
     }
 
-    let exponent = calculatePower(e) + upperBit - lz + f.minBinaryExponent
+    let exponent = calculatePower(e) + upperBit - lz + f.maxBinaryExponent
 
     if (exponent <= 0) {
         if (-exponent + 1 >= 64)
