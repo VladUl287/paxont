@@ -86,7 +86,7 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
 
         if (m === 0 && s.digitsCount > 0) {
             return {
-                type: COMPLETE, 
+                type: COMPLETE,
                 value: 0,
                 nextIndex: i
             }
@@ -139,8 +139,8 @@ for (let exp = -1022; exp <= 1023; exp++)
 
 function tryFastParse(b: Uint8Array, s: Store): boolean {
     return tryParseInteger(b, s) &&
-        (b[s.index] !== DOT || tryParseDecimal(b, s)) &&
-        (((b[s.index] | 32) !== E) || tryParseExponent(b, s))
+        tryParseDecimal(b, s) &&
+        tryParseExponent(b, s)
 }
 
 function tryParseInteger(b: Uint8Array, s: Store): boolean {
@@ -225,16 +225,21 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
 }
 
 function tryParseDecimal(b: Uint8Array, s: Store): boolean {
-    let i = s.index + 1
+    const len = b.length
+    let i = s.index
+
+    if (i >= len || b[i] !== DOT)
+        return true
+    i++
+
     let m = s.mantissa
     let dc = 0
 
     const start = i
-    const length = b.length
     if (s.digitsCount === 0)
-        while (i < length && b[i] === ZERO) i++
+        while (i < len && b[i] === ZERO) i++
 
-    while (i < length && dc < MAX_SAFE_INT_DIGITS - 1) {
+    while (i < len && dc < MAX_SAFE_INT_DIGITS - 1) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
 
@@ -243,7 +248,7 @@ function tryParseDecimal(b: Uint8Array, s: Store): boolean {
         i++
     }
 
-    if (i < length && dc >= MAX_SAFE_INT_DIGITS - 1) {
+    if (i < len && dc >= MAX_SAFE_INT_DIGITS - 1) {
         const d = (b[i] - 48) >>> 0
         if (d <= 9) {
             const tempM = m * 10 + d
@@ -311,7 +316,12 @@ function tryParseDecimalLong(b: Uint8Array, s: Store, dc: number, start: number)
 }
 
 function tryParseExponent(b: Uint8Array, s: Store): boolean {
-    let i = s.index + 1
+    const len = b.length
+    let i = s.index
+
+    if (i >= len || (b[i] | 32) !== E)
+        return true
+    i++
 
     let sign = 1
     if (b[i] === MINUS) {
@@ -323,7 +333,7 @@ function tryParseExponent(b: Uint8Array, s: Store): boolean {
     }
 
     let e = 0
-    while (i < b.length) {
+    while (i < len) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
 
@@ -332,8 +342,8 @@ function tryParseExponent(b: Uint8Array, s: Store): boolean {
 
         i++
     }
-    s.exponent += (e * sign)
 
+    s.exponent += (e * sign)
     return true
 }
 
