@@ -1,24 +1,51 @@
 import { skipWhitespace } from "./utils"
-import { ReadResult } from "../utils/types"
-import { ConvertState, JsonReader, ObjectFromMeta, ObjectMeta } from "../metadata/types"
-import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/ascii_symbols"
+import { ReadResult, ReadResultType } from "../utils/types"
+import { JsonContext, ObjectFromMeta, ObjectMeta } from "../metadata/types"
+import { COLON, COMMA, CURLY_CLOSE, DOUBLE_QUOTE } from "../utils/ascii_symbols"
+import { JSONParseError } from "../utils/error"
+
+const COMPLETE = ReadResultType.COMPLETE
+const ERROR = ReadResultType.ERROR
+const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toObject<T extends Record<string, any>>(
-    m: ObjectMeta<T>, reader: JsonReader, i: number, d: number, state: ConvertState
+    m: ObjectMeta<T>,
+    context: JsonContext,
+    index: number,
+    depth: number,
 ): ReadResult<ObjectFromMeta<T>> {
+    const { reader, options, stack } = context
+
+    if (depth > options.maxDepth)
+        return {
+            type: ERROR,
+            error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${index}`, index)
+        }
+    depth++
+
     const b = reader.bytes
+    const len = b.length
 
-    if (i < b.length && b[i] !== CURLY_OPEN && !state?.processing)
-        throw new Error(``)
-    i++
+    let i = index
+    if (i >= len) {
+        if (reader.writable)
+            return {
+                type: NEEDS_MORE_DATA,
+                nextIndex: i
+            }
 
-    if (state)
-        state.processing = true
+        return {
+            type: ERROR,
+            error: new JSONParseError(`Unexpected end of input at index ${i} while parsing object`, i)
+        }
+    }
 
     const getFieldIndex = m.getFieldIndex
     const fields = m.fields
 
-    let buffer = state?.buffer ?? new Array(fields.length)
+    const state = stack.pop()
+
+    const buffer = state?.buffer ?? new Array(fields.length)
 
     let j = state?.bufferIndex ?? 0
     while (j < fields.length) {
@@ -27,32 +54,54 @@ export function toObject<T extends Record<string, any>>(
         let start = i
 
         if (b[i] !== DOUBLE_QUOTE) {
-            if (reader.writable || i < b.length) throw new Error(``)
+            if (reader.writable && i > b.length)
+                return {
+                    type: ERROR,
+                    error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${i}`, i)
+                }
 
-            return { nextIndex: i }
+            return {
+                type: NEEDS_MORE_DATA,
+                nextIndex: i
+            }
         }
         i++
 
         const index = getFieldIndex(b, i)
         if (index === -1) {
-            if (reader.writable || i < b.length) throw new Error(``)
+            if (reader.writable || i < b.length)
+                return {
+                    type: ERROR,
+                    error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${index}`, index)
+                }
 
-            return { nextIndex: start }
+            return {
+                type: NEEDS_MORE_DATA,
+                nextIndex: i
+            }
         }
 
         const field = fields[index]
         i += field.name.bytes.length + 1
 
         if (b[i] !== COLON) {
-            if (reader.writable || i < b.length) throw new Error(``)
+            if (reader.writable || i < b.length)
+                return {
+                    type: ERROR,
+                    error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${index}`, index)
+                }
 
-            return { nextIndex: start }
+            return {
+                type: NEEDS_MORE_DATA,
+                nextIndex: i
+            }
         }
         i++
 
         i = skipWhitespace(b, i)
 
-        const result = field.value.toValue(reader, field.value, i, d)
+        const fieldMeta = field.value
+        const result = fieldMeta.tryParseValue(fieldMeta, context, i, depth)
         i = result.nextIndex
 
         if (result.value === undefined || i >= b.length) {
@@ -61,7 +110,10 @@ export function toObject<T extends Record<string, any>>(
 
             state.bufferIndex = j
             state.buffer = buffer
-            return { nextIndex: start }
+            return {
+                type: NEEDS_MORE_DATA,
+                nextIndex: start
+            }
         }
 
         if (b[i] === COMMA) i++
@@ -78,13 +130,17 @@ export function toObject<T extends Record<string, any>>(
 
         state.bufferIndex = j
         state.buffer = buffer
-        return { nextIndex: i }
+        return {
+            type: NEEDS_MORE_DATA,
+            nextIndex: i
+        }
     }
 
     if (state)
         state.processing = false
 
     return {
+        type: COMPLETE,
         value: m.build(buffer),
         nextIndex: i
     }
