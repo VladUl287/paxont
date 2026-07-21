@@ -2,9 +2,8 @@ import { JsonContext, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { JsonOptions } from "../options"
 import { utc } from "../utils/date"
 import { COLON, DOT, DOUBLE_QUOTE, isDigitUnsafe, MINUS, PLUS, T_UPPER, Z } from "../utils/ascii_symbols"
-import { isComplete, ReadResult, ReadResultType } from "../utils/types"
+import { ReadResult, ReadResultType } from "../utils/types"
 import { JSONParseError } from "../utils/error"
-import { tryParseInt } from "./number/int"
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
@@ -16,13 +15,13 @@ export function tryParseDate(
     index: number,
     depth: number,
 ): ReadResult<Date> {
-    const { reader, options } = context
+    const { reader } = context
     const b = reader.bytes
     const len = b.length
 
     if (index < len) {
         if (b[index] === DOUBLE_QUOTE)
-            return fromString(reader, index, options)
+            return fromString(context, index)
 
         if (isDigitUnsafe(b[index]))
             return fromTimestamp(reader, index)
@@ -39,23 +38,33 @@ export function tryParseDate(
     }
 }
 
-type TryParseResult = { value: Date, nextIndex: number }
+type TryParseResult = {
+    value: Date,
+    nextIndex: number
+}
 
-function fromString(reader: JsonReader, i: number, options: JsonOptions): ReadResult<Date> {
+function fromString(context: JsonContext, i: number): ReadResult<Date> {
+    const { reader, options } = context
     const b = reader.bytes
+    const len = b.length
 
     const result: TryParseResult = {
         value: Date.prototype,
         nextIndex: 0
     }
 
-    if (tryParseISO8601(b, i, result) || tryParseDefault(b, i, options, result)) {
+    if (tryParseISO8601(b, i, result) || tryParseDefault(b, i, options, result))
         return {
             type: COMPLETE,
             value: result.value,
             nextIndex: result.nextIndex
         }
-    }
+
+    if (reader.writable && result.nextIndex === len)
+        return {
+            type: NEEDS_MORE_DATA,
+            nextIndex: i
+        }
 
     return {
         type: ERROR,
