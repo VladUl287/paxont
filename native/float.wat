@@ -1,52 +1,11 @@
 
 (module
   (memory (export "memory") 256)
-  
-  (func $clz64 (param $x i64) (result i32)
-    (local $n i32)
-    (local.set $n (i32.const 0))
-    (if (i64.eqz (i64.shr_u (local.get $x) (i64.const 32)))
-      (then
-        (local.set $n (i32.add (local.get $n) (i32.const 32)))
-        (local.set $x (i64.shl (local.get $x) (i64.const 32)))
-      )
-    )
-    (if (i64.eqz (i64.shr_u (local.get $x) (i64.const 48)))
-      (then
-        (local.set $n (i32.add (local.get $n) (i32.const 16)))
-        (local.set $x (i64.shl (local.get $x) (i64.const 16)))
-      )
-    )
-    (if (i64.eqz (i64.shr_u (local.get $x) (i64.const 56)))
-      (then
-        (local.set $n (i32.add (local.get $n) (i32.const 8)))
-        (local.set $x (i64.shl (local.get $x) (i64.const 8)))
-      )
-    )
-    (if (i64.eqz (i64.shr_u (local.get $x) (i64.const 60)))
-      (then
-        (local.set $n (i32.add (local.get $n) (i32.const 4)))
-        (local.set $x (i64.shl (local.get $x) (i64.const 4)))
-      )
-    )
-    (if (i64.eqz (i64.shr_u (local.get $x) (i64.const 62)))
-      (then
-        (local.set $n (i32.add (local.get $n) (i32.const 2)))
-        (local.set $x (i64.shl (local.get $x) (i64.const 2)))
-      )
-    )
-    (if (i64.eqz (i64.shr_u (local.get $x) (i64.const 63)))
-      (then
-        (local.set $n (i32.add (local.get $n) (i32.const 1)))
-      )
-    )
-    (i32.sub (i32.const 64) (local.get $n))
-  )
-  
+    
   (func $countSignificantBits64 (param $value i64) (result i32)
     (if (result i32) (i64.eqz (local.get $value))
       (then (i32.const 0))
-      (else (call $clz64 (local.get $value)))
+      (else (i32.wrap_i64 (i64.clz (local.get $value))))
     )
   )
   
