@@ -83,6 +83,15 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
         i = s.index
 
         let m = s.mantissa
+
+        if (m === 0 && s.digitsCount > 0) {
+            return {
+                type: COMPLETE, 
+                value: 0,
+                nextIndex: i + 1
+            }
+        }
+
         const e = s.exponent
         const eabs = Math.abs(e)
 
@@ -152,13 +161,13 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
         i += 4
     }
 
-    if (isDigitUnsafe(b[i])) {
+    if (i < len && isDigitUnsafe(b[i])) {
         m = m * 10 + (b[i++] & 0x0F)
 
-        if (isDigitUnsafe(b[i])) {
+        if (i < len && isDigitUnsafe(b[i])) {
             m = m * 10 + (b[i++] & 0x0F)
 
-            if (isDigitUnsafe(b[i])) {
+            if (i < len && isDigitUnsafe(b[i])) {
                 m = m * 10 + (b[i++] & 0x0F)
 
                 if (i < len && isDigitUnsafe(b[i]))
