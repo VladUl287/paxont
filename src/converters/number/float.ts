@@ -91,7 +91,7 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
         if (m === 0 && s.digitsCount > 0 && s.mantissaU32[0] === 0) {
             return {
                 type: COMPLETE,
-                value: 0,
+                value: negative ? -0 : 0,
                 nextIndex: i
             }
         }
