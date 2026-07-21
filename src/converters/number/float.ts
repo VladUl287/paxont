@@ -286,7 +286,7 @@ function tryParseDecimal(b: Uint8Array, s: Store): boolean {
 }
 
 function tryParseDecimalLong(b: Uint8Array, s: Store, dc: number, start: number): boolean {
-    let i = start
+    let i = s.index
     let m = s.mantissa
     let m32 = s.mantissaU32
 
