@@ -239,20 +239,20 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
 function tryParseDecimal(b: Uint8Array, s: Store): boolean {
     const len = b.length
     let i = s.index
+    let dc = s.digitsCount
 
     if (i >= len || b[i] !== DOT)
         return true
     i++
 
-    if (s.digitsCount >= MAX_SAFE_INT_DIGITS) {
-        return tryParseDecimalLong(b, s, s.digitsCount, i)
+    if (dc >= MAX_SAFE_INT_DIGITS) {
+        return tryParseDecimalLong(b, s, dc, i)
     }
 
     let m = s.mantissa
-    let dc = 0
 
     const start = i
-    if (s.digitsCount === 0)
+    if (dc === 0)
         while (i < len && b[i] === ZERO) i++
 
     while (i < len && dc < MAX_SAFE_INT_DIGITS - 1) {
