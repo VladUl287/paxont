@@ -8,11 +8,6 @@ lookup[CARRIAGE_RETURN] = 1
 
 export function skipWhitespace(b: Uint8Array, i: number): number {
     if (b[i] > SPACE) return i
-
     while (i < b.length && lookup[b[i]]) i++
-
-    if (i < b.length && b[i] < SPACE)
-        throw new Error(`Unexpected token ${String.fromCharCode(b[i])} at index ${i}`)
-
     return i
 }
