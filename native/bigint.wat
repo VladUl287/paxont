@@ -146,9 +146,4 @@
     
     (local.get $length)
   )
-  
-  (func (export "reset")
-    (i32.store (i32.const 0) (i32.const 0))
-    (i32.store (i32.const 4) (i32.const 0))
-  )
 )
