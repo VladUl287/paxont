@@ -11,6 +11,10 @@ type ArrayState<T, A extends MutableArray<T>> = ConvertState & {
     bufferIndex?: number
 }
 
+const COMPLETE = ReadResultType.COMPLETE
+const ERROR = ReadResultType.ERROR
+const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
+
 export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
     metadata: ArrayMeta<T, A, M>,
     reader: JsonReader,
@@ -31,12 +35,12 @@ export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
     if (i >= len) {
         if (reader.writable)
             return {
-                type: ReadResultType.NEEDS_MORE_DATA,
+                type: NEEDS_MORE_DATA,
                 nextIndex: i
             }
 
         return {
-            type: ReadResultType.ERROR,
+            type: ERROR,
             error: new JSONParseError(`Unexpected end of input at index ${i} while parsing array`, i)
         }
     }
@@ -46,7 +50,7 @@ export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
     if (!state || !state.isContinued) {
         if (b[i] !== SQUARE_OPEN)
             return {
-                type: ReadResultType.ERROR,
+                type: ERROR,
                 error: new JSONParseError(`Expected '[' at index ${i}, but found '${String.fromCharCode(b[i])}' while parsing array`, i)
             }
         i++
@@ -93,7 +97,7 @@ export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
             else if (b[i] === SQUARE_CLOSE) break
             else {
                 return {
-                    type: ReadResultType.ERROR,
+                    type: ERROR,
                     error: new JSONParseError(`Unexpected end of value at index ${i} while parsing array. Expected ']' or ',' as end of value`, i)
                 }
             }
@@ -103,14 +107,14 @@ export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
         release(buffer)
 
         return {
-            type: ReadResultType.COMPLETE,
+            type: COMPLETE,
             value: value,
             nextIndex: ++i
         }
     }
     catch (error) {
         return {
-            type: ReadResultType.ERROR,
+            type: ERROR,
             error: new JSONParseError(
                 `Unexpected error while parsing array at index ${i}: ${error instanceof Error ? error.message : String(error)}`,
                 i, { cause: error })
