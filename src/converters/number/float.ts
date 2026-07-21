@@ -1,4 +1,4 @@
-import { DOT, E, MINUS, PLUS, ZERO } from "../../utils/ascii_symbols"
+import { DOT, E, isDigitUnsafe, MINUS, PLUS, ZERO } from "../../utils/ascii_symbols"
 import { ReadResult, ReadResultType } from "../../utils/types"
 import { ConvertState, JsonReader, PrimitiveMeta } from "../../metadata/types"
 
@@ -33,7 +33,6 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-// TODO: move format into metadata to handle f16, f32 and f64 automatically
 export const format: FloatFormat = {
     normalMantissaBits: 53,
     denormalMantissaBits: 52,
@@ -176,7 +175,7 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
     let dc = s.digitsCount
 
     const len = b.length
-    if (i < len && ((b[i] - 48) >>> 0) > 9)
+    if (i < len && !isDigitUnsafe(b[i]))
         return true
 
     splitTo32(m, m32)
@@ -193,8 +192,8 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
         i++
     }
 
-    if (dc === MAX_SAFE_LONG_DIGITS && ((b[i] - 48) >>> 0) <= 9) {
-        return false //too many digits, go to slow path
+    if (dc === MAX_SAFE_LONG_DIGITS && isDigitUnsafe(b[i])) {
+        return false
     }
 
     if (localDc > 0) {
