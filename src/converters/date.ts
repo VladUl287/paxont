@@ -2,8 +2,9 @@ import { JsonContext, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { JsonOptions } from "../options"
 import { utc } from "../utils/date"
 import { COLON, DOT, DOUBLE_QUOTE, isDigitUnsafe, MINUS, PLUS, T_UPPER, Z } from "../utils/ascii_symbols"
-import { ReadResult, ReadResultType } from "../utils/types"
+import { isComplete, ReadResult, ReadResultType } from "../utils/types"
 import { JSONParseError } from "../utils/error"
+import { f64Format, tryParseFloat } from "./number/float"
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
@@ -72,25 +73,37 @@ function fromString(context: JsonContext, i: number): ReadResult<Date> {
     }
 }
 
-function fromTimestamp(b: JsonReader, i: number): ReadResult<Date> {
-    // const maxValue = 8_640_000_000_000_000
-    // const minValue = -8_640_000_000_000_000
+function fromTimestamp(reader: JsonReader, i: number): ReadResult<Date> {
+    const maxValue = 8_640_000_000_000_000
+    const minValue = -8_640_000_000_000_000
 
-    // const result = tryParseFloat64(b, i, 16, minValue, maxValue, true)
+    const result = tryParseFloat(reader, i, f64Format)
 
-    // if (isComplete(result)) {
-    //     const date = new Date(result.value)
+    if (isComplete(result)) {
+        const value = result.value
 
-    //     if (isNaN(date.getTime()))
-    //         throw new Error(`Invalid date value '${b[i]}' at index ${i}`)
+        if (value < minValue || value > maxValue)
+            return {
+                type: ERROR,
+                error: new JSONParseError('', i)
+            }
 
-    //     return {
-    //         value: date,
-    //         nextIndex: result.nextIndex
-    //     } as any
-    // }
+        const date = new Date(value)
 
-    return {} as any
+        if (isNaN(date.valueOf()))
+            return {
+                type: ERROR,
+                error: new JSONParseError('', i)
+            }
+
+        return {
+            type: COMPLETE,
+            value: date,
+            nextIndex: result.nextIndex
+        }
+    }
+
+    return result
 }
 
 function tryParseDefault(b: Uint8Array, i: number, o: JsonOptions, r: TryParseResult): boolean {
