@@ -343,6 +343,7 @@ function tryParseExponent(b: Uint8Array, s: Store): boolean {
         i++
     }
 
+    s.index = i
     s.exponent += (e * sign)
     return true
 }
