@@ -8,7 +8,7 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toObject<T extends Record<string, any>>(
+export function tryParseObject<T extends Record<string, any>>(
     m: ObjectMeta<T>,
     context: JsonContext,
     index: number,

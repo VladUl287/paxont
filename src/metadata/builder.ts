@@ -11,7 +11,7 @@ import { tryParseMap } from "../converters/map"
 import { toSet } from "../converters/set"
 import { genObjectFactory, genObjectToJsonFactory1 } from "../code_gen/object"
 import { generateTrieSwitch } from "../code_gen/field"
-import { toObject } from "../converters/object"
+import { tryParseObject } from "../converters/object"
 import { tryParseNullable } from "../converters/nullable"
 import { tryParseBigInt, tryParseInt64, tryParseUint64 } from "../converters/number/bigint"
 import { tryParseBoolean } from "../converters/boolean"
@@ -170,7 +170,7 @@ export const object = <M extends ObjectFieldMeta<any, any, any>[]>(...fields: M)
         fields: fields,
         build: factory,
         getFieldIndex: fieldIndex,
-        tryParseValue: toObject,
+        tryParseValue: tryParseObject,
         toJson: toJson
     }
 }
