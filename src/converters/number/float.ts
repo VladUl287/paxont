@@ -88,7 +88,7 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
             return {
                 type: COMPLETE, 
                 value: 0,
-                nextIndex: i + 1
+                nextIndex: i
             }
         }
 
