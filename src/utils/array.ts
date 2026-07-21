@@ -1,4 +1,4 @@
-import Stack from "./stack"
+import { Stack } from "./structs"
 
 export interface MutableArray<V> {
     readonly length: number

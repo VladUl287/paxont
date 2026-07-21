@@ -6,7 +6,7 @@ import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
 import { useMetadata } from "./metadata"
 import { isComplete } from "./utils/types"
-import Stack from "./utils/stack"
+import { Stack } from "./utils/structs"
 
 const optionsCache = createCache<Partial<JsonOptions>, JsonOptions>()
 const defaultMetadata = useMetadata()
