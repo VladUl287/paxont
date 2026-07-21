@@ -1,10 +1,11 @@
-import { parseNumberF64 } from "../src/converters/number"
-import fs, { read } from 'fs'
-import readline from 'readline'
+import fs from 'fs'
+import { JsonReader } from '../src/metadata/types'
+import { f64Format, tryParseFloat } from '../src/converters/number/float'
+import { isComplete, ReadResultType } from '../src/utils/types'
 
 describe('parseNumberF64-files', () => {
     const encoder = new TextEncoder()
-    const toBytes = (str: string): Uint8Array => encoder.encode(str)
+    const toReader = (str: string): JsonReader => ({ bytes: encoder.encode(str), writable: false })
 
     const files = fs.readdirSync('./tests/data')
         .filter(file => file.endsWith('.txt'))
@@ -20,10 +21,17 @@ describe('parseNumberF64-files', () => {
             })
 
             numbers.forEach(num => {
-                const bytes = toBytes(num)
-                const parsed = parseNumberF64(bytes, 0) as any
+                const reader = toReader(num)
+                const parsed = tryParseFloat(reader, 0, f64Format) as any
+
+                expect(isComplete(parsed)).toBe(true)
+
                 parsed.value = `${num} -> ${parsed.value}`
-                expect(parsed).toStrictEqual({ value: `${num} -> ${Number(num)}`, nextIndex: bytes.length })
+                expect(parsed).toStrictEqual({
+                    type: ReadResultType.COMPLETE,
+                    value: `${num} -> ${Number(num)}`, 
+                    nextIndex: reader.bytes.length 
+                })
             })
         })
     })
