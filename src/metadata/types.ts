@@ -23,7 +23,7 @@ export type ConvertState = {
 }
 
 export type tryParseValue<T, M extends BaseMeta<T, M>> =
-    (metadata: M, reader: JsonReader, index: number, depth: number, state: ConvertState) => ReadResult<T>
+    (metadata: M, context: JsonContext, index: number, depth: number) => ReadResult<T>
 
 export type toJsonConverter<T, M extends BaseMeta<T, M>> = (metadata: M, value: T, options: JsonOptions) => string
 
