@@ -74,7 +74,7 @@ export const array = <M extends BaseMeta<ExtractType<M>, M>>(
             return `[${value.map(c => toJson(metaValue, c, options)).join(',')}]`
         },
         value: value,
-        arrayPool: useArrayPool(1024)
+        arrayPool: useArrayPool()
     }
 
     modifiers.forEach(modify => {
