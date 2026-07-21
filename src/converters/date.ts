@@ -1,9 +1,10 @@
-import { JsonContext, PrimitiveMeta } from "../metadata/types"
+import { JsonContext, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { JsonOptions } from "../options"
 import { utc } from "../utils/date"
 import { COLON, DOT, DOUBLE_QUOTE, isDigitUnsafe, MINUS, PLUS, T_UPPER, Z } from "../utils/ascii_symbols"
 import { isComplete, ReadResult, ReadResultType } from "../utils/types"
 import { JSONParseError } from "../utils/error"
+import { tryParseInt } from "./number/int"
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
@@ -21,10 +22,10 @@ export function tryParseDate(
 
     if (index < len) {
         if (b[index] === DOUBLE_QUOTE)
-            return fromString(b, index + 1, options)
+            return fromString(reader, index, options)
 
         if (isDigitUnsafe(b[index]))
-            return fromTimestamp(b, index)
+            return fromTimestamp(reader, index)
     }
     else if (reader.writable)
         return {
@@ -40,13 +41,15 @@ export function tryParseDate(
 
 type TryParseResult = { value: Date, nextIndex: number }
 
-function fromString(b: Uint8Array, i: number, opt: JsonOptions): ReadResult<Date> {
+function fromString(reader: JsonReader, i: number, options: JsonOptions): ReadResult<Date> {
+    const b = reader.bytes
+
     const result: TryParseResult = {
         value: Date.prototype,
         nextIndex: 0
     }
 
-    if (tryParseISO8601(b, i, result) || tryParseDefault(b, i, result, opt)) {
+    if (tryParseISO8601(b, i, result) || tryParseDefault(b, i, options, result)) {
         return {
             type: COMPLETE,
             value: result.value,
@@ -60,31 +63,34 @@ function fromString(b: Uint8Array, i: number, opt: JsonOptions): ReadResult<Date
     }
 }
 
-function fromTimestamp(b: Uint8Array, i: number): ReadResult<Date> {
-    const result = parseFloat64(b, i)
+function fromTimestamp(b: JsonReader, i: number): ReadResult<Date> {
+    // const maxValue = 8_640_000_000_000_000
+    // const minValue = -8_640_000_000_000_000
 
-    if (isComplete(result)) {
-        const date = new Date(result.value)
+    // const result = tryParseFloat64(b, i, 16, minValue, maxValue, true)
 
-        if (isNaN(date.getTime()))
-            throw new Error(`Invalid date value '${b[i]}' at index ${i}`)
+    // if (isComplete(result)) {
+    //     const date = new Date(result.value)
 
-        return {
-            value: date,
-            nextIndex: result.nextIndex
-        } as any
-    }
+    //     if (isNaN(date.getTime()))
+    //         throw new Error(`Invalid date value '${b[i]}' at index ${i}`)
+
+    //     return {
+    //         value: date,
+    //         nextIndex: result.nextIndex
+    //     } as any
+    // }
 
     return {} as any
 }
 
-function tryParseDefault(b: Uint8Array, i: number, r: TryParseResult, options: JsonOptions): boolean {
+function tryParseDefault(b: Uint8Array, i: number, o: JsonOptions, r: TryParseResult): boolean {
     let start = i
 
     const len = b.length
     while (i < len && b[i] !== DOUBLE_QUOTE) i++
 
-    const decoder = options.decoder
+    const decoder = o.decoder
     const view = new Uint8Array(b.buffer, start, i - start)
     const dateString = decoder.decode(view)
 
