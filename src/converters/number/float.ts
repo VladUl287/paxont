@@ -34,7 +34,7 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export const f64Format: FloatFormat = {
+export const f64Format: Readonly<FloatFormat> = Object.freeze({
     normalMantissaBits: 53,
     denormalMantissaBits: 52,
     exponentBias: 1023,
@@ -51,7 +51,7 @@ export const f64Format: FloatFormat = {
     minExponentRoundToEven: -27,
     maxExponentRoundToEven: 55,
     infinityExponent: 2047
-}
+})
 
 const mantissaU32 = new Uint32Array(2)
 
