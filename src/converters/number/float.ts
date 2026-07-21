@@ -244,6 +244,10 @@ function tryParseDecimal(b: Uint8Array, s: Store): boolean {
         return true
     i++
 
+    if (s.digitsCount >= MAX_SAFE_INT_DIGITS) {
+        return tryParseDecimalLong(b, s, s.digitsCount, i)
+    }
+
     let m = s.mantissa
     let dc = 0
 
@@ -272,7 +276,6 @@ function tryParseDecimal(b: Uint8Array, s: Store): boolean {
 
             s.index = i
             s.mantissa = m
-
             return tryParseDecimalLong(b, s, dc, start)
         }
     }
@@ -285,7 +288,7 @@ function tryParseDecimal(b: Uint8Array, s: Store): boolean {
 }
 
 function tryParseDecimalLong(b: Uint8Array, s: Store, dc: number, start: number): boolean {
-    let i = s.index
+    let i = start
     let m = s.mantissa
     let m32 = s.mantissaU32
 
@@ -293,8 +296,10 @@ function tryParseDecimalLong(b: Uint8Array, s: Store, dc: number, start: number)
     if (i < length && ((b[i] - 48) >>> 0) > 9)
         return true
 
-    splitTo32(m, m32)
-    m = 0
+    if(m > 0) {
+        splitTo32(m, m32)
+        m = 0
+    }
 
     let localDc = 0
     while (i < length && dc < MAX_SAFE_LONG_DIGITS) {
