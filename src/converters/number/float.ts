@@ -88,7 +88,7 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
 
         let m = s.mantissa
 
-        if (m === 0 && s.digitsCount > 0 && s.mantissaU32[0] === 0) {
+        if (m === 0 && s.digitsCount > 0 && s.mantissaU32[0] === 0 && s.mantissaU32[1] === 0) {
             return {
                 type: COMPLETE,
                 value: negative ? -0 : 0,
@@ -246,6 +246,7 @@ function tryParseDecimal(b: Uint8Array, s: Store): boolean {
     i++
 
     if (dc >= MAX_SAFE_INT_DIGITS) {
+        s.index = i
         return tryParseDecimalLong(b, s, dc, i)
     }
 
@@ -255,29 +256,26 @@ function tryParseDecimal(b: Uint8Array, s: Store): boolean {
     if (dc === 0)
         while (i < len && b[i] === ZERO) i++
 
-    while (i < len && dc < MAX_SAFE_INT_DIGITS - 1) {
+    let overflow = false
+    while (i < len && dc <= MAX_SAFE_INT_DIGITS) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
+
+        const temp = m * 10 + d
+        if (temp > MAX_SAFE_INTEGER) {
+            overflow = true
+            break
+        }
 
         m = m * 10 + d
         dc++
         i++
     }
 
-    if (i < len && dc >= MAX_SAFE_INT_DIGITS - 1) {
-        const d = (b[i] - 48) >>> 0
-        if (d <= 9) {
-            const tempM = m * 10 + d
-            if (tempM <= MAX_SAFE_INTEGER) {
-                m = tempM
-                dc++
-                i++
-            }
-
-            s.index = i
-            s.mantissa = m
-            return tryParseDecimalLong(b, s, dc, start)
-        }
+    if (i < len && (dc > MAX_SAFE_INT_DIGITS || overflow)) {
+        s.index = i
+        s.mantissa = m
+        return tryParseDecimalLong(b, s, dc, start)
     }
 
     s.index = i
@@ -296,7 +294,7 @@ function tryParseDecimalLong(b: Uint8Array, s: Store, dc: number, start: number)
     if (i < length && ((b[i] - 48) >>> 0) > 9)
         return true
 
-    if(m > 0) {
+    if (m > 0) {
         splitTo32(m, m32)
         m = 0
     }
