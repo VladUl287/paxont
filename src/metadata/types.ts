@@ -7,7 +7,7 @@ import { BaseType } from "./baseTypes"
 export type TypeName = BaseType | (string & { __typeName: never })
 
 export type JsonReader = {
-    readonly bytes: Uint8Array
+    readonly bytes: Readonly<Uint8Array>
     readonly writable: boolean
 }
 
