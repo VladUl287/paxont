@@ -34,7 +34,7 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export const format: FloatFormat = {
+export const f64Format: FloatFormat = {
     normalMantissaBits: 53,
     denormalMantissaBits: 52,
     exponentBias: 1023,
@@ -61,6 +61,10 @@ export function tryParseFloat64(
     index: number,
     depth: number,
     state: ConvertState): ReadResult<number> {
+    return tryParseFloat(reader, index, f64Format)
+}
+
+export function tryParseFloat(reader: JsonReader, index: number, format: FloatFormat): ReadResult<number> {
     const b = reader.bytes
 
     let i = index
