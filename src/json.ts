@@ -50,10 +50,13 @@ export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T,
     }
 
     const result = metadata.tryParseValue(metadata, {
-        bytes,
-        writable: false,
         options: fullOptions,
-    }, 0, 0, stackMock)
+        reader: {
+            bytes,
+            writable: false
+        },
+        stack: stackMock,
+    }, 0, 0)
 
     if (isComplete(result)) {
         return result.value

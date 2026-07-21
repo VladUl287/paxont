@@ -1,15 +1,9 @@
-import { BaseMeta, ArrayMeta, JsonReader, TypeName, ConvertState } from "../metadata/types"
+import { BaseMeta, ArrayMeta, JsonContext } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/ascii_symbols"
 import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
 import { copyArray, MutableArray } from "../utils/array"
 import { JSONParseError } from "../utils/error"
-import Stack from "../utils/stack"
-
-type ArrayState<T, A extends MutableArray<T>> = ConvertState & {
-    buffer?: A
-    bufferIndex?: number
-}
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
@@ -17,15 +11,17 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
     metadata: ArrayMeta<T, A, M>,
-    reader: JsonReader,
+    context: JsonContext,
     index: number,
-    depth: number,
-    stack: Stack<ArrayState<T, A>>,
+    depth: number
 ): ReadResult<A> {
-    if (depth > reader.options.maxDepth)
+    const reader = context.reader
+    const options = context.options
+
+    if (depth > options.maxDepth)
         return {
             type: ReadResultType.ERROR,
-            error: new JSONParseError(`Maximum depth of ${reader.options.maxDepth} exceeded at index ${index}`, index)
+            error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${index}`, index)
         }
 
     const b = reader.bytes
@@ -45,6 +41,7 @@ export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
         }
     }
 
+    const stack = context.stack
     const state = stack.pop()
 
     if (!state || !state.isContinued) {
@@ -61,13 +58,13 @@ export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
     let buffer = state?.buffer ?? rent(b.length - i)
     try {
         const itemMeta = metadata.value
-        const tryParseValue = itemMeta.tryParseValue
+        const tryParseValue = itemMeta.tryParseValue as any
 
         let j = state?.bufferIndex ?? 0
         while (true) {
             i = skipWhitespace(b, i)
 
-            const result = tryParseValue(itemMeta, reader, i, depth, stack)
+            const result = tryParseValue(itemMeta, context, i, depth)
 
             if (isError(result))
                 return result

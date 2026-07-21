@@ -1,5 +1,6 @@
 import { JsonOptions } from "../options"
 import { ArrayPool, MutableArray } from "../utils/array"
+import Stack from "../utils/stack"
 import { ReadResult } from "../utils/types"
 import { BaseType } from "./baseTypes"
 
@@ -8,7 +9,12 @@ export type TypeName = BaseType | (string & { __typeName: never })
 export type JsonReader = {
     readonly bytes: Uint8Array
     readonly writable: boolean
-    readonly options: JsonOptions
+}
+
+export type JsonContext = {
+    readonly reader: JsonReader,
+    readonly options: JsonOptions,
+    readonly stack: Stack<ConvertState>
 }
 
 export type ConvertState = {

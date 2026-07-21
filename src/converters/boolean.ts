@@ -1,21 +1,24 @@
-import { ConvertState, JsonReader, PrimitiveMeta } from "../metadata/types"
+import { JsonContext, PrimitiveMeta } from "../metadata/types"
 import { E } from "../utils/ascii_symbols"
 import { ReadResult, ReadResultType } from "../utils/types"
 import { JSONParseError } from "../utils/error"
-import Stack from "../utils/stack"
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function tryParseBoolean(
-    _m: PrimitiveMeta<boolean>, ctx: JsonReader, i: number, _d: number, _s: Stack<ConvertState>
+    metadata: PrimitiveMeta<boolean>,
+    context: JsonContext,
+    index: number,
+    depth: number
 ): ReadResult<boolean> {
-    const b = ctx.bytes
+    const reader = context.reader
+    const b = reader.bytes
     const len = b.length
-
+    
+    let i = index
     let ch = 0
-
     const TRUE = 0x65757274
     if (i + 3 < len && (ch = (b[i] | b[i + 1] << 8 | b[i + 2] << 16 | b[i + 3] << 24)) === TRUE)
         return {
@@ -32,7 +35,7 @@ export function tryParseBoolean(
             nextIndex: i + 5
         }
 
-    if (ctx.writable && (i + 3 >= len || i + 4 >= len))
+    if (reader.writable && (i + 3 >= len || i + 4 >= len))
         return {
             type: NEEDS_MORE_DATA,
             nextIndex: i
