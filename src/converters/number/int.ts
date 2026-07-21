@@ -55,7 +55,7 @@ export const tryParseUint32 = (
     state: ConvertState
 ): ReadResult<number> => tryParseInt(reader, index, 10, 0, 4294967295, false)
 
-function tryParseInt(
+export function tryParseInt(
     reader: JsonReader,
     i: number,
     maxDigits: number,
