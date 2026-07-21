@@ -4,11 +4,11 @@ import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
 import { copyArray, MutableArray } from "../utils/array"
 import { JSONParseError } from "../utils/error"
+import Stack from "../utils/stack"
 
 type ArrayState<T, A extends MutableArray<T>> = ConvertState & {
-    buffer?: A,
-    bufferIndex?: number,
-    itemState?: ConvertState
+    buffer?: A
+    bufferIndex?: number
 }
 
 export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
@@ -16,7 +16,7 @@ export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
     reader: JsonReader,
     index: number,
     depth: number,
-    state: ArrayState<T, A>,
+    stack: Stack<ArrayState<T, A>>,
 ): ReadResult<A> {
     if (depth > reader.options.maxDepth)
         return {
@@ -41,7 +41,9 @@ export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
         }
     }
 
-    if (!state.isContinued) {
+    const state = stack.pop()
+
+    if (!state || !state.isContinued) {
         if (b[i] !== SQUARE_OPEN)
             return {
                 type: ReadResultType.ERROR,
@@ -52,27 +54,26 @@ export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
 
     const { rent, release } = metadata.arrayPool
 
-    let buffer = state.buffer ?? rent(b.length - i)
+    let buffer = state?.buffer ?? rent(b.length - i)
     try {
         const itemMeta = metadata.value
         const tryParseValue = itemMeta.tryParseValue
 
-        const itemState = state.itemState ?? {}
-
-        let j = state.bufferIndex ?? 0
+        let j = state?.bufferIndex ?? 0
         while (true) {
             i = skipWhitespace(b, i)
 
-            const result = tryParseValue(itemMeta, reader, i, depth, itemState)
+            const result = tryParseValue(itemMeta, reader, i, depth, stack)
 
             if (isError(result))
                 return result
 
             if (isNeedsMoreData(result)) {
-                state.isContinued = true
-                state.buffer = buffer
-                state.bufferIndex = j
-                state.itemState = itemState
+                stack.push({
+                    isContinued: true,
+                    buffer: buffer,
+                    bufferIndex: j
+                })
                 return result
             }
 
@@ -98,9 +99,12 @@ export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
             }
         }
 
+        const value = buffer.slice(0, j)
+        release(buffer)
+
         return {
             type: ReadResultType.COMPLETE,
-            value: buffer.slice(0, j),
+            value: value,
             nextIndex: ++i
         }
     }
@@ -111,8 +115,5 @@ export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
                 `Unexpected error while parsing array at index ${i}: ${error instanceof Error ? error.message : String(error)}`,
                 i, { cause: error })
         }
-    }
-    finally {
-        release(buffer)
     }
 }

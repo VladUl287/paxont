@@ -1,11 +1,12 @@
 import { createCache } from "./cache/cache"
 import { defaultOptions, JsonOptions, mergeOptions } from "./options"
-import { BaseMeta } from "./metadata/types"
+import { BaseMeta, ConvertState } from "./metadata/types"
 import { useArrayRecycler } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
 import { useMetadata } from "./metadata"
 import { isComplete } from "./utils/types"
+import Stack from "./utils/stack"
 
 const optionsCache = createCache<Partial<JsonOptions>, JsonOptions>()
 const defaultMetadata = useMetadata()
@@ -13,6 +14,15 @@ const defaultMetadata = useMetadata()
 const recycler = useArrayRecycler(Uint8Array)
 
 type MetaOrObject<T> = T extends BaseMeta<infer V, any> ? V : T
+
+const stackMock: Stack<ConvertState> = {
+    stack: [],
+    length: 0,
+    isEmpty: true,
+    pop: () => undefined,
+    push: (_value) => { },
+    ensureLength: (_length: number) => { }
+} as Partial<Stack<ConvertState>> as Stack<ConvertState>
 
 export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T, options?: Partial<JsonOptions>): MetaOrObject<T> {
     const fullOptions = !!options ?
@@ -43,7 +53,7 @@ export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T,
         bytes,
         writable: false,
         options: fullOptions,
-    }, 0, 0, {})
+    }, 0, 0, stackMock)
 
     if (isComplete(result)) {
         return result.value

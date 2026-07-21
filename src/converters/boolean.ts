@@ -2,13 +2,14 @@ import { ConvertState, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { E } from "../utils/ascii_symbols"
 import { ReadResult, ReadResultType } from "../utils/types"
 import { JSONParseError } from "../utils/error"
+import Stack from "../utils/stack"
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function tryParseBoolean(
-    _m: PrimitiveMeta<boolean>, ctx: JsonReader, i: number, _d: number, _s: ConvertState
+    _m: PrimitiveMeta<boolean>, ctx: JsonReader, i: number, _d: number, _s: Stack<ConvertState>
 ): ReadResult<boolean> {
     const b = ctx.bytes
     const len = b.length
