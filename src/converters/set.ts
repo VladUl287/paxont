@@ -1,47 +1,95 @@
-import { BaseMeta, ArrayMeta, JsonReader, SetMeta, ConvertState } from "../metadata/types"
+import { BaseMeta, SetMeta, JsonContext } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/ascii_symbols"
 import { skipWhitespace } from "./utils"
-import { ReadResult } from "../utils/types"
+import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
+import { JSONParseError } from "../utils/error"
+
+const COMPLETE = ReadResultType.COMPLETE
+const ERROR = ReadResultType.ERROR
+const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toSet<V, M extends BaseMeta<V, any>>(
-    ctx: JsonReader, m: SetMeta<V, M>, i: number, d: number, state: ConvertState
+    metadata: SetMeta<V, M>,
+    context: JsonContext,
+    index: number,
+    depth: number
 ): ReadResult<Set<V>> {
-    const b = ctx.bytes
+    const reader = context.reader
+    const options = context.options
 
-    if (b[i] !== SQUARE_OPEN)
-        throw new Error(`Expected '[' at index ${i}, but found '${String.fromCharCode(b[i])}' while parsing Set`)
-    i++
-
-    const set = new Set<V>()
-    const valueMeta = m.value
-
-    let j = 0
-    while (true) {
-        i = skipWhitespace(b, i)
-
-        const itemResult = valueMeta.tryParseValue(ctx, valueMeta, i, d)
-        if (!itemResult.value) {
-            if (ctx.writable)
-                return { nextIndex: i }
-
-            throw new Error()
+    if (depth > options.maxDepth)
+        return {
+            type: ERROR,
+            error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${index}`, index)
         }
 
-        set.add(itemResult.value)
-        i = itemResult.nextIndex
-        j++
+    const b = reader.bytes
+    const len = b.length
 
-        i = skipWhitespace(b, i)
+    let i = index
+    if (i >= len) {
+        if (reader.writable)
+            return {
+                type: NEEDS_MORE_DATA,
+                nextIndex: i
+            }
 
-        if (b[i] === SQUARE_CLOSE)
-            break
+        return {
+            type: ERROR,
+            error: new JSONParseError(`Unexpected end of input at index ${i} while parsing array`, i)
+        }
+    }
 
-        if (b[i] !== COMMA)
-            throw new Error('not end of value')
+    const stack = context.stack
+    const state = stack.pop()
+
+    if (!state || !state.isContinued) {
+        if (b[i] !== SQUARE_OPEN)
+            return {
+                type: ERROR,
+                error: new JSONParseError(`Expected '[' at index ${i}, but found '${String.fromCharCode(b[i])}' while parsing Set`, i)
+            }
         i++
     }
 
+    const set = state?.set ?? new Set<V>()
+    const valueMeta = metadata.value
+
+    const tryParseValue = valueMeta.tryParseValue
+
+    while (true) {
+        i = skipWhitespace(b, i)
+
+        const result = tryParseValue(valueMeta, context, i, depth)
+
+        if (isError(result))
+            return result
+
+        if (isNeedsMoreData(result)) {
+            stack.push({
+                isContinued: true,
+                set
+            })
+            return result
+        }
+
+        set.add(result.value)
+        i = result.nextIndex
+
+        i = skipWhitespace(b, i)
+
+        if (b[i] === COMMA) i++
+        else if (b[i] === SQUARE_CLOSE) break
+        else {
+            return {
+                type: ERROR,
+                error: new JSONParseError(`Unexpected end of value at index ${i} while parsing Set. Expected ']' or ',' as end of value`, i)
+            }
+        }
+    }
+
     return {
+        type: COMPLETE,
         value: set,
         nextIndex: ++i
     }
