@@ -38,7 +38,7 @@ export const i64 = () => primitive(JSONT.I64, tryParseInt64)
 
 const primitive = <T extends Object>(type: BaseType, toValue: ToValueConverter<T, PrimitiveMeta<T>>): PrimitiveMeta<T> => ({
     type: type,
-    tryParseValue: toValue,
+    toValue: toValue,
     toJson: (s, _) => s.toString()
 })
 
@@ -48,7 +48,7 @@ export const nullable = <M extends BaseMeta<ExtractType<M>, M>>(value: M): Nulla
         if (value === null) return 'null'
         return meta.value.toJson(meta.value, value, options)
     },
-    tryParseValue: tryParseNullable,
+    toValue: tryParseNullable,
     value: value,
 })
 
@@ -75,7 +75,7 @@ export const array = <M extends BaseMeta<ExtractType<M>, M>>(
 ): ArrayMeta<ExtractType<M>, ExtractType<M>[], M> => {
     let meta: ArrayMeta<ExtractType<M>, ExtractType<M>[], M> = {
         type: JSONT.ARRAY,
-        tryParseValue: toArray,
+        toValue: toArray,
         toJson: (meta, value, options) => {
             const metaValue = meta.value
             const toJson = metaValue.toJson
@@ -108,7 +108,7 @@ const typedArray = <T extends IntegerTypedArray | FloatTypedArray>(
     type: BaseType, value: PrimitiveMeta<number>
 ): ArrayMeta<number, T, PrimitiveMeta<number>> => ({
     type: type,
-    tryParseValue: toArray,
+    toValue: toArray,
     toJson: (m, value) => `[${value.join(',')}]`,
     value: value
 })
@@ -117,7 +117,7 @@ const bigIntTypedArray = <T extends BigIntTypedArray>(
     type: BaseType, value: PrimitiveMeta<bigint>
 ): ArrayMeta<bigint, T, PrimitiveMeta<bigint>> => ({
     type: type,
-    tryParseValue: toArray,
+    toValue: toArray,
     toJson: (m, value) => `[${value.join(',')}]`,
     value: value
 })
@@ -126,7 +126,7 @@ export const map = <M extends BaseMeta<ExtractType<M>, M>>(value: M): MapMeta<Ex
     type: JSONT.MAP,
     key: string(),
     value: value,
-    tryParseValue: tryParseMap,
+    toValue: tryParseMap,
     toJson: (m, v, o) => {
         const meta = m.value
         const toJson = meta.toJson
@@ -138,7 +138,7 @@ export const set = <T, M extends BaseMeta<T, M>>(value: M, ...modifiers: Array<M
     const defaultMeta: SetMeta<T, M> = {
         type: JSONT.SET,
         value: value,
-        tryParseValue: tryParseSet,
+        toValue: tryParseSet,
         toJson: (meta, set, options) => {
             const valueMeta = meta.value
             const toJson = valueMeta.toJson
@@ -185,7 +185,7 @@ export const object = <M extends ObjectFieldMeta<any, any, any>[]>(...fields: M)
         fields: fields,
         build: factory,
         getFieldIndex: fieldIndex,
-        tryParseValue: tryParseObject,
+        toValue: tryParseObject,
         toJson: toJson
     }
 }

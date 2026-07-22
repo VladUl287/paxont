@@ -56,7 +56,7 @@ export function deserialize<T>(
 
     const bytes = toBytes(json, recycler, filledOptions)
 
-    const result = metadata.tryParseValue(metadata, {
+    const result = metadata.toValue(metadata, {
         options: filledOptions,
         reader: {
             bytes,
@@ -99,7 +99,7 @@ export async function deserializeAsync<T>(
         if (!value)
             break
 
-        const result = metadata.tryParseValue(metadata, {
+        const result = metadata.toValue(metadata, {
             options: filledOptions,
             reader: {
                 bytes: value,

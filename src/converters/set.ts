@@ -55,7 +55,7 @@ export function tryParseSet<V, M extends BaseMeta<V, any>>(
     const set = state?.set ?? new Set<V>()
     const valueMeta = metadata.value
 
-    const tryParseValue = valueMeta.tryParseValue
+    const tryParseValue = valueMeta.toValue
 
     while (true) {
         i = skipWhitespace(b, i)

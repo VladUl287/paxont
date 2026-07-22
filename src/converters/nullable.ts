@@ -32,5 +32,5 @@ export function tryParseNullable<T, M extends BaseMeta<T, M>>(
         }
 
     const metaValue = metadata.value
-    return metaValue.tryParseValue(metaValue, context, i, depth)
+    return metaValue.toValue(metaValue, context, i, depth)
 }

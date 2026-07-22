@@ -58,7 +58,7 @@ export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
     let buffer = state?.buffer ?? rent(b.length - i)
     try {
         const itemMeta = metadata.value
-        const tryParseValue = itemMeta.tryParseValue as any
+        const tryParseValue = itemMeta.toValue as any
 
         let j = state?.bufferIndex ?? 0
         while (true) {

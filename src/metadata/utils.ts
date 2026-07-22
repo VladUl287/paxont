@@ -5,7 +5,7 @@ export function isMetadata(value: unknown): value is BaseMeta<any, any> {
         return false
 
     const potential = value as BaseMeta<any, any>
-    return typeof potential.tryParseValue === 'function' &&
+    return typeof potential.toValue === 'function' &&
         typeof potential.toJson === 'function' &&
         typeof potential.type === 'string'
 }

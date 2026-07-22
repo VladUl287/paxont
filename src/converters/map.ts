@@ -33,9 +33,9 @@ export function tryParseMap<T, M extends BaseMeta<T, M>>(
     const result = new Map<string, T>()
 
     const keyMeta = metadata.key
-    const tryParseKey = metadata.key.tryParseValue
+    const tryParseKey = metadata.key.toValue
     const valueMeta = metadata.value
-    const tryParseValue = valueMeta.tryParseValue
+    const tryParseValue = valueMeta.toValue
 
     while (true) {
         i = skipWhitespace(b, i)
