@@ -69,7 +69,8 @@ export function deserialize<T>(
         throw result.error
 
     if (isNeedsMoreData(result))
-        throw new Error()
+        throw new Error(`Incomplete JSON: sync parser expects full data.
+            In sync mode, data cannot be streamed - custom parser must receive complete data at once`)
 
     return result.value
 }
