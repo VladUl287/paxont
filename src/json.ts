@@ -15,18 +15,15 @@ const defaultMetadata = useMetadata()
 
 const recycler = useArrayRecycler(Uint8Array)
 
-type MetaOrObject<T> = T extends BaseMeta<infer V, any> ? V : T
+const defaultStack = new Stack<ConvertState>()
 
-const stackMock: Stack<ConvertState> = {
-    stack: [],
-    length: 0,
-    isEmpty: true,
-    pop: () => undefined,
-    push: (_value) => { },
-    ensureLength: (_length: number) => { }
-} as Partial<Stack<ConvertState>> as Stack<ConvertState>
+type ExtractType<T> = T extends BaseMeta<infer V, any> ? V : T
 
-export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T, options?: Partial<JsonOptions>): MetaOrObject<T> {
+export function deserialize<T>(
+    json: ArrayBuffer | Uint8Array | string,
+    type: T,
+    options?: Partial<JsonOptions>
+): ExtractType<T> {
     const filledOptions = !!options ?
         optionsCache.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
         defaultOptions
@@ -36,7 +33,6 @@ export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T,
         type
 
     let bytes: Uint8Array
-
     if (typeof json === 'string') {
         const length = getMaxBytesCount(json.length)
         bytes = recycler.acquire(length)
@@ -49,7 +45,8 @@ export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T,
         bytes = json
     }
     else {
-        throw new Error()
+        throw new Error(
+            `Invalid input type: expected string, ArrayBuffer, or Uint8Array, but received ${json === null ? 'null' : typeof json}`)
     }
 
     const result = metadata.tryParseValue(metadata, {
@@ -58,7 +55,7 @@ export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T,
             bytes,
             writable: false
         },
-        stack: stackMock,
+        stack: defaultStack,
     }, 0, 0)
 
     if (isError(result))
@@ -74,7 +71,7 @@ export async function deserializeAsync<T>(
     json: ReadableStream<Uint8Array>,
     type: T,
     options?: Partial<JsonOptions>
-): Promise<MetaOrObject<T>> {
+): Promise<ExtractType<T>> {
     const filledOptions = !!options ?
         optionsCache.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
         defaultOptions
@@ -86,7 +83,7 @@ export async function deserializeAsync<T>(
     const stack = new Stack<ConvertState>()
 
     const reader = json.getReader()
-    
+
     while (!reader.closed) {
         const chunk = await reader.read()
         const value = chunk.value
