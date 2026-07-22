@@ -5,10 +5,12 @@ import { useArrayRecycler } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
 import { useMetadata } from "./metadata"
-import { isComplete } from "./utils/types"
+import { isError, isNeedsMoreData } from "./utils/types"
 import { Stack } from "./utils/structs"
 
 const optionsCache = createCache<Partial<JsonOptions>, JsonOptions>()
+const metadataCache = createCache<any, BaseMeta<any, any>>()
+
 const defaultMetadata = useMetadata()
 
 const recycler = useArrayRecycler(Uint8Array)
@@ -25,19 +27,20 @@ const stackMock: Stack<ConvertState> = {
 } as Partial<Stack<ConvertState>> as Stack<ConvertState>
 
 export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T, options?: Partial<JsonOptions>): MetaOrObject<T> {
-    const fullOptions = !!options ?
+    const filledOptions = !!options ?
         optionsCache.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
         defaultOptions
 
-    const metadata = isMetadata(type) ? type : defaultMetadata.toMetadata(type)
+    const metadata = !isMetadata(type) ?
+        metadataCache.getOrAdd(type, (t) => defaultMetadata.toMetadata(t)) :
+        type
 
     let bytes: Uint8Array
 
-    const isString = typeof json === 'string'
-    if (isString) {
+    if (typeof json === 'string') {
         const length = getMaxBytesCount(json.length)
         bytes = recycler.acquire(length)
-        fullOptions.encoder.encodeInto(json, bytes)
+        filledOptions.encoder.encodeInto(json, bytes)
     }
     else if (json instanceof ArrayBuffer) {
         bytes = new Uint8Array(json)
@@ -50,7 +53,7 @@ export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T,
     }
 
     const result = metadata.tryParseValue(metadata, {
-        options: fullOptions,
+        options: filledOptions,
         reader: {
             bytes,
             writable: false
@@ -58,11 +61,13 @@ export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T,
         stack: stackMock,
     }, 0, 0)
 
-    if (isComplete(result)) {
-        return result.value
-    }
+    if (isError(result))
+        throw result.error
 
-    return result as any
+    if (isNeedsMoreData(result))
+        throw new Error()
+
+    return result.value
 }
 
 export function deserializeAsync<T>(json: ReadableStream<Uint8Array>, type: T, options?: Partial<JsonOptions>): Promise<MetaOrObject<T>> {
