@@ -11,7 +11,7 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function tryParseDate(
+export function toDate(
     metadata: PrimitiveMeta<Date>,
     context: ParseContext,
     index: number,

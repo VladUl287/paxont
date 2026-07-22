@@ -1,7 +1,7 @@
 import { add, complete, cycle, suite } from 'benny'
 import { JsonReader } from '../../src/metadata/types'
 import { defaultOptions } from '../../src/options'
-import { tryParseString } from '../../src/converters/string'
+import { toString } from '../../src/converters/string'
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder('utf-8', { fatal: false })
@@ -29,7 +29,7 @@ const data: JsonReader = {
 suite(
     'decoding',
 
-    add('toString', () => tryParseString(data, {} as any, 0, 0, {})),
+    add('toString', () => toString(data, {} as any, 0, 0, {})),
     add('JSON.parse', () => JSON.parse(str)),
 
     cycle((result) => {

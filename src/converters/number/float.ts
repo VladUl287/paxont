@@ -55,7 +55,7 @@ export const f64Format: Readonly<FloatFormat> = Object.freeze({
 
 const mantissaU32 = new Uint32Array(2)
 
-export function tryParseFloat64(
+export function toFloat(
     metadata: PrimitiveMeta<number>,
     context: ParseContext,
     index: number,
@@ -112,7 +112,7 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
 
         if (m > 0) splitTo32(m, s.mantissaU32)
 
-        const f64 = toFloat64(s.mantissaU32, e, format)
+        const f64 = toFloatMidpath(s.mantissaU32, e, format)
         if (f64) return {
             type: COMPLETE,
             value: f64,
@@ -367,7 +367,7 @@ const halfValue = splitTo64(4503599627370496n)
 
 const product128 = new Uint32Array(4)
 
-function toFloat64(m: Uint32Array, e: number, f: FloatFormat): number | undefined {
+function toFloatMidpath(m: Uint32Array, e: number, f: FloatFormat): number | undefined {
     const m32 = m
     const low = m32[0]
     const high = m32[1]

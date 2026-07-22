@@ -8,7 +8,7 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export const tryParseInt8 = (
+export const toInt8 = (
     metadata: PrimitiveMeta<number>,
     reader: JsonReader,
     index: number,
@@ -17,7 +17,7 @@ export const tryParseInt8 = (
 ): ReadResult<number> =>
     parseInt8(reader, index, -128, 127, true)
 
-export const tryParseUint8 = (
+export const toUint8 = (
     metadata: PrimitiveMeta<number>,
     reader: JsonReader,
     index: number,

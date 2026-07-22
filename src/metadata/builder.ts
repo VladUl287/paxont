@@ -6,35 +6,35 @@ import {
     ObjectMeta, PrimitiveMeta, SetMeta, ToValueConverter
 } from "./types"
 import { BaseType, JSONT } from "./baseTypes"
-import { tryParseDate } from "../converters/date"
-import { tryParseMap } from "../converters/map"
-import { tryParseSet } from "../converters/set"
+import { toDate } from "../converters/date"
+import { toMap } from "../converters/map"
+import { toSet } from "../converters/set"
 import { genObjectFactory, genObjectToJsonFactory1 } from "../code_gen/object"
 import { generateTrieSwitch } from "../code_gen/field"
-import { tryParseObject } from "../converters/object"
-import { tryParseNullable } from "../converters/nullable"
-import { tryParseBigInt, tryParseInt64, tryParseUint64 } from "../converters/number/bigint"
-import { tryParseBoolean } from "../converters/boolean"
-import { tryParseString } from "../converters/string"
+import { toObject } from "../converters/object"
+import { toNullable } from "../converters/nullable"
+import { tryParseBigInt, toInt64, toUint64 } from "../converters/number/bigint"
+import { toBoolean } from "../converters/boolean"
+import { toString } from "../converters/string"
 import { ArrayPool, useArrayPool } from "../utils/array"
-import { tryParseInt16, tryParseInt32, tryParseInt8, tryParseUint16, tryParseUint32, tryParseUint8 } from "../converters/number/int"
-import { tryParseFloat64 } from "../converters/number/float"
+import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../converters/number/int"
+import { toFloat } from "../converters/number/float"
 
-export const string = () => primitive(JSONT.STRING, tryParseString)
-export const number = () => primitive(JSONT.NUMBER, tryParseFloat64)
+export const string = () => primitive(JSONT.STRING, toString)
+export const number = () => primitive(JSONT.NUMBER, toFloat)
 export const bigInt = () => primitive(JSONT.BIGINT, tryParseBigInt)
-export const bool = () => primitive(JSONT.BOOL, tryParseBoolean)
-export const date = () => primitive(JSONT.DATE, tryParseDate)
+export const bool = () => primitive(JSONT.BOOL, toBoolean)
+export const date = () => primitive(JSONT.DATE, toDate)
 
-export const u8 = () => primitive(JSONT.U8, tryParseUint8)
-export const u16 = () => primitive(JSONT.U16, tryParseUint16)
-export const u32 = () => primitive(JSONT.U32, tryParseUint32)
-export const i8 = () => primitive(JSONT.I8, tryParseInt8)
-export const i16 = () => primitive(JSONT.I16, tryParseInt16)
-export const i32 = () => primitive(JSONT.I32, tryParseInt32)
+export const u8 = () => primitive(JSONT.U8, toUint8)
+export const u16 = () => primitive(JSONT.U16, toUint16)
+export const u32 = () => primitive(JSONT.U32, toUint32)
+export const i8 = () => primitive(JSONT.I8, toInt8)
+export const i16 = () => primitive(JSONT.I16, toInt16)
+export const i32 = () => primitive(JSONT.I32, toInt32)
 
-export const u64 = () => primitive(JSONT.U64, tryParseUint64)
-export const i64 = () => primitive(JSONT.I64, tryParseInt64)
+export const u64 = () => primitive(JSONT.U64, toUint64)
+export const i64 = () => primitive(JSONT.I64, toInt64)
 
 const primitive = <T extends Object>(type: BaseType, toValue: ToValueConverter<T, PrimitiveMeta<T>>): PrimitiveMeta<T> => ({
     type: type,
@@ -48,7 +48,7 @@ export const nullable = <M extends BaseMeta<ExtractType<M>, M>>(value: M): Nulla
         if (value === null) return 'null'
         return meta.value.toJson(meta.value, value, options)
     },
-    toValue: tryParseNullable,
+    toValue: toNullable,
     value: value,
 })
 
@@ -126,7 +126,7 @@ export const map = <M extends BaseMeta<ExtractType<M>, M>>(value: M): MapMeta<Ex
     type: JSONT.MAP,
     key: string(),
     value: value,
-    toValue: tryParseMap,
+    toValue: toMap,
     toJson: (m, v, o) => {
         const meta = m.value
         const toJson = meta.toJson
@@ -138,7 +138,7 @@ export const set = <T, M extends BaseMeta<T, M>>(value: M, ...modifiers: Array<M
     const defaultMeta: SetMeta<T, M> = {
         type: JSONT.SET,
         value: value,
-        toValue: tryParseSet,
+        toValue: toSet,
         toJson: (meta, set, options) => {
             const valueMeta = meta.value
             const toJson = valueMeta.toJson
@@ -185,7 +185,7 @@ export const object = <M extends ObjectFieldMeta<any, any, any>[]>(...fields: M)
         fields: fields,
         build: factory,
         getFieldIndex: fieldIndex,
-        toValue: tryParseObject,
+        toValue: toObject,
         toJson: toJson
     }
 }

@@ -8,7 +8,7 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function tryParseMap<T, M extends BaseMeta<T, M>>(
+export function toMap<T, M extends BaseMeta<T, M>>(
     metadata: MapMeta<T, M>,
     context: ParseContext,
     index: number,

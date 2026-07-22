@@ -10,14 +10,14 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export const tryParseInt64 = (
+export const toInt64 = (
     metadata: PrimitiveMeta<bigint>,
     reader: ParseContext,
     index: number,
     depth: number
 ): ReadResult<bigint> => parseInt64(reader.reader, index, -9223372036854775808n, 9223372036854775807n, true)
 
-export const tryParseUint64 = (
+export const toUint64 = (
     metadata: PrimitiveMeta<bigint>,
     reader: ParseContext,
     index: number,

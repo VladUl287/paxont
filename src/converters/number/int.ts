@@ -8,42 +8,42 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export const tryParseInt8 = (
+export const toInt8 = (
     metadata: PrimitiveMeta<number>,
     { reader }: ParseContext,
     index: number,
     depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 3, -128, 127, true)
 
-export const tryParseUint8 = (
+export const toUint8 = (
     metadata: PrimitiveMeta<number>,
     { reader }: ParseContext,
     index: number,
     depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 3, 0, 255, false)
 
-export const tryParseInt16 = (
+export const toInt16 = (
     metadata: PrimitiveMeta<number>,
     { reader }: ParseContext,
     index: number,
     depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 5, -32768, 32767, true)
 
-export const tryParseUint16 = (
+export const toUint16 = (
     metadata: PrimitiveMeta<number>,
     { reader }: ParseContext,
     index: number,
     depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 5, 0, 65535, false)
 
-export const tryParseInt32 = (
+export const toInt32 = (
     metadata: PrimitiveMeta<number>,
     { reader }: ParseContext,
     index: number,
     depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 10, -2147483648, 2147483647, true)
 
-export const tryParseUint32 = (
+export const toUint32 = (
     metadata: PrimitiveMeta<number>,
     { reader }: ParseContext,
     index: number,

@@ -10,7 +10,7 @@ const { decode } = useDecoder({
     isNode: IS_NODE
 })
 
-export function tryParseString(
+export function toString(
     m: PrimitiveMeta<string>,
     context: ParseContext,
     index: number,

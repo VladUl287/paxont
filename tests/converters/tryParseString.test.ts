@@ -1,4 +1,4 @@
-import { tryParseString } from "../../src/converters/string"
+import { toString } from "../../src/converters/string"
 import { JsonReader } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 
@@ -19,7 +19,7 @@ describe('tryParseString', () => {
 
                     const metaMock: any = {}
 
-                    const { value, nextIndex } = tryParseString(reader, metaMock, 0, 0, {})
+                    const { value, nextIndex } = toString(reader, metaMock, 0, 0, {})
 
                     expect(value).not.toBeUndefined()
                     expect(value).toBe(str.substring(1, str.length - 1))
