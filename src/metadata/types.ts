@@ -22,13 +22,13 @@ export type ConvertState = {
     [key: string]: any
 }
 
-export type tryParseValue<T, M extends BaseMeta<T, M>> =
+export type tryParseValueConverter<T, M extends BaseMeta<T, M>> =
     (metadata: M, context: JsonContext, index: number, depth: number) => ReadResult<T>
 
 export type toJsonConverter<T, M extends BaseMeta<T, M>> = (metadata: M, value: T, options: JsonOptions) => string
 
 export interface BaseMeta<T, M extends BaseMeta<T, M>> {
-    readonly tryParseValue: tryParseValue<T, M>,
+    readonly tryParseValue: tryParseValueConverter<T, M>,
     readonly toJson: toJsonConverter<T, M>,
     readonly type: TypeName
 }
