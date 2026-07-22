@@ -3,7 +3,7 @@ import { TypedArray } from "../utils/typedArray"
 import {
     ArrayMeta,
     BaseMeta, Expand, ExtractType, MapMeta, NullableMeta, ObjectFieldMeta,
-    ObjectMeta, PrimitiveMeta, SetMeta, tryParseValueConverter
+    ObjectMeta, PrimitiveMeta, SetMeta, ToValueConverter
 } from "./types"
 import { BaseType, JSONT } from "./baseTypes"
 import { tryParseDate } from "../converters/date"
@@ -36,7 +36,7 @@ export const i32 = () => primitive(JSONT.I32, tryParseInt32)
 export const u64 = () => primitive(JSONT.U64, tryParseUint64)
 export const i64 = () => primitive(JSONT.I64, tryParseInt64)
 
-const primitive = <T extends Object>(type: BaseType, toValue: tryParseValueConverter<T, PrimitiveMeta<T>>): PrimitiveMeta<T> => ({
+const primitive = <T extends Object>(type: BaseType, toValue: ToValueConverter<T, PrimitiveMeta<T>>): PrimitiveMeta<T> => ({
     type: type,
     tryParseValue: toValue,
     toJson: (s, _) => s.toString()
