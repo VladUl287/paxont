@@ -24,7 +24,7 @@ export const toUint64 = (
     depth: number
 ): ReadResult<bigint> => parseInt64(reader.reader, index, 0n, 18446744073709551615n, false)
 
-export function tryParseBigInt(
+export function toBigInt(
     metadata: PrimitiveMeta<bigint>, 
     context: ParseContext, 
     index: number,

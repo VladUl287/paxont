@@ -1,5 +1,5 @@
 import { toArray } from "../converters/array"
-import { BigIntTypedArray, FloatTypedArray, IntegerTypedArray, TypedArray } from "../utils/typedArray"
+import { BigIntTypedArray, FloatTypedArray, IntegerTypedArray } from "../utils/typedArray"
 import {
     ArrayMeta,
     BaseMeta, Expand, ExtractType, MapMeta, Modifier, NullableMeta, ObjectFieldMeta,
@@ -13,34 +13,65 @@ import { genObjectFactory, genObjectToJsonFactory1 } from "../code_gen/object"
 import { generateTrieSwitch } from "../code_gen/field"
 import { toObject } from "../converters/object"
 import { toNullable } from "../converters/nullable"
-import { tryParseBigInt, toInt64, toUint64 } from "../converters/number/bigint"
+import { toBigInt, toInt64, toUint64 } from "../converters/number/bigint"
 import { toBoolean } from "../converters/boolean"
 import { toString } from "../converters/string"
 import { ArrayPool, useArrayPool } from "../utils/array"
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../converters/number/int"
 import { toFloat } from "../converters/number/float"
 
-export const string = () => primitive(JSONT.STRING, toString)
-export const number = () => primitive(JSONT.NUMBER, toFloat)
-export const bigInt = () => primitive(JSONT.BIGINT, tryParseBigInt)
-export const bool = () => primitive(JSONT.BOOL, toBoolean)
-export const date = () => primitive(JSONT.DATE, toDate)
+export const string = (...modifiers: Modifier<PrimitiveMeta<string>>[]) =>
+    primitive(JSONT.STRING, toString, ...modifiers)
 
-export const u8 = () => primitive(JSONT.U8, toUint8)
-export const u16 = () => primitive(JSONT.U16, toUint16)
-export const u32 = () => primitive(JSONT.U32, toUint32)
-export const i8 = () => primitive(JSONT.I8, toInt8)
-export const i16 = () => primitive(JSONT.I16, toInt16)
-export const i32 = () => primitive(JSONT.I32, toInt32)
+export const number = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
+    primitive(JSONT.NUMBER, toFloat, ...modifiers)
 
-export const u64 = () => primitive(JSONT.U64, toUint64)
-export const i64 = () => primitive(JSONT.I64, toInt64)
+export const bigInt = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
+    primitive(JSONT.BIGINT, toBigInt, ...modifiers)
 
-const primitive = <T extends Object>(type: BaseType, toValue: ToValueConverter<T, PrimitiveMeta<T>>): PrimitiveMeta<T> => ({
-    type: type,
-    toValue: toValue,
-    toJson: (s, _) => s.toString()
-})
+export const bool = (...modifiers: Modifier<PrimitiveMeta<boolean>>[]) =>
+    primitive(JSONT.BOOL, toBoolean, ...modifiers)
+
+export const date = (...modifiers: Modifier<PrimitiveMeta<Date>>[]) =>
+    primitive(JSONT.DATE, toDate, ...modifiers)
+
+export const u8 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
+    primitive(JSONT.U8, toUint8, ...modifiers)
+
+export const u16 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
+    primitive(JSONT.U16, toUint16, ...modifiers)
+
+export const u32 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
+    primitive(JSONT.U32, toUint32, ...modifiers)
+
+export const i8 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
+    primitive(JSONT.I8, toInt8, ...modifiers)
+
+export const i16 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
+    primitive(JSONT.I16, toInt16, ...modifiers)
+
+export const i32 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
+    primitive(JSONT.I32, toInt32, ...modifiers)
+
+export const u64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
+    primitive(JSONT.U64, toUint64, ...modifiers)
+
+export const i64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
+    primitive(JSONT.I64, toInt64, ...modifiers)
+
+
+const primitive = <T>(
+    type: BaseType,
+    toValue: ToValueConverter<T, PrimitiveMeta<T>>,
+    ...modifiers: Modifier<PrimitiveMeta<T>>[]
+): PrimitiveMeta<T> => {
+    const defaultMeta: PrimitiveMeta<T> = {
+        type: type,
+        toValue: toValue,
+        toJson: (s, _) => s.toString()
+    }
+    return modifiers.reduce((value, modify) => modify(value), defaultMeta)
+}
 
 export const nullable = <M extends BaseMeta<ExtractType<M>, M>>(value: M): NullableMeta<ExtractType<M>, M> => ({
     type: JSONT.NULLABLE,
@@ -82,7 +113,6 @@ export const array = <T, M extends BaseMeta<T, M>>(
         value: value,
         arrayPool: globalPools[value.type] ?? useArrayPool(Array)
     }
-
     return modifiers.reduce((value, modify) => modify(value), defaultMeta)
 }
 
@@ -99,36 +129,52 @@ export const i64Array = () => bigIntTypedArray<BigInt64Array>(JSONT.I64_ARRAY, i
 export const f64Array = () => typedArray<Float64Array>(JSONT.F64_ARRAY, number())
 
 const typedArray = <T extends IntegerTypedArray | FloatTypedArray>(
-    type: BaseType, value: PrimitiveMeta<number>
-): ArrayMeta<number, T, PrimitiveMeta<number>> => ({
-    type: type,
-    toValue: toArray,
-    toJson: (m, value) => `[${value.join(',')}]`,
-    value: value,
-    arrayPool: globalPools[value.type]
-})
+    type: BaseType,
+    value: PrimitiveMeta<number>,
+    ...modifiers: Modifier<ArrayMeta<number, T, PrimitiveMeta<number>>>[]
+): ArrayMeta<number, T, PrimitiveMeta<number>> => {
+    const defaultMeta: ArrayMeta<number, T, PrimitiveMeta<number>> = {
+        type: type,
+        toValue: toArray,
+        toJson: (m, value) => `[${value.join(',')}]`,
+        value: value,
+        arrayPool: globalPools[value.type]
+    }
+    return modifiers.reduce((value, modify) => modify(value), defaultMeta)
+}
 
 const bigIntTypedArray = <T extends BigIntTypedArray>(
-    type: BaseType, value: PrimitiveMeta<bigint>
-): ArrayMeta<bigint, T, PrimitiveMeta<bigint>> => ({
-    type: type,
-    toValue: toArray,
-    toJson: (m, value) => `[${value.join(',')}]`,
-    value: value,
-    arrayPool: globalPools[value.type]
-})
-
-export const map = <M extends BaseMeta<ExtractType<M>, M>>(value: M): MapMeta<ExtractType<M>, M> => ({
-    type: JSONT.MAP,
-    key: string(),
-    value: value,
-    toValue: toMap,
-    toJson: (m, v, o) => {
-        const meta = m.value
-        const toJson = meta.toJson
-        return `{${[...v.entries()].map(c => `"${c[0]}": ${toJson(meta, c[1], o)}`).join(',')}}`
+    type: BaseType,
+    value: PrimitiveMeta<bigint>,
+    ...modifiers: Modifier<ArrayMeta<bigint, T, PrimitiveMeta<bigint>>>[]
+): ArrayMeta<bigint, T, PrimitiveMeta<bigint>> => {
+    const defaultMeta: ArrayMeta<bigint, T, PrimitiveMeta<bigint>> = {
+        type: type,
+        toValue: toArray,
+        toJson: (m, value) => `[${value.join(',')}]`,
+        value: value,
+        arrayPool: globalPools[value.type]
     }
-})
+    return modifiers.reduce((value, modify) => modify(value), defaultMeta)
+}
+
+export const map = <T, M extends BaseMeta<T, M>>(
+    value: M,
+    ...modifiers: Modifier<MapMeta<T, M>>[]
+): MapMeta<T, M> => {
+    const defaultMeta: MapMeta<T, M> = {
+        type: JSONT.MAP,
+        key: string(),
+        value: value,
+        toValue: toMap,
+        toJson: (m, v, o) => {
+            const meta = m.value
+            const toJson = meta.toJson
+            return `{${[...v.entries()].map(c => `"${c[0]}": ${toJson(meta, c[1], o)}`).join(',')}}`
+        }
+    }
+    return modifiers.reduce((value, modify) => modify(value), defaultMeta)
+}
 
 export const set = <T, M extends BaseMeta<T, M>>(value: M, ...modifiers: Modifier<SetMeta<T, M>>[]): SetMeta<T, M> => {
     const defaultMeta: SetMeta<T, M> = {
@@ -144,7 +190,6 @@ export const set = <T, M extends BaseMeta<T, M>>(value: M, ...modifiers: Modifie
             return `[${values}]`
         }
     }
-
     return modifiers.reduce((value, modify) => modify(value), defaultMeta)
 }
 
