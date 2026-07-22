@@ -31,6 +31,11 @@ const conversionU32 = new Uint32Array(bufferConversion)
 const conversionU64 = new BigUint64Array(bufferConversion)
 const conversionF64 = new Float64Array(bufferConversion)
 
+type Swar = {
+    memory: WebAssembly.Memory,
+    get_digits: Function
+}
+
 type BigInteger = {
     memory: WebAssembly.Memory,
     init: Function
@@ -38,16 +43,30 @@ type BigInteger = {
     mul: Function
 }
 
+const wasmMemory = new WebAssembly.Memory({
+    initial: 1,
+    maximum: 1
+})
+
+const swar = new WebAssembly.Instance(
+    new WebAssembly.Module(
+        new Uint8Array([
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 6, 1, 96, 2, 127, 127, 0, 2, 15, 1, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 0, 1, 3, 2, 1, 0, 6, 31, 6, 127, 1, 65, 1, 11, 127, 1, 65, 2, 11, 127, 1, 65, 4, 11, 127, 1, 65, 48, 11, 127, 1, 65, 0, 11, 127, 1, 65, 0, 11, 7, 23, 2, 6, 109, 101, 109, 111, 114, 121, 2, 0, 10, 103, 101, 116, 95, 100, 105, 103, 105, 116, 115, 0, 0, 10, 187, 1, 1, 184, 1, 1, 7, 127, 32, 0, 33, 8, 65, 0, 33, 5, 65, 0, 33, 6, 65, 0, 33, 7, 65, 0, 33, 2, 2, 64, 3, 64, 32, 2, 32, 1, 79, 13, 1, 2, 64, 3, 64, 32, 2, 32, 1, 79, 13, 1, 32, 0, 32, 2, 106, 45, 0, 0, 33, 3, 32, 3, 65, 48, 79, 32, 3, 65, 57, 77, 113, 4, 64, 32, 3, 35, 3, 71, 32, 5, 35, 0, 113, 114, 4, 64, 32, 3, 65, 15, 113, 33, 4, 32, 5, 35, 0, 114, 33, 5, 32, 5, 35, 1, 113, 65, 0, 70, 4, 64, 32, 7, 65, 1, 106, 33, 7, 11, 32, 8, 32, 6, 106, 32, 4, 58, 0, 0, 32, 6, 65, 1, 106, 33, 6, 5, 32, 5, 35, 1, 113, 4, 64, 32, 7, 65, 1, 107, 33, 7, 11, 11, 32, 2, 65, 1, 106, 33, 2, 12, 1, 5, 32, 5, 35, 2, 114, 33, 5, 12, 2, 11, 11, 32, 5, 35, 2, 113, 4, 64, 12, 3, 11, 12, 1, 11, 11, 11, 11])
+    ), { env: { memory: wasmMemory } }).exports as Swar
+
+console.log(swar)
+
 const instance = new WebAssembly.Instance(
     new WebAssembly.Module(
         new Uint8Array([
             0, 97, 115, 109, 1, 0, 0, 0, 1, 13, 3, 96, 1, 127, 0, 96, 1, 127, 1, 127, 96, 0, 0, 3, 5, 4, 0, 1, 1, 2, 5, 3, 1, 0, 1, 7, 37, 5, 6, 109, 101, 109, 111, 114, 121, 2, 0, 4, 105, 110, 105, 116, 0, 0, 3, 97, 100, 100, 0, 1, 3, 109, 117, 108, 0, 2, 5, 114, 101, 115, 101, 116, 0, 3, 10, 194, 2, 4, 16, 0, 65, 0, 65, 1, 54, 2, 0, 65, 4, 32, 0, 54, 2, 0, 11, 142, 1, 3, 3, 127, 2, 126, 1, 127, 65, 0, 33, 1, 32, 1, 40, 2, 0, 33, 2, 32, 0, 173, 33, 4, 65, 0, 33, 3, 3, 64, 2, 64, 32, 3, 32, 2, 79, 32, 4, 80, 114, 13, 0, 32, 1, 65, 4, 106, 32, 3, 65, 4, 108, 106, 40, 2, 0, 173, 32, 4, 124, 33, 5, 32, 1, 65, 4, 106, 32, 3, 65, 4, 108, 106, 32, 5, 167, 54, 2, 0, 32, 5, 66, 32, 136, 33, 4, 32, 3, 65, 1, 106, 33, 3, 12, 1, 11, 11, 32, 4, 66, 0, 82, 4, 64, 32, 2, 65, 1, 106, 33, 6, 32, 1, 32, 6, 54, 2, 0, 32, 1, 65, 4, 106, 32, 2, 65, 4, 108, 106, 32, 4, 167, 54, 2, 0, 32, 6, 15, 11, 32, 2, 11, 141, 1, 3, 3, 127, 2, 126, 1, 127, 65, 0, 33, 1, 32, 1, 40, 2, 0, 33, 2, 66, 0, 33, 4, 65, 0, 33, 3, 3, 64, 2, 64, 32, 3, 32, 2, 79, 13, 0, 32, 1, 65, 4, 106, 32, 3, 65, 4, 108, 106, 40, 2, 0, 173, 32, 0, 173, 126, 32, 4, 124, 33, 5, 32, 1, 65, 4, 106, 32, 3, 65, 4, 108, 106, 32, 5, 167, 54, 2, 0, 32, 5, 66, 32, 136, 33, 4, 32, 3, 65, 1, 106, 33, 3, 12, 1, 11, 11, 32, 4, 66, 0, 82, 4, 64, 32, 2, 65, 1, 106, 33, 6, 32, 1, 32, 6, 54, 2, 0, 32, 1, 65, 4, 106, 32, 2, 65, 4, 108, 106, 32, 4, 167, 54, 2, 0, 32, 6, 15, 11, 32, 2, 11, 16, 0, 65, 0, 65, 0, 54, 2, 0, 65, 4, 65, 0, 54, 2, 0, 11
         ])
-    )).exports as BigInteger
+    ), { env: { memory: wasmMemory } }).exports as BigInteger
 
-const limbs = new Uint32Array(instance.memory.buffer)
+const memory = new Uint8Array(swar.memory.buffer)
+const limbs = new Uint32Array(memory.buffer)
 
-export function parseNumberF64(bytes: Uint8Array, start: number): ReadResult<number> {
+export function parseNumberF64(b: Uint8Array, start: number): ReadResult<number> {
     let i = start
 
     const STATE_NEGATIVE = 0x01
@@ -57,128 +76,130 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ReadResult<num
 
     let state = 0 >>> 0
 
-    if (bytes[i] === MINUS) {
+    if (b[i] === MINUS) {
         state ^= STATE_NEGATIVE
         i++
     }
 
     let scale = 0
-    let mantissa = 0
     let digitsCount = 0
-    let tempDC = 0
-    let trailingZeros = 0
 
-    const MAX_SAFE_INT_DIGITS = 10
+    const length = b.length
 
-    instance.init(0)
 
-    const length = bytes.length
+    memory.set(new Uint8Array(b.buffer, i))
 
-    while (i < length) {
-        if (i <= length - 4) {
-            const a = bytes[i]
-            const b = bytes[i + 1]
-            const c = bytes[i + 2]
-            const d = bytes[i + 3]
+    swar.get_digits(0, b.length - i)
 
-            const word = (a << 0 | b << 8 | c << 16 | d << 24) - 0x30303030
-            const hasNonDigit = ((word + 0x76767676) | word) & 0x80808080
+    // while (i < length) {
+    //     if (i <= length - 8) {
+    //         memory[digitsCount] = b[i]
+    //         memory[digitsCount + 1] = b[i + 1]
+    //         memory[digitsCount + 2] = b[i + 2]
+    //         memory[digitsCount + 3] = b[i + 3]
+    //         memory[digitsCount + 4] = b[i + 4]
+    //         memory[digitsCount + 5] = b[i + 5]
+    //         memory[digitsCount + 6] = b[i + 6]
+    //         memory[digitsCount + 7] = b[i + 7]
 
-            if (hasNonDigit === 0) {
-                const chunk = ((a & 0x0F) * 1000) + ((b & 0x0F) * 100) + ((c & 0x0F) * 10) + (d & 0x0F)
-                if (chunk !== 0 || (state & STATE_NONZERO)) {
-                    digitsCount += 4
-                    tempDC += 4
+    //         if (is_digits_64(b[i], b[i + 1])) {
+    //             i += 8
+    //             continue
+    //         }
 
-                    if ((state & STATE_DECIMAL) === 0)
-                        scale += 4
+    //         break
+    //     }
 
-                    state |= STATE_NONZERO
+    //     // if (i <= length - 4) {
+    //     //     const a = bytes[i]
+    //     //     const b = bytes[i + 1]
+    //     //     const c = bytes[i + 2]
+    //     //     const d = bytes[i + 3]
 
-                    if (tempDC < 8) {
-                        mantissa = mantissa * 10000 + chunk
-                    }
-                    else {
-                        instance.mul(100000000)
-                        instance.add(mantissa)
-                        mantissa = 0
-                        tempDC = 0
-                    }
-                }
-                else if (state & STATE_DECIMAL) {
-                    scale -= 4
-                }
-                i += 4
-                continue
-            }
-        }
+    //     //     const word = (a << 0 | b << 8 | c << 16 | d << 24) - 0x30303030
+    //     //     const hasNonDigit = ((word + 0x76767676) | word) & 0x80808080
 
-        const segment_length = Math.min(length, i + 4)
-        while (i < segment_length) {
-            const byte = bytes[i]
-            if (isDigitUnsafe(byte)) {
-                if (byte !== ZERO || (state & STATE_NONZERO)) {
-                    const digit = byte & 0x0F
+    //     //     if (hasNonDigit === 0) {
+    //     //         const chunk = ((a & 0x0F) * 1000) + ((b & 0x0F) * 100) + ((c & 0x0F) * 10) + (d & 0x0F)
 
-                    digitsCount++
-                    tempDC++
-                    trailingZeros = (digit === 0 ? trailingZeros + 1 : 0)
+    //     //         if (chunk !== 0 || (state & STATE_NONZERO)) {
+    //     //             digitsCount += 4
 
-                    state |= STATE_NONZERO
+    //     //             if ((state & STATE_DECIMAL) === 0)
+    //     //                 scale += 4
 
-                    if ((state & STATE_DECIMAL) === 0)
-                        scale++
+    //     //             state |= STATE_NONZERO
 
-                    if (tempDC < MAX_SAFE_INT_DIGITS) {
-                        mantissa = mantissa * 10 + digit
-                    }
-                    else if (tempDC === MAX_SAFE_INT_DIGITS) {
-                        instance.mul(10000000000)
-                        instance.add(mantissa)
-                        mantissa = 0
-                        tempDC = 0
-                    }
-                }
-                else if (state & STATE_DECIMAL) {
-                    scale--
-                }
-                i++
-                continue
-            }
-            else if (byte === DOT) {
-                state |= STATE_DECIMAL
-                i++
-                continue
-            }
-            else if (byte === E || byte === E_UPPER) {
-                i++
+    //     //             memory[digitsCount] = a
+    //     //             memory[digitsCount + 1] = b
+    //     //             memory[digitsCount + 2] = c
+    //     //             memory[digitsCount + 3] = d
+    //     //         }
+    //     //         else if (state & STATE_DECIMAL)
+    //     //             scale -= 4
 
-                let signExp = 1
-                if (bytes[i] === MINUS) {
-                    signExp = -1
-                    i++
-                }
-                else if (bytes[i] === PLUS) {
-                    i++
-                }
+    //     //         i += 4
+    //     //         continue
+    //     //     }
+    //     // }
 
-                let exponent = 0
-                while (isDigit(bytes[i])) {
-                    exponent = exponent * 10 + (bytes[i] - 48)
-                    i++
-                }
+    //     const segment_length = Math.min(length, i + 4)
+    //     while (i < segment_length) {
+    //         const byte = b[i]
 
-                exponent *= signExp
-                scale += exponent
-            }
+    //         if (isDigitUnsafe(byte)) {
+    //             if (byte !== ZERO || (state & STATE_NONZERO)) {
+    //                 state |= STATE_NONZERO
 
-            state |= STATE_END
-            break
-        }
+    //                 digitsCount++
 
-        if (state & STATE_END)
-            break
-    }
+    //                 if ((state & STATE_DECIMAL) === 0)
+    //                     scale++
+
+    //                 memory[digitsCount] = (byte & 0x0F)
+    //             }
+    //             else if (state & STATE_DECIMAL) {
+    //                 scale--
+    //             }
+    //             i++
+    //             continue
+    //         }
+
+    //         if (byte === DOT) {
+    //             state |= STATE_DECIMAL
+    //             i++
+    //             continue
+    //         }
+
+    //         if (byte === E || byte === E_UPPER) {
+    //             i++
+
+    //             let signExp = 1
+    //             if (b[i] === MINUS) {
+    //                 signExp = -1
+    //                 i++
+    //             }
+    //             else if (b[i] === PLUS) {
+    //                 i++
+    //             }
+
+    //             let exponent = 0
+    //             while (isDigit(b[i])) {
+    //                 exponent = exponent * 10 + (b[i] - 48)
+    //                 i++
+    //             }
+
+    //             exponent *= signExp
+    //             scale += exponent
+    //         }
+
+    //         state |= STATE_END
+    //         break
+    //     }
+
+    //     if (state & STATE_END)
+    //         break
+    // }
 
     const positiveExponent = Math.max(0, scale)
     const integerDigitsPresent = Math.min(positiveExponent, digitsCount)
@@ -189,11 +210,11 @@ export function parseNumberF64(bytes: Uint8Array, start: number): ReadResult<num
 
     return {
         type: ReadResultType.COMPLETE,
-        // value: {} as any,
-        value: numberToFloatingPointBitsSlow(
-            instance, digitsCount, scale, positiveExponent,
-            integerDigitsPresent, fractionalDigitsPresent, f64Format, true
-        ),
+        value: {} as any,
+        // value: numberToFloatingPointBitsSlow(
+        //     instance, digitsCount, scale, positiveExponent,
+        //     integerDigitsPresent, fractionalDigitsPresent, f64Format, true
+        // ),
         nextIndex: i
     }
 }
