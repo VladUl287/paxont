@@ -86,3 +86,4 @@ export type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
 
 export type ExtractType<M> = M extends BaseMeta<infer U, any> ? U : never
 
+export type Modifier<M extends BaseMeta<any, M>> = (metadata: M) => M

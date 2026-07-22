@@ -2,7 +2,7 @@ import { toArray } from "../converters/array"
 import { BigIntTypedArray, FloatTypedArray, IntegerTypedArray, TypedArray } from "../utils/typedArray"
 import {
     ArrayMeta,
-    BaseMeta, Expand, ExtractType, MapMeta, NullableMeta, ObjectFieldMeta,
+    BaseMeta, Expand, ExtractType, MapMeta, Modifier, NullableMeta, ObjectFieldMeta,
     ObjectMeta, PrimitiveMeta, SetMeta, ToValueConverter
 } from "./types"
 import { BaseType, JSONT } from "./baseTypes"
@@ -52,8 +52,6 @@ export const nullable = <M extends BaseMeta<ExtractType<M>, M>>(value: M): Nulla
     value: value,
 })
 
-type Modifier = <M extends BaseMeta<ExtractType<M>, M>>(metadata: M) => M
-
 export const arrayPool =
     <T, A extends ArrayLike<T>>(pool: ArrayPool<A>) =>
         <M extends ArrayMeta<ExtractType<M>, ExtractType<M>[], any>>(metadata: M): M => ({
@@ -69,11 +67,11 @@ const globalPools: Record<string, ArrayPool<any>> = Object.freeze({
     undefined: useArrayPool(Array)
 })
 
-export const array = <M extends BaseMeta<ExtractType<M>, M>>(
+export const array = <T, M extends BaseMeta<T, M>>(
     value: M,
-    ...modifiers: Array<Modifier>
-): ArrayMeta<ExtractType<M>, ExtractType<M>[], M> => {
-    let meta: ArrayMeta<ExtractType<M>, ExtractType<M>[], M> = {
+    ...modifiers: Modifier<ArrayMeta<T, T[], M>>[]
+): ArrayMeta<T, T[], M> => {
+    let defaultMeta: ArrayMeta<T, T[], M> = {
         type: JSONT.ARRAY,
         toValue: toArray,
         toJson: (meta, value, options) => {
@@ -85,11 +83,7 @@ export const array = <M extends BaseMeta<ExtractType<M>, M>>(
         arrayPool: globalPools[value.type] ?? useArrayPool(Array)
     }
 
-    modifiers.forEach(modify => {
-        meta = modify(meta)
-    })
-
-    return meta
+    return modifiers.reduce((value, modify) => modify(value), defaultMeta)
 }
 
 export const u8Array = () => typedArray<Uint8Array>(JSONT.U8_ARRAY, u8())
@@ -134,7 +128,7 @@ export const map = <M extends BaseMeta<ExtractType<M>, M>>(value: M): MapMeta<Ex
     }
 })
 
-export const set = <T, M extends BaseMeta<T, M>>(value: M, ...modifiers: Array<Modifier>): SetMeta<T, M> => {
+export const set = <T, M extends BaseMeta<T, M>>(value: M, ...modifiers: Modifier<SetMeta<T, M>>[]): SetMeta<T, M> => {
     const defaultMeta: SetMeta<T, M> = {
         type: JSONT.SET,
         value: value,
