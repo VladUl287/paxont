@@ -3,23 +3,23 @@ import { ReadResult, ReadResultType } from "../../utils/types"
 import { ConvertState, JsonReader, PrimitiveMeta } from "../../metadata/types"
 import { isDigitUnsafe } from "../../utils/ascii"
 
-type FloatFormat = {
-    normalMantissaBits: number
-    denormalMantissaBits: number
-    exponentBias: number
-    maxBinaryExponent: number
-    minBinaryExponent: number
-    exponentBits: number
-    normalMantissaMask: bigint
-    denormalMantissaMask: bigint
-    zeroBits: number
-    overflowDecimalExponent: number,
-    maxExponentFastPath: number,
-    minSafeExponent: number,
-    maxSafeExponent: number,
-    minExponentRoundToEven: number,
-    maxExponentRoundToEven: number,
-    infinityExponent: number
+export type FloatFormat = {
+    readonly normalMantissaBits: number
+    readonly denormalMantissaBits: number
+    readonly exponentBias: number
+    readonly maxBinaryExponent: number
+    readonly minBinaryExponent: number
+    readonly exponentBits: number
+    readonly normalMantissaMask: bigint
+    readonly denormalMantissaMask: bigint
+    readonly zeroBits: number
+    readonly overflowDecimalExponent: number,
+    readonly maxExponentFastPath: number,
+    readonly minSafeExponent: number,
+    readonly maxSafeExponent: number,
+    readonly minExponentRoundToEven: number,
+    readonly maxExponentRoundToEven: number,
+    readonly infinityExponent: number
 }
 
 type Store = {
