@@ -1,7 +1,7 @@
 import { createCache } from "./cache/cache"
 import { defaultOptions, JsonOptions, mergeOptions } from "./options"
 import { BaseMeta, ConvertState } from "./metadata/types"
-import { useArrayRecycler } from "./utils/array"
+import { ArrayRecycler, useArrayRecycler } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
 import { useMetadata } from "./metadata"
@@ -13,11 +13,33 @@ const metadataCache = createCache<any, BaseMeta<any, any>>()
 
 const defaultMetadata = useMetadata()
 
-const recycler = useArrayRecycler(Uint8Array)
+const recycler = useArrayRecycler<Uint8Array<ArrayBufferLike>>(Uint8Array)
 
 const defaultStack = new Stack<ConvertState>()
 
 type ExtractType<T> = T extends BaseMeta<infer V, any> ? V : T
+
+function toBytes(
+    input: ArrayBuffer | Uint8Array | string,
+    recycler: ArrayRecycler<Uint8Array>,
+    { encoder }: JsonOptions
+): Uint8Array {
+    if (typeof input === 'string') {
+        const length = getMaxBytesCount(input.length)
+        const bytes = recycler.acquire(length)
+        encoder.encodeInto(input, bytes)
+        return bytes
+    }
+
+    if (input instanceof ArrayBuffer)
+        return new Uint8Array(input)
+
+    if (input instanceof Uint8Array)
+        return input
+
+    throw new Error(
+        `Invalid input type: expected string, ArrayBuffer, or Uint8Array, but received ${input === null ? 'null' : typeof input}`)
+}
 
 export function deserialize<T>(
     json: ArrayBuffer | Uint8Array | string,
@@ -32,22 +54,7 @@ export function deserialize<T>(
         metadataCache.getOrAdd(type, (t) => defaultMetadata.toMetadata(t)) :
         type
 
-    let bytes: Uint8Array
-    if (typeof json === 'string') {
-        const length = getMaxBytesCount(json.length)
-        bytes = recycler.acquire(length)
-        filledOptions.encoder.encodeInto(json, bytes)
-    }
-    else if (json instanceof ArrayBuffer) {
-        bytes = new Uint8Array(json)
-    }
-    else if (json instanceof Uint8Array) {
-        bytes = json
-    }
-    else {
-        throw new Error(
-            `Invalid input type: expected string, ArrayBuffer, or Uint8Array, but received ${json === null ? 'null' : typeof json}`)
-    }
+    const bytes = toBytes(json, recycler, filledOptions)
 
     const result = metadata.tryParseValue(metadata, {
         options: filledOptions,
