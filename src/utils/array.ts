@@ -1,12 +1,12 @@
 import { Stack } from "./structs"
 
-export interface MutableArray<V> {
+export interface ArrayLikeWritable<T> {
     readonly length: number
-    [index: number]: V
+    [index: number]: T
     slice: (start?: number, end?: number) => this
 }
 
-export type ArrayRecycler<A extends MutableArray<any>> = {
+export type ArrayRecycler<A extends ArrayLikeWritable<any>> = {
     acquire: (length: number, source?: A) => A,
     dispose(): void
 }
@@ -16,7 +16,7 @@ export type ArrayPool<A extends ArrayLike<any>> = {
     release: (array: A) => void
 }
 
-export const copyArray = <V, T extends MutableArray<V>>(source: ArrayLike<V>, target: T): T => {
+export const copyArray = <V, T extends ArrayLikeWritable<V>>(source: ArrayLike<V>, target: T): T => {
     if (!source || !target) return target
 
     const length = Math.min(source.length, target.length)
@@ -80,7 +80,7 @@ export function useArrayPool<A extends ArrayLike<any>>(ctor: new (length: number
     return { rent, release }
 }
 
-export function useArrayRecycler<A extends MutableArray<any>>(ctor: new (length: number) => A): ArrayRecycler<A> {
+export function useArrayRecycler<A extends ArrayLikeWritable<any>>(ctor: new (length: number) => A): ArrayRecycler<A> {
     let array: A | null = null
 
     const acquire = (newLength: number, source?: A) => {

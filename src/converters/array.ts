@@ -2,14 +2,14 @@ import { BaseMeta, ArrayMeta, ParseContext } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/ascii_symbols"
 import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
-import { copyArray, MutableArray } from "../utils/array"
+import { copyArray, ArrayLikeWritable } from "../utils/array"
 import { JSONParseError } from "../utils/error"
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
+export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T, M>>(
     metadata: ArrayMeta<T, A, M>,
     context: ParseContext,
     index: number,
