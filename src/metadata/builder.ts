@@ -104,7 +104,7 @@ export const i64Array = () => bigIntTypedArray<BigInt64Array>(JSONT.I64_ARRAY, i
 
 export const f64Array = () => typedArray<Float64Array>(JSONT.F64_ARRAY, number())
 
-const typedArray = <T extends IntegerTypedArray | FloatTypedArray >(
+const typedArray = <T extends IntegerTypedArray | FloatTypedArray>(
     type: BaseType, value: PrimitiveMeta<number>
 ): ArrayMeta<number, T, PrimitiveMeta<number>> => ({
     type: type,
@@ -134,16 +134,23 @@ export const map = <M extends BaseMeta<ExtractType<M>, M>>(value: M): MapMeta<Ex
     }
 })
 
-export const set = <M extends BaseMeta<ExtractType<M>, M>>(value: M): SetMeta<ExtractType<M>, M> => ({
-    type: JSONT.SET,
-    value: value,
-    tryParseValue: tryParseSet,
-    toJson: (m, v, o) => {
-        const meta = m.value
-        const toJson = meta.toJson
-        return `{${[...v.values()].map(v => toJson(meta, v, o)).join(',')}}`
+export const set = <T, M extends BaseMeta<T, M>>(value: M, ...modifiers: Array<Modifier>): SetMeta<T, M> => {
+    const defaultMeta: SetMeta<T, M> = {
+        type: JSONT.SET,
+        value: value,
+        tryParseValue: tryParseSet,
+        toJson: (meta, set, options) => {
+            const valueMeta = meta.value
+            const toJson = valueMeta.toJson
+            const values = Array.from(set)
+                .map(value => toJson(valueMeta, value, options))
+                .join(',')
+            return `[${values}]`
+        }
     }
-})
+
+    return modifiers.reduce((value, modify) => modify(value), defaultMeta)
+}
 
 export const field = <K extends string, M extends BaseMeta<ExtractType<M>, M>>(
     name: K, value: M, encoder: TextEncoder = new TextEncoder()
