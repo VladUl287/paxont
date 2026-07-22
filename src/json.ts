@@ -70,8 +70,49 @@ export function deserialize<T>(json: ArrayBuffer | Uint8Array | string, type: T,
     return result.value
 }
 
-export function deserializeAsync<T>(json: ReadableStream<Uint8Array>, type: T, options?: Partial<JsonOptions>): Promise<MetaOrObject<T>> {
-    return new Promise(() => { })
+export async function deserializeAsync<T>(
+    json: ReadableStream<Uint8Array>,
+    type: T,
+    options?: Partial<JsonOptions>
+): Promise<MetaOrObject<T>> {
+    const filledOptions = !!options ?
+        optionsCache.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
+        defaultOptions
+
+    const metadata = !isMetadata(type) ?
+        metadataCache.getOrAdd(type, (t) => defaultMetadata.toMetadata(t)) :
+        type
+
+    const stack = new Stack<ConvertState>()
+
+    const reader = json.getReader()
+    
+    while (!reader.closed) {
+        const chunk = await reader.read()
+        const value = chunk.value
+
+        if (!value)
+            break
+
+        const result = metadata.tryParseValue(metadata, {
+            options: filledOptions,
+            reader: {
+                bytes: value,
+                writable: !chunk.done
+            },
+            stack
+        }, 0, 0)
+
+        if (isError(result))
+            throw result.error
+
+        if (isNeedsMoreData(result))
+            continue
+
+        return result.value
+    }
+
+    throw new Error()
 }
 
 export function serialize<T, M extends BaseMeta<T, any>>(value: T, metadata: M, options?: Partial<JsonOptions>): string {
