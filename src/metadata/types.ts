@@ -4,7 +4,7 @@ import { Stack } from "../utils/structs"
 import { ReadResult } from "../utils/types"
 import { BaseType } from "./baseTypes"
 
-export type TypeName = BaseType | (string & { __typeName: never })
+export type TypeName = BaseType | (string & {})
 
 export type JsonReader = {
     readonly bytes: Uint8Array
