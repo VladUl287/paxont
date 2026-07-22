@@ -104,7 +104,8 @@ const typedArray = <T extends IntegerTypedArray | FloatTypedArray>(
     type: type,
     toValue: toArray,
     toJson: (m, value) => `[${value.join(',')}]`,
-    value: value
+    value: value,
+    arrayPool: globalPools[value.type]
 })
 
 const bigIntTypedArray = <T extends BigIntTypedArray>(
@@ -113,7 +114,8 @@ const bigIntTypedArray = <T extends BigIntTypedArray>(
     type: type,
     toValue: toArray,
     toJson: (m, value) => `[${value.join(',')}]`,
-    value: value
+    value: value,
+    arrayPool: globalPools[value.type]
 })
 
 export const map = <M extends BaseMeta<ExtractType<M>, M>>(value: M): MapMeta<ExtractType<M>, M> => ({
