@@ -69,7 +69,7 @@ export interface NullableMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<T | 
 
 export interface ArrayMeta<T, A extends MutableArray<T>, M extends BaseMeta<T, M>> extends BaseMeta<A, ArrayMeta<T, A, M>> {
     readonly value: M
-    readonly arrayPool: ArrayPool<T, A>
+    readonly arrayPool: ArrayPool<A>
 }
 
 export interface SetMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<Set<T>, SetMeta<T, M>> {

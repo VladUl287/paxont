@@ -28,24 +28,25 @@ export const clampLength = (minLength: number): number => {
 }
 
 const globalPools = Object.freeze({
-    string: useArrayPool<string>(),
-    number: useArrayPool<number>(),
-    object: useArrayPool<object>()
+    number: useArrayPool(Float64Array),
+    u8: useArrayPool(Uint8Array),
+    string: useArrayPool<Array<string>>(Array),
+    object: useArrayPool<Array<number>>(Array)
 })
 
-export type ArrayPool<V, T extends ArrayLike<V>> = {
-    rent: (minLength: number) => T
-    release: (array: T) => void
+export type ArrayPool<A extends ArrayLike<any>> = {
+    rent: (minLength: number) => A
+    release: (array: A) => void
 }
 
-export function useArrayPool<T>(): ArrayPool<T, Array<T>> {
+export function useArrayPool<A extends ArrayLike<any>>(ctor: new (length: number) => A): ArrayPool<A> {
     const MAX_LENGTH = 0x3fffffff
     const globalMinLength = 2
-    const pool = new Map<number, Stack<Array<T>>>()
+    const pool = new Map<number, Stack<A>>()
 
-    let hotArray: Array<T> | undefined
+    let hotArray: A | undefined
 
-    const rent = (minLength: number): Array<T> => {
+    const rent = (minLength: number): A => {
         let len = minLength >>> 0
         if (len < globalMinLength) len = globalMinLength
         else if (len > MAX_LENGTH) len = MAX_LENGTH
@@ -59,17 +60,15 @@ export function useArrayPool<T>(): ArrayPool<T, Array<T>> {
 
         const stack = pool.get(len)
         if (stack !== undefined)
-            return stack.pop() ?? new Array<T>(len)
+            return stack.pop() ?? new ctor(len)
 
-        return new Array<T>(len)
+        return new ctor(len)
     }
 
-    const release = (array: Array<T>): void => {
+    const release = (array: A): void => {
         let len = array.length >>> 0
-        if (len > MAX_LENGTH) {
-            array.length = MAX_LENGTH
-            len = MAX_LENGTH
-        }
+
+        if (len > MAX_LENGTH) return
         if (len & (len - 1)) return
 
         if (hotArray === undefined) {
@@ -79,7 +78,7 @@ export function useArrayPool<T>(): ArrayPool<T, Array<T>> {
 
         let stack = pool.get(len)
         if (stack === undefined) {
-            stack = new Stack<Array<T>>()
+            stack = new Stack<A>()
             pool.set(len, stack)
         }
         stack.push(array)
