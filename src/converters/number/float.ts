@@ -1,6 +1,6 @@
 import { DOT, E, MINUS, PLUS, ZERO } from "../../utils/ascii_symbols"
 import { ReadResult, ReadResultType } from "../../utils/types"
-import { ConvertState, JsonReader, PrimitiveMeta } from "../../metadata/types"
+import { ConvertState, ParseContext, JsonReader, PrimitiveMeta } from "../../metadata/types"
 import { isDigitUnsafe } from "../../utils/ascii"
 
 export type FloatFormat = {
@@ -57,11 +57,10 @@ const mantissaU32 = new Uint32Array(2)
 
 export function tryParseFloat64(
     metadata: PrimitiveMeta<number>,
-    reader: JsonReader,
+    context: ParseContext,
     index: number,
-    depth: number,
-    state: ConvertState): ReadResult<number> {
-    return tryParseFloat(reader, index, f64Format)
+    depth: number): ReadResult<number> {
+    return tryParseFloat(context.reader, index, f64Format)
 }
 
 export function tryParseFloat(reader: JsonReader, index: number, format: FloatFormat): ReadResult<number> {

@@ -1,4 +1,4 @@
-import { BaseMeta, JsonContext, MapMeta } from "../metadata/types"
+import { BaseMeta, ParseContext, MapMeta } from "../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN } from "../utils/ascii_symbols"
 import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
@@ -10,7 +10,7 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function tryParseMap<T, M extends BaseMeta<T, M>>(
     metadata: MapMeta<T, M>,
-    context: JsonContext,
+    context: ParseContext,
     index: number,
     depth: number,
 ): ReadResult<Map<string, T>> {

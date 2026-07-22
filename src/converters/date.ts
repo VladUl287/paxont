@@ -1,4 +1,4 @@
-import { JsonContext, JsonReader, PrimitiveMeta } from "../metadata/types"
+import { ParseContext, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { JsonOptions } from "../options"
 import { utc } from "../utils/date"
 import { COLON, DOT, DOUBLE_QUOTE, MINUS, PLUS, T_UPPER, Z } from "../utils/ascii_symbols"
@@ -13,7 +13,7 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function tryParseDate(
     metadata: PrimitiveMeta<Date>,
-    context: JsonContext,
+    context: ParseContext,
     index: number,
     depth: number,
 ): ReadResult<Date> {
@@ -45,7 +45,7 @@ type TryParseResult = {
     nextIndex: number
 }
 
-function fromString(context: JsonContext, i: number): ReadResult<Date> {
+function fromString(context: ParseContext, i: number): ReadResult<Date> {
     const { reader, options } = context
     const b = reader.bytes
     const len = b.length

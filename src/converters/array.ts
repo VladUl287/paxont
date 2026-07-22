@@ -1,4 +1,4 @@
-import { BaseMeta, ArrayMeta, JsonContext } from "../metadata/types"
+import { BaseMeta, ArrayMeta, ParseContext } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/ascii_symbols"
 import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
@@ -11,7 +11,7 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toArray<T, A extends MutableArray<T>, M extends BaseMeta<T, M>>(
     metadata: ArrayMeta<T, A, M>,
-    context: JsonContext,
+    context: ParseContext,
     index: number,
     depth: number
 ): ReadResult<A> {

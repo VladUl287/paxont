@@ -1,6 +1,6 @@
 import { skipWhitespace } from "./utils"
 import { ReadResult, ReadResultType } from "../utils/types"
-import { JsonContext, ObjectFromMeta, ObjectMeta } from "../metadata/types"
+import { ParseContext, ObjectFromMeta, ObjectMeta } from "../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, DOUBLE_QUOTE } from "../utils/ascii_symbols"
 import { JSONParseError } from "../utils/error"
 
@@ -10,7 +10,7 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function tryParseObject<T extends Record<string, any>>(
     m: ObjectMeta<T>,
-    context: JsonContext,
+    context: ParseContext,
     index: number,
     depth: number,
 ): ReadResult<ObjectFromMeta<T>> {

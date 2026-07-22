@@ -1,4 +1,4 @@
-import { JsonContext, PrimitiveMeta } from "../metadata/types"
+import { ParseContext, PrimitiveMeta } from "../metadata/types"
 import { E } from "../utils/ascii_symbols"
 import { ReadResult, ReadResultType } from "../utils/types"
 import { JSONParseError } from "../utils/error"
@@ -9,7 +9,7 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function tryParseBoolean(
     metadata: PrimitiveMeta<boolean>,
-    context: JsonContext,
+    context: ParseContext,
     index: number,
     depth: number
 ): ReadResult<boolean> {

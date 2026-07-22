@@ -1,4 +1,4 @@
-import { BaseMeta, JsonContext, NullableMeta } from "../metadata/types"
+import { BaseMeta, ParseContext, NullableMeta } from "../metadata/types"
 import { isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
 import { L, N, U } from "../utils/ascii_symbols"
 
@@ -9,7 +9,7 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function tryParseNullable<T, M extends BaseMeta<T, M>>(
     metadata: NullableMeta<T, M>,
-    context: JsonContext,
+    context: ParseContext,
     index: number,
     depth: number
 ): ReadResult<T | null> {

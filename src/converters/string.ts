@@ -1,5 +1,5 @@
 import { genUnrolledFromCharCode } from "../code_gen/string"
-import { ConvertState, JsonReader, PrimitiveMeta } from "../metadata/types"
+import { ConvertState, ParseContext, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { IS_NODE } from "../utils/platform"
 import { ReadResult } from "../utils/types"
 import { DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
@@ -12,16 +12,19 @@ const { decode } = useDecoder({
 
 export function tryParseString(
     m: PrimitiveMeta<string>,
-    reader: JsonReader,
-    i: number,
-    d: number,
-    state: ConvertState
+    context: ParseContext,
+    index: number,
+    depth: number
 ): ReadResult<string> {
+    const reader = context.reader
     const b = reader.bytes
 
+    let i = index
     if (b[i] !== DQ) {
         if (i >= b.length && reader.writable)
-            return { nextIndex: i }
+            return {
+                nextsIndex: i
+            }
 
         if (i < b.length && !state.isContinued)
             throw new Error(`Expected " at index ${i}, but found '${b[i]}' while parsing string`)

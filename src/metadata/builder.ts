@@ -1,5 +1,5 @@
 import { toArray } from "../converters/array"
-import { TypedArray } from "../utils/typedArray"
+import { BigIntTypedArray, FloatTypedArray, IntegerTypedArray, TypedArray } from "../utils/typedArray"
 import {
     ArrayMeta,
     BaseMeta, Expand, ExtractType, MapMeta, NullableMeta, ObjectFieldMeta,
@@ -55,11 +55,19 @@ export const nullable = <M extends BaseMeta<ExtractType<M>, M>>(value: M): Nulla
 type Modifier = <M extends BaseMeta<ExtractType<M>, M>>(metadata: M) => M
 
 export const arrayPool =
-    <T, A extends ArrayLike<T>>(pool: ArrayPool<T, A>) =>
+    <T, A extends ArrayLike<T>>(pool: ArrayPool<A>) =>
         <M extends ArrayMeta<ExtractType<M>, ExtractType<M>[], any>>(metadata: M): M => ({
             ...metadata,
             arrayPool: pool
         })
+
+const globalPools: Record<string, ArrayPool<any>> = Object.freeze({
+    number: useArrayPool(Float64Array),
+    u8: useArrayPool(Uint8Array),
+    string: useArrayPool<Array<string>>(Array),
+    object: useArrayPool<Array<number>>(Array),
+    undefined: useArrayPool(Array)
+})
 
 export const array = <M extends BaseMeta<ExtractType<M>, M>>(
     value: M,
@@ -74,7 +82,7 @@ export const array = <M extends BaseMeta<ExtractType<M>, M>>(
             return `[${value.map(c => toJson(metaValue, c, options)).join(',')}]`
         },
         value: value,
-        arrayPool: useArrayPool()
+        arrayPool: globalPools[value.type] ?? useArrayPool(Array)
     }
 
     modifiers.forEach(modify => {
@@ -87,16 +95,16 @@ export const array = <M extends BaseMeta<ExtractType<M>, M>>(
 export const u8Array = () => typedArray<Uint8Array>(JSONT.U8_ARRAY, u8())
 export const u16Array = () => typedArray<Uint16Array>(JSONT.U16_ARRAY, u16())
 export const u32Array = () => typedArray<Uint32Array>(JSONT.U32_ARRAY, u32())
-export const u64Array = () => typedArray1<BigUint64Array>(JSONT.U32_ARRAY, u64())
+export const u64Array = () => bigIntTypedArray<BigUint64Array>(JSONT.U32_ARRAY, u64())
 
 export const i8Array = () => typedArray<Int8Array>(JSONT.I8_ARRAY, i8())
 export const i16Array = () => typedArray<Int16Array>(JSONT.I16_ARRAY, i16())
 export const i32Array = () => typedArray<Int32Array>(JSONT.I32_ARRAY, i32())
-export const i64Array = () => typedArray1<BigInt64Array>(JSONT.I64_ARRAY, i64())
+export const i64Array = () => bigIntTypedArray<BigInt64Array>(JSONT.I64_ARRAY, i64())
 
 export const f64Array = () => typedArray<Float64Array>(JSONT.F64_ARRAY, number())
 
-const typedArray = <T extends TypedArray>(
+const typedArray = <T extends IntegerTypedArray | FloatTypedArray >(
     type: BaseType, value: PrimitiveMeta<number>
 ): ArrayMeta<number, T, PrimitiveMeta<number>> => ({
     type: type,
@@ -105,7 +113,7 @@ const typedArray = <T extends TypedArray>(
     value: value
 })
 
-const typedArray1 = <T extends TypedArray>(
+const bigIntTypedArray = <T extends BigIntTypedArray>(
     type: BaseType, value: PrimitiveMeta<bigint>
 ): ArrayMeta<bigint, T, PrimitiveMeta<bigint>> => ({
     type: type,

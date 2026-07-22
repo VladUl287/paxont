@@ -1,4 +1,4 @@
-import { ConvertState, JsonReader, PrimitiveMeta } from "../../metadata/types"
+import { ConvertState, JsonReader, ParseContext, PrimitiveMeta } from "../../metadata/types"
 import { JSONParseError } from "../../utils/error"
 import { ReadResult, ReadResultType } from "../../utils/types"
 import { MINUS } from "../../utils/ascii_symbols"
@@ -10,50 +10,44 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export const tryParseInt8 = (
     metadata: PrimitiveMeta<number>,
-    reader: JsonReader,
+    { reader }: ParseContext,
     index: number,
-    depth: number,
-    state: ConvertState
+    depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 3, -128, 127, true)
 
 export const tryParseUint8 = (
     metadata: PrimitiveMeta<number>,
-    reader: JsonReader,
+    { reader }: ParseContext,
     index: number,
-    depth: number,
-    state: ConvertState
+    depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 3, 0, 255, false)
 
 export const tryParseInt16 = (
     metadata: PrimitiveMeta<number>,
-    reader: JsonReader,
+    { reader }: ParseContext,
     index: number,
-    depth: number,
-    state: ConvertState
+    depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 5, -32768, 32767, true)
 
 export const tryParseUint16 = (
     metadata: PrimitiveMeta<number>,
-    reader: JsonReader,
+    { reader }: ParseContext,
     index: number,
-    depth: number,
-    state: ConvertState
+    depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 5, 0, 65535, false)
 
 export const tryParseInt32 = (
     metadata: PrimitiveMeta<number>,
-    reader: JsonReader,
+    { reader }: ParseContext,
     index: number,
-    depth: number,
-    state: ConvertState
+    depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 10, -2147483648, 2147483647, true)
 
 export const tryParseUint32 = (
     metadata: PrimitiveMeta<number>,
-    reader: JsonReader,
+    { reader }: ParseContext,
     index: number,
-    depth: number,
-    state: ConvertState
+    depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 10, 0, 4294967295, false)
 
 export function tryParseInt(

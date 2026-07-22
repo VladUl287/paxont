@@ -32,13 +32,6 @@ export const clampLength = (minLength: number): number => {
     return 1 << (32 - Math.clz32(n))
 }
 
-const globalPools = Object.freeze({
-    number: useArrayPool(Float64Array),
-    u8: useArrayPool(Uint8Array),
-    string: useArrayPool<Array<string>>(Array),
-    object: useArrayPool<Array<number>>(Array)
-})
-
 export function useArrayPool<A extends ArrayLike<any>>(ctor: new (length: number) => A): ArrayPool<A> {
     const MAX_LENGTH = 0x3fffffff
     const globalMinLength = 2

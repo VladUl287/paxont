@@ -1,4 +1,4 @@
-import { ConvertState, JsonReader, PrimitiveMeta } from "../../metadata/types"
+import { ConvertState, JsonReader, ParseContext, PrimitiveMeta } from "../../metadata/types"
 import { MINUS } from "../../utils/ascii_symbols"
 import { ReadResult, ReadResultType } from "../../utils/types"
 import { JSONParseError } from "../../utils/error"
@@ -12,28 +12,31 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export const tryParseInt64 = (
     metadata: PrimitiveMeta<bigint>,
-    reader: JsonReader,
+    reader: ParseContext,
     index: number,
-    depth: number,
-    state: ConvertState
-): ReadResult<bigint> => parseInt64(reader, index, -9223372036854775808n, 9223372036854775807n, true)
+    depth: number
+): ReadResult<bigint> => parseInt64(reader.reader, index, -9223372036854775808n, 9223372036854775807n, true)
 
 export const tryParseUint64 = (
     metadata: PrimitiveMeta<bigint>,
-    reader: JsonReader,
+    reader: ParseContext,
     index: number,
-    depth: number,
-    state: ConvertState
-): ReadResult<bigint> => parseInt64(reader, index, 0n, 18446744073709551615n, false)
+    depth: number
+): ReadResult<bigint> => parseInt64(reader.reader, index, 0n, 18446744073709551615n, false)
 
 export function tryParseBigInt(
-    _m: PrimitiveMeta<bigint>, ctx: JsonReader, i: number, _d: number, state: BigIntState): ReadResult<bigint> {
-    const b = ctx.bytes
+    metadata: PrimitiveMeta<bigint>, 
+    context: ParseContext, 
+    index: number,
+    depth: number): ReadResult<bigint> {
+    const reader = context.reader
+    const b = reader.bytes
     const len = b.length
 
+    let i = index
     let start = i
-    if (state.isContinued)
-        i = state.lastIndex ?? i
+    // if (state.isContinued)
+    //     i = state.lastIndex ?? i
 
     try {
         while (i < len - 4) {
@@ -49,15 +52,15 @@ export function tryParseBigInt(
 
         while (i < len && isDigitUnsafe(b[i])) i++
 
-        if (i === len && ctx.writable) {
-            state.isContinued = true
-            state.lastIndex = i
+        // if (i === len && ctx.writable) {
+        //     state.isContinued = true
+        //     state.lastIndex = i
 
-            return {
-                type: NEEDS_MORE_DATA,
-                nextIndex: start
-            }
-        }
+        //     return {
+        //         type: NEEDS_MORE_DATA,
+        //         nextIndex: start
+        //     }
+        // }
 
         const length = i - start
         if (length <= 0) {
@@ -68,7 +71,7 @@ export function tryParseBigInt(
             }
         }
 
-        const decoder = ctx.options.decoder
+        const decoder = context.options.decoder
         const view = new Uint8Array(b.buffer, start, i - start)
         return {
             type: COMPLETE,
@@ -82,12 +85,6 @@ export function tryParseBigInt(
             error: new JSONParseError(
                 `Unexpected error while parsing bigint at index ${i}: ${error instanceof Error ? error.message : String(error)}`,
                 i, { cause: error })
-        }
-    }
-    finally {
-        if (state.isContinued) {
-            state.isContinued = false
-            state.lastIndex = 0
         }
     }
 }

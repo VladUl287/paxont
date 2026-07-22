@@ -11,7 +11,7 @@ export type JsonReader = {
     readonly writable: boolean
 }
 
-export type JsonContext = {
+export type ParseContext = {
     readonly reader: JsonReader,
     readonly options: JsonOptions,
     readonly stack: Stack<ConvertState>
@@ -23,7 +23,7 @@ export type ConvertState = {
 }
 
 export type ToValueConverter<T, M extends BaseMeta<T, M>> = 
-    (metadata: M, context: JsonContext, index: number, depth: number) => ReadResult<T>
+    (metadata: M, context: ParseContext, index: number, depth: number) => ReadResult<T>
 
 export type ToJsonConverter<T, M extends BaseMeta<T, M>> = (metadata: M, value: T, options: JsonOptions) => string
 
