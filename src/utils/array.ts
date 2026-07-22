@@ -6,9 +6,14 @@ export interface MutableArray<V> {
     slice: (start?: number, end?: number) => this
 }
 
-export type ArrayRecycler<T extends MutableArray<V>, V> = {
-    acquire: (length: number, source?: T) => T,
+export type ArrayRecycler<A extends MutableArray<any>> = {
+    acquire: (length: number, source?: A) => A,
     dispose(): void
+}
+
+export type ArrayPool<A extends ArrayLike<any>> = {
+    rent: (minLength: number) => A
+    release: (array: A) => void
 }
 
 export const copyArray = <V, T extends MutableArray<V>>(source: ArrayLike<V>, target: T): T => {
@@ -33,11 +38,6 @@ const globalPools = Object.freeze({
     string: useArrayPool<Array<string>>(Array),
     object: useArrayPool<Array<number>>(Array)
 })
-
-export type ArrayPool<A extends ArrayLike<any>> = {
-    rent: (minLength: number) => A
-    release: (array: A) => void
-}
 
 export function useArrayPool<A extends ArrayLike<any>>(ctor: new (length: number) => A): ArrayPool<A> {
     const MAX_LENGTH = 0x3fffffff
@@ -87,10 +87,10 @@ export function useArrayPool<A extends ArrayLike<any>>(ctor: new (length: number
     return { rent, release }
 }
 
-export function useArrayRecycler<T extends MutableArray<V>, V>(ctor: new (length: number) => T): ArrayRecycler<T, V> {
-    let array: T | null = null
+export function useArrayRecycler<A extends MutableArray<any>>(ctor: new (length: number) => A): ArrayRecycler<A> {
+    let array: A | null = null
 
-    const acquire = (newLength: number, source?: T) => {
+    const acquire = (newLength: number, source?: A) => {
         if (array !== null && array.length >= newLength) {
             if (source) {
                 const length = Math.min(newLength, source.length)
