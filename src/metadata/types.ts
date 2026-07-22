@@ -18,7 +18,7 @@ export type JsonContext = {
 }
 
 export type ConvertState = {
-    isContinued?: boolean,
+    isContinued: boolean,
     [key: string]: any
 }
 
