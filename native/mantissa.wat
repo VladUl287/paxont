@@ -1,4 +1,3 @@
-
 (module
   (import "env" "memory" (memory 1))
   (export "memory" (memory 0))
@@ -13,6 +12,9 @@
     (local $digit i32)
     (local $digitsCount i32)
     (local $exponent i32)
+    (local $data v128)
+    (local $sub v128)
+    (local $cmp v128)
     (local $STATE_NONZERO i32)
     (local $STATE_DECIMAL i32)
     
@@ -24,6 +26,27 @@
     (local.set $exponent (i32.const 0))
     (local.set $i (i32.const 0))
     
+    (block $outer_break
+      (loop $outer_loop
+        (if (i32.le_u (local.get $i) (i32.sub (local.get $length) (i32.const 16)))
+          (then
+            (local.set $data (v128.load (local.get $i)))
+            (local.set $sub (i8x16.sub (local.get $data) (v128.const i8x16 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48)))
+            (local.set $cmp (i8x16.le_u (local.get $sub) (v128.const i8x16 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9)))
+
+            (br_if $outer_break (i32.eqz (i8x16.all_true (local.get $cmp))))
+
+            (v128.store (local.get $targetPtr) (local.get $sub))
+            
+            (local.set $i (i32.add (local.get $i) (i32.const 16)))
+            (local.set $targetPtr (i32.add (local.get $targetPtr) (i32.const 16)))
+            (local.set $digitsCount (i32.add (local.get $digitsCount) (i32.const 16)))
+
+            (br $outer_loop)
+          )
+          (else (br $outer_break))
+      )))
+
     (block $inner_break
       (loop $inner_loop
         (br_if $inner_break (i32.ge_u (local.get $i) (local.get $length)))

@@ -51,7 +51,8 @@ const wasmMemory = new WebAssembly.Memory({
 const swar = new WebAssembly.Instance(
     new WebAssembly.Module(
         new Uint8Array([
-            0, 97, 115, 109, 1, 0, 0, 0, 1, 6, 1, 96, 2, 127, 127, 0, 2, 15, 1, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 0, 1, 3, 2, 1, 0, 6, 31, 6, 127, 1, 65, 1, 11, 127, 1, 65, 2, 11, 127, 1, 65, 4, 11, 127, 1, 65, 48, 11, 127, 1, 65, 0, 11, 127, 1, 65, 0, 11, 7, 23, 2, 6, 109, 101, 109, 111, 114, 121, 2, 0, 10, 103, 101, 116, 95, 100, 105, 103, 105, 116, 115, 0, 0, 10, 187, 1, 1, 184, 1, 1, 7, 127, 32, 0, 33, 8, 65, 0, 33, 5, 65, 0, 33, 6, 65, 0, 33, 7, 65, 0, 33, 2, 2, 64, 3, 64, 32, 2, 32, 1, 79, 13, 1, 2, 64, 3, 64, 32, 2, 32, 1, 79, 13, 1, 32, 0, 32, 2, 106, 45, 0, 0, 33, 3, 32, 3, 65, 48, 79, 32, 3, 65, 57, 77, 113, 4, 64, 32, 3, 35, 3, 71, 32, 5, 35, 0, 113, 114, 4, 64, 32, 3, 65, 15, 113, 33, 4, 32, 5, 35, 0, 114, 33, 5, 32, 5, 35, 1, 113, 65, 0, 70, 4, 64, 32, 7, 65, 1, 106, 33, 7, 11, 32, 8, 32, 6, 106, 32, 4, 58, 0, 0, 32, 6, 65, 1, 106, 33, 6, 5, 32, 5, 35, 1, 113, 4, 64, 32, 7, 65, 1, 107, 33, 7, 11, 11, 32, 2, 65, 1, 106, 33, 2, 12, 1, 5, 32, 5, 35, 2, 114, 33, 5, 12, 2, 11, 11, 32, 5, 35, 2, 113, 4, 64, 12, 3, 11, 12, 1, 11, 11, 11, 11])
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 6, 1, 96, 2, 127, 127, 0, 2, 15, 1, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 0, 1, 3, 2, 1, 0, 6, 11, 2, 127, 1, 65, 0, 11, 127, 1, 65, 0, 11, 7, 23, 2, 6, 109, 101, 109, 111, 114, 121, 2, 0, 10, 103, 101, 116, 95, 100, 105, 103, 105, 116, 115, 0, 0, 10, 131, 2, 1, 128, 2, 3, 6, 127, 3, 123, 2, 127, 65, 0, 33, 11, 65, 0, 33, 12, 32, 0, 33, 2, 65, 0, 33, 6, 65, 0, 33, 7, 65, 0, 33, 3, 2, 64, 3, 64, 32, 3, 32, 1, 65, 16, 107, 77, 4, 64, 32, 3, 253, 0, 4, 0, 33, 8, 32, 8, 253, 12, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 253, 113, 33, 9, 32, 9, 253, 12, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 253, 42, 33, 10, 32, 10, 253, 99, 69, 13, 2, 32, 2, 32, 9, 253, 11, 4, 0, 32, 3, 65, 16, 106, 33, 3, 32, 2, 65, 16, 106, 33, 2, 32, 6, 65, 16, 106, 33, 6, 12, 1, 5, 12, 2, 11, 11, 11, 2, 64, 3, 64, 32, 3, 32, 1, 79, 13, 1, 32, 0, 32, 3, 106, 45, 0, 0, 33, 4, 32, 4, 65, 48, 107, 65, 9, 77, 4, 64, 32, 4, 65, 48, 71, 32, 11, 114, 4, 64, 32, 4, 65, 15, 113, 33, 5, 65, 1, 33, 11, 32, 12, 69, 4, 64, 32, 7, 65, 1, 106, 33, 7, 11, 32, 2, 32, 5, 58, 0, 0, 32, 6, 65, 1, 106, 34, 6, 33, 2, 5, 32, 12, 4, 64, 32, 7, 65, 1, 107, 33, 7, 11, 11, 32, 3, 65, 1, 106, 33, 3, 12, 1, 5, 12, 2, 11, 11, 11, 11
+        ])
     ), { env: { memory: wasmMemory } }).exports as Swar
 
 console.log(swar)
@@ -90,116 +91,6 @@ export function parseNumberF64(b: Uint8Array, start: number): ReadResult<number>
     memory.set(new Uint8Array(b.buffer, i))
 
     swar.get_digits(0, b.length - i)
-
-    // while (i < length) {
-    //     if (i <= length - 8) {
-    //         memory[digitsCount] = b[i]
-    //         memory[digitsCount + 1] = b[i + 1]
-    //         memory[digitsCount + 2] = b[i + 2]
-    //         memory[digitsCount + 3] = b[i + 3]
-    //         memory[digitsCount + 4] = b[i + 4]
-    //         memory[digitsCount + 5] = b[i + 5]
-    //         memory[digitsCount + 6] = b[i + 6]
-    //         memory[digitsCount + 7] = b[i + 7]
-
-    //         if (is_digits_64(b[i], b[i + 1])) {
-    //             i += 8
-    //             continue
-    //         }
-
-    //         break
-    //     }
-
-    //     // if (i <= length - 4) {
-    //     //     const a = bytes[i]
-    //     //     const b = bytes[i + 1]
-    //     //     const c = bytes[i + 2]
-    //     //     const d = bytes[i + 3]
-
-    //     //     const word = (a << 0 | b << 8 | c << 16 | d << 24) - 0x30303030
-    //     //     const hasNonDigit = ((word + 0x76767676) | word) & 0x80808080
-
-    //     //     if (hasNonDigit === 0) {
-    //     //         const chunk = ((a & 0x0F) * 1000) + ((b & 0x0F) * 100) + ((c & 0x0F) * 10) + (d & 0x0F)
-
-    //     //         if (chunk !== 0 || (state & STATE_NONZERO)) {
-    //     //             digitsCount += 4
-
-    //     //             if ((state & STATE_DECIMAL) === 0)
-    //     //                 scale += 4
-
-    //     //             state |= STATE_NONZERO
-
-    //     //             memory[digitsCount] = a
-    //     //             memory[digitsCount + 1] = b
-    //     //             memory[digitsCount + 2] = c
-    //     //             memory[digitsCount + 3] = d
-    //     //         }
-    //     //         else if (state & STATE_DECIMAL)
-    //     //             scale -= 4
-
-    //     //         i += 4
-    //     //         continue
-    //     //     }
-    //     // }
-
-    //     const segment_length = Math.min(length, i + 4)
-    //     while (i < segment_length) {
-    //         const byte = b[i]
-
-    //         if (isDigitUnsafe(byte)) {
-    //             if (byte !== ZERO || (state & STATE_NONZERO)) {
-    //                 state |= STATE_NONZERO
-
-    //                 digitsCount++
-
-    //                 if ((state & STATE_DECIMAL) === 0)
-    //                     scale++
-
-    //                 memory[digitsCount] = (byte & 0x0F)
-    //             }
-    //             else if (state & STATE_DECIMAL) {
-    //                 scale--
-    //             }
-    //             i++
-    //             continue
-    //         }
-
-    //         if (byte === DOT) {
-    //             state |= STATE_DECIMAL
-    //             i++
-    //             continue
-    //         }
-
-    //         if (byte === E || byte === E_UPPER) {
-    //             i++
-
-    //             let signExp = 1
-    //             if (b[i] === MINUS) {
-    //                 signExp = -1
-    //                 i++
-    //             }
-    //             else if (b[i] === PLUS) {
-    //                 i++
-    //             }
-
-    //             let exponent = 0
-    //             while (isDigit(b[i])) {
-    //                 exponent = exponent * 10 + (b[i] - 48)
-    //                 i++
-    //             }
-
-    //             exponent *= signExp
-    //             scale += exponent
-    //         }
-
-    //         state |= STATE_END
-    //         break
-    //     }
-
-    //     if (state & STATE_END)
-    //         break
-    // }
 
     const positiveExponent = Math.max(0, scale)
     const integerDigitsPresent = Math.min(positiveExponent, digitsCount)
