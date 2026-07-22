@@ -1,7 +1,8 @@
 import { ConvertState, JsonReader, PrimitiveMeta } from "../../metadata/types"
 import { JSONParseError } from "../../utils/error"
 import { ReadResult, ReadResultType } from "../../utils/types"
-import { isDigitUnsafe, MINUS } from "../../utils/ascii_symbols"
+import { MINUS } from "../../utils/ascii_symbols"
+import { isDigitUnsafe } from "../../utils/ascii"
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR

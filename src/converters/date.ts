@@ -1,10 +1,11 @@
 import { JsonContext, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { JsonOptions } from "../options"
 import { utc } from "../utils/date"
-import { COLON, DOT, DOUBLE_QUOTE, isDigitUnsafe, MINUS, PLUS, T_UPPER, Z } from "../utils/ascii_symbols"
+import { COLON, DOT, DOUBLE_QUOTE, MINUS, PLUS, T_UPPER, Z } from "../utils/ascii_symbols"
 import { isComplete, ReadResult, ReadResultType } from "../utils/types"
 import { JSONParseError } from "../utils/error"
 import { f64Format, tryParseFloat } from "./number/float"
+import { isDigitUnsafe } from "../utils/ascii"
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
