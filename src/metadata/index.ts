@@ -8,7 +8,7 @@ import {
 import { Int16, Int32, Int64, Int8, Nullable, Uint16, Uint32, Uint64, Uint8 } from "../utils/types"
 import { isPlainObject } from "../utils/object"
 
-type UseMetadata = {
+export type MetadataBuilder = {
     addType: <M extends BaseMeta<any, any>>(type: JType<M>) => void
     deleteType: (type: TypeName | JType) => boolean
     getTypes: () => JType[]
@@ -28,10 +28,10 @@ interface JType<M extends BaseMeta<any, any> = BaseMeta<any, any>> {
 }
 
 
-export function useMetadata(): UseMetadata {
+export function useMetadata(): MetadataBuilder {
     const types = new Map<TypeName, JType>()
 
-    const withDefaultTypes = (meta: UseMetadata): UseMetadata => {
+    const withDefaultTypes = (meta: MetadataBuilder): MetadataBuilder => {
         const types: JType<BaseMeta<any, any>>[] = [
             { type: JSONT.STRING, check: (d) => typeof d === 'string', toMeta: string, priority: 50 },
             { type: JSONT.NUMBER, check: (d) => typeof d === 'number', toMeta: number, priority: 50 },
