@@ -36,7 +36,7 @@ export function toDate(
 
     return {
         type: ERROR,
-        error: new JSONParseError(`Expected date value at index ${index}, but found '${String.fromCharCode(b[index])}'`, index)
+        error: new JSONParseError(`Expected date value at index ${index}, but found '${String.fromCharCode(b[index])}'`)
     }
 }
 
@@ -70,7 +70,7 @@ function fromString(context: ParseContext, i: number): ReadResult<Date> {
 
     return {
         type: ERROR,
-        error: new JSONParseError(`Invalid date value '${b[i]}' at index ${i}`, i)
+        error: new JSONParseError(`Invalid date value '${b[i]}' at index ${i}`)
     }
 }
 
@@ -86,7 +86,7 @@ function fromTimestamp(reader: JsonReader, i: number): ReadResult<Date> {
         if (value < minValue || value > maxValue)
             return {
                 type: ERROR,
-                error: new JSONParseError('', i)
+                error: new JSONParseError('')
             }
 
         const date = new Date(value)
@@ -94,7 +94,7 @@ function fromTimestamp(reader: JsonReader, i: number): ReadResult<Date> {
         if (isNaN(date.valueOf()))
             return {
                 type: ERROR,
-                error: new JSONParseError('', i)
+                error: new JSONParseError('')
             }
 
         return {

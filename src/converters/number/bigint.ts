@@ -67,7 +67,7 @@ export function toBigInt(
             return {
                 type: ERROR,
                 error: new JSONParseError(
-                    `Expected at least one digit at index ${i}, but found '${String.fromCharCode(b[i])}' while parsing bigint`, i)
+                    `Expected at least one digit at index ${i}, but found '${String.fromCharCode(b[i])}' while parsing bigint`)
             }
         }
 
@@ -84,7 +84,7 @@ export function toBigInt(
             type: ReadResultType.ERROR,
             error: new JSONParseError(
                 `Unexpected error while parsing bigint at index ${i}: ${error instanceof Error ? error.message : String(error)}`,
-                i, { cause: error })
+                { cause: error })
         }
     }
 }

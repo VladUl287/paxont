@@ -54,7 +54,7 @@ function parseInt8(reader: JsonReader, i: number, minValue: number, maxValue: nu
                 if (i < len && isDigitUnsafe(b[i]))
                     return {
                         type: ERROR,
-                        error: new JSONParseError(``, i)
+                        error: new JSONParseError(``)
                     }
             }
         }
@@ -71,7 +71,7 @@ function parseInt8(reader: JsonReader, i: number, minValue: number, maxValue: nu
     if (m < minValue || m > maxValue)
         return {
             type: ERROR,
-            error: new JSONParseError(``, i)
+            error: new JSONParseError(``)
         }
 
     return {

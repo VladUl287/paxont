@@ -75,7 +75,7 @@ export function tryParseInt(
     if (i < len && isDigitUnsafe(b[i]))
         return {
             type: ERROR,
-            error: new JSONParseError(``, i)
+            error: new JSONParseError(``)
         }
 
     if (i >= len && reader.writable)
@@ -89,7 +89,7 @@ export function tryParseInt(
     if (m < minValue || m > maxValue) {
         return {
             type: ERROR,
-            error: new JSONParseError(``, i)
+            error: new JSONParseError(``)
         }
     }
 

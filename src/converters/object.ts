@@ -19,7 +19,7 @@ export function toObject<T extends Record<string, any>>(
     if (depth > options.maxDepth)
         return {
             type: ERROR,
-            error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${index}`, index)
+            error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${index}`)
         }
     depth++
 
@@ -36,7 +36,7 @@ export function toObject<T extends Record<string, any>>(
 
         return {
             type: ERROR,
-            error: new JSONParseError(`Unexpected end of input at index ${i} while parsing object`, i)
+            error: new JSONParseError(`Unexpected end of input at index ${i} while parsing object`)
         }
     }
 
@@ -57,7 +57,7 @@ export function toObject<T extends Record<string, any>>(
             if (reader.writable && i > b.length)
                 return {
                     type: ERROR,
-                    error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${i}`, i)
+                    error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${i}`)
                 }
 
             return {
@@ -72,7 +72,7 @@ export function toObject<T extends Record<string, any>>(
             if (reader.writable || i < b.length)
                 return {
                     type: ERROR,
-                    error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${index}`, index)
+                    error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${index}`)
                 }
 
             return {
@@ -88,7 +88,7 @@ export function toObject<T extends Record<string, any>>(
             if (reader.writable || i < b.length)
                 return {
                     type: ERROR,
-                    error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${index}`, index)
+                    error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${index}`)
                 }
 
             return {

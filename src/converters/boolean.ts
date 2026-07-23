@@ -44,6 +44,6 @@ export function toBoolean(
     return {
         type: ERROR,
         error: new JSONParseError(
-            `Expected 'true' or 'false' at index ${i}, but found '${String.fromCharCode(b[i])}' while parsing boolean`, i)
+            `Expected 'true' or 'false' at index ${i}, but found '${String.fromCharCode(b[i])}' while parsing boolean`)
     }
 }

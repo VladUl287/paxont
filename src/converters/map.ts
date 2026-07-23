@@ -25,7 +25,7 @@ export function toMap<T, M extends BaseMeta<T, M>>(
         if (b[i] !== CURLY_OPEN)
             return {
                 type: ERROR,
-                error: new JSONParseError(``, i)
+                error: new JSONParseError(``)
             }
         i++
     }
@@ -72,7 +72,7 @@ export function toMap<T, M extends BaseMeta<T, M>>(
         if (b[i] !== COLON) {
             return {
                 type: ERROR,
-                error: new JSONParseError('', i)
+                error: new JSONParseError('')
             }
         }
         i++
