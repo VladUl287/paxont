@@ -4,6 +4,8 @@ export function generateTrieSwitch(fields: Uint8Array[]) {
         readonly index: number
     }
 
+    // TODO: long fields
+    // TODO: many fields
     const buildSwitchTrie = (fields: Array<Field>, depth = 0) => {
         const fieldsCount = fields.length
 
@@ -28,9 +30,9 @@ export function generateTrieSwitch(fields: Uint8Array[]) {
             let i = depth
             while (i < b.length - 4) {
                 const a1 = b[i], a2 = b[i + 1], a3 = b[i + 2], a4 = b[i + 3]
-
+                
                 const packValue = a1 << 0 | a2 << 8 | a3 << 16 | a4 << 24
-                chunks.push(`((a[i+${i}]<<0 | a[i+${i + 1}]<<8 | a[i+${i + 2}]<<16 | a[i+${i + 3}]<<24) === ${packValue})`)
+                chunks.push(`((a[i+${i}] | a[i+${i + 1}]<<8 | a[i+${i + 2}]<<16 | a[i+${i + 3}]<<24) === ${packValue})`)
 
                 i += 4
             }
