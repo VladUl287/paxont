@@ -6,7 +6,7 @@ export type JsonOptions = {
     readonly fieldCaseInsensitive: boolean
 }
 
-export const defaultOptions: JsonOptions = {
+export const defaultOptions: JsonOptions = Object.freeze({
     encoder: new TextEncoder(),
     decoder: new TextDecoder('utf-8', {
         fatal: false
@@ -14,7 +14,7 @@ export const defaultOptions: JsonOptions = {
     maxDepth: 64,
     allowTrailingCommas: false,
     fieldCaseInsensitive: false
-}
+})
 
 export function mergeOptions(base: JsonOptions, add: Partial<JsonOptions>): JsonOptions {
     return {
