@@ -59,6 +59,9 @@ export const u64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
 export const i64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
     primitive(JSONT.I64, toInt64, ...modifiers)
 
+function applyModifier<M extends BaseMeta<any, M>>(value: M, modify: Modifier<M>): M {
+    return Object.assign({}, modify(value), { type: value.type })
+}
 
 const primitive = <T>(
     type: BaseType,
@@ -70,18 +73,24 @@ const primitive = <T>(
         toValue: toValue,
         toJson: (s, _) => s.toString()
     }
-    return modifiers.reduce((value, modify) => modify(value), defaultMeta)
+    return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const nullable = <M extends BaseMeta<ExtractType<M>, M>>(value: M): NullableMeta<ExtractType<M>, M> => ({
-    type: JSONT.NULLABLE,
-    toJson: (meta, value, options) => {
-        if (value === null) return 'null'
-        return meta.value.toJson(meta.value, value, options)
-    },
-    toValue: toNullable,
-    value: value,
-})
+export const nullable = <T, M extends BaseMeta<T, M>>(
+    value: M,
+    ...modifiers: Modifier<NullableMeta<T, M>>[]
+): NullableMeta<T, M> => {
+    const defaultMeta: NullableMeta<T, M> = {
+        type: JSONT.NULLABLE,
+        toJson: (meta, value, options) => {
+            if (value === null) return 'null'
+            return meta.value.toJson(meta.value, value, options)
+        },
+        toValue: toNullable,
+        value: value
+    }
+    return modifiers.reduce(applyModifier, defaultMeta)
+}
 
 export const arrayPool =
     <T, A extends ArrayLike<T>>(pool: ArrayPool<A>) =>
@@ -113,7 +122,7 @@ export const array = <T, M extends BaseMeta<T, M>>(
         value: value,
         arrayPool: globalPools[value.type] ?? useArrayPool(Array)
     }
-    return modifiers.reduce((value, modify) => modify(value), defaultMeta)
+    return modifiers.reduce(applyModifier, defaultMeta)
 }
 
 export const u8Array = () => typedArray<Uint8Array>(JSONT.U8_ARRAY, u8())
@@ -151,7 +160,7 @@ const typedArray = <T extends ArrayLikeWritable<number> & (IntegerTypedArray | F
         value: value,
         arrayPool: globalPools[value.type]
     }
-    return modifiers.reduce((value, modify) => modify(value), defaultMeta)
+    return modifiers.reduce(applyModifier, defaultMeta)
 }
 
 const bigIntTypedArray = <T extends ArrayLikeWritable<bigint> & BigIntTypedArray>(
@@ -177,7 +186,7 @@ const bigIntTypedArray = <T extends ArrayLikeWritable<bigint> & BigIntTypedArray
         value: value,
         arrayPool: globalPools[value.type]
     }
-    return modifiers.reduce((value, modify) => modify(value), defaultMeta)
+    return modifiers.reduce(applyModifier, defaultMeta)
 }
 
 export const map = <T, M extends BaseMeta<T, M>>(
@@ -195,7 +204,7 @@ export const map = <T, M extends BaseMeta<T, M>>(
             return `{${[...v.entries()].map(c => `"${c[0]}": ${toJson(meta, c[1], o)}`).join(',')}}`
         }
     }
-    return modifiers.reduce((value, modify) => modify(value), defaultMeta)
+    return modifiers.reduce(applyModifier, defaultMeta)
 }
 
 export const set = <T, M extends BaseMeta<T, M>>(value: M, ...modifiers: Modifier<SetMeta<T, M>>[]): SetMeta<T, M> => {
@@ -212,7 +221,7 @@ export const set = <T, M extends BaseMeta<T, M>>(value: M, ...modifiers: Modifie
             return `[${values}]`
         }
     }
-    return modifiers.reduce((value, modify) => modify(value), defaultMeta)
+    return modifiers.reduce(applyModifier, defaultMeta)
 }
 
 export const field = <K extends string, M extends BaseMeta<ExtractType<M>, M>>(
