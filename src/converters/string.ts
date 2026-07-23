@@ -10,6 +10,34 @@ const { decode } = useDecoder({
     isNode: IS_NODE
 })
 
+export function createStringParser(options: StringParseFactoryOptions) {
+    const tryParseString = (m: PrimitiveMeta<string>, context: ParseContext, index: number, depth: number): ReadResult<string> => {
+        const reader = context.reader
+        const b = reader.bytes
+
+        let i = index
+        if (b[i] !== DQ) {
+            // if (i >= b.length && reader.writable)
+            //     return {
+            //         nextsIndex: i
+            //     }
+
+            if (i < b.length)
+                throw new Error(`Expected " at index ${i}, but found '${b[i]}' while parsing string`)
+        }
+        else i++
+
+        return decode(reader, i)
+    }
+
+    return {
+        tryParseString
+    }
+}
+
+const toString1 = createStringParser({} as any).tryParseString
+export default toString1
+
 export function toString(
     m: PrimitiveMeta<string>,
     context: ParseContext,
@@ -43,18 +71,18 @@ type DecodeModule = {
     readonly parse_ascii_prefix: (index: number, length: number, target: number) => number
 }
 
-type UseDecodeOptions = {
+type StringParseFactoryOptions = {
     readonly maxWasmMemoryPages: number
     readonly initialWasmMemoryPages: number
     readonly isNode: boolean
 }
 
 type UseDecode = {
-    readonly options: UseDecodeOptions,
+    readonly options: StringParseFactoryOptions,
     readonly module: DecodeModule
 }
 
-function useDecoder(options: UseDecodeOptions) {
+function useDecoder(options: StringParseFactoryOptions) {
     try {
         const wasmMemory = new WebAssembly.Memory({
             initial: options.initialWasmMemoryPages,
