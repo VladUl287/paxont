@@ -16,6 +16,18 @@ export type ArrayPool<A extends ArrayLike<any>> = {
     release: (array: A) => void
 }
 
+export const groupBy = <K, V>(fields: V[], keySelector: (field: V) => K) => {
+    return fields.reduce((map, field) => {
+        const key = keySelector(field)
+        const fields = map.get(key)
+        if (fields) {
+            fields.push(field)
+            return map
+        }
+        return map.set(key, [field])
+    }, new Map<K, V[]>())
+}
+
 export const copyArray = <V, T extends ArrayLikeWritable<V>>(source: ArrayLike<V>, target: T): T => {
     if (!source || !target) return target
 
