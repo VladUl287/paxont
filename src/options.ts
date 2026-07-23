@@ -20,7 +20,7 @@ export function mergeOptions(base: JsonOptions, add: Partial<JsonOptions>): Json
     return {
         ...base,
         ...Object.fromEntries(
-            Object.entries(add ?? {}).filter(([_, value]) => Boolean(value))
+            Object.entries(add ?? {}).filter(([_, value]) => value !== null && value !== undefined)
         )
     }
 }
