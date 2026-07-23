@@ -4,8 +4,6 @@ export function generateTrieSwitch(fields: Uint8Array[]) {
         readonly index: number
     }
 
-    // TODO: long fields
-    // TODO: many fields
     const buildSwitchTrie = (fields: Array<Field>, depth = 0) => {
         const fieldsCount = fields.length
 
@@ -14,18 +12,10 @@ export function generateTrieSwitch(fields: Uint8Array[]) {
             return `return ${fields[0].index};`
         }
 
-        // const maxDepth = Math.max(...fields.map(arr => arr.length))
-        // if (depth >= maxDepth) {
-        //     if (fields.length === 1) {
-        //         return `return ${indices[0]};`
-        //     }
-        //     return 'return -1;'
-        // }
-
         if (fieldsCount === 1) {
             const { bytes: b, index } = fields[0]
 
-            const chunks = new Array<string>(Math.ceil(b.length / 4) + 1)
+            const chunks = new Array<string>()
 
             let i = depth
             while (i < b.length - 4) {
@@ -145,5 +135,5 @@ export function generateTrieSwitch(fields: Uint8Array[]) {
     }))
     const functionBody = `${buildSwitchTrie(mappedFields, 0)}return -1;`
     console.log(functionBody)
-    return new Function('arr', 'i', functionBody)
+    return new Function('a', 'i', functionBody)
 }
