@@ -1,8 +1,10 @@
-export type CacheFactory<K, V> = {
+export type Cache<K, V> = {
     getOrAdd: <T extends V>(key: K, factory: (key: K) => T) => T
 }
 
-export function createCache<K, V>(): CacheFactory<K, V> {
+export type CacheFactory = <K, V>() => Cache<K, V>
+
+export function createCache<K, V>(): Cache<K, V> {
     const cache = new Map<K, V>()
 
     return {
