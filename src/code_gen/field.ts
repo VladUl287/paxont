@@ -1,6 +1,4 @@
-import { TrieOptions } from "./types"
-
-export function generateTrieSwitch(fields: Uint8Array[], options: TrieOptions) {
+export function generateTrieSwitch(fields: Uint8Array[]) {
     const buildSwitchTree = (arrays: Uint8Array[], indices: number[], depth = 0) => {
         const maxDepth = Math.max(...arrays.map(arr => arr.length));
 
@@ -17,7 +15,7 @@ export function generateTrieSwitch(fields: Uint8Array[], options: TrieOptions) {
             return 'return -1;'
         }
 
-        if (options.pack && arrays.length === 1) {
+        if (arrays.length === 1) {
             let chunks = []
 
             let bytes = arrays[0]
@@ -160,7 +158,5 @@ export function generateTrieSwitch(fields: Uint8Array[], options: TrieOptions) {
         return -1;
     `
 
-    // console.log(functionBody)
-
-    return new Function('arr', 'i', functionBody);
+    return new Function('arr', 'i', functionBody)
 }
