@@ -1,162 +1,147 @@
 export function generateTrieSwitch(fields: Uint8Array[]) {
-    const buildSwitchTree = (arrays: Uint8Array[], indices: number[], depth = 0) => {
-        const maxDepth = Math.max(...arrays.map(arr => arr.length));
+    type Field = {
+        readonly bytes: Uint8Array,
+        readonly index: number
+    }
 
-        if (arrays.length === 0) return 'return -1;'
+    const buildSwitchTrie = (fields: Array<Field>, depth = 0) => {
+        const fieldsCount = fields.length
 
-        if (arrays.length === 1 && depth >= arrays[0].length) {
-            return `return ${indices[0]};`
+        if (fieldsCount === 0) return 'return -1;'
+        if (fieldsCount === 1 && depth >= fields[0].bytes.length) {
+            return `return ${fields[0].index};`
         }
 
-        if (depth >= maxDepth) {
-            if (arrays.length === 1) {
-                return `return ${indices[0]};`
-            }
-            return 'return -1;'
-        }
+        // const maxDepth = Math.max(...fields.map(arr => arr.length))
+        // if (depth >= maxDepth) {
+        //     if (fields.length === 1) {
+        //         return `return ${indices[0]};`
+        //     }
+        //     return 'return -1;'
+        // }
 
-        if (arrays.length === 1) {
-            let chunks = []
+        if (fieldsCount === 1) {
+            const { bytes: b, index } = fields[0]
 
-            let bytes = arrays[0]
+            const chunks = new Array<string>(Math.ceil(b.length / 4) + 1)
+
             let i = depth
-            for (; i < bytes.length - 4; i += 4) {
-                const a = bytes[i]
-                const b = bytes[i + 1]
-                const c = bytes[i + 2]
-                const d = bytes[i + 3]
+            while (i < b.length - 4) {
+                const a1 = b[i], a2 = b[i + 1], a3 = b[i + 2], a4 = b[i + 3]
 
-                const packValue = a << 0 | b << 8 | c << 16 | d << 24
+                const packValue = a1 << 0 | a2 << 8 | a3 << 16 | a4 << 24
+                chunks.push(`((a[i+${i}]<<0 | a[i+${i + 1}]<<8 | a[i+${i + 2}]<<16 | a[i+${i + 3}]<<24) === ${packValue})`)
 
-                chunks.push(`((arr[i+${i}]<<0 | arr[i+${i + 1}]<<8 | arr[i+${i + 2}]<<16 | arr[i+${i + 3}]<<24) === ${packValue})`)
+                i += 4
             }
 
-            chunks.push(
-                '(' + [...bytes]
-                    .slice(i)
-                    .map((v, j) => `arr[i+${i + j}]===${v}`)
-                    .join(' && ') + ')'
-            )
+            while (i < b.length) {
+                chunks.push(`a[i+${i}]===${b[i]}`)
+                i++
+            }
 
-            return 'return (' + chunks.join(' && ') + `) ? ${indices[0]} : -1`
+            return 'return (' + chunks.join(' && ') + `) ? ${index} : -1`
         }
 
-        const canPack4 = arrays.every(c => (c.length - depth) >= 4)
-        const canPack3 = arrays.every(c => (c.length - depth) >= 3)
+        const canPack4 = fields.every(c => (c.bytes.length - depth) >= 4)
+        const canPack3 = fields.every(c => (c.bytes.length - depth) >= 3)
 
+        let d = depth
         if (canPack4) {
-            const packedMap = new Map()
+            const map = new Map<number, Field[]>()
 
-            for (let i = 0; i < arrays.length; i++) {
-                const arr = arrays[i]
-                const idx = indices[i]
+            for (let i = 0; i < fields.length; i++) {
+                const field = fields[i]
+                const b = field.bytes
 
-                if (depth + 3 < arr.length) {
-                    const packed = (arr[depth] << 0) |
-                        (arr[depth + 1] << 8) |
-                        (arr[depth + 2] << 16) |
-                        (arr[depth + 3] << 24);
+                if (d + 3 < b.length) {
+                    const packed = b[d] | b[d + 1] << 8 | b[d + 2] << 16 | b[d + 3] << 24
+                    const array = map.get(packed) ?? new Array<Field>()
+                    if (!map.has(packed))
+                        map.set(packed, array)
+                    array.push(field)
+                    continue
+                }
 
-                    if (!packedMap.has(packed)) packedMap.set(packed, { arrays: [], indices: [] });
-                    packedMap.get(packed).arrays.push(arr);
-                    packedMap.get(packed).indices.push(idx);
-                } else if (depth < arr.length) {
-                    const val = arr[depth];
-                    if (!packedMap.has(val)) packedMap.set(val, { arrays: [], indices: [] });
-                    packedMap.get(val).arrays.push(arr);
-                    packedMap.get(val).indices.push(idx);
+                if (d < b.length) {
+                    const value = b[d]
+                    const array = map.get(value) ?? new Array<Field>()
+                    if (!map.has(value))
+                        map.set(value, array)
+                    array.push(field)
                 }
             }
 
-            let switchCode = `switch((arr[i+${depth}] << 0 | arr[i+${depth + 1}] << 8 | arr[i+${depth + 2}] << 16 | arr[i+${depth + 3}] << 24) >>> 0) {\n`;
-
-            for (const [packed, { arrays: matchingArrays, indices: matchingIndices }] of packedMap) {
-                switchCode += `    case ${packed}: {\n`;
-                const nested = buildSwitchTree(matchingArrays, matchingIndices, depth + 4)
-                switchCode += `        ${nested}\n`
-                switchCode += `    }\n`
+            let switchTrie = `switch(a[i+${d}] | a[i+${d + 1}]<<8 | a[i+${d + 2}]<<16 | a[i+${d + 3}]<<24){`;
+            for (const [key, fields] of map) {
+                switchTrie += `case ${key}:{${buildSwitchTrie(fields, d + 4)}}`
             }
-
-            switchCode += `    default: return -1;\n`
-            switchCode += `}\n`
-            return switchCode
+            return switchTrie + 'default: return -1;}'
         }
         else if (canPack3) {
-            const packedMap = new Map()
+            const map = new Map<number, Field[]>()
 
-            for (let i = 0; i < arrays.length; i++) {
-                const arr = arrays[i]
-                const idx = indices[i]
+            for (let i = 0; i < fields.length; i++) {
+                const field = fields[i]
+                const b = field.bytes
 
-                if (depth + 2 < arr.length) {
-                    const packed = (arr[depth] << 0) | (arr[depth + 1] << 8) | (arr[depth + 2] << 16)
-
-                    if (!packedMap.has(packed)) packedMap.set(packed, { arrays: [], indices: [] })
-                    packedMap.get(packed).arrays.push(arr)
-                    packedMap.get(packed).indices.push(idx)
+                if (d + 2 < b.length) {
+                    const packed = b[d] | b[d + 1] << 8 | b[d + 2] << 16
+                    const array = map.get(packed) ?? new Array<Field>()
+                    if (!map.has(packed))
+                        map.set(packed, array)
+                    array.push(field)
+                    continue
                 }
-                else if (depth < arr.length) {
-                    const val = arr[depth]
-                    if (!packedMap.has(val)) packedMap.set(val, { arrays: [], indices: [] })
-                    packedMap.get(val).arrays.push(arr)
-                    packedMap.get(val).indices.push(idx)
+
+                if (d < b.length) {
+                    const value = b[d]
+                    const array = map.get(value) ?? new Array<Field>()
+                    if (!map.has(value))
+                        map.set(value, array)
+                    array.push(field)
                 }
             }
 
-            let switchCode = `switch((arr[i+${depth}] << 0 | arr[i+${depth + 1}] << 8 | arr[i+${depth + 2}] << 16) >>> 0) {\n`
-
-            for (const [packed, { arrays: matchingArrays, indices: matchingIndices }] of packedMap) {
-                switchCode += `    case ${packed}: {\n`;
-                const nested = buildSwitchTree(matchingArrays, matchingIndices, depth + 4)
-                switchCode += `        ${nested}\n`
-                switchCode += `    }\n`
+            let switchCode = `switch(a[i+${d}] | a[i+${d + 1}] << 8 | a[i+${d + 2}] << 16) {`
+            for (const [packed, fields] of map) {
+                switchCode += `case ${packed}:{${buildSwitchTrie(fields, d + 4)}}`
             }
-
-            switchCode += `    default: return -1;\n`
-            switchCode += `}\n`
-            return switchCode
+            return switchCode + 'default: return -1;}'
         }
         else {
-            const valueMap = new Map()
-            let defaultValue: number = -1
+            const map = new Map()
+            let defaultIndex: number = -1
 
-            for (let i = 0; i < arrays.length; i++) {
-                const arr = arrays[i];
-                const idx = indices[i];
+            for (let i = 0; i < fields.length; i++) {
+                const field = fields[i]
+                const b = field.bytes
 
-                if (depth < arr.length) {
-                    const val = arr[depth]
-                    if (!valueMap.has(val)) valueMap.set(val, { arrays: [], indices: [] })
-                    valueMap.get(val).arrays.push(arr)
-                    valueMap.get(val).indices.push(idx)
+                if (d < b.length) {
+                    const value = b[d]
+                    const array = map.get(value) ?? new Array<Field>()
+                    if (!map.has(value))
+                        map.set(value, array)
+                    array.push(field)
+                    continue
                 }
-                else {
-                    defaultValue = idx
-                }
+
+                defaultIndex = field.index
             }
 
-            let switchCode = `switch(arr[i+${depth}]) {\n`;
-
-            for (const [val, { arrays: matchingArrays, indices: matchingIndices }] of valueMap) {
-                switchCode += `    case ${val}: {\n`;
-                const nested = buildSwitchTree(matchingArrays, matchingIndices, depth + 1)
-                switchCode += `        ${nested}\n`;
-                switchCode += `    }\n`;
+            let switchCode = `switch(a[i+${d}]){`;
+            for (const [key, fields] of map) {
+                switchCode += `case ${key}:{${buildSwitchTrie(fields, d + 1)}}`
             }
-
-            switchCode += `    default: return ${defaultValue};\n`;
-            switchCode += `}\n`;
-
-            return switchCode;
+            return switchCode + `default: return ${defaultIndex};}`
         }
-    };
+    }
 
-    const indices = fields.map((_, i) => i);
-
-    const functionBody = `
-        ${buildSwitchTree(fields, indices, 0)}
-        return -1;
-    `
-
+    const mappedFields = fields.map((b, i) => ({
+        bytes: b,
+        index: i
+    }))
+    const functionBody = `${buildSwitchTrie(mappedFields, 0)}return -1;`
+    console.log(functionBody)
     return new Function('arr', 'i', functionBody)
 }
