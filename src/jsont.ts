@@ -1,4 +1,4 @@
-import { createCache } from "./cache/cache"
+import { CacheFactory, createCache } from "./cache/cache"
 import { defaultOptions, JsonOptions, mergeOptions } from "./options"
 import { BaseMeta, ConvertState } from "./metadata/types"
 import { ArrayRecycler, useArrayRecycler } from "./utils/array"
