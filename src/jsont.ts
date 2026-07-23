@@ -1,10 +1,10 @@
 import { CacheFactory, createCache } from "./cache/cache"
 import { defaultOptions, JsonOptions, mergeOptions } from "./options"
 import { BaseMeta, ConvertState } from "./metadata/types"
-import { ArrayRecycler, useArrayRecycler } from "./utils/array"
+import { ArrayPool, ArrayRecycler, useArrayRecycler } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
-import { useMetadata } from "./metadata"
+import { MetadataBuilder, useMetadata } from "./metadata"
 import { isError, isNeedsMoreData } from "./utils/types"
 import { Stack } from "./utils/structs"
 
@@ -18,6 +18,44 @@ const recycler = useArrayRecycler<Uint8Array<ArrayBufferLike>>(Uint8Array)
 const defaultStack = new Stack<ConvertState>()
 
 type ExtractType<T> = T extends BaseMeta<infer V, any> ? V : T
+
+export function useJSONT(value: {
+    metadataBuilder: MetadataBuilder,
+    cacheFactory: CacheFactory,
+    recycler: ArrayRecycler<Uint8Array>,
+    pool: ArrayPool<Uint8Array>,
+    jsonOptions: {
+        defaultOptions: JsonOptions,
+        mergetOptions: Function
+    },
+    result: {
+        isComplete: Function,
+        isError: Function,
+        isNeedsMoreData: Function,
+    }
+}) {
+    function deserialize<T>(
+        json: ArrayBuffer | Uint8Array | string,
+        type: T,
+        options?: Partial<JsonOptions>
+    ): ExtractType<T> { return {} as any }
+
+    async function deserializeAsync<T>(
+        json: ReadableStream<Uint8Array>,
+        type: T,
+        options?: Partial<JsonOptions>
+    ): Promise<ExtractType<T>> { return {} as any }
+
+    function serialize<T, M extends BaseMeta<T, any>>(value: T, metadata: M, options?: Partial<JsonOptions>): string {
+        return {} as any
+    }
+
+    return {
+        deserialize,
+        deserializeAsync,
+        serialize
+    }
+}
 
 function toBytes(
     input: ArrayBuffer | Uint8Array | string,
