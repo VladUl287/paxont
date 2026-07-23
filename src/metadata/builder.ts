@@ -136,7 +136,18 @@ const typedArray = <T extends ArrayLikeWritable<number> & (IntegerTypedArray | F
     const defaultMeta: ArrayMeta<number, T, PrimitiveMeta<number>> = {
         type: type,
         toValue: toArray,
-        toJson: (m, value) => `[${value.join(',')}]`,
+        toJson: (meta, value, options) => {
+            const valueMeta = meta.value
+            const values = [...value]
+            const result = values
+                .map(
+                    function (this: typeof valueMeta, number: number) {
+                        return valueMeta.toJson(valueMeta, number, options)
+                    },
+                    valueMeta)
+                .join(',')
+            return `[${result}]`
+        },
         value: value,
         arrayPool: globalPools[value.type]
     }
@@ -151,7 +162,18 @@ const bigIntTypedArray = <T extends ArrayLikeWritable<bigint> & BigIntTypedArray
     const defaultMeta: ArrayMeta<bigint, T, PrimitiveMeta<bigint>> = {
         type: type,
         toValue: toArray,
-        toJson: (m, value) => `[${value.join(',')}]`,
+        toJson: (meta, value, options) => {
+            const valueMeta = meta.value
+            const values = [...value]
+            const result = values
+                .map(
+                    function (this: typeof valueMeta, number: bigint) {
+                        return valueMeta.toJson(valueMeta, number, options)
+                    },
+                    valueMeta)
+                .join(',')
+            return `[${result}]`
+        },
         value: value,
         arrayPool: globalPools[value.type]
     }
