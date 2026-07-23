@@ -16,7 +16,7 @@ import { toNullable } from "../converters/nullable"
 import { toBigInt, toInt64, toUint64 } from "../converters/number/bigint"
 import { toBoolean } from "../converters/boolean"
 import { toString } from "../converters/string"
-import { ArrayPool, useArrayPool } from "../utils/array"
+import { ArrayLikeWritable, ArrayPool, useArrayPool } from "../utils/array"
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../converters/number/int"
 import { toFloat } from "../converters/number/float"
 
@@ -128,7 +128,7 @@ export const i64Array = () => bigIntTypedArray<BigInt64Array>(JSONT.I64_ARRAY, i
 
 export const f64Array = () => typedArray<Float64Array>(JSONT.F64_ARRAY, number())
 
-const typedArray = <T extends IntegerTypedArray | FloatTypedArray>(
+const typedArray = <T extends ArrayLikeWritable<number> & (IntegerTypedArray | FloatTypedArray)>(
     type: BaseType,
     value: PrimitiveMeta<number>,
     ...modifiers: Modifier<ArrayMeta<number, T, PrimitiveMeta<number>>>[]
@@ -143,7 +143,7 @@ const typedArray = <T extends IntegerTypedArray | FloatTypedArray>(
     return modifiers.reduce((value, modify) => modify(value), defaultMeta)
 }
 
-const bigIntTypedArray = <T extends BigIntTypedArray>(
+const bigIntTypedArray = <T extends ArrayLikeWritable<bigint> & BigIntTypedArray>(
     type: BaseType,
     value: PrimitiveMeta<bigint>,
     ...modifiers: Modifier<ArrayMeta<bigint, T, PrimitiveMeta<bigint>>>[]
@@ -215,9 +215,7 @@ export const object = <M extends ObjectFieldMeta<any, any, any>[]>(...fields: M)
     const factory = genObjectFactory(keys) as any
 
     const keysBytes = fields.map(f => f.name.bytes)
-    const fieldIndex = generateTrieSwitch(keysBytes, {
-        pack: true
-    }) as any
+    const fieldIndex = generateTrieSwitch(keysBytes) as any
 
     const toJson = genObjectToJsonFactory1(...fields)
 
