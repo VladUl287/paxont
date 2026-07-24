@@ -1,4 +1,4 @@
-import { Stack } from "./structs"
+import { Stack } from "./stack"
 
 export interface ArrayLikeWritable<T> {
     readonly length: number

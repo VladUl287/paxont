@@ -1,6 +1,6 @@
 import { JsonOptions } from "../options"
 import { ArrayPool, ArrayLikeWritable } from "../utils/array"
-import { Stack } from "../utils/structs"
+import { Stack } from "../utils/stack"
 import { ReadResult } from "../utils/types"
 import { BaseType } from "./baseTypes"
 

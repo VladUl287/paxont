@@ -2,7 +2,7 @@ import { add, complete, cycle, suite } from 'benny'
 import { ParseContext, PrimitiveMeta } from '../../src/metadata/types'
 import { defaultOptions } from '../../src/options'
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from '../../src/converters/number/int'
-import { Stack } from '../../src/utils/structs'
+import { Stack } from '../../src/utils/stack'
 import { toFloat } from '../../src/converters/number/float'
 import { toInt64, toUint64 } from '../../src/converters/number/bigint'
 
