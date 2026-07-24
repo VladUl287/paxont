@@ -39,15 +39,15 @@ suite(
     add('toInt8', () => toInt8(metadata, u8Context, 0, 0)),
     add('toInt16', () => toInt16(metadata, u16Context, 0, 0)),
     add('toInt32', () => toInt32(metadata, u32Context, 0, 0)),
+    add('toFloat', () => toFloat(metadata, f64Context, 0, 0)),
+    add('toUint64', () => toUint64(metadataBigInt, u64Context, 0, 0)),
+    add('toInt64', () => toInt64(metadataBigInt, i64Context, 0, 0)),
+
     add('toUint8_parse', () => JSON.parse(u8_str)),
     add('toUint16_parse', () => JSON.parse(u16_str)),
     add('toUint32_parse', () => JSON.parse(u32_str)),
 
-    add('toFloat', () => toFloat(metadata, f64Context, 0, 0)),
     add('toFloat_parse', () => JSON.parse(f64_str)),
-
-    add('toUint64', () => toUint64(metadataBigInt, u64Context, 0, 0)),
-    add('toInt64', () => toInt64(metadataBigInt, i64Context, 0, 0)),
     add('toUint64_parse', () => JSON.parse(u64_str)),
     add('toInt64_parse', () => JSON.parse(i64_str)),
 
