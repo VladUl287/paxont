@@ -1,6 +1,6 @@
 import { ParseContext, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { JsonOptions } from "../options"
-import { utc } from "../utils/date"
+import { utc } from "../utils/utc"
 import { COLON, DOT, DOUBLE_QUOTE, MINUS, PLUS, T_UPPER, Z } from "../utils/ascii_symbols"
 import { isComplete, ReadResult, ReadResultType } from "../utils/types"
 import { JSONParseError } from "../utils/error"
