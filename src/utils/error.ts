@@ -1,7 +1,7 @@
 import { BaseMeta } from "../metadata/types"
 
 export type ErrorContext = {
-    position?: number;
+    index?: number;
     depth?: number;
     metadata?: BaseMeta<unknown, any>
     cause?: unknown
@@ -9,7 +9,7 @@ export type ErrorContext = {
 }
 
 export class JSONParseError extends Error {
-    public readonly position?: number
+    public readonly index?: number
     public readonly depth?: number
     public readonly metadata?: BaseMeta<unknown, any>
     public readonly context: Readonly<ErrorContext>
@@ -20,9 +20,9 @@ export class JSONParseError extends Error {
 
         this.name = 'JSONParseError'
 
-        const { position, depth, metadata, cause, ...extra } = context ?? {}
+        const { index: position, depth, metadata, cause, ...extra } = context ?? {}
 
-        this.position = position
+        this.index = position
         this.depth = depth
         this.metadata = metadata
         this.cause = cause
@@ -39,8 +39,12 @@ export class JSONParseError extends Error {
     toString(): string {
         const parts = [this.message]
 
-        if (this.position !== undefined) {
-            parts.push(`at position ${this.position}`)
+        if (this.metadata !== undefined) {
+            parts.push(`while parsing '${this.metadata.type}'`)
+        }
+
+        if (this.index !== undefined) {
+            parts.push(`at position ${this.index}`)
         }
 
         if (this.depth !== undefined) {
