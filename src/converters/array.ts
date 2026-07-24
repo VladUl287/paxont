@@ -2,7 +2,7 @@ import { BaseMeta, ArrayMeta, ParseContext } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/ascii_symbols"
 import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
-import { copyArray, ArrayLikeWritable } from "../utils/array"
+import { ArrayLikeWritable } from "../utils/array"
 import { JSONParseError } from "../utils/error"
 
 const COMPLETE = ReadResultType.COMPLETE
@@ -69,14 +69,14 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
     }
 
     try {
-        const itemMeta = metadata.value
-        const tryParseValue = itemMeta.toValue as any
+        const itemMetadata = metadata.value
+        const toValue = itemMetadata.toValue
 
         let j = bufferIndex
         while (true) {
             i = skipWhitespace(b, i)
 
-            const result = tryParseValue(itemMeta, context, i, depth)
+            const result = toValue(itemMetadata, context, i, depth)
 
             if (isError(result))
                 return result
@@ -94,36 +94,26 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
             i = result.nextIndex
             j++
 
-            if (j >= buffer.length) {
-                const newBuffer = copyArray(buffer, rent(buffer.length * 2))
-                release(buffer)
-                buffer = newBuffer
-            }
-
             i = skipWhitespace(b, i)
 
             if (b[i] === COMMA) i++
             else if (b[i] === SQUARE_CLOSE) break
-            else {
-                return {
-                    type: ERROR,
-                    error: new JSONParseError(`Expected ']' or ',' but found '${String.fromCharCode(b[i])}'`, { depth, index: i, metadata })
-                }
+            else return {
+                type: ERROR,
+                error: new JSONParseError(`Expected ']' or ',' but found '${String.fromCharCode(b[i])}'`, { depth, index: i, metadata })
             }
         }
 
-        const value = buffer.slice(0, j)
-
         return {
             type: COMPLETE,
-            value: value,
+            value: buffer.slice(0, j),
             nextIndex: ++i
         }
     }
     catch (error) {
         return {
             type: ERROR,
-            error: new JSONParseError('Unknown error', { depth, index: i, metadata })
+            error: new JSONParseError('Unknown error', { depth, index: i, metadata, cause: error })
         }
     }
     finally {
