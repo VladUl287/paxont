@@ -28,13 +28,12 @@ export type MetadataFactoryOptions = {
     withDefaults: WithDefaults
 }
 
-const defaultOptions: MetadataFactoryOptions = { withDefaults: withDefaultTypes }
+const defaultOptions: MetadataFactoryOptions = Object.freeze({ withDefaults: withDefaultTypes })
 
 export function useMetadata(options: MetadataFactoryOptions = defaultOptions): MetadataFactory {
     const types = new Map<TypeName, JType<any, any>>()
 
-    const add = <T, M extends BaseMeta<T, M>>(jtype: JType<T, M>): void => 
-        { types.set(jtype.type, jtype) }
+    const add = <T, M extends BaseMeta<T, M>>(jtype: JType<T, M>): void => { types.set(jtype.type, jtype) }
 
     const remove = <T, M extends BaseMeta<T, M>>(jtype: TypeName | JType<T, M>): boolean => {
         const type = typeof jtype === 'string' ? jtype : jtype.type
