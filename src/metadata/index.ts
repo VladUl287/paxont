@@ -5,7 +5,7 @@ import {
     i64Array, i8, i8Array, map, nullable, number, object, set, string, u16,
     u16Array, u32, u32Array, u64, u64Array, u8, u8Array
 } from "./builder"
-import { Int16, Int32, Int64, Int8, Nullable, Uint16, Uint32, Uint64, Uint8 } from "../utils/types"
+import { Int16, Int32, Int64, Int8, Nullable, Uint16, Uint32, Uint64, Uint8 } from "./type-containers"
 import { isPlainObject } from "../utils/object"
 
 export type MetadataFactory = {
