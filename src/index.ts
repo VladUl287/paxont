@@ -1,7 +1,7 @@
 import { CacheFactory, createCache } from "./cache/cache"
 import { defaultOptions, JsonOptions, mergeOptions } from "./options"
 import { BaseMeta, ConvertState } from "./metadata/types"
-import { ArrayPool, ArrayRecycler, useArrayRecycler } from "./utils/array"
+import { ArrayPool, useArrayPool } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
 import { MetadataFactory, useMetadata } from "./metadata"
@@ -13,7 +13,7 @@ const metadataCache = createCache<any, BaseMeta<any, any>>()
 
 const defaultMetadata = useMetadata()
 
-const recycler = useArrayRecycler<Uint8Array<ArrayBufferLike>>(Uint8Array)
+const pool = useArrayPool<Uint8Array<ArrayBufferLike>>(Uint8Array)
 
 const defaultStack = new Stack<ConvertState>()
 
@@ -21,9 +21,8 @@ type ExtractType<T> = T extends BaseMeta<infer V, any> ? V : T
 
 export function useJSONT(value: {
     metadataBuilder: MetadataFactory,
-    cacheFactory: CacheFactory,
-    recycler: ArrayRecycler<Uint8Array>,
-    pool: ArrayPool<Uint8Array>,
+    createCache: CacheFactory,
+    arrayPool: ArrayPool<Uint8Array>,
     jsonOptions: {
         defaultOptions: JsonOptions,
         mergetOptions: Function
@@ -57,30 +56,8 @@ export function useJSONT(value: {
     }
 }
 
-function toBytes(
-    input: ArrayBuffer | Uint8Array | string,
-    recycler: ArrayRecycler<Uint8Array>,
-    { encoder }: JsonOptions
-): Uint8Array {
-    if (typeof input === 'string') {
-        const length = getMaxBytesCount(input.length)
-        const bytes = recycler.acquire(length)
-        encoder.encodeInto(input, bytes)
-        return bytes
-    }
-
-    if (input instanceof ArrayBuffer)
-        return new Uint8Array(input)
-
-    if (input instanceof Uint8Array)
-        return input
-
-    throw new Error(
-        `Invalid input type: expected string, ArrayBuffer, or Uint8Array, but received ${input === null ? 'null' : typeof input}`)
-}
-
 export function deserialize<T>(
-    json: ArrayBuffer | Uint8Array | string,
+    value: ArrayBuffer | Uint8Array | string,
     type: T,
     options?: Partial<JsonOptions>
 ): ExtractType<T> {
@@ -92,7 +69,21 @@ export function deserialize<T>(
         metadataCache.getOrAdd(type, (t) => defaultMetadata.toMetadata(t)) :
         type
 
-    const bytes = toBytes(json, recycler, filledOptions)
+    let bytes: Uint8Array
+
+    const isString = typeof value === 'string'
+    if (isString) {
+        const length = getMaxBytesCount(value.length)
+        bytes = pool.rent(length)
+        filledOptions.encoder.encodeInto(value, bytes)
+    }
+    else if (value instanceof ArrayBuffer)
+        bytes = new Uint8Array(value)
+    else if (value instanceof Uint8Array)
+        bytes = value
+    else
+        throw new Error(
+            `Invalid input type: expected string, ArrayBuffer, or Uint8Array, but received ${value === null ? 'null' : typeof value}`)
 
     const result = metadata.toValue(metadata, {
         options: filledOptions,
@@ -102,6 +93,9 @@ export function deserialize<T>(
         },
         stack: defaultStack,
     }, 0, 0)
+
+    if (isString)
+        pool.release(bytes)
 
     if (isError(result))
         throw result.error

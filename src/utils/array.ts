@@ -6,11 +6,6 @@ export interface ArrayLikeWritable<T> {
     slice: (start?: number, end?: number) => this
 }
 
-export type ArrayRecycler<A extends ArrayLikeWritable<any>> = {
-    acquire: (length: number, source?: A) => A,
-    dispose(): void
-}
-
 export type ArrayPool<A extends ArrayLike<any>> = {
     rent: (minLength: number) => A
     release: (array: A) => void
@@ -106,36 +101,4 @@ export function useArrayPool<A extends ArrayLike<any>>(ctor: new (length: number
     }
 
     return { rent, release }
-}
-
-export function useArrayRecycler<A extends ArrayLikeWritable<any>>(ctor: new (length: number) => A): ArrayRecycler<A> {
-    let array: A | null = null
-
-    const acquire = (newLength: number, source?: A) => {
-        if (array !== null && array.length >= newLength) {
-            if (source) {
-                const length = Math.min(newLength, source.length)
-                for (let i = 0; i < length; i++)
-                    array[i] = source[i]
-            }
-            return array
-        }
-
-        array = new ctor(newLength)
-
-        if (source) {
-            const length = Math.min(newLength, source.length)
-            for (let i = 0; i < length; i++)
-                array[i] = source[i]
-        }
-
-        return array
-    }
-
-    const dispose = () => (array = null)
-
-    return {
-        acquire,
-        dispose
-    }
 }
