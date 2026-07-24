@@ -35,7 +35,7 @@ export function generateTrie(values: Uint8Array[]) {
                 i++
             }
 
-            return 'return (' + chunks.join(' && ') + `) ? ${index} : -1`
+            return 'return (' + chunks.join(' && ') + `) ? ${index} : -1;`
         }
 
         const canPack4 = values.every(c => (c.bytes.length - d) >= 4)
@@ -131,5 +131,6 @@ export function generateTrie(values: Uint8Array[]) {
         bytes: b,
         index: i
     }))
-    return new Function('a', 'i', `${build(mappedValues, 0)}return -1;`)
+    const functionBody = `${build(mappedValues, 0)}return -1;`
+    return new Function('a', 'i', functionBody)
 }
