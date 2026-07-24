@@ -3,7 +3,7 @@ import { BaseMeta } from "../metadata/types"
 export type ErrorContext = {
     index?: number;
     depth?: number;
-    metadata?: BaseMeta<unknown, any>
+    metadata?: BaseMeta<any, any>
     cause?: unknown
     [key: string]: unknown
 }
