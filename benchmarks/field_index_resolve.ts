@@ -1,5 +1,5 @@
 import { add, complete, cycle, suite } from 'benny'
-import { generateTrieSwitch } from '../src/code_gen/field'
+import { generateTrie } from '../src/code_gen/trie'
 
 const encoder = new TextEncoder()
 
@@ -60,7 +60,7 @@ const keys = Object.keys(big_unique_object).map(c => {
     return encoder.encode(c)
 })
 
-const switchMathcerWithoutPack = generateTrieSwitch(keys)
+const switchMathcerWithoutPack = generateTrie(keys)
 
 suite(
     'field_index_resolve',

@@ -10,7 +10,7 @@ import { toDate } from "../converters/date"
 import { toMap } from "../converters/map"
 import { toSet } from "../converters/set"
 import { genObjectFactory, genObjectToJsonFactory1 } from "../code_gen/object"
-import { generateTrieSwitch } from "../code_gen/field"
+import { generateTrie } from "../code_gen/trie"
 import { toObject } from "../converters/object"
 import { toNullable } from "../converters/nullable"
 import { toBigInt, toInt64, toUint64 } from "../converters/number/bigint"
@@ -246,7 +246,7 @@ export const object = <M extends ObjectFieldMeta<any, any, any>[]>(...fields: M)
     const factory = genObjectFactory(keys) as any
 
     const keysBytes = fields.map(f => f.name.bytes)
-    const fieldIndex = generateTrieSwitch(keysBytes) as any
+    const fieldIndex = generateTrie(keysBytes) as any
 
     const toJson = genObjectToJsonFactory1(...fields)
 
