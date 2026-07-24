@@ -4,7 +4,7 @@ import { BaseMeta, ConvertState } from "./metadata/types"
 import { ArrayPool, ArrayRecycler, useArrayRecycler } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
-import { MetadataBuilder, useMetadata } from "./metadata"
+import { MetadataFactory, useMetadata } from "./metadata"
 import { isError, isNeedsMoreData } from "./utils/types"
 import { Stack } from "./utils/structs"
 
@@ -20,7 +20,7 @@ const defaultStack = new Stack<ConvertState>()
 type ExtractType<T> = T extends BaseMeta<infer V, any> ? V : T
 
 export function useJSONT(value: {
-    metadataBuilder: MetadataBuilder,
+    metadataBuilder: MetadataFactory,
     cacheFactory: CacheFactory,
     recycler: ArrayRecycler<Uint8Array>,
     pool: ArrayPool<Uint8Array>,
