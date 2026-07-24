@@ -1,4 +1,4 @@
-import { bitLength } from "../src/converters/number"
+import { bitLength } from "../src/converters/number/float_slow"
 
 describe('bitLength', () => {
     test('should return 0 for zero', () => {
