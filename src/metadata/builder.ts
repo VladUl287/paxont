@@ -106,11 +106,11 @@ const globalPools: Record<string, ArrayPool<any>> = Object.freeze({
     undefined: useArrayPool(Array)
 })
 
-export const array = <T, M extends BaseMeta<T, M>>(
+export const array = <M extends BaseMeta<ExtractType<M>, M>>(
     value: M,
-    ...modifiers: Modifier<ArrayMeta<T, T[], M>>[]
-): ArrayMeta<T, T[], M> => {
-    let defaultMeta: ArrayMeta<T, T[], M> = {
+    ...modifiers: Modifier<ArrayMeta<ExtractType<M>, ExtractType<M>[], M>>[]
+): ArrayMeta<ExtractType<M>, ExtractType<M>[], M> => {
+    let defaultMeta: ArrayMeta<ExtractType<M>, ExtractType<M>[], M> = {
         type: JSONT.ARRAY,
         toValue: toArray,
         toJson: (meta, value, options) => {
