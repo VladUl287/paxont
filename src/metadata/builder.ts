@@ -1,5 +1,4 @@
 import { toArray } from "../converters/array"
-import { BigIntTypedArray, FloatTypedArray, IntegerTypedArray } from "../utils/typedArray"
 import {
     ArrayMeta,
     BaseMeta, Expand, ExtractType, MapMeta, Modifier, NullableMeta, ObjectFieldMeta,
@@ -16,7 +15,7 @@ import { toNullable } from "../converters/nullable"
 import { toBigInt, toInt64, toUint64 } from "../converters/number/bigint"
 import { toBoolean } from "../converters/boolean"
 import { toString } from "../converters/string"
-import { ArrayLikeWritable, ArrayPool, useArrayPool } from "../utils/array"
+import { ArrayLikeWritable, ArrayPool, BigIntTypedArray, FloatTypedArray, IntegerTypedArray, useArrayPool } from "../utils/array"
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../converters/number/int"
 import { toFloat } from "../converters/number/float"
 

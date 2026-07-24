@@ -16,6 +16,22 @@ export type ArrayPool<A extends ArrayLike<any>> = {
     release: (array: A) => void
 }
 
+export type IntegerTypedArray =
+    | Int8Array
+    | Uint8Array
+    | Int16Array
+    | Uint16Array
+    | Int32Array
+    | Uint32Array
+
+export type FloatTypedArray =
+    | Float32Array
+    | Float64Array
+
+export type BigIntTypedArray =
+    | BigInt64Array
+    | BigUint64Array
+
 export const groupBy = <K, V>(fields: V[], keySelector: (field: V) => K) => {
     return fields.reduce((map, field) => {
         const key = keySelector(field)
