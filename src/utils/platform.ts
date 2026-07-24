@@ -8,11 +8,15 @@ const BROWSER = Platform.BROWSER
 const NODE = Platform.NODE
 const UNKNOWN = Platform.UNKNOWN
 
-export const isNode = (platform: Platform) => platform === NODE
-export const isBrowser = (platform: Platform) => platform === BROWSER
+export const isNode = (platform: Platform): platform is Platform.NODE => platform === NODE
+export const isBrowser = (platform: Platform): platform is Platform.BROWSER => platform === BROWSER
+export const isUnknown = (platform: Platform): platform is Platform.UNKNOWN => platform === BROWSER
 
-export const IS_NODE = detectPlatform() === NODE
-export const IS_BROWSER = detectPlatform() === BROWSER
+export const CURRENT_PLATFORM = detectPlatform()
+
+export const IS_NODE = CURRENT_PLATFORM === NODE
+export const IS_BROWSER = CURRENT_PLATFORM === BROWSER
+export const IS_UNKNOWN = CURRENT_PLATFORM === UNKNOWN
 
 export function detectPlatform(): Platform {
     if (typeof process !== 'undefined' &&
