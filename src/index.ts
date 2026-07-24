@@ -5,7 +5,7 @@ import { ArrayPool, useArrayPool } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
 import { MetadataFactory, useMetadata } from "./metadata"
-import { isError, isNeedsMoreData } from "./utils/types"
+import { isComplete, isError, isNeedsMoreData } from "./utils/types"
 import { Stack } from "./utils/stack"
 
 const optionsCache = createCache<Partial<JsonOptions>, JsonOptions>()
@@ -19,20 +19,37 @@ const defaultStack = new Stack<ConvertState>()
 
 type ExtractType<T> = T extends BaseMeta<infer V, any> ? V : T
 
-export function useJSONT(value: {
-    metadataBuilder: MetadataFactory,
-    createCache: CacheFactory,
-    arrayPool: ArrayPool<Uint8Array>,
+type JSONTOptions = {
+    readonly metadataBuilder: MetadataFactory
+    readonly arrayPool: ArrayPool<Uint8Array<ArrayBuffer>>
+    readonly jsonOptions: {
+        readonly defaultOptions: JsonOptions
+        readonly mergetOptions: typeof mergeOptions
+    }
+    readonly result: {
+        isComplete: Function
+        isError: Function
+        isNeedsMoreData: Function
+    }
+    readonly createCache: CacheFactory
+}
+
+const defaultJSONTOptions: JSONTOptions = Object.freeze({
+    metadataBuilder: useMetadata(),
+    arrayPool: useArrayPool(Uint8Array),
     jsonOptions: {
-        defaultOptions: JsonOptions,
-        mergetOptions: Function
+        defaultOptions: defaultOptions,
+        mergetOptions: mergeOptions
     },
     result: {
-        isComplete: Function,
-        isError: Function,
-        isNeedsMoreData: Function,
-    }
-}) {
+        isComplete: isComplete,
+        isError: isError,
+        isNeedsMoreData: isNeedsMoreData
+    },
+    createCache: createCache,
+})
+
+export function useJSONT(value: JSONTOptions = defaultJSONTOptions) {
     function deserialize<T>(
         json: ArrayBuffer | Uint8Array | string,
         type: T,
