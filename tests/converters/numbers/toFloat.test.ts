@@ -1,6 +1,6 @@
-import { f64Format, tryParseFloat } from "../src/converters/number/float"
-import { JsonReader } from "../src/metadata/types"
-import { ReadResultType } from "../src/utils/types"
+import { f64Format, tryParseFloat } from "../../../src/converters/number/float"
+import { JsonReader } from "../../../src/metadata/types"
+import { ReadResultType } from "../../../src/utils/types"
 
 describe('tryParseFloat', () => {
   const toReader = (str: string): JsonReader => ({ bytes: new TextEncoder().encode(str), writable: false })
