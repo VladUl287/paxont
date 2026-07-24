@@ -12,7 +12,7 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T, M>>(
     metadata: ArrayMeta<T, A, M>,
     context: ParseContext,
-    index: number,
+    i: number,
     depth: number
 ): ReadResult<A> {
     const reader = context.reader
@@ -21,13 +21,12 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
     if (depth > options.maxDepth)
         return {
             type: ReadResultType.ERROR,
-            error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${index}`)
+            error: new JSONParseError(`Maximum depth exceeded`, { depth, index: i, metadata })
         }
 
     const b = reader.bytes
     const len = b.length
 
-    let i = index
     if (i >= len) {
         if (reader.writable)
             return {
@@ -37,30 +36,43 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
 
         return {
             type: ERROR,
-            error: new JSONParseError(`Unexpected end of input at index ${i} while parsing array`)
+            error: new JSONParseError(`Unexpected end of input`, { depth, index: i, metadata })
         }
     }
 
+    let isContinued: boolean
+    let buffer: A
+    let bufferIndex: number
+
+    const { rent, release } = metadata.arrayPool
+
     const stack = context.stack
     const state = stack.pop()
+    if (state !== undefined) {
+        isContinued = state.isContinued
+        buffer = state.buffer
+        bufferIndex = state.bufferIndex
+    }
+    else {
+        isContinued = false
+        buffer = rent(b.length - i)
+        bufferIndex = 0
+    }
 
-    if (!state || !state.isContinued) {
+    if (!isContinued) {
         if (b[i] !== SQUARE_OPEN)
             return {
                 type: ERROR,
-                error: new JSONParseError(`Expected '[' at index ${i}, but found '${String.fromCharCode(b[i])}' while parsing array`)
+                error: new JSONParseError(`Expected '[' but found '${String.fromCharCode(b[i])}'`, { depth, index: i, metadata })
             }
         i++
     }
 
-    const { rent, release } = metadata.arrayPool
-
-    let buffer = state?.buffer ?? rent(b.length - i)
     try {
         const itemMeta = metadata.value
         const tryParseValue = itemMeta.toValue as any
 
-        let j = state?.bufferIndex ?? 0
+        let j = bufferIndex
         while (true) {
             i = skipWhitespace(b, i)
 
@@ -95,13 +107,12 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
             else {
                 return {
                     type: ERROR,
-                    error: new JSONParseError(`Unexpected end of value at index ${i} while parsing array. Expected ']' or ',' as end of value`)
+                    error: new JSONParseError(`Expected ']' or ',' but found '${String.fromCharCode(b[i])}'`, { depth, index: i, metadata })
                 }
             }
         }
 
         const value = buffer.slice(0, j)
-        release(buffer)
 
         return {
             type: COMPLETE,
@@ -112,9 +123,10 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
     catch (error) {
         return {
             type: ERROR,
-            error: new JSONParseError(
-                `Unexpected error while parsing array at index ${i}: ${error instanceof Error ? error.message : String(error)}`,
-                { cause: error })
+            error: new JSONParseError('Unknown error', { depth, index: i, metadata })
         }
+    }
+    finally {
+        release(buffer)
     }
 }
