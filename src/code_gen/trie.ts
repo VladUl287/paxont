@@ -5,6 +5,8 @@ export function generateTrie(values: Uint8Array[]) {
     }
 
     const build = (values: Array<Value>, depth = 0) => {
+        values.sort((a, b) => b.bytes.length - a.bytes.length)
+
         const d = depth
         const count = values.length
 
