@@ -25,6 +25,20 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
         }
 
     const b = reader.bytes
+    const len = b.length
+
+    if (i >= len) {
+        if (reader.writable)
+            return {
+                type: NEEDS_MORE_DATA,
+                nextIndex: i
+            }
+
+        return {
+            type: ERROR,
+            error: new JSONParseError(`Unexpected end of input`, { depth, index: i, metadata })
+        }
+    }
 
     let isContinued: boolean
     let buffer: A
