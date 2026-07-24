@@ -35,32 +35,3 @@ export class Stack<T> {
         return this.length === 0
     }
 }
-
-export class ReadonlyUint8Array extends Uint8Array {
-    constructor(data: Uint8Array) {
-        super(data)
-        return Object.freeze(this)
-    }
-
-    readonly [index: number]: number
-
-    set(): void {
-        throw new Error('ReadonlyUint8Array is immutable')
-    }
-
-    fill(): this {
-        throw new Error('ReadonlyUint8Array is immutable')
-    }
-
-    copyWithin(): this {
-        throw new Error('ReadonlyUint8Array is immutable')
-    }
-
-    slice(start?: number, end?: number): ReadonlyUint8Array {
-        return new ReadonlyUint8Array(super.slice(start, end))
-    }
-
-    subarray(start?: number, end?: number): ReadonlyUint8Array {
-        return new ReadonlyUint8Array(super.subarray(start, end));
-    }
-}
