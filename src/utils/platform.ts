@@ -8,6 +8,9 @@ const BROWSER = Platform.BROWSER
 const NODE = Platform.NODE
 const UNKNOWN = Platform.UNKNOWN
 
+export const isNode = (platform: Platform) => platform === NODE
+export const isBrowser = (platform: Platform) => platform === BROWSER
+
 export const IS_NODE = detectPlatform() === NODE
 export const IS_BROWSER = detectPlatform() === BROWSER
 

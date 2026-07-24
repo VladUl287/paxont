@@ -1,13 +1,13 @@
 import { genUnrolledFromCharCode } from "../code_gen/string"
 import { ConvertState, ParseContext, JsonReader, PrimitiveMeta } from "../metadata/types"
-import { IS_NODE } from "../utils/platform"
+import { detectPlatform, IS_NODE, isNode, Platform } from "../utils/platform"
 import { ReadResult } from "../utils/types"
 import { DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
 
 const { decode } = useDecoder({
     initialWasmMemoryPages: 1, //~64KiB
     maxWasmMemoryPages: 128, //~8MiB,
-    isNode: IS_NODE
+    platform: detectPlatform()
 })
 
 export function createStringParser(options: StringParseFactoryOptions) {
@@ -74,7 +74,7 @@ type DecodeModule = {
 type StringParseFactoryOptions = {
     readonly maxWasmMemoryPages: number
     readonly initialWasmMemoryPages: number
-    readonly isNode: boolean
+    readonly platform: Platform
 }
 
 type UseDecode = {
@@ -188,7 +188,7 @@ function useDecoder(options: StringParseFactoryOptions) {
                     }
                 }
 
-                if (options.isNode) {
+                if (isNode(options.platform)) {
                     const buffer = Buffer.from(memory.buffer, multipleOfTwo, utf16Length)
                     return {
                         value: buffer.toString('utf16le'),
