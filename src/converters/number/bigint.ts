@@ -25,8 +25,8 @@ export const toUint64 = (
 ): ReadResult<bigint> => parseInt64(reader.reader, index, 0n, 18446744073709551615n, false)
 
 export function toBigInt(
-    metadata: PrimitiveMeta<bigint>, 
-    context: ParseContext, 
+    metadata: PrimitiveMeta<bigint>,
+    context: ParseContext,
     index: number,
     depth: number): ReadResult<bigint> {
     const reader = context.reader
@@ -129,7 +129,7 @@ export function parseInt64(reader: JsonReader, i: number, minValue: bigint, maxV
             conversionU32[0] = low >>> 0
             conversionU32[1] = conversionU32[1] * 10 + Math.floor(low / 0x100000000)
         }
-
+        dc++
         i++
     }
 
