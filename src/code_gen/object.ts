@@ -1,4 +1,4 @@
-import { ObjectFieldMeta, ToJsonConverter } from "../metadata/types"
+import { ObjectFieldMeta } from "../metadata/types"
 
 export function genObjectFactory(fields: string[]): (values: unknown[]) => object {
     const assignments = fields
@@ -21,5 +21,5 @@ export function genObjectToJsonFactory1(...fields: ObjectFieldMeta<any, any, any
         })
         .join(',')
     body += '}`'
-    return new Function('d', 'm', 'o', body) as ToJsonConverter<any, any>
+    return new Function('d', 'm', 'o', body) as any
 }

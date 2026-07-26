@@ -2,7 +2,7 @@ import { toArray } from "../converters/array"
 import {
     ArrayMeta,
     BaseMeta, Expand, ExtractType, MapMeta, Modifier, NullableMeta, ObjectFieldMeta,
-    ObjectMeta, PrimitiveMeta, SetMeta, ToValueConverter
+    ObjectMeta, PrimitiveMeta, SetMeta
 } from "./types"
 import { BaseType, JSONT } from "./baseTypes"
 import { toDate } from "../converters/date"
@@ -64,7 +64,7 @@ function applyModifier<M extends BaseMeta<any, M>>(value: M, modify: Modifier<M>
 
 const primitive = <T>(
     type: BaseType,
-    toValue: ToValueConverter<T, PrimitiveMeta<T>>,
+    toValue: PrimitiveMeta<T>['toValue'],
     ...modifiers: Modifier<PrimitiveMeta<T>>[]
 ): PrimitiveMeta<T> => {
     const defaultMeta: PrimitiveMeta<T> = {
