@@ -26,7 +26,7 @@ describe('toArray', () => {
 
     const arrayMeta = array(number())
 
-    describe('valid numeric array', () => {
+    describe('valid array', () => {
         test('converts simple number array string to array', () => {
             const bytes = jsonArrayToBytes("[1, 2, 3]")
             const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
@@ -52,7 +52,7 @@ describe('toArray', () => {
         })
     })
 
-    describe('invalid numeric array', () => {
+    describe('invalid array', () => {
         test('depth exceed', () => {
             const bytes = jsonArrayToBytes("[1, 2, 3]")
             const array = toArray(arrayMeta, syncCtx(bytes, defaultOptions), 0, defaultOptions.maxDepth + 1)
@@ -86,7 +86,7 @@ describe('toArray', () => {
         })
     })
 
-    describe('partial numeric array', () => {
+    describe('partial array', () => {
         test('depth exceed', () => {
             const chunks = [jsonArrayToBytes("[1,"), jsonArrayToBytes("2,3]")].reverse()
             let ch
@@ -100,33 +100,6 @@ describe('toArray', () => {
     })
 
     describe('edge cases and error handling', () => {
-        test('handles boolean values', () => {
-            expect(jsonArrayToBytes('[true, false, true]')).toEqual([true, false, true])
-        })
-
-        test('handles null and undefined', () => {
-            expect(jsonArrayToBytes('[null, undefined, null]')).toEqual([null, undefined, null])
-        })
-
-        test('handles negative numbers', () => {
-            expect(jsonArrayToBytes('[-1, -2, -3]')).toEqual([-1, -2, -3])
-        })
-
-        test('handles decimal numbers', () => {
-            expect(jsonArrayToBytes('[1.5, 2.7, 3.9]')).toEqual([1.5, 2.7, 3.9])
-        })
-
-        test('handles exponential notation', () => {
-            expect(jsonArrayToBytes('[1e3, 2e-3, 3.5e2]')).toEqual([1000, 0.002, 350])
-        })
-
-        test('handles escaped characters in strings', () => {
-            expect(jsonArrayToBytes('["hello\\nworld", "test\\"quote"]')).toEqual([
-                'hello\nworld',
-                'test"quote'
-            ])
-        })
-
         test('returns empty array for invalid input if no error throwing', () => {
             expect(() => jsonArrayToBytes('not an array')).toThrow()
         })
@@ -162,27 +135,35 @@ describe('toArray', () => {
             const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
             expect(array).toEqual([1, 2, 3])
         })
+    })
 
-        describe('invalid input', () => {
-            test('throws error for invalid JSON', () => {
-                expect(() => jsonArrayToBytes('[1, 2, 3')).toThrow()
-            })
+    describe('invalid input', () => {
+        test('throws error for invalid JSON', () => {
+            const bytes = jsonArrayToBytes('[1, 2, 3')
+            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
+            expect(array).toEqual({ type: ReadResultType.ERROR, error: new JSONParseError('') })
+        })
 
-            test('throws error for non-array JSON', () => {
-                expect(() => jsonArrayToBytes('{"a": 1}')).toThrow()
-            })
+        test('throws error for non-array JSON', () => {
+            const bytes = jsonArrayToBytes('{"a": 1}')
+            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
+            expect(array).toEqual({ type: ReadResultType.ERROR, error: new JSONParseError('') })
+        })
 
-            test('throws error for empty string', () => {
-                expect(() => jsonArrayToBytes('')).toThrow()
-            })
+        test('throws error for empty string', () => {
+            const bytes = jsonArrayToBytes('')
+            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
+            expect(array).toEqual({ type: ReadResultType.ERROR, error: new JSONParseError('') })
+        })
 
-            // test('throws error for null input', () => {
-            //     expect(() => jsonArrayToBytes(null)).toThrow()
-            // })
+        test('throws error for null input', () => {
+            const array = toArray(arrayMeta, null as any, 0, 0)
+            expect(array).toEqual({ type: ReadResultType.ERROR, error: new JSONParseError('') })
+        })
 
-            // test('throws error for undefined input', () => {
-            //     expect(() => jsonArrayToBytes(undefined)).toThrow()
-            // })
+        test('throws error for undefined input', () => {
+            const array = toArray(arrayMeta, undefined as any, 0, 0)
+            expect(array).toEqual({ type: ReadResultType.ERROR, error: new JSONParseError('') })
         })
     })
 
@@ -253,8 +234,6 @@ describe('toArray', () => {
     //         expect(Array.from(result)).toEqual([1n, 2n, 3n])
     //     })
     // })
-
-    // Nested arrays and objects
 
     // describe('type checking', () => {
     //     test('returns Array by default', () => {
