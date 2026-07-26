@@ -5,42 +5,32 @@ import { ArrayPool, useArrayPool } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
 import { MetadataFactory, useMetadata } from "./metadata"
-import { isComplete, isError, isNeedsMoreData } from "./utils/types"
+import { isError, isNeedsMoreData } from "./utils/types"
 import { Stack } from "./utils/stack"
 
 type ExtractType<T> = T extends BaseMeta<infer V, any> ? V : T
 
-type JSONTOptions = {
+type SerializerOptions = {
     readonly metadataBuilder: MetadataFactory
     readonly arrayPool: ArrayPool<Uint8Array>
     readonly jsonOptions: {
         readonly defaultOptions: JsonOptions
         readonly mergetOptions: typeof mergeOptions
     }
-    readonly result: {
-        isComplete: Function
-        isError: Function
-        isNeedsMoreData: Function
-    }
     readonly createCache: CacheFactory
 }
 
-const defaultJSONTOptions: JSONTOptions = Object.freeze({
+const defaultJSONTOptions: SerializerOptions = Object.freeze({
     metadataBuilder: useMetadata(),
     arrayPool: useArrayPool<Uint8Array<ArrayBufferLike>>(Uint8Array),
     jsonOptions: {
         defaultOptions: defaultOptions,
         mergetOptions: mergeOptions
     },
-    result: {
-        isComplete: isComplete,
-        isError: isError,
-        isNeedsMoreData: isNeedsMoreData
-    },
     createCache: createCache,
 })
 
-export function createSerializer(value: JSONTOptions = defaultJSONTOptions) {
+export function createSerializer(value: SerializerOptions = defaultJSONTOptions) {
     const { arrayPool, createCache } = value
 
     const optionsCache = createCache<Partial<JsonOptions>, JsonOptions>()
