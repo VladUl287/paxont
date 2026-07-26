@@ -91,16 +91,16 @@ function fromTimestamp(reader: JsonReader, i: number): ReadResult<Date> {
 
         const date = new Date(value)
 
-        if (isNaN(date.valueOf()))
+        if (!isNaN(date.getTime()))
             return {
-                type: ERROR,
-                error: new JSONParseError('')
+                type: COMPLETE,
+                value: date,
+                nextIndex: result.nextIndex
             }
 
         return {
-            type: COMPLETE,
-            value: date,
-            nextIndex: result.nextIndex
+            type: ERROR,
+            error: new JSONParseError('')
         }
     }
 
@@ -121,7 +121,7 @@ function tryParseDefault(b: Uint8Array, i: number, o: JsonOptions, r: TryParseRe
     r.value = date
     r.nextIndex = ++i
 
-    return !isNaN(date.valueOf())
+    return !isNaN(date.getTime())
 }
 
 const nonDigit = (b: number) => !isDigitUnsafe(b)
