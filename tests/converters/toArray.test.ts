@@ -87,8 +87,78 @@ describe('toArray', () => {
     })
 
     describe('partial array', () => {
-        test('depth exceed', () => {
+        test('start splitted', () => {
+            const chunks = [jsonArrayToBytes("["), jsonArrayToBytes("1,2,3]")].reverse()
+            let ch
+            let result
+            const stack = new Stack<ConvertState>()
+            while ((ch = chunks.pop()) !== undefined) {
+                result = toArray(arrayMeta, asyncCtx(ch, dfo, stack), 0, 0)
+            }
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
+        })
+        test('start splitted with whitespace', () => {
+            const chunks = [jsonArrayToBytes("[ "), jsonArrayToBytes("1,2,3]")].reverse()
+            let ch
+            let result
+            const stack = new Stack<ConvertState>()
+            while ((ch = chunks.pop()) !== undefined) {
+                result = toArray(arrayMeta, asyncCtx(ch, dfo, stack), 0, 0)
+            }
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
+        })
+        test('value splitted', () => {
+            const chunks = [jsonArrayToBytes("[1"), jsonArrayToBytes(",2,3]")].reverse()
+            let ch
+            let result
+            const stack = new Stack<ConvertState>()
+            while ((ch = chunks.pop()) !== undefined) {
+                result = toArray(arrayMeta, asyncCtx(ch, dfo, stack), 0, 0)
+            }
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
+        })
+        test('value splitted with whitespace', () => {
+            const chunks = [jsonArrayToBytes("[1 "), jsonArrayToBytes(",2,3]")].reverse()
+            let ch
+            let result
+            const stack = new Stack<ConvertState>()
+            while ((ch = chunks.pop()) !== undefined) {
+                result = toArray(arrayMeta, asyncCtx(ch, dfo, stack), 0, 0)
+            }
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
+        })
+        test('comma splitted', () => {
             const chunks = [jsonArrayToBytes("[1,"), jsonArrayToBytes("2,3]")].reverse()
+            let ch
+            let result
+            const stack = new Stack<ConvertState>()
+            while ((ch = chunks.pop()) !== undefined) {
+                result = toArray(arrayMeta, asyncCtx(ch, dfo, stack), 0, 0)
+            }
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
+        })
+        test('comma splitted with whitespace', () => {
+            const chunks = [jsonArrayToBytes("[1, "), jsonArrayToBytes("2,3]")].reverse()
+            let ch
+            let result
+            const stack = new Stack<ConvertState>()
+            while ((ch = chunks.pop()) !== undefined) {
+                result = toArray(arrayMeta, asyncCtx(ch, dfo, stack), 0, 0)
+            }
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
+        })
+        test('end splited', () => {
+            const chunks = [jsonArrayToBytes("[1, 2, 3"), jsonArrayToBytes("]")].reverse()
+            let ch
+            let result
+            const stack = new Stack<ConvertState>()
+            while ((ch = chunks.pop()) !== undefined) {
+                result = toArray(arrayMeta, asyncCtx(ch, dfo, stack), 0, 0)
+            }
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
+        })
+        test('end splited with whitespace', () => {
+            const chunks = [jsonArrayToBytes("[1, 2, 3"), jsonArrayToBytes(" ]")].reverse()
             let ch
             let result
             const stack = new Stack<ConvertState>()
