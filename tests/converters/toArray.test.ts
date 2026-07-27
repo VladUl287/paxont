@@ -4,7 +4,7 @@ import { ConvertState, ParseContext, PrimitiveMeta } from "../../src/metadata/ty
 import { defaultOptions, defaultOptions as dfo } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
-import { ReadResult, ReadResultType } from "../../src/utils/types"
+import { isNeedsMoreData, ReadResult, ReadResultType } from "../../src/utils/types"
 
 describe('toArray', () => {
     const encoder = new TextEncoder()
@@ -18,8 +18,8 @@ describe('toArray', () => {
         stack: new Stack<ConvertState>()
     })
 
-    const asyncCtx = (bytes: Uint8Array, options = dfo, stack = new Stack<ConvertState>()) => ({
-        reader: { bytes: bytes, writable: true },
+    const asyncCtx = (bytes: Uint8Array, options = dfo, stack = new Stack<ConvertState>(), writable: boolean = false) => ({
+        reader: { bytes, writable },
         options: options,
         stack: stack
     })
@@ -85,12 +85,18 @@ describe('toArray', () => {
             const chunks = [jsonArrayToBytes("["), jsonArrayToBytes("1,2,3]")].reverse()
             let ch
             let result
+            let index = 0
+            let tempCh: number[] = []
             const stack = new Stack<ConvertState>()
             while ((ch = chunks.pop()) !== undefined) {
-                const ctx = asyncCtx(ch, dfo, stack)
-                result = toArray(arrayMeta, ctx, 0, 0)
+                const ctx = asyncCtx(new Uint8Array([...tempCh, ...ch]), dfo, stack, chunks.length !== 0)
+                result = toArray(arrayMeta, ctx, index, 0)
+                if (isNeedsMoreData(result)) {
+                    index = result.nextIndex - ch.length
+                    tempCh = [...ch.slice(result.nextIndex)]
+                }
             }
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 6 })
         })
         test('start splitted with whitespace', () => {
             const chunks = [jsonArrayToBytes("[ "), jsonArrayToBytes("1,2,3]")].reverse()
@@ -101,7 +107,7 @@ describe('toArray', () => {
                 const ctx = asyncCtx(ch, dfo, stack)
                 result = toArray(arrayMeta, ctx, 0, 0)
             }
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 6 })
         })
         test('value splitted', () => {
             const chunks = [jsonArrayToBytes("[1"), jsonArrayToBytes(",2,3]")].reverse()
