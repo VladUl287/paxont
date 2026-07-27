@@ -82,8 +82,10 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
 
             const result = toValue(itemMetadata, context, i, depth)
 
-            if (isError(result))
+            if (isError(result)) {
+                release(buffer)
                 return result
+            }
 
             if (isNeedsMoreData(result)) {
                 stack.push({ isContinued: true, buffer, bufferIndex: j })
@@ -106,12 +108,15 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
                         nextIndex: i
                     }
                 }
+                release(buffer)
                 return {
                     type: ERROR,
                     error: new JSONParseError(`Expected ']' or ',' but found '${String.fromCharCode(b[i])}'`, { depth, index: i, metadata })
                 }
             }
         }
+
+        release(buffer)
 
         return {
             type: COMPLETE,
@@ -124,8 +129,5 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
             type: ERROR,
             error: new JSONParseError('Unknown error', { depth, index: i, metadata, cause: error })
         }
-    }
-    finally {
-        release(buffer)
     }
 }
