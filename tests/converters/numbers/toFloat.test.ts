@@ -343,5 +343,24 @@ describe('tryParseFloat', () => {
 
       expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 3 })
     })
+
+    test('parses negative integer', () => {
+      const chunks = [toBytes("-1"), toBytes("-123")].reverse()
+
+      let ch
+      let result
+      let index = 0
+
+      const stack = new Stack<ConvertState>()
+      while ((ch = chunks.pop()) !== undefined) {
+        const ctx = { reader: { bytes: ch, writable: chunks.length !== 0 }, options: defaultOptions, stack }
+        result = toFloat({} as any, ctx, index, 0)
+        if (isNeedsMoreData(result)) {
+          index = result.nextIndex
+        }
+      }
+
+      expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: -123, nextIndex: 4 })
+    })
   })
 })
