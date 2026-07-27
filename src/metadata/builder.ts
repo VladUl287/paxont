@@ -20,43 +20,43 @@ import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../conver
 import { toFloat } from "../converters/number/float"
 
 export const string = (...modifiers: Modifier<PrimitiveMeta<string>>[]) =>
-    primitive(JSONT.STRING, toString, ...modifiers)
+    primitive(JSONT.STRING, toString, (v) => `"${v}"`, ...modifiers)
 
 export const number = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.NUMBER, toFloat, ...modifiers)
+    primitive(JSONT.NUMBER, toFloat, (v) => v.toString(), ...modifiers)
 
 export const bigInt = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
-    primitive(JSONT.BIGINT, toBigInt, ...modifiers)
+    primitive(JSONT.BIGINT, toBigInt, (v) => v.toString(), ...modifiers)
 
 export const bool = (...modifiers: Modifier<PrimitiveMeta<boolean>>[]) =>
-    primitive(JSONT.BOOL, toBoolean, ...modifiers)
+    primitive(JSONT.BOOL, toBoolean, (v) => v.toString(), ...modifiers)
 
 export const date = (...modifiers: Modifier<PrimitiveMeta<Date>>[]) =>
-    primitive(JSONT.DATE, toDate, ...modifiers)
+    primitive(JSONT.DATE, toDate, (v) => `"${v.toISOString()}"`, ...modifiers)
 
 export const u8 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.U8, toUint8, ...modifiers)
+    primitive(JSONT.U8, toUint8, (v) => v.toString(), ...modifiers)
 
 export const u16 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.U16, toUint16, ...modifiers)
+    primitive(JSONT.U16, toUint16, (v) => v.toString(), ...modifiers)
 
 export const u32 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.U32, toUint32, ...modifiers)
+    primitive(JSONT.U32, toUint32, (v) => v.toString(), ...modifiers)
 
 export const i8 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.I8, toInt8, ...modifiers)
+    primitive(JSONT.I8, toInt8, (v) => v.toString(), ...modifiers)
 
 export const i16 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.I16, toInt16, ...modifiers)
+    primitive(JSONT.I16, toInt16, (v) => v.toString(), ...modifiers)
 
 export const i32 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.I32, toInt32, ...modifiers)
+    primitive(JSONT.I32, toInt32, (v) => v.toString(), ...modifiers)
 
 export const u64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
-    primitive(JSONT.U64, toUint64, ...modifiers)
+    primitive(JSONT.U64, toUint64, (v) => v.toString(), ...modifiers)
 
 export const i64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
-    primitive(JSONT.I64, toInt64, ...modifiers)
+    primitive(JSONT.I64, toInt64, (v) => v.toString(), ...modifiers)
 
 function applyModifier<M extends BaseMeta<any, M>>(value: M, modify: Modifier<M>): M {
     return Object.assign({}, modify(value), { type: value.type })
@@ -64,12 +64,13 @@ function applyModifier<M extends BaseMeta<any, M>>(value: M, modify: Modifier<M>
 const primitive = <T>(
     type: BaseType,
     toValue: PrimitiveMeta<T>['toValue'],
+    toJson: (value: T) => string,
     ...modifiers: Modifier<PrimitiveMeta<T>>[]
 ): PrimitiveMeta<T> => {
     const defaultMeta: PrimitiveMeta<T> = {
         type: type,
         toValue: toValue,
-        toJson: (m, v, _) => v.toString()
+        toJson: (m, v, _) => toJson(v)
     }
     return modifiers.reduce(applyModifier, defaultMeta)
 }
