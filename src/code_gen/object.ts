@@ -1,5 +1,4 @@
-import { BaseMeta, ObjectFieldMeta, ObjectMeta } from "../metadata/types"
-import { JsonOptions } from "../options"
+import { ObjectMeta } from "../metadata/types"
 
 export function genObjectFactory(fields: string[]): (values: unknown[]) => object {
     const assignments = fields
