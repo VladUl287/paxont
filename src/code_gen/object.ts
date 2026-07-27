@@ -1,10 +1,14 @@
 import { ObjectMeta } from "../metadata/types"
 
-export function genObjectFactory(fields: string[]): (values: unknown[]) => object {
+type FieldArrayToRecord<T extends readonly string[]> = {
+  [K in T[number]]: unknown
+}
+
+export function genObjectFactory<T extends readonly string[]>(fields: T): (values: unknown[]) => FieldArrayToRecord<T> {
     const assignments = fields
-        .map((field, i) => `${field}: v[${i}]`)
+        .map((field, i) => `'${field}': v[${i}]`)
         .join(',')
-    return new Function("v", `return {${assignments}}`) as (values: unknown[]) => object
+    return new Function("v", `return {${assignments}}`) as (values: unknown[]) => FieldArrayToRecord<T>
 }
 
 export function genObjectToJsonFactory(fields: string[]): ObjectMeta<any>['toJson'] {
