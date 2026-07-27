@@ -60,12 +60,16 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
     }
 
     if (!isContinued) {
-        if (b[i] !== SQUARE_OPEN)
-            return {
-                type: ERROR,
-                error: new JSONParseError(`Expected '[' but found '${String.fromCharCode(b[i])}'`, { depth, index: i, metadata })
-            }
-        i++
+        if (b[i] !== SQUARE_OPEN) return {
+            type: ERROR,
+            error: new JSONParseError(`Expected '[' but found '${String.fromCharCode(b[i])}'`, { depth, index: i, metadata })
+        }
+
+        if (b[++i] === SQUARE_CLOSE) return {
+            type: COMPLETE,
+            value: buffer.slice(0, 0),
+            nextIndex: ++i
+        }
     }
 
     try {
@@ -82,11 +86,7 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
                 return result
 
             if (isNeedsMoreData(result)) {
-                stack.push({
-                    isContinued: true,
-                    buffer: buffer,
-                    bufferIndex: j
-                })
+                stack.push({ isContinued: true, buffer, bufferIndex: j })
                 return result
             }
 
@@ -98,9 +98,18 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
 
             if (b[i] === COMMA) i++
             else if (b[i] === SQUARE_CLOSE) break
-            else return {
-                type: ERROR,
-                error: new JSONParseError(`Expected ']' or ',' but found '${String.fromCharCode(b[i])}'`, { depth, index: i, metadata })
+            else {
+                if (i >= b.length && reader.writable) {
+                    stack.push({ isContinued: true, buffer, bufferIndex: j })
+                    return {
+                        type: NEEDS_MORE_DATA,
+                        nextIndex: i
+                    }
+                }
+                return {
+                    type: ERROR,
+                    error: new JSONParseError(`Expected ']' or ',' but found '${String.fromCharCode(b[i])}'`, { depth, index: i, metadata })
+                }
             }
         }
 
