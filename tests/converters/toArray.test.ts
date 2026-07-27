@@ -1,6 +1,6 @@
 import { toArray } from "../../src/converters/array"
 import { array, i16Array, i32Array, i64Array, i8Array, number, string, u16Array, u32Array, u64Array, u8Array } from "../../src/metadata/builder"
-import { ConvertState, ParseContext, PrimitiveMeta } from "../../src/metadata/types"
+import { ArrayMeta, ConvertState, ParseContext, PrimitiveMeta } from "../../src/metadata/types"
 import { defaultOptions, defaultOptions as dfo } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
@@ -8,59 +8,84 @@ import { isNeedsMoreData, ReadResult, ReadResultType } from "../../src/utils/typ
 
 describe('toArray', () => {
     const encoder = new TextEncoder()
-    const jsonArrayToBytes = (jsonArray: string): Uint8Array => {
-        return encoder.encode(jsonArray)
+
+    const toBytes = (str: string): Uint8Array => encoder.encode(str)
+
+    const deserialize = (meta: ArrayMeta<any, any, any>, data: Uint8Array, index = 0, depth = 0) => {
+        return toArray(meta, {
+            reader: { bytes: data, writable: false },
+            options: defaultOptions,
+            stack: new Stack<ConvertState>()
+        }, index, depth)
     }
 
-    const syncCtx = (bytes: Uint8Array, options = dfo) => ({
-        reader: { bytes: bytes, writable: false },
-        options: options,
-        stack: new Stack<ConvertState>()
-    })
+    const deserializePartially = (chunks: Uint8Array[]) => {
+        let result
+        let index = 0
 
-    const asyncCtx = (bytes: Uint8Array, options = dfo, stack = new Stack<ConvertState>(), writable: boolean = false) => ({
-        reader: { bytes, writable },
-        options: options,
-        stack: stack
-    })
+        let currentChunk
+        let prevChunk: number[] = []
+
+        const stack = new Stack<ConvertState>()
+
+        while ((currentChunk = chunks.pop()) !== undefined) {
+            const context: ParseContext = {
+                reader: {
+                    bytes: new Uint8Array([...prevChunk, ...currentChunk]),
+                    writable: chunks.length !== 0
+                },
+                options: defaultOptions,
+                stack: stack
+            }
+            result = toArray(arrayMeta, context, index, 0)
+
+            if (isNeedsMoreData(result)) {
+                index = result.nextIndex - currentChunk.length
+                prevChunk = [...currentChunk.slice(result.nextIndex)]
+                continue
+            }
+
+            return result
+        }
+    }
 
     const arrayMeta = array(number())
 
     describe('valid array', () => {
         test('converts simple number array string to array', () => {
-            const bytes = jsonArrayToBytes("[1, 2, 3]")
-            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 9 })
+            const bytes = toBytes("[1, 2, 3]")
+            const result = deserialize(arrayMeta, bytes)
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 9 })
         })
 
         test('converts empty array string to empty array', () => {
-            const bytes = jsonArrayToBytes('[]')
-            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({ type: ReadResultType.COMPLETE, value: [], nextIndex: 2 })
+            const bytes = toBytes('[]')
+            const result = deserialize(arrayMeta, bytes)
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [], nextIndex: 2 })
         })
 
         test('converts array with single element', () => {
-            const bytes = jsonArrayToBytes('[42]')
-            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({ type: ReadResultType.COMPLETE, value: [42], nextIndex: 4 })
+            const bytes = toBytes('[42]')
+            const result = deserialize(arrayMeta, bytes)
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [42], nextIndex: 4 })
         })
     })
 
     describe('invalid array', () => {
         test('depth exceed', () => {
-            const bytes = jsonArrayToBytes("[1, 2, 3]")
-            const array = toArray(arrayMeta, syncCtx(bytes, defaultOptions), 0, defaultOptions.maxDepth + 1)
-            expect(array).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+            const bytes = toBytes("[1, 2, 3]")
+            const result = deserialize(arrayMeta, bytes, 0, 128)
+            expect(result).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
         })
 
         test('unexpected end of input', () => {
-            const bytes = jsonArrayToBytes("[1]")
-            const array = toArray(arrayMeta, syncCtx(bytes), 3, 0)
-            expect(array).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+            const bytes = toBytes("[1]")
+            const result = deserialize(arrayMeta, bytes, 3, 0)
+            expect(result).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
         })
 
         test('item parse error', () => {
-            const bytes = jsonArrayToBytes("[1]")
+            const bytes = toBytes("[1]")
             const error: ReadResult<number> = {
                 type: ReadResultType.ERROR,
                 error: expect.any(JSONParseError)
@@ -69,169 +94,73 @@ describe('toArray', () => {
                 ...m,
                 toValue: (m: PrimitiveMeta<number>, c: ParseContext, i: number, d: number): ReadResult<number> => error
             })))
-            const result = toArray(numericArray, syncCtx(bytes), 0, 0)
+             const result = deserialize(numericArray, bytes)
             expect(result).toEqual(error)
         })
 
         test('unexpected end of value', () => {
-            const bytes = jsonArrayToBytes("[1, 2")
-            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+            const bytes = toBytes("[1, 2")
+            const result = deserialize(arrayMeta, bytes)
+            expect(result).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
         })
     })
 
     describe('partial array', () => {
         test('start splitted', () => {
-            const chunks = [jsonArrayToBytes("["), jsonArrayToBytes("1,2,3]")].reverse()
-            let ch
-            let result
-            let index = 0
-            let tempCh: number[] = []
-            const stack = new Stack<ConvertState>()
-            while ((ch = chunks.pop()) !== undefined) {
-                const ctx = asyncCtx(new Uint8Array([...tempCh, ...ch]), dfo, stack, chunks.length !== 0)
-                result = toArray(arrayMeta, ctx, index, 0)
-                if (isNeedsMoreData(result)) {
-                    index = result.nextIndex - ch.length
-                    tempCh = [...ch.slice(result.nextIndex)]
-                }
-            }
+            const chunks = [toBytes("["), toBytes("1,2,3]")].reverse()
+            const result = deserializePartially(chunks)
             expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 6 })
         })
         test('start splitted with whitespace', () => {
-            const chunks = [jsonArrayToBytes("[ "), jsonArrayToBytes("1,2,3]")].reverse()
-            let ch
-            let result
-            let index = 0
-            let tempCh: number[] = []
-            const stack = new Stack<ConvertState>()
-            while ((ch = chunks.pop()) !== undefined) {
-                const ctx = asyncCtx(new Uint8Array([...tempCh, ...ch]), dfo, stack, chunks.length !== 0)
-                result = toArray(arrayMeta, ctx, index, 0)
-                if (isNeedsMoreData(result)) {
-                    index = result.nextIndex - ch.length
-                    tempCh = [...ch.slice(result.nextIndex)]
-                }
-            }
+            const chunks = [toBytes("[ "), toBytes("1,2,3]")].reverse()
+            const result = deserializePartially(chunks)
             expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 6 })
         })
         test('value splitted', () => {
-            const chunks = [jsonArrayToBytes("[1"), jsonArrayToBytes(",2,3]")].reverse()
-            let ch
-            let result
-            let index = 0
-            let tempCh: number[] = []
-            const stack = new Stack<ConvertState>()
-            while ((ch = chunks.pop()) !== undefined) {
-                const ctx = asyncCtx(new Uint8Array([...tempCh, ...ch]), dfo, stack, chunks.length !== 0)
-                result = toArray(arrayMeta, ctx, index, 0)
-                if (isNeedsMoreData(result)) {
-                    index = result.nextIndex - ch.length
-                    tempCh = [...ch.slice(result.nextIndex)]
-                }
-            }
+            const chunks = [toBytes("[1"), toBytes(",2,3]")].reverse()
+            const result = deserializePartially(chunks)
             expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 6 })
         })
         test('value splitted with whitespace', () => {
-            const chunks = [jsonArrayToBytes("[1 "), jsonArrayToBytes(",2,3]")].reverse()
-            let ch
-            let result
-            let index = 0
-            let tempCh: number[] = []
-            const stack = new Stack<ConvertState>()
-            while ((ch = chunks.pop()) !== undefined) {
-                const ctx = asyncCtx(new Uint8Array([...tempCh, ...ch]), dfo, stack, chunks.length !== 0)
-                result = toArray(arrayMeta, ctx, index, 0)
-                if (isNeedsMoreData(result)) {
-                    index = result.nextIndex - ch.length
-                    tempCh = [...ch.slice(result.nextIndex)]
-                }
-            }
+            const chunks = [toBytes("[1 "), toBytes(",2,3]")].reverse()
+            const result = deserializePartially(chunks)
             expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 5 })
         })
         test('comma splitted', () => {
-            const chunks = [jsonArrayToBytes("[1,"), jsonArrayToBytes("2,3]")].reverse()
-            let ch
-            let result
-            let index = 0
-            let tempCh: number[] = []
-            const stack = new Stack<ConvertState>()
-            while ((ch = chunks.pop()) !== undefined) {
-                const ctx = asyncCtx(new Uint8Array([...tempCh, ...ch]), dfo, stack, chunks.length !== 0)
-                result = toArray(arrayMeta, ctx, index, 0)
-                if (isNeedsMoreData(result)) {
-                    index = result.nextIndex - ch.length
-                    tempCh = [...ch.slice(result.nextIndex)]
-                }
-            }
+            const chunks = [toBytes("[1,"), toBytes("2,3]")].reverse()
+            const result = deserializePartially(chunks)
             expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 4 })
         })
         test('comma splitted with whitespace', () => {
-            const chunks = [jsonArrayToBytes("[1, "), jsonArrayToBytes("2,3]")].reverse()
-            let ch
-            let result
-            let index = 0
-            let tempCh: number[] = []
-            const stack = new Stack<ConvertState>()
-            while ((ch = chunks.pop()) !== undefined) {
-                const ctx = asyncCtx(new Uint8Array([...tempCh, ...ch]), dfo, stack, chunks.length !== 0)
-                result = toArray(arrayMeta, ctx, index, 0)
-                if (isNeedsMoreData(result)) {
-                    index = result.nextIndex - ch.length
-                    tempCh = [...ch.slice(result.nextIndex)]
-                }
-            }
+            const chunks = [toBytes("[1, "), toBytes("2,3]")].reverse()
+            const result = deserializePartially(chunks)
             expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 4 })
         })
         test('end splited', () => {
-            const chunks = [jsonArrayToBytes("[1, 2, 3"), jsonArrayToBytes("]")].reverse()
-            let ch
-            let result
-            let index = 0
-            let tempCh: number[] = []
-            const stack = new Stack<ConvertState>()
-            while ((ch = chunks.pop()) !== undefined) {
-                const ctx = asyncCtx(new Uint8Array([...tempCh, ...ch]), dfo, stack, chunks.length !== 0)
-                result = toArray(arrayMeta, ctx, index, 0)
-                if (isNeedsMoreData(result)) {
-                    index = result.nextIndex - ch.length
-                    tempCh = [...ch.slice(result.nextIndex)]
-                }
-            }
+            const chunks = [toBytes("[1, 2, 3"), toBytes("]")].reverse()
+            const result = deserializePartially(chunks)
             expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 2 })
         })
         test('end splited with whitespace', () => {
-            const chunks = [jsonArrayToBytes("[1, 2, 3"), jsonArrayToBytes(" ]")].reverse()
-            let ch
-            let result
-            let index = 0
-            let tempCh: number[] = []
-            const stack = new Stack<ConvertState>()
-            while ((ch = chunks.pop()) !== undefined) {
-                const ctx = asyncCtx(new Uint8Array([...tempCh, ...ch]), dfo, stack, chunks.length !== 0)
-                result = toArray(arrayMeta, ctx, index, 0)
-                if (isNeedsMoreData(result)) {
-                    index = result.nextIndex - ch.length
-                    tempCh = [...ch.slice(result.nextIndex)]
-                }
-            }
+            const chunks = [toBytes("[1, 2, 3"), toBytes(" ]")].reverse()
+            const result = deserializePartially(chunks)
             expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 3 })
         })
     })
 
     describe('edge cases and error handling', () => {
         test('returns empty array for invalid input if no error throwing', () => {
-            const bytes = jsonArrayToBytes("not an array")
-            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+            const bytes = toBytes("not an array")
+            const result = deserialize(arrayMeta, bytes)
+            expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
         })
 
         test('handles large arrays', () => {
             const largeArray = Array.from({ length: 1000 }, (_, i) => i)
             const arrayString = '[' + largeArray.join(', ') + ']'
-            const bytes = jsonArrayToBytes(arrayString)
-            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({
+            const bytes = toBytes(arrayString)
+            const result = deserialize(arrayMeta, bytes)
+            expect(result).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: largeArray,
                 nextIndex: 4890
@@ -241,9 +170,9 @@ describe('toArray', () => {
 
     describe('whitespace handling', () => {
         test('handles spaces around elements', () => {
-            const bytes = jsonArrayToBytes("[1, 2, 3]")
-            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({
+            const bytes = toBytes("[1, 2, 3]")
+            const result = deserialize(arrayMeta, bytes)
+            expect(result).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: [1, 2, 3],
                 nextIndex: 9
@@ -251,9 +180,9 @@ describe('toArray', () => {
         })
 
         test('handles spaces between brackets and elements', () => {
-            const bytes = jsonArrayToBytes("[ 1, 2, 3 ]")
-            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({
+            const bytes = toBytes("[ 1, 2, 3 ]")
+            const result = deserialize(arrayMeta, bytes)
+            expect(result).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: [1, 2, 3],
                 nextIndex: 11
@@ -261,9 +190,9 @@ describe('toArray', () => {
         })
 
         test('handles newlines and tabs', () => {
-            const bytes = jsonArrayToBytes("[\n  1,\n  2,\n  3\n]")
-            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({
+            const bytes = toBytes("[\n  1,\n  2,\n  3\n]")
+            const result = deserialize(arrayMeta, bytes)
+            expect(result).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: [1, 2, 3],
                 nextIndex: 17
@@ -271,9 +200,9 @@ describe('toArray', () => {
         })
 
         test('handles multiple spaces', () => {
-            const bytes = jsonArrayToBytes('[1,    2,    3]')
-            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({
+            const bytes = toBytes('[1,    2,    3]')
+            const result = deserialize(arrayMeta, bytes)
+            expect(result).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: [1, 2, 3],
                 nextIndex: 15
@@ -283,21 +212,21 @@ describe('toArray', () => {
 
     describe('invalid input', () => {
         test('throws error for invalid JSON', () => {
-            const bytes = jsonArrayToBytes('[1, 2, 3')
-            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+            const bytes = toBytes('[1, 2, 3')
+            const result = deserialize(arrayMeta, bytes)
+            expect(result).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
         })
 
         test('throws error for non-array JSON', () => {
-            const bytes = jsonArrayToBytes('{"a": 1}')
-            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+            const bytes = toBytes('{"a": 1}')
+            const result = deserialize(arrayMeta, bytes)
+            expect(result).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
         })
 
         test('throws error for empty string', () => {
-            const bytes = jsonArrayToBytes('')
-            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+            const bytes = toBytes('')
+            const result = deserialize(arrayMeta, bytes)
+            expect(result).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
         })
 
         test('throws error for null input', () => {
@@ -311,10 +240,10 @@ describe('toArray', () => {
 
     describe('TypedArray support', () => {
         test('converts to Int8Array when factory is provided', () => {
-            const bytes = jsonArrayToBytes('[1, 2, 3]')
+            const bytes = toBytes('[1, 2, 3]')
             const meta = i8Array()
-            const array = toArray(meta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({
+            const result = deserialize(meta, bytes)
+            expect(result).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: new Int8Array([1, 2, 3]),
                 nextIndex: 9
@@ -322,10 +251,10 @@ describe('toArray', () => {
         })
 
         test('converts to Uint8Array when factory is provided', () => {
-            const bytes = jsonArrayToBytes('[1, 2, 3]')
+            const bytes = toBytes('[1, 2, 3]')
             const meta = u8Array()
-            const array = toArray(meta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({
+            const result = deserialize(meta, bytes)
+            expect(result).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: new Uint8Array([1, 2, 3]),
                 nextIndex: 9
@@ -333,10 +262,10 @@ describe('toArray', () => {
         })
 
         test('converts to Int16Array when factory is provided', () => {
-            const bytes = jsonArrayToBytes('[1, 2, 3]')
+            const bytes = toBytes('[1, 2, 3]')
             const meta = i16Array()
-            const array = toArray(meta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({
+            const result = deserialize(meta, bytes)
+            expect(result).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: new Int16Array([1, 2, 3]),
                 nextIndex: 9
@@ -344,10 +273,10 @@ describe('toArray', () => {
         })
 
         test('converts to Uint16Array when factory is provided', () => {
-            const bytes = jsonArrayToBytes('[1, 2, 3]')
+            const bytes = toBytes('[1, 2, 3]')
             const meta = u16Array()
-            const array = toArray(meta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({
+            const result = deserialize(meta, bytes)
+            expect(result).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: new Uint16Array([1, 2, 3]),
                 nextIndex: 9
@@ -355,10 +284,10 @@ describe('toArray', () => {
         })
 
         test('converts to Int32Array when factory is provided', () => {
-            const bytes = jsonArrayToBytes('[1, 2, 3]')
+            const bytes = toBytes('[1, 2, 3]')
             const meta = i32Array()
-            const array = toArray(meta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({
+            const result = deserialize(meta, bytes)
+            expect(result).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: new Int32Array([1, 2, 3]),
                 nextIndex: 9
@@ -366,10 +295,10 @@ describe('toArray', () => {
         })
 
         test('converts to Uint32Array when factory is provided', () => {
-            const bytes = jsonArrayToBytes('[1, 2, 3]')
+            const bytes = toBytes('[1, 2, 3]')
             const meta = u32Array()
-            const array = toArray(meta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({
+            const result = deserialize(meta, bytes)
+            expect(result).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: new Uint32Array([1, 2, 3]),
                 nextIndex: 9
@@ -377,10 +306,10 @@ describe('toArray', () => {
         })
 
         test('converts to BigInt64Array when factory is provided', () => {
-            const bytes = jsonArrayToBytes('[1, 2, 3]')
+            const bytes = toBytes('[1, 2, 3]')
             const meta = i64Array()
-            const array = toArray(meta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({
+            const result = deserialize(meta, bytes)
+            expect(result).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: new BigInt64Array([1n, 2n, 3n]),
                 nextIndex: 9
@@ -388,10 +317,10 @@ describe('toArray', () => {
         })
 
         test('converts to BigUint64Array when factory is provided', () => {
-            const bytes = jsonArrayToBytes('[1, 2, 3]')
+            const bytes = toBytes('[1, 2, 3]')
             const meta = u64Array()
-            const array = toArray(meta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual({
+            const result = deserialize(meta, bytes)
+            expect(result).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: new BigUint64Array([1n, 2n, 3n]),
                 nextIndex: 9
