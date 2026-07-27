@@ -102,10 +102,16 @@ describe('toArray', () => {
             const chunks = [jsonArrayToBytes("[ "), jsonArrayToBytes("1,2,3]")].reverse()
             let ch
             let result
+            let index = 0
+            let tempCh: number[] = []
             const stack = new Stack<ConvertState>()
             while ((ch = chunks.pop()) !== undefined) {
-                const ctx = asyncCtx(ch, dfo, stack)
-                result = toArray(arrayMeta, ctx, 0, 0)
+                const ctx = asyncCtx(new Uint8Array([...tempCh, ...ch]), dfo, stack, chunks.length !== 0)
+                result = toArray(arrayMeta, ctx, index, 0)
+                if (isNeedsMoreData(result)) {
+                    index = result.nextIndex - ch.length
+                    tempCh = [...ch.slice(result.nextIndex)]
+                }
             }
             expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 6 })
         })
@@ -113,61 +119,103 @@ describe('toArray', () => {
             const chunks = [jsonArrayToBytes("[1"), jsonArrayToBytes(",2,3]")].reverse()
             let ch
             let result
+            let index = 0
+            let tempCh: number[] = []
             const stack = new Stack<ConvertState>()
             while ((ch = chunks.pop()) !== undefined) {
-                result = toArray(arrayMeta, asyncCtx(ch, dfo, stack), 0, 0)
+                const ctx = asyncCtx(new Uint8Array([...tempCh, ...ch]), dfo, stack, chunks.length !== 0)
+                result = toArray(arrayMeta, ctx, index, 0)
+                if (isNeedsMoreData(result)) {
+                    index = result.nextIndex - ch.length
+                    tempCh = [...ch.slice(result.nextIndex)]
+                }
             }
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 6 })
         })
         test('value splitted with whitespace', () => {
             const chunks = [jsonArrayToBytes("[1 "), jsonArrayToBytes(",2,3]")].reverse()
             let ch
             let result
+            let index = 0
+            let tempCh: number[] = []
             const stack = new Stack<ConvertState>()
             while ((ch = chunks.pop()) !== undefined) {
-                result = toArray(arrayMeta, asyncCtx(ch, dfo, stack), 0, 0)
+                const ctx = asyncCtx(new Uint8Array([...tempCh, ...ch]), dfo, stack, chunks.length !== 0)
+                result = toArray(arrayMeta, ctx, index, 0)
+                if (isNeedsMoreData(result)) {
+                    index = result.nextIndex - ch.length
+                    tempCh = [...ch.slice(result.nextIndex)]
+                }
             }
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 5 })
         })
         test('comma splitted', () => {
             const chunks = [jsonArrayToBytes("[1,"), jsonArrayToBytes("2,3]")].reverse()
             let ch
             let result
+            let index = 0
+            let tempCh: number[] = []
             const stack = new Stack<ConvertState>()
             while ((ch = chunks.pop()) !== undefined) {
-                result = toArray(arrayMeta, asyncCtx(ch, dfo, stack), 0, 0)
+                const ctx = asyncCtx(new Uint8Array([...tempCh, ...ch]), dfo, stack, chunks.length !== 0)
+                result = toArray(arrayMeta, ctx, index, 0)
+                if (isNeedsMoreData(result)) {
+                    index = result.nextIndex - ch.length
+                    tempCh = [...ch.slice(result.nextIndex)]
+                }
             }
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 4 })
         })
         test('comma splitted with whitespace', () => {
             const chunks = [jsonArrayToBytes("[1, "), jsonArrayToBytes("2,3]")].reverse()
             let ch
             let result
+            let index = 0
+            let tempCh: number[] = []
             const stack = new Stack<ConvertState>()
             while ((ch = chunks.pop()) !== undefined) {
-                result = toArray(arrayMeta, asyncCtx(ch, dfo, stack), 0, 0)
+                const ctx = asyncCtx(new Uint8Array([...tempCh, ...ch]), dfo, stack, chunks.length !== 0)
+                result = toArray(arrayMeta, ctx, index, 0)
+                if (isNeedsMoreData(result)) {
+                    index = result.nextIndex - ch.length
+                    tempCh = [...ch.slice(result.nextIndex)]
+                }
             }
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 4 })
         })
         test('end splited', () => {
             const chunks = [jsonArrayToBytes("[1, 2, 3"), jsonArrayToBytes("]")].reverse()
             let ch
             let result
+            let index = 0
+            let tempCh: number[] = []
             const stack = new Stack<ConvertState>()
             while ((ch = chunks.pop()) !== undefined) {
-                result = toArray(arrayMeta, asyncCtx(ch, dfo, stack), 0, 0)
+                const ctx = asyncCtx(new Uint8Array([...tempCh, ...ch]), dfo, stack, chunks.length !== 0)
+                result = toArray(arrayMeta, ctx, index, 0)
+                if (isNeedsMoreData(result)) {
+                    index = result.nextIndex - ch.length
+                    tempCh = [...ch.slice(result.nextIndex)]
+                }
             }
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 2 })
         })
         test('end splited with whitespace', () => {
             const chunks = [jsonArrayToBytes("[1, 2, 3"), jsonArrayToBytes(" ]")].reverse()
             let ch
             let result
+            let index = 0
+            let tempCh: number[] = []
             const stack = new Stack<ConvertState>()
             while ((ch = chunks.pop()) !== undefined) {
-                result = toArray(arrayMeta, asyncCtx(ch, dfo, stack), 0, 0)
+                const ctx = asyncCtx(new Uint8Array([...tempCh, ...ch]), dfo, stack, chunks.length !== 0)
+                result = toArray(arrayMeta, ctx, index, 0)
+                if (isNeedsMoreData(result)) {
+                    index = result.nextIndex - ch.length
+                    tempCh = [...ch.slice(result.nextIndex)]
+                }
             }
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 3 })
         })
     })
 
