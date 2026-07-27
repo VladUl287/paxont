@@ -8,7 +8,7 @@ import { BaseType, JSONT } from "./baseTypes"
 import { toDate } from "../converters/date"
 import { toMap } from "../converters/map"
 import { toSet } from "../converters/set"
-import { genObjectFactory, genObjectToJsonFactory1 } from "../code_gen/object"
+import { genObjectFactory, genObjectToJsonFactory } from "../code_gen/object"
 import { generateTrie } from "../code_gen/trie"
 import { toObject } from "../converters/object"
 import { toNullable } from "../converters/nullable"
@@ -254,7 +254,7 @@ export const object = <M extends ObjectFieldMeta<any, any, any>[]>(...fields: M)
     const keysBytes = fields.map(f => f.name.bytes)
     const fieldIndex = generateTrie(keysBytes) as any
 
-    const toJson = genObjectToJsonFactory1(...fields)
+    const toJson = genObjectToJsonFactory(...fields)
 
     return {
         type: JSONT.OBJECT,

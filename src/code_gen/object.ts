@@ -7,19 +7,12 @@ export function genObjectFactory(fields: string[]): (values: unknown[]) => objec
     return new Function("v", `return {${assignments}}`) as (values: unknown[]) => object
 }
 
-export function genObjectToJsonFactory1(...fields: ObjectFieldMeta<any, any, any>[]) {
+export function genObjectToJsonFactory(fields: string[]): (fields: ObjectFieldMeta<any, any, any>[]) => string {
     let body = 'var f = m.fields;'
     body += 'return `{'
     body += fields
-        .map((field, i) => {
-            const key = field.name.value
-
-            if (typeof key !== 'string')
-                return ''
-
-            return `"${key}":\${f[${i}].toJson(d.${key},f[${i}],o)}`
-        })
+        .map((key, i) => `"${key}":\${f[${i}].toJson(d.${key},f[${i}],o)}`)
         .join(',')
     body += '}`'
-    return new Function('d', 'm', 'o', body) as any
+    return new Function('d', 'm', 'o', body) as (fields: ObjectFieldMeta<any, any, any>[]) => string
 }
