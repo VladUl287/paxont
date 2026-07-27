@@ -99,11 +99,18 @@ export const arrayPool =
         })
 
 const globalPools: Record<string, ArrayPool<any>> = Object.freeze({
-    number: useArrayPool(Float64Array),
-    u8: useArrayPool(Uint8Array),
+    number: useArrayPool<Array<number>>(Array),
     string: useArrayPool<Array<string>>(Array),
-    object: useArrayPool<Array<number>>(Array),
-    undefined: useArrayPool(Array)
+    object: useArrayPool<Array<object>>(Array),
+    undefined: useArrayPool<Array<any>>(Array),
+    i8: useArrayPool(Int8Array),
+    i16: useArrayPool(Int16Array),
+    i32: useArrayPool(Int32Array),
+    i64: useArrayPool(BigInt64Array),
+    u8: useArrayPool(Uint8Array),
+    u16: useArrayPool(Uint16Array),
+    u32: useArrayPool(Uint32Array),
+    u64: useArrayPool(BigUint64Array),
 })
 
 export const array = <M extends BaseMeta<ExtractType<M>, M>>(
