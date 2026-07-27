@@ -82,7 +82,7 @@ describe('createCache', () => {
 
         it('should handle complex value types', () => {
 
-            type User = { id: number name: string }
+            type User = { id: number; name: string }
             const userCache = createCache<string, User>()
             const key = 'user1'
             const user: User = { id: 1, name: 'John Doe' }
