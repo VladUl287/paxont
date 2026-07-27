@@ -1,5 +1,5 @@
 import { toArray } from "../../src/converters/array"
-import { array, number } from "../../src/metadata/builder"
+import { array, i32Array, i64Array, i8Array, number, u16Array, u32Array, u64Array, u8Array } from "../../src/metadata/builder"
 import { ConvertState, ParseContext, PrimitiveMeta } from "../../src/metadata/types"
 import { defaultOptions, defaultOptions as dfo } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
@@ -237,82 +237,93 @@ describe('toArray', () => {
         })
     })
 
-    // describe('TypedArray support', () => {
-    //     test('converts to Int8Array when factory is provided', () => {
-    //         const result = jsonArrayToBytes('[1, 2, 3]', Int8Array)
-    //         expect(result).toBeInstanceOf(Int8Array)
-    //         expect(Array.from(result)).toEqual([1, 2, 3])
-    //     })
+    describe('TypedArray support', () => {
+        test('converts to Int8Array when factory is provided', () => {
+            const bytes = jsonArrayToBytes('[1, 2, 3]')
+            const meta = i8Array()
+            const array = toArray(meta, syncCtx(bytes), 0, 0)
+            expect(array).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: new Int8Array([1, 2, 3]),
+                nextIndex: 7
+            })
+        })
 
-    //     test('converts to Uint8Array when factory is provided', () => {
-    //         const result = jsonArrayToBytes('[1, 2, 3]', Uint8Array)
-    //         expect(result).toBeInstanceOf(Uint8Array)
-    //         expect(Array.from(result)).toEqual([1, 2, 3])
-    //     })
+        test('converts to Uint8Array when factory is provided', () => {
+            const bytes = jsonArrayToBytes('[1, 2, 3]')
+            const meta = u8Array()
+            const array = toArray(meta, syncCtx(bytes), 0, 0)
+            expect(array).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: new Uint8Array([1, 2, 3]),
+                nextIndex: 7
+            })
+        })
 
-    //     test('converts to Uint8ClampedArray when factory is provided', () => {
-    //         const result = jsonArrayToBytes('[1, 2, 3]', Uint8ClampedArray)
-    //         expect(result).toBeInstanceOf(Uint8ClampedArray)
-    //         expect(Array.from(result)).toEqual([1, 2, 3])
-    //     })
+        test('converts to Int16Array when factory is provided', () => {
+            const bytes = jsonArrayToBytes('[1, 2, 3]')
+            const meta = u16Array()
+            const array = toArray(meta, syncCtx(bytes), 0, 0)
+            expect(array).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: new Int16Array([1, 2, 3]),
+                nextIndex: 7
+            })
+        })
 
-    //     test('converts to Int16Array when factory is provided', () => {
-    //         const result = jsonArrayToBytes('[1, 2, 3]', Int16Array)
-    //         expect(result).toBeInstanceOf(Int16Array)
-    //         expect(Array.from(result)).toEqual([1, 2, 3])
-    //     })
+        test('converts to Uint16Array when factory is provided', () => {
+            const bytes = jsonArrayToBytes('[1, 2, 3]')
+            const meta = u16Array()
+            const array = toArray(meta, syncCtx(bytes), 0, 0)
+            expect(array).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: new Uint16Array([1, 2, 3]),
+                nextIndex: 7
+            })
+        })
 
-    //     test('converts to Uint16Array when factory is provided', () => {
-    //         const result = jsonArrayToBytes('[1, 2, 3]', Uint16Array)
-    //         expect(result).toBeInstanceOf(Uint16Array)
-    //         expect(Array.from(result)).toEqual([1, 2, 3])
-    //     })
+        test('converts to Int32Array when factory is provided', () => {
+            const bytes = jsonArrayToBytes('[1, 2, 3]')
+            const meta = i32Array()
+            const array = toArray(meta, syncCtx(bytes), 0, 0)
+            expect(array).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: new Int32Array([1, 2, 3]),
+                nextIndex: 7
+            })
+        })
 
-    //     test('converts to Int32Array when factory is provided', () => {
-    //         const result = jsonArrayToBytes('[1, 2, 3]', Int32Array)
-    //         expect(result).toBeInstanceOf(Int32Array)
-    //         expect(Array.from(result)).toEqual([1, 2, 3])
-    //     })
+        test('converts to Uint32Array when factory is provided', () => {
+            const bytes = jsonArrayToBytes('[1, 2, 3]')
+            const meta = u32Array()
+            const array = toArray(meta, syncCtx(bytes), 0, 0)
+            expect(array).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: new Uint32Array([1, 2, 3]),
+                nextIndex: 7
+            })
+        })
 
-    //     test('converts to Uint32Array when factory is provided', () => {
-    //         const result = jsonArrayToBytes('[1, 2, 3]', Uint32Array)
-    //         expect(result).toBeInstanceOf(Uint32Array)
-    //         expect(Array.from(result)).toEqual([1, 2, 3])
-    //     })
+        test('converts to BigInt64Array when factory is provided', () => {
+            const bytes = jsonArrayToBytes('[1, 2, 3]')
+            const meta = i64Array()
+            const array = toArray(meta, syncCtx(bytes), 0, 0)
+            expect(array).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: new BigInt64Array([1n, 2n, 3n]),
+                nextIndex: 7
+            })
+        })
 
-    //     test('converts to Float32Array when factory is provided', () => {
-    //         const result = jsonArrayToBytes('[1.5, 2.5, 3.5]', Float32Array)
-    //         expect(result).toBeInstanceOf(Float32Array)
-    //         expect(Array.from(result)).toEqual([1.5, 2.5, 3.5])
-    //     })
-
-    //     test('converts to Float64Array when factory is provided', () => {
-    //         const result = jsonArrayToBytes('[1.5, 2.5, 3.5]', Float64Array)
-    //         expect(result).toBeInstanceOf(Float64Array)
-    //         expect(Array.from(result)).toEqual([1.5, 2.5, 3.5])
-    //     })
-
-    //     test('converts to BigInt64Array when factory is provided', () => {
-    //         const result = jsonArrayToBytes('[1, 2, 3]', BigInt64Array)
-    //         expect(result).toBeInstanceOf(BigInt64Array)
-    //         expect(Array.from(result)).toEqual([1n, 2n, 3n])
-    //     })
-
-    //     test('converts to BigUint64Array when factory is provided', () => {
-    //         const result = jsonArrayToBytes('[1, 2, 3]', BigUint64Array)
-    //         expect(result).toBeInstanceOf(BigUint64Array)
-    //         expect(Array.from(result)).toEqual([1n, 2n, 3n])
-    //     })
-    // })
-
-    // describe('type checking', () => {
-    //     test('returns Array by default', () => {
-    //         expect(jsonArrayToBytes('[1, 2, 3]')).toBeInstanceOf(Array)
-    //     })
-
-    //     test('returns correct TypedArray type', () => {
-    //         const result = jsonArrayToBytes('[1, 2, 3]', Int8Array)
-    //         expect(Object.prototype.toString.call(result)).toBe('[object Int8Array]')
-    //     })
-    // })
+        test('converts to BigUint64Array when factory is provided', () => {
+            const bytes = jsonArrayToBytes('[1, 2, 3]')
+            const meta = u64Array()
+            const array = toArray(meta, syncCtx(bytes), 0, 0)
+            expect(array).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: new BigUint64Array([1n, 2n, 3n]),
+                nextIndex: 7
+            })
+        })
+    })
 })
