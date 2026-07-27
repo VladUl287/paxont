@@ -1,6 +1,7 @@
 import { toDate } from "../../src/converters/date"
-import { JsonReader } from "../../src/metadata/types"
+import { ConvertState, JsonReader, ParseContext } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
+import { Stack } from "../../src/utils/stack"
 
 describe('toDate', () => {
     function stringToUint8Array(str: string) {
@@ -9,8 +10,9 @@ describe('toDate', () => {
 
     function callToDate(bytes: Uint8Array, i: number) {
         const meta: any = {}
-        const ctx: JsonReader = { bytes: bytes, options: defaultOptions }
-        return toDate(ctx, meta, i, 0)
+        const reader: JsonReader = { bytes: bytes, writable: false }
+        const ctx: ParseContext = { reader: reader, options: defaultOptions, stack: new Stack<ConvertState>() }
+        return toDate(meta, ctx, i, 0)
     }
 
     describe('valid ISO date formats', () => {
