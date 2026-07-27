@@ -1,6 +1,6 @@
 import { DOT, E, MINUS, PLUS, ZERO } from "../../utils/ascii_symbols"
-import { ReadResult, ReadResultType } from "../../utils/types"
-import { ConvertState, ParseContext, JsonReader, PrimitiveMeta } from "../../metadata/types"
+import { isComplete, ReadResult, ReadResultType } from "../../utils/types"
+import { ParseContext, JsonReader, PrimitiveMeta } from "../../metadata/types"
 import { isDigitUnsafe } from "../../utils/ascii"
 
 export type FloatFormat = {
@@ -60,7 +60,16 @@ export function toFloat(
     context: ParseContext,
     index: number,
     depth: number): ReadResult<number> {
-    return tryParseFloat(context.reader, index, f64Format)
+    const result = tryParseFloat(context.reader, index, f64Format)
+    const reader = context.reader
+    const length = reader.bytes.length
+    if (reader.writable && isComplete(result) && result.nextIndex >= length) {
+        return {
+            type: NEEDS_MORE_DATA,
+            nextIndex: index
+        }
+    }
+    return result
 }
 
 export function tryParseFloat(reader: JsonReader, index: number, format: FloatFormat): ReadResult<number> {
