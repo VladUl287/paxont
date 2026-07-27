@@ -254,7 +254,7 @@ export const object = <M extends ObjectFieldMeta<any, any, any>[]>(...fields: M)
     const keysBytes = fields.map(f => f.name.bytes)
     const fieldIndex = generateTrie(keysBytes) as any
 
-    const toJson = genObjectToJsonFactory(...fields)
+    const toJson = genObjectToJsonFactory(fields.map(c => c.name.value))
 
     return {
         type: JSONT.OBJECT,
