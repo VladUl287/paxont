@@ -184,7 +184,7 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
     const len = Math.min(b.length, st + MAX_SAFE_INT_DIGITS)
 
     let m = 0
-    while (i < len - 4) {
+    while (i <= len - 4) {
         const d = b[i], d2 = b[i + 1], d3 = b[i + 2], d4 = b[i + 3]
 
         const w = (d | d2 << 8 | d3 << 16 | d4 << 24) - 0x30303030
@@ -201,22 +201,23 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
         if (i < len && isDigitUnsafe(b[i])) {
             m = m * 10 + (b[i++] & 0x0F)
 
-            if (i < len && isDigitUnsafe(b[i])) {
+            if (i < len && isDigitUnsafe(b[i]))
                 m = m * 10 + (b[i++] & 0x0F)
-
-                if (i < len && isDigitUnsafe(b[i])) {
-                    s.index = i
-                    s.mantissa = m
-                    s.digitsCount = i - st
-                    return tryParseLong(b, s)
-                }
-            }
         }
+    }
+
+    const dc = i - st
+
+    if (dc === MAX_SAFE_INT_DIGITS && i < b.length && isDigitUnsafe(b[i])) {
+        s.index = i
+        s.mantissa = m
+        s.digitsCount = i - st
+        return tryParseLong(b, s)
     }
 
     s.index = i
     s.mantissa = m
-    s.digitsCount = i - st
+    s.digitsCount = dc
     return true
 }
 
