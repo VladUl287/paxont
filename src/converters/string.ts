@@ -1,7 +1,7 @@
 import { genUnrolledFromCharCode } from "../code_gen/string"
 import { ParseContext, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { CURRENT_PLATFORM, isNode, Platform } from "../utils/platform"
-import { ReadResult } from "../utils/types"
+import { ReadResult, ReadResultType } from "../utils/types"
 import { DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
 
 const { decode } = useDecoder({
@@ -9,6 +9,10 @@ const { decode } = useDecoder({
     maxWasmMemoryPages: 128, //~8MiB,
     useBuffer: isNode(CURRENT_PLATFORM)
 })
+
+const COMPLETE = ReadResultType.COMPLETE
+const ERROR = ReadResultType.ERROR
+const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function createStringParser(options: StringParseFactoryOptions) {
     const tryParseString = (m: PrimitiveMeta<string>, context: ParseContext, index: number, depth: number): ReadResult<string> => {
@@ -47,14 +51,27 @@ export function toString(
     const reader = context.reader
     const b = reader.bytes
 
+    let isContinued: boolean
+
+    const stack = context.stack
+    const state = stack.pop()
+
+    if (state !== undefined) {
+        isContinued = state.isContinued
+    }
+    else {
+        isContinued = false
+    }
+
     let i = index
     if (b[i] !== DQ) {
         if (i >= b.length && reader.writable)
             return {
-                nextsIndex: i
+                type: NEEDS_MORE_DATA,
+                nextIndex: i
             }
 
-        if (i < b.length && !state.isContinued)
+        if (i < b.length && !isContinued)
             throw new Error(`Expected " at index ${i}, but found '${b[i]}' while parsing string`)
     }
     else i++
@@ -164,6 +181,7 @@ function useDecoder(options: StringParseFactoryOptions) {
                     if (ascii_length <= 64) {
                         const factory = factories[ascii_length]
                         return {
+                            type: COMPLETE,
                             value: factory(b, i),
                             nextIndex: index + 1
                         }
@@ -171,6 +189,7 @@ function useDecoder(options: StringParseFactoryOptions) {
 
                     const view = new Uint8Array(b.buffer, i, index - 1)
                     return {
+                        type: COMPLETE,
                         value: unsafeDecoder8.decode(view),
                         nextIndex: index + 1
                     }
@@ -183,14 +202,16 @@ function useDecoder(options: StringParseFactoryOptions) {
                     const view = new Uint16Array(memory.buffer, multipleOfTwo, utf16Length / 2)
                     const factory = factories[view.length]
                     return {
+                        type: COMPLETE,
                         value: factory(view, 0),
                         nextIndex: index + 1
                     }
                 }
 
-                if (isNode(options.platform)) {
+                if (options.useBuffer) {
                     const buffer = Buffer.from(memory.buffer, multipleOfTwo, utf16Length)
                     return {
+                        type: COMPLETE,
                         value: buffer.toString('utf16le'),
                         nextIndex: index + 1
                     }
@@ -198,6 +219,7 @@ function useDecoder(options: StringParseFactoryOptions) {
 
                 const view = new Uint8Array(memory.buffer, multipleOfTwo, utf16Length)
                 return {
+                    type: COMPLETE,
                     value: unsafeDecoder16.decode(view),
                     nextIndex: index + 1
                 }
