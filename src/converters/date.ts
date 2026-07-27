@@ -23,7 +23,7 @@ export function toDate(
 
     if (index < len) {
         if (b[index] === DOUBLE_QUOTE)
-            return fromString(context, index)
+            return fromString(context, index + 1)
 
         if (isDigitUnsafe(b[index]))
             return fromTimestamp(reader, index)
