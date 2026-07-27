@@ -1,7 +1,8 @@
 import { DOT, E, MINUS, PLUS, ZERO } from "../../utils/ascii_symbols"
-import { isComplete, ReadResult, ReadResultType } from "../../utils/types"
+import { isError, ReadResult, ReadResultType } from "../../utils/types"
 import { ParseContext, JsonReader, PrimitiveMeta } from "../../metadata/types"
 import { isDigitUnsafe } from "../../utils/ascii"
+import { JSONParseError } from "../../utils/error"
 
 export type FloatFormat = {
     readonly normalMantissaBits: number
@@ -61,14 +62,16 @@ export function toFloat(
     index: number,
     depth: number): ReadResult<number> {
     const result = tryParseFloat(context.reader, index, f64Format)
+    if (isError(result)) return result
+
     const reader = context.reader
     const length = reader.bytes.length
-    if (reader.writable && isComplete(result) && result.nextIndex >= length) {
-        return {
-            type: NEEDS_MORE_DATA,
-            nextIndex: index
-        }
+
+    if (reader.writable && result.nextIndex >= length) return {
+        type: NEEDS_MORE_DATA,
+        nextIndex: index
     }
+
     return result
 }
 
@@ -134,6 +137,17 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
 
     while (i < len && isNumberByte(b[i]))
         i++
+
+    if (start === i) {
+        if (reader.writable) return {
+            type: NEEDS_MORE_DATA,
+            nextIndex: index
+        }
+        return {
+            type: ERROR,
+            error: new JSONParseError('')
+        }
+    }
 
     const result = new TextDecoder().decode(b.subarray(start, i))
 
