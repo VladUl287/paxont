@@ -80,6 +80,11 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
         while (true) {
             i = skipWhitespace(b, i)
 
+            if (isContinued) {
+                if (b[i] === COMMA) i++
+                else if (b[i] === SQUARE_CLOSE) break
+            }
+
             const result = toValue(itemMetadata, context, i, depth)
 
             if (isError(result)) {
