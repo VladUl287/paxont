@@ -1,9 +1,12 @@
-import { f64Format, tryParseFloat } from "../../../src/converters/number/float"
-import { JsonReader } from "../../../src/metadata/types"
-import { ReadResultType } from "../../../src/utils/types"
+import { f64Format, toFloat, tryParseFloat } from "../../../src/converters/number/float"
+import { ConvertState, JsonReader } from "../../../src/metadata/types"
+import { defaultOptions } from "../../../src/options"
+import { Stack } from "../../../src/utils/stack"
+import { isNeedsMoreData, ReadResultType } from "../../../src/utils/types"
 
 describe('tryParseFloat', () => {
   const toReader = (str: string): JsonReader => ({ bytes: new TextEncoder().encode(str), writable: false })
+  const toBytes = (str: string): Uint8Array => new TextEncoder().encode(str)
 
   describe('Basic numeric parsing', () => {
     test('parses positive integer', () => {
@@ -318,6 +321,27 @@ describe('tryParseFloat', () => {
     test('Math.LN2', () => {
       const bytes = toReader(Math.LN2.toString())
       expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: Math.LN2, nextIndex: 18 })
+    })
+  })
+
+  describe('Partial numeric parsing', () => {
+    test('parses positive integer', () => {
+      const chunks = [toBytes("1"), toBytes("123")].reverse()
+
+      let ch
+      let result
+      let index = 0
+
+      const stack = new Stack<ConvertState>()
+      while ((ch = chunks.pop()) !== undefined) {
+        const ctx = { reader: { bytes: ch, writable: chunks.length !== 0 }, options: defaultOptions, stack }
+        result = toFloat({} as any, ctx, index, 0)
+        if (isNeedsMoreData(result)) {
+          index = result.nextIndex
+        }
+      }
+
+      expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 3 })
     })
   })
 })
