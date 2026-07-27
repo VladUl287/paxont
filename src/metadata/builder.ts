@@ -195,11 +195,11 @@ const bigIntTypedArray = <T extends ArrayLikeWritable<bigint> & BigIntTypedArray
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const map = <T, M extends BaseMeta<T, M>>(
+export const map = <M extends BaseMeta<ExtractType<M>, M>>(
     value: M,
-    ...modifiers: Modifier<MapMeta<T, M>>[]
-): MapMeta<T, M> => {
-    const defaultMeta: MapMeta<T, M> = {
+    ...modifiers: Modifier<MapMeta<ExtractType<M>, M>>[]
+): MapMeta<ExtractType<M>, M> => {
+    const defaultMeta: MapMeta<ExtractType<M>, M> = {
         type: JSONT.MAP,
         key: string(),
         value: value,
