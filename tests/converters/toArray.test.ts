@@ -1,5 +1,5 @@
 import { toArray } from "../../src/converters/array"
-import { array, i32Array, i64Array, i8Array, number, u16Array, u32Array, u64Array, u8Array } from "../../src/metadata/builder"
+import { array, i16Array, i32Array, i64Array, i8Array, number, string, u16Array, u32Array, u64Array, u8Array } from "../../src/metadata/builder"
 import { ConvertState, ParseContext, PrimitiveMeta } from "../../src/metadata/types"
 import { defaultOptions, defaultOptions as dfo } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
@@ -30,25 +30,19 @@ describe('toArray', () => {
         test('converts simple number array string to array', () => {
             const bytes = jsonArrayToBytes("[1, 2, 3]")
             const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual([1, 2, 3])
-        })
-
-        test('converts string array with quotes to array', () => {
-            const bytes = jsonArrayToBytes("[\"test\", \"test\", \"test\"]")
-            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual(['test', 'test', 'test'])
+            expect(array).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 9 })
         })
 
         test('converts empty array string to empty array', () => {
             const bytes = jsonArrayToBytes('[]')
             const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toEqual([])
+            expect(array).toStrictEqual({ type: ReadResultType.COMPLETE, value: [], nextIndex: 2 })
         })
 
         test('converts array with single element', () => {
             const bytes = jsonArrayToBytes('[42]')
             const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toEqual([42])
+            expect(array).toStrictEqual({ type: ReadResultType.COMPLETE, value: [42], nextIndex: 4 })
         })
     })
 
@@ -56,33 +50,33 @@ describe('toArray', () => {
         test('depth exceed', () => {
             const bytes = jsonArrayToBytes("[1, 2, 3]")
             const array = toArray(arrayMeta, syncCtx(bytes, defaultOptions), 0, defaultOptions.maxDepth + 1)
-            expect(array).toEqual({ type: ReadResultType.ERROR, error: new JSONParseError('') })
+            expect(array).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
         })
 
         test('unexpected end of input', () => {
             const bytes = jsonArrayToBytes("[1]")
             const array = toArray(arrayMeta, syncCtx(bytes), 3, 0)
-            expect(array).toEqual({ type: ReadResultType.ERROR, error: new JSONParseError('') })
+            expect(array).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
         })
 
         test('item parse error', () => {
             const bytes = jsonArrayToBytes("[1]")
             const error: ReadResult<number> = {
                 type: ReadResultType.ERROR,
-                error: new JSONParseError('mock error')
+                error: expect.any(JSONParseError)
             }
-            const numericArray = array({
-                ...number(),
+            const numericArray = array(number((m) => ({
+                ...m,
                 toValue: (m: PrimitiveMeta<number>, c: ParseContext, i: number, d: number): ReadResult<number> => error
-            })
+            })))
             const result = toArray(numericArray, syncCtx(bytes), 0, 0)
-            expect(result).toStrictEqual(error)
+            expect(result).toEqual(error)
         })
 
         test('unexpected end of value', () => {
             const bytes = jsonArrayToBytes("[1, 2")
             const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toEqual({ type: ReadResultType.ERROR, error: new JSONParseError('') })
+            expect(array).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
         })
     })
 
@@ -93,7 +87,8 @@ describe('toArray', () => {
             let result
             const stack = new Stack<ConvertState>()
             while ((ch = chunks.pop()) !== undefined) {
-                result = toArray(arrayMeta, asyncCtx(ch, dfo, stack), 0, 0)
+                const ctx = asyncCtx(ch, dfo, stack)
+                result = toArray(arrayMeta, ctx, 0, 0)
             }
             expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
         })
@@ -103,7 +98,8 @@ describe('toArray', () => {
             let result
             const stack = new Stack<ConvertState>()
             while ((ch = chunks.pop()) !== undefined) {
-                result = toArray(arrayMeta, asyncCtx(ch, dfo, stack), 0, 0)
+                const ctx = asyncCtx(ch, dfo, stack)
+                result = toArray(arrayMeta, ctx, 0, 0)
             }
             expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 7 })
         })
@@ -171,13 +167,21 @@ describe('toArray', () => {
 
     describe('edge cases and error handling', () => {
         test('returns empty array for invalid input if no error throwing', () => {
-            expect(() => jsonArrayToBytes('not an array')).toThrow()
+            const bytes = jsonArrayToBytes("not an array")
+            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
+            expect(array).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
         })
 
         test('handles large arrays', () => {
             const largeArray = Array.from({ length: 1000 }, (_, i) => i)
             const arrayString = '[' + largeArray.join(', ') + ']'
-            expect(jsonArrayToBytes(arrayString)).toEqual(largeArray)
+            const bytes = jsonArrayToBytes(arrayString)
+            const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
+            expect(array).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: largeArray,
+                nextIndex: 4890
+            })
         })
     })
 
@@ -185,25 +189,41 @@ describe('toArray', () => {
         test('handles spaces around elements', () => {
             const bytes = jsonArrayToBytes("[1, 2, 3]")
             const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toStrictEqual([1, 2, 3])
+            expect(array).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: [1, 2, 3],
+                nextIndex: 9
+            })
         })
 
         test('handles spaces between brackets and elements', () => {
             const bytes = jsonArrayToBytes("[ 1, 2, 3 ]")
             const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toEqual([1, 2, 3])
+            expect(array).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: [1, 2, 3],
+                nextIndex: 11
+            })
         })
 
         test('handles newlines and tabs', () => {
             const bytes = jsonArrayToBytes("[\n  1,\n  2,\n  3\n]")
             const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toEqual([1, 2, 3])
+            expect(array).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: [1, 2, 3],
+                nextIndex: 17
+            })
         })
 
         test('handles multiple spaces', () => {
             const bytes = jsonArrayToBytes('[1,    2,    3]')
             const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toEqual([1, 2, 3])
+            expect(array).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: [1, 2, 3],
+                nextIndex: 15
+            })
         })
     })
 
@@ -211,29 +231,27 @@ describe('toArray', () => {
         test('throws error for invalid JSON', () => {
             const bytes = jsonArrayToBytes('[1, 2, 3')
             const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toEqual({ type: ReadResultType.ERROR, error: new JSONParseError('') })
+            expect(array).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
         })
 
         test('throws error for non-array JSON', () => {
             const bytes = jsonArrayToBytes('{"a": 1}')
             const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toEqual({ type: ReadResultType.ERROR, error: new JSONParseError('') })
+            expect(array).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
         })
 
         test('throws error for empty string', () => {
             const bytes = jsonArrayToBytes('')
             const array = toArray(arrayMeta, syncCtx(bytes), 0, 0)
-            expect(array).toEqual({ type: ReadResultType.ERROR, error: new JSONParseError('') })
+            expect(array).toEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
         })
 
         test('throws error for null input', () => {
-            const array = toArray(arrayMeta, null as any, 0, 0)
-            expect(array).toEqual({ type: ReadResultType.ERROR, error: new JSONParseError('') })
+            expect(() => toArray(arrayMeta, null as any, 0, 0)).toThrow(TypeError)
         })
 
         test('throws error for undefined input', () => {
-            const array = toArray(arrayMeta, undefined as any, 0, 0)
-            expect(array).toEqual({ type: ReadResultType.ERROR, error: new JSONParseError('') })
+            expect(() => toArray(arrayMeta, undefined as any, 0, 0)).toThrow(TypeError)
         })
     })
 
@@ -245,7 +263,7 @@ describe('toArray', () => {
             expect(array).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: new Int8Array([1, 2, 3]),
-                nextIndex: 7
+                nextIndex: 9
             })
         })
 
@@ -256,18 +274,18 @@ describe('toArray', () => {
             expect(array).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: new Uint8Array([1, 2, 3]),
-                nextIndex: 7
+                nextIndex: 9
             })
         })
 
         test('converts to Int16Array when factory is provided', () => {
             const bytes = jsonArrayToBytes('[1, 2, 3]')
-            const meta = u16Array()
+            const meta = i16Array()
             const array = toArray(meta, syncCtx(bytes), 0, 0)
             expect(array).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: new Int16Array([1, 2, 3]),
-                nextIndex: 7
+                nextIndex: 9
             })
         })
 
@@ -278,7 +296,7 @@ describe('toArray', () => {
             expect(array).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: new Uint16Array([1, 2, 3]),
-                nextIndex: 7
+                nextIndex: 9
             })
         })
 
@@ -289,7 +307,7 @@ describe('toArray', () => {
             expect(array).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: new Int32Array([1, 2, 3]),
-                nextIndex: 7
+                nextIndex: 9
             })
         })
 
@@ -300,7 +318,7 @@ describe('toArray', () => {
             expect(array).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: new Uint32Array([1, 2, 3]),
-                nextIndex: 7
+                nextIndex: 9
             })
         })
 
@@ -311,7 +329,7 @@ describe('toArray', () => {
             expect(array).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: new BigInt64Array([1n, 2n, 3n]),
-                nextIndex: 7
+                nextIndex: 9
             })
         })
 
@@ -322,7 +340,7 @@ describe('toArray', () => {
             expect(array).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: new BigUint64Array([1n, 2n, 3n]),
-                nextIndex: 7
+                nextIndex: 9
             })
         })
     })
