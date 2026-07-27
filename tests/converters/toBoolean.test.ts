@@ -5,19 +5,53 @@ import { defaultOptions } from "../../src/options"
 import { A, E, F, L, R, S, T, U } from "../../src/utils/ascii_symbols"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
-import { ReadResultType } from "../../src/utils/types"
+import { isNeedsMoreData, ReadResultType } from "../../src/utils/types"
 
 describe('toBoolean', () => {
-    const createContext = (bytes: number[]): ParseContext => ({
+    const encoder = new TextEncoder()
+
+    const toBytes = (str: string): Uint8Array => encoder.encode(str)
+
+    const createContext = (bytes: number[], writable = false, stack = new Stack<ConvertState>()): ParseContext => ({
         reader: {
             bytes: Uint8Array.from(bytes),
-            writable: false
+            writable: writable
         },
         options: defaultOptions,
-        stack: new Stack<ConvertState>()
+        stack: stack
     })
 
     const meta = bool()
+
+    const deserializePartially = (chunks: Uint8Array[]) => {
+        let result
+        let index = 0
+
+        let currentChunk
+        let prevChunk: number[] = []
+
+        const stack = new Stack<ConvertState>()
+
+        while ((currentChunk = chunks.pop()) !== undefined) {
+            const context: ParseContext = {
+                reader: {
+                    bytes: new Uint8Array([...prevChunk, ...currentChunk]),
+                    writable: chunks.length !== 0
+                },
+                options: defaultOptions,
+                stack: stack
+            }
+            result = toBoolean(meta, context, index, 0)
+
+            if (isNeedsMoreData(result)) {
+                index = result.nextIndex
+                prevChunk = [...currentChunk.slice(result.nextIndex)]
+                continue
+            }
+
+            return result
+        }
+    }
 
     describe('TRUE conversion (lowercase)', () => {
         it('should return true when bytes contain "true" at the given index', () => {
@@ -169,6 +203,56 @@ describe('toBoolean', () => {
             const ctx = createContext([F, A, L, S, E])
             const result = toBoolean(meta, ctx, 0, 0)
             expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: false, nextIndex: 5 })
+        })
+    })
+
+    describe('Partial cases', () => {
+        it('should correctly parse true with writable', () => {
+            const chunks = [toBytes("true")]
+            const result = deserializePartially(chunks)
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: true, nextIndex: 4 })
+        })
+
+        it('should correctly parse false with writable', () => {
+            const chunks = [toBytes("false")]
+            const result = deserializePartially(chunks)
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: false, nextIndex: 5 })
+        })
+
+        it('should correctly parse true by halves', () => {
+            const chunks = [toBytes("tr"), toBytes("ue")].reverse()
+            const result = deserializePartially(chunks)
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: true, nextIndex: 4 })
+        })
+
+        it('should correctly parse false by halves', () => {
+            const chunks = [toBytes("fal"), toBytes("se")].reverse()
+            const result = deserializePartially(chunks)
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: false, nextIndex: 5 })
+        })
+
+        it('should correctly parse true empty first chunk', () => {
+            const chunks = [toBytes(""), toBytes("true")].reverse()
+            const result = deserializePartially(chunks)
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: true, nextIndex: 4 })
+        })
+
+        it('should correctly parse false empty first chunk', () => {
+            const chunks = [toBytes(""), toBytes("false")].reverse()
+            const result = deserializePartially(chunks)
+            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: false, nextIndex: 5 })
+        })
+
+        it('should return error invalid data', () => {
+            const chunks = [toBytes("not"), toBytes("valid")].reverse()
+            const result = deserializePartially(chunks)
+            expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+        })
+
+        it('should return error invalid data', () => {
+            const chunks = [toBytes("not"), toBytes("valid")].reverse()
+            const result = deserializePartially(chunks)
+            expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
         })
     })
 })
