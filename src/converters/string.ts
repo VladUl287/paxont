@@ -1,13 +1,13 @@
 import { genUnrolledFromCharCode } from "../code_gen/string"
 import { ParseContext, JsonReader, PrimitiveMeta } from "../metadata/types"
-import { CURRENT_PLATFORM, isNode, Platform } from "../utils/platform"
+import { CURRENT_PLATFORM, isBun, isNode, Platform } from "../utils/platform"
 import { ReadResult, ReadResultType } from "../utils/types"
 import { DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
 
 const { decode } = useDecoder({
     initialWasmMemoryPages: 1, //~64KiB
     maxWasmMemoryPages: 128, //~8MiB,
-    useBuffer: isNode(CURRENT_PLATFORM)
+    useBuffer: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM)
 })
 
 const COMPLETE = ReadResultType.COMPLETE
