@@ -61,7 +61,6 @@ export const i64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
 function applyModifier<M extends BaseMeta<any, M>>(value: M, modify: Modifier<M>): M {
     return Object.assign({}, modify(value), { type: value.type })
 }
-
 const primitive = <T>(
     type: BaseType,
     toValue: PrimitiveMeta<T>['toValue'],
@@ -70,7 +69,7 @@ const primitive = <T>(
     const defaultMeta: PrimitiveMeta<T> = {
         type: type,
         toValue: toValue,
-        toJson: (s, _) => s.toString()
+        toJson: (m, v, _) => v.toString()
     }
     return modifiers.reduce(applyModifier, defaultMeta)
 }
