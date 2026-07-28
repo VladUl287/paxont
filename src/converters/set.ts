@@ -43,13 +43,27 @@ export function toSet<V, M extends BaseMeta<V, any>>(
     const stack = context.stack
     const state = stack.pop()
 
-    if (!state || !state.isContinued) {
-        if (b[i] !== SQUARE_OPEN)
-            return {
-                type: ERROR,
-                error: new JSONParseError(`Expected '[' at index ${i}, but found '${String.fromCharCode(b[i])}' while parsing Set`)
-            }
+    let isContinued: boolean
+
+    if (state !== undefined) {
+        isContinued = state.isContinued
+    }
+    else {
+        isContinued = false
+    }
+
+    if (!isContinued) {
+        if (b[i] !== SQUARE_OPEN) return {
+            type: ERROR,
+            error: new JSONParseError(`Expected '[' but found '${String.fromCharCode(b[i])}'`, { depth, index: i, metadata })
+        }
         i++
+
+        if (b[i] === SQUARE_CLOSE) return {
+            type: COMPLETE,
+            value: new Set<V>(),
+            nextIndex: ++i
+        }
     }
 
     const set = state?.set ?? new Set<V>()
