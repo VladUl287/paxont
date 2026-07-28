@@ -178,7 +178,7 @@ export function toObject<T extends Record<string, any>>(
     i = skipWhitespace(b, i)
 
     if (b[i] !== CURLY_CLOSE) {
-        if (!reader.writable && i >= b.length) {
+        if (!reader.writable || i < b.length) {
             return {
                 type: ERROR,
                 error: new JSONParseError(``)
