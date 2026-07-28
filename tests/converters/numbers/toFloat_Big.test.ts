@@ -11,7 +11,7 @@ describe('parseNumberF64-files', () => {
         .filter(file => file.endsWith('.txt'))
 
     test.concurrent.each(files)('%s', (file) => {
-        const fileContent = fs.readFileSync('./tests/data/freetype-2-7.txt')
+        const fileContent = fs.readFileSync('./tests/data/' + file)
         const text = new TextDecoder().decode(fileContent)
 
         const numbers = text.split('\n')
