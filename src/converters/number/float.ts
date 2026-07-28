@@ -165,22 +165,16 @@ function tryFastParse(b: Uint8Array, s: Store): boolean {
         tryParseExponent(b, s)
 }
 
-// function willOverflow1(h: number, l: number, m: number, d: number) {
-//     const lm = l * m + d
-//     const hr = h * m + ((lm >>> 0) < (l * m >>> 0) ? 1 : 0)
-//     return ((hr ^ h) & 0x80000000) !== 0
-// }
+function willOverflow1(h: number, l: number, m: number, d: number) {
+    if (Math.abs(h) > 0x7FFFFFFF / m) {
+        const result = BigInt(h) * BigInt(m) + BigInt((BigInt(l) * BigInt(m) + BigInt(d)) >> 32n)
+        return result > 0x7FFFFFFFn || result < -0x80000000n
+    }
 
-// function willOverflow1(h: number, l: number, m: number, d: number) {
-//     if (Math.abs(h) > 0x7FFFFFFF / m) {
-//         const result = BigInt(h) * BigInt(m) + BigInt((BigInt(l) * BigInt(m) + BigInt(d)) >> 32n)
-//         return result > 0x7FFFFFFFn || result < -0x80000000n
-//     }
-
-//     const lm = l * m + d
-//     const hr = h * m + ((lm >>> 0) < (l * m >>> 0) ? 1 : 0)
-//     return ((hr ^ h) & 0x80000000) !== 0
-// }
+    const lm = l * m + d
+    const hr = h * m + ((lm >>> 0) < (l * m >>> 0) ? 1 : 0)
+    return ((hr ^ h) & 0x80000000) !== 0
+}
 
 function willOverflow2(n: number, m: number, d: number) {
     return n > (9007199254740991 - d) / m
@@ -244,12 +238,11 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
     let dc = s.digitsCount
     let dcInitial = dc
 
-    const len = b.length
-    // const len = Math.min(b.length, i + MAX_SAFE_LONG_DIGITS - dc)
+    const len = Math.min(b.length, i + MAX_SAFE_LONG_DIGITS + 1 - dc)
     splitTo32(m, m32)
     m = 0
 
-    while (i < len && dc <= MAX_SAFE_LONG_DIGITS) {
+    while (i < len) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
         m = m * 10 + d
@@ -260,18 +253,12 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
     const digitsCount = dc - dcInitial
     const pow = POW10[digitsCount]
 
-    // if(willOverflow1(m32[1], m32[0], pow, m)) {
-    //     return false
-    // }
-
-    // if (dc > MAX_SAFE_LONG_DIGITS || (dc === MAX_SAFE_LONG_DIGITS && willOverflow1(m32[1], m32[0], pow, m)))
-    //     return false
+    if (dc > MAX_SAFE_LONG_DIGITS || (dc === MAX_SAFE_LONG_DIGITS && willOverflow1(m32[1], m32[0], pow, m)))
+        return false
 
     const low = m32[0] * pow + m
     m32[0] = low >>> 0
     m32[1] = m32[1] * pow + Math.floor(low / 0x100000000)
-
-    const test = (BigInt(m32[1] | 0) << 32n) | (BigInt(m32[0] | 0))
 
     s.index = i
     s.mantissa = 0
