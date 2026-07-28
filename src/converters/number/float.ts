@@ -133,10 +133,9 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
     }
 
     const isNumberByte = (b: number) =>
-        isDigitUnsafe(b) || b === DOT || (b | 32) === E || PLUS || MINUS
+        isDigitUnsafe(b) || b === DOT || (b | 32) === E || b === PLUS || b === MINUS
 
-    while (i < len && isNumberByte(b[i]))
-        i++
+    while (i < len && isNumberByte(b[i])) i++
 
     const result = new TextDecoder().decode(b.subarray(start, i))
 
@@ -166,11 +165,22 @@ function tryFastParse(b: Uint8Array, s: Store): boolean {
         tryParseExponent(b, s)
 }
 
-function willOverflow1(h: number, l: number, m: number, d: number) {
-    const lm = l * m + d
-    const hr = h * m + ((lm >>> 0) < (l * m >>> 0) ? 1 : 0)
-    return ((hr ^ h) & 0x80000000) !== 0
-}
+// function willOverflow1(h: number, l: number, m: number, d: number) {
+//     const lm = l * m + d
+//     const hr = h * m + ((lm >>> 0) < (l * m >>> 0) ? 1 : 0)
+//     return ((hr ^ h) & 0x80000000) !== 0
+// }
+
+// function willOverflow1(h: number, l: number, m: number, d: number) {
+//     if (Math.abs(h) > 0x7FFFFFFF / m) {
+//         const result = BigInt(h) * BigInt(m) + BigInt((BigInt(l) * BigInt(m) + BigInt(d)) >> 32n)
+//         return result > 0x7FFFFFFFn || result < -0x80000000n
+//     }
+
+//     const lm = l * m + d
+//     const hr = h * m + ((lm >>> 0) < (l * m >>> 0) ? 1 : 0)
+//     return ((hr ^ h) & 0x80000000) !== 0
+// }
 
 function willOverflow2(n: number, m: number, d: number) {
     return n > (9007199254740991 - d) / m
@@ -232,35 +242,39 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
     let m = s.mantissa
     let m32 = s.mantissaU32
     let dc = s.digitsCount
+    let dcInitial = dc
 
     const len = b.length
+    // const len = Math.min(b.length, i + MAX_SAFE_LONG_DIGITS - dc)
     splitTo32(m, m32)
     m = 0
 
-    let localDc = 0
-    while (i < len && dc < MAX_SAFE_LONG_DIGITS) {
+    while (i < len && dc <= MAX_SAFE_LONG_DIGITS) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
-
         m = m * 10 + d
-        localDc++
         dc++
         i++
     }
 
-    if (dc === MAX_SAFE_LONG_DIGITS) //check if mantissa is bigger than 19 digits max
-        return false
+    const digitsCount = dc - dcInitial
+    const pow = POW10[digitsCount]
 
-    if (localDc > 0) {
-        const pow = POW10[localDc]
-        const low = m32[0] * pow + m
-        m32[0] = low >>> 0
-        m32[1] = m32[1] * pow + Math.floor(low / 0x100000000)
-        m = 0
-    }
+    // if(willOverflow1(m32[1], m32[0], pow, m)) {
+    //     return false
+    // }
+
+    // if (dc > MAX_SAFE_LONG_DIGITS || (dc === MAX_SAFE_LONG_DIGITS && willOverflow1(m32[1], m32[0], pow, m)))
+    //     return false
+
+    const low = m32[0] * pow + m
+    m32[0] = low >>> 0
+    m32[1] = m32[1] * pow + Math.floor(low / 0x100000000)
+
+    const test = (BigInt(m32[1] | 0) << 32n) | (BigInt(m32[0] | 0))
 
     s.index = i
-    s.mantissa = m
+    s.mantissa = 0
     s.digitsCount = dc
     return true
 }
