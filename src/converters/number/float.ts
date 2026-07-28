@@ -166,11 +166,24 @@ function tryFastParse(b: Uint8Array, s: Store): boolean {
         tryParseExponent(b, s)
 }
 
+function willOverflow1(h: number, l: number, m: number, d: number) {
+    const lm = l * m + d
+    const hr = h * m + ((lm >>> 0) < (l * m >>> 0) ? 1 : 0)
+    return ((hr ^ h) & 0x80000000) !== 0
+}
+
+function willOverflow2(n: number, m: number, d: number) {
+    return n > (9007199254740991 - d) / m
+}
+
 function tryParseInteger(b: Uint8Array, s: Store): boolean {
     let i = s.index
 
     const st = i
     const len = Math.min(b.length, st + MAX_SAFE_INT_DIGITS)
+
+    const STATE_LONG = 0x01
+    let state = 0 >>> 0
 
     let m = 0
     while (i < len - 4) {
@@ -191,13 +204,17 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
             m = m * 10 + (b[i++] & 0x0F)
 
             if (i < len && isDigitUnsafe(b[i])) {
-                m = m * 10 + (b[i++] & 0x0F)
+                const dc = i - st
+                const digit = (b[i++] & 0x0F)
 
-                if (i < len && isDigitUnsafe(b[i])) {
-                    s.index = i
-                    s.mantissa = m
-                    s.digitsCount = i - st
-                    return tryParseLong(b, s)
+                if (dc === MAX_SAFE_INT_DIGITS - 1 && willOverflow2(m, 10, digit)) {
+                    state ^= STATE_LONG
+                }
+                else {
+                    m = m * 10 + digit
+
+                    if (i < b.length && isDigitUnsafe(b[i]))
+                        state ^= STATE_LONG
                 }
             }
         }
@@ -206,7 +223,8 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
     s.index = i
     s.mantissa = m
     s.digitsCount = i - st
-    return true
+
+    return (state & STATE_LONG) ? tryParseLong(b, s) : true
 }
 
 function tryParseLong(b: Uint8Array, s: Store): boolean {
