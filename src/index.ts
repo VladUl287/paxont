@@ -20,7 +20,7 @@ type SerializerOptions = {
     readonly createCache: CacheFactory
 }
 
-const defaultJSONTOptions: SerializerOptions = Object.freeze({
+const defaultSerializerOptions: SerializerOptions = Object.freeze({
     metadataBuilder: useMetadata(),
     arrayPool: useArrayPool<Uint8Array<ArrayBufferLike>>(Uint8Array),
     jsonOptions: {
@@ -30,7 +30,7 @@ const defaultJSONTOptions: SerializerOptions = Object.freeze({
     createCache: createCache,
 })
 
-export function createSerializer(value: SerializerOptions = defaultJSONTOptions) {
+export function createSerializer(value: SerializerOptions = defaultSerializerOptions) {
     const { arrayPool, createCache } = value
 
     const optionsCache = createCache<Partial<JsonOptions>, JsonOptions>()
@@ -151,4 +151,4 @@ export function createSerializer(value: SerializerOptions = defaultJSONTOptions)
     }
 }
 
-export const { deserialize, deserializeAsync, serialize } = createSerializer(defaultJSONTOptions)
+export const { deserialize, deserializeAsync, serialize } = createSerializer(defaultSerializerOptions)
