@@ -63,7 +63,7 @@ export function toObject<T extends Record<string, any>>(
         let start = i
 
         if (b[i] !== DOUBLE_QUOTE) {
-            if (reader.writable && i > b.length)
+            if (!reader.writable)
                 return {
                     type: ERROR,
                     error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${i}`)
@@ -114,8 +114,8 @@ export function toObject<T extends Record<string, any>>(
         i = result.nextIndex
 
         if (result.value === undefined || i >= b.length) {
-            if (reader.writable) throw new Error(``)
-            if (!state) throw new Error()
+            if (reader.writable) return { type: ERROR, error: new JSONParseError(``) }
+            if (!state) return { type: ERROR, error: new JSONParseError(``) }
 
             state.bufferIndex = j
             state.buffer = buffer
@@ -134,8 +134,15 @@ export function toObject<T extends Record<string, any>>(
     i = skipWhitespace(b, i)
 
     if (b[i] !== CURLY_CLOSE) {
-        if (reader.writable || i < b.length) throw new Error(``)
-        if (!state) throw new Error()
+        if (reader.writable || i < b.length) {
+            return { type: ERROR, error: new JSONParseError(``) }
+        }
+        if (!state) {
+            return {
+                type: ERROR,
+                error: new JSONParseError(``)
+            }
+        }
 
         state.bufferIndex = j
         state.buffer = buffer
