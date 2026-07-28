@@ -75,11 +75,11 @@ const primitive = <T>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const nullable = <T, M extends BaseMeta<T, M>>(
+export const nullable = <M extends BaseMeta<ExtractType<M>, M>>(
     value: M,
-    ...modifiers: Modifier<NullableMeta<T, M>>[]
-): NullableMeta<T, M> => {
-    const defaultMeta: NullableMeta<T, M> = {
+    ...modifiers: Modifier<NullableMeta<ExtractType<M>, M>>[]
+): NullableMeta<ExtractType<M>, M> => {
+    const defaultMeta: NullableMeta<ExtractType<M>, M> = {
         type: JSONT.NULLABLE,
         toJson: (meta, value, options) => {
             if (value === null) return 'null'
