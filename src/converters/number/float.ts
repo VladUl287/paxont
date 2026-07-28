@@ -1,5 +1,5 @@
 import { DOT, E, MINUS, PLUS, ZERO } from "../../utils/ascii_symbols"
-import { isError, ReadResult, ReadResultType } from "../../utils/types"
+import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/types"
 import { ParseContext, JsonReader, PrimitiveMeta } from "../../metadata/types"
 import { isDigitUnsafe } from "../../utils/ascii"
 import { JSONParseError } from "../../utils/error"
@@ -63,6 +63,7 @@ export function toFloat(
     depth: number): ReadResult<number> {
     const result = tryParseFloat(context.reader, index, f64Format)
     if (isError(result)) return result
+    if (isNeedsMoreData(result)) return result
 
     const reader = context.reader
     const length = reader.bytes.length
@@ -138,6 +139,18 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
     while (i < len && isNumberByte(b[i])) i++
 
     const result = new TextDecoder().decode(b.subarray(start, i))
+    if (result === "") {
+        if (i >= b.length && reader.writable) {
+            return {
+                type: NEEDS_MORE_DATA,
+                nextIndex: index
+            }
+        }
+        return {
+            type: ERROR,
+            error: new JSONParseError('')
+        }
+    }
 
     return {
         type: COMPLETE,
