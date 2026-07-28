@@ -1,7 +1,7 @@
 import { skipWhitespace } from "./utils"
 import { ReadResult, ReadResultType } from "../utils/types"
 import { ParseContext, ObjectFromMeta, ObjectMeta } from "../metadata/types"
-import { COLON, COMMA, CURLY_CLOSE, DOUBLE_QUOTE } from "../utils/ascii_symbols"
+import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/ascii_symbols"
 import { JSONParseError } from "../utils/error"
 
 const COMPLETE = ReadResultType.COMPLETE
@@ -44,6 +44,15 @@ export function toObject<T extends Record<string, any>>(
     const fields = m.fields
 
     const state = stack.pop()
+
+    if (!state?.isContinued) {
+        if (b[i] !== CURLY_OPEN)
+            return {
+                type: ERROR,
+                error: new JSONParseError(`Unexpected end of input at index ${i} while parsing object`)
+            }
+        i++
+    }
 
     const buffer = state?.buffer ?? new Array(fields.length)
 
@@ -101,7 +110,7 @@ export function toObject<T extends Record<string, any>>(
         i = skipWhitespace(b, i)
 
         const fieldMeta = field.value
-        const result = fieldMeta.tryParseValue(fieldMeta, context, i, depth)
+        const result = fieldMeta.toValue(fieldMeta, context, i, depth)
         i = result.nextIndex
 
         if (result.value === undefined || i >= b.length) {
@@ -136,12 +145,9 @@ export function toObject<T extends Record<string, any>>(
         }
     }
 
-    if (state)
-        state.processing = false
-
     return {
         type: COMPLETE,
         value: m.build(buffer),
-        nextIndex: i
+        nextIndex: ++i
     }
 }
