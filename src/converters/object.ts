@@ -1,5 +1,5 @@
 import { skipWhitespace } from "./utils"
-import { ReadResult, ReadResultType } from "../utils/types"
+import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
 import { ParseContext, ObjectFromMeta, ObjectMeta } from "../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/ascii_symbols"
 import { JSONParseError } from "../utils/error"
@@ -23,6 +23,28 @@ export function toObject<T extends Record<string, any>>(
         }
     depth++
 
+    const fields = m.fields
+
+    let isContinued: boolean
+    let buffer: Array<any>
+    let bufferIndex: number
+    let fieldIndex: number | undefined
+
+    const state = stack.pop()
+
+    if (state !== undefined) {
+        isContinued = state.isContinued
+        buffer = state.buffer
+        bufferIndex = state.bufferIndex
+        fieldIndex = state.fieldIndex
+    }
+    else {
+        isContinued = false
+        buffer = new Array(fields.length)
+        bufferIndex = 0
+        fieldIndex = undefined
+    }
+
     const b = reader.bytes
     const len = b.length
 
@@ -41,89 +63,111 @@ export function toObject<T extends Record<string, any>>(
     }
 
     const getFieldIndex = m.getFieldIndex
-    const fields = m.fields
 
-    const state = stack.pop()
-
-    if (!state?.isContinued) {
-        if (b[i] !== CURLY_OPEN)
-            return {
-                type: ERROR,
-                error: new JSONParseError(`Unexpected end of input at index ${i} while parsing object`)
-            }
+    if (!isContinued) {
+        if (b[i] !== CURLY_OPEN) return {
+            type: ERROR,
+            error: new JSONParseError(`Unexpected end of input at index ${i} while parsing object`)
+        }
         i++
     }
 
-    const buffer = state?.buffer ?? new Array(fields.length)
-
-    let j = state?.bufferIndex ?? 0
+    let j = bufferIndex
     while (j < fields.length) {
         i = skipWhitespace(b, i)
 
-        let start = i
+        let field
+        let index = fieldIndex
+        if (index === undefined) {
+            const start = i
 
-        if (b[i] !== DOUBLE_QUOTE) {
-            if (!reader.writable)
-                return {
+            if (b[i] !== DOUBLE_QUOTE) {
+                if (i < b.length && !reader.writable) return {
                     type: ERROR,
                     error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${i}`)
                 }
 
-            return {
-                type: NEEDS_MORE_DATA,
-                nextIndex: i
-            }
-        }
-        i++
+                stack.push({
+                    isContinued: true,
+                    buffer,
+                    bufferIndex: j
+                })
 
-        const index = getFieldIndex(b, i)
-        if (index === -1) {
-            if (reader.writable || i < b.length)
                 return {
+                    type: NEEDS_MORE_DATA,
+                    nextIndex: start
+                }
+            }
+            i++
+
+            index = getFieldIndex(b, i)
+            if (index === -1) {
+                if (i < b.length && !reader.writable) return {
                     type: ERROR,
-                    error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${index}`)
+                    error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${i}`)
                 }
 
-            return {
-                type: NEEDS_MORE_DATA,
-                nextIndex: i
-            }
-        }
+                stack.push({
+                    isContinued: true,
+                    buffer,
+                    bufferIndex: j
+                })
 
-        const field = fields[index]
-        i += field.name.bytes.length + 1
-
-        if (b[i] !== COLON) {
-            if (reader.writable || i < b.length)
                 return {
+                    type: NEEDS_MORE_DATA,
+                    nextIndex: start
+                }
+            }
+
+            field = fields[index]
+            i += field.name.bytes.length + 1
+
+            if (b[i] !== COLON) {
+                if (i < b.length && !reader.writable) return {
                     type: ERROR,
-                    error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${index}`)
+                    error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${i}`)
                 }
 
-            return {
-                type: NEEDS_MORE_DATA,
-                nextIndex: i
+                stack.push({
+                    isContinued: true,
+                    buffer,
+                    bufferIndex: j
+                })
+
+                return {
+                    type: NEEDS_MORE_DATA,
+                    nextIndex: start
+                }
             }
+            i++
         }
-        i++
+        else {
+            field = fields[index]
+            fieldIndex = undefined
+        }
 
         i = skipWhitespace(b, i)
 
         const fieldMeta = field.value
         const result = fieldMeta.toValue(fieldMeta, context, i, depth)
-        i = result.nextIndex
 
-        if (result.value === undefined || i >= b.length) {
-            if (reader.writable) return { type: ERROR, error: new JSONParseError(``) }
-            if (!state) return { type: ERROR, error: new JSONParseError(``) }
+        if (isError(result))
+            return result
 
-            state.bufferIndex = j
-            state.buffer = buffer
+        if (isNeedsMoreData(result)) {
+            stack.push({
+                isContinued: true,
+                buffer,
+                bufferIndex: j,
+                fieldIndex: index
+            })
             return {
                 type: NEEDS_MORE_DATA,
-                nextIndex: start
+                nextIndex: i
             }
         }
+
+        i = result.nextIndex
 
         if (b[i] === COMMA) i++
 
@@ -134,18 +178,19 @@ export function toObject<T extends Record<string, any>>(
     i = skipWhitespace(b, i)
 
     if (b[i] !== CURLY_CLOSE) {
-        if (reader.writable || i < b.length) {
-            return { type: ERROR, error: new JSONParseError(``) }
-        }
-        if (!state) {
+        if (!reader.writable && i >= b.length) {
             return {
                 type: ERROR,
                 error: new JSONParseError(``)
             }
         }
 
-        state.bufferIndex = j
-        state.buffer = buffer
+        stack.push({
+            isContinued: true,
+            buffer,
+            bufferIndex: j,
+            fieldIndex: index
+        })
         return {
             type: NEEDS_MORE_DATA,
             nextIndex: i
