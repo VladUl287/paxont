@@ -207,7 +207,7 @@ export const map = <M extends BaseMeta<ExtractType<M>, M>>(
         toJson: (m, v, o) => {
             const meta = m.value
             const toJson = meta.toJson
-            return `{${[...v.entries()].map(c => `"${c[0]}": ${toJson(meta, c[1], o)}`).join(',')}}`
+            return `{${[...v.entries()].map(c => `"${c[0]}":${toJson(meta, c[1], o)}`).join(',')}}`
         }
     }
     return modifiers.reduce(applyModifier, defaultMeta)
