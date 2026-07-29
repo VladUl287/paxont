@@ -1,6 +1,7 @@
 import { toObject } from "../../src/converters/object"
 import { metadata } from "../../src/metadata"
 import { JSONT } from "../../src/metadata/baseTypes"
+import { Int16, Int32, Int64, Int8, Nullable, Uint16, Uint32, Uint64, Uint8 } from "../../src/metadata/type-containers"
 import { BaseMeta, ObjectMeta, ParseContext, TypeName } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { Stack } from "../../src/utils/stack"
@@ -66,15 +67,78 @@ describe('metadata', () => {
         expect(meta.getFieldIndex(toBytes("coordinates"), 0)).toBe(5)
 
         expect(meta.toValue).toBe(toObject)
-        const ctx: ParseContext = { 
+        const ctx: ParseContext = {
             reader: {
                 bytes: toBytes(JSON.stringify(object)),
                 writable: false
             },
             options: defaultOptions,
             stack: new Stack()
-        } 
+        }
         const value = meta.toValue(meta, ctx, 0, 0)
         expect(value).toStrictEqual({ type: ReadResultType.COMPLETE, value: object, nextIndex: ctx.reader.bytes.length })
+    })
+
+    test('full typed object', () => {
+        const object = {
+            id: new Int32(),
+            status: new Int8(),
+            symbol: new Int16(),
+            number: new Int64(),
+            
+            category: new Uint8(),
+            symbol_add: new Uint16(),
+            userId: new Uint32(),
+            hash: new Uint64(),
+
+            coefficient: 124.4,
+            name: "name",
+            isActive: true,
+            isAlive: false,
+
+            bytes: new Uint8Array(),
+            
+            address: new Nullable({
+                index: 12345,
+                name: "name"
+            }),
+            coordinates: [
+                { x: 1.23, y: 35.4 },
+                { x: 1.23, y: 65.2 },
+                { x: 1.23, y: 87.1 },
+            ],
+            urls: new Map<string, number>([
+                ["https://dummyimage.com", 0],
+                ["https://dummyimage.com/200x200", 1]
+            ]),
+            images: new Set(["https://dummyimage.com/200x200/FFFFFF/lorem-ipsum.png&text=jsonplaceholder.org", "https://dummyimage.com/200x200/FFFFFF/lorem-ipsum.png&text=jsonplaceholder.org"])
+        }
+
+        const meta = metaBuilder.toMetadata(object) as ObjectMeta<any>
+
+        expectBaseStructure(meta, JSONT.OBJECT)
+
+        expect(meta).toHaveProperty('fields')
+        expect(meta).toHaveProperty('build')
+        expect(meta).toHaveProperty('getFieldIndex')
+        expect(meta.toValue).toBe(toObject)
+
+        const toBytes = (str: string) => new TextEncoder().encode(str)
+
+        expect(meta.toJson(meta, object, defaultOptions)).toBe(JSON.stringify(object))
+
+        const ctx: ParseContext = {
+            reader: {
+                bytes: toBytes(JSON.stringify(object)),
+                writable: false
+            },
+            options: defaultOptions,
+            stack: new Stack()
+        }
+        expect(meta.toValue(meta, ctx, 0, 0)).toStrictEqual({
+            type: ReadResultType.COMPLETE,
+            value: object,
+            nextIndex: ctx.reader.bytes.length
+        })
     })
 })
