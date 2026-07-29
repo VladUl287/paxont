@@ -213,8 +213,11 @@ export const map = <M extends BaseMeta<ExtractType<M>, M>>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const set = <T, M extends BaseMeta<T, M>>(value: M, ...modifiers: Modifier<SetMeta<T, M>>[]): SetMeta<T, M> => {
-    const defaultMeta: SetMeta<T, M> = {
+export const set = <M extends BaseMeta<ExtractType<M>, M>>(
+    value: M,
+    ...modifiers: Modifier<SetMeta<ExtractType<M>, M>>[]
+): SetMeta<ExtractType<M>, M> => {
+    const defaultMeta: SetMeta<ExtractType<M>, M> = {
         type: JSONT.SET,
         value: value,
         toValue: toSet,
