@@ -1,13 +1,14 @@
 import { toArray } from "../../src/converters/array"
 import { toBoolean } from "../../src/converters/boolean"
 import { toDate } from "../../src/converters/date"
+import { toMap } from "../../src/converters/map"
 import { toNullable } from "../../src/converters/nullable"
 import { toBigInt, toInt64, toUint64 } from "../../src/converters/number/bigint"
 import { toFloat } from "../../src/converters/number/float"
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../../src/converters/number/int"
 import { toString } from "../../src/converters/string"
 import { JSONT } from "../../src/metadata/baseTypes"
-import { array, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array, arrayPool, u32Array, u64Array, i8Array, i16Array, i32Array, i64Array, f64Array } from "../../src/metadata/builder"
+import { array, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array, arrayPool, u32Array, u64Array, i8Array, i16Array, i32Array, i64Array, f64Array, map } from "../../src/metadata/builder"
 import { BaseMeta, TypeName } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { useArrayPool } from "../../src/utils/array"
@@ -278,5 +279,19 @@ describe('metadata builders', () => {
         expect(meta).toHaveProperty('pool')
         expect(meta.toValue).toBe(toArray)
         expect(meta.toJson(meta, new Float64Array([1.1]), defaultOptions)).toBe('[1.1]')
+    })
+
+    test('map', () => {
+        const meta = map(number())
+
+        expectBaseStructure(meta, JSONT.MAP)
+        expect(meta).toHaveProperty('value')
+        expect(meta.value).toMatchObject({
+            type: JSONT.NUMBER,
+            toJson: expect.any(Function),
+            toValue: toFloat
+        })
+        expect(meta.toValue).toBe(toMap)
+        expect(meta.toJson(meta, new Map([['first', 1]]), defaultOptions)).toBe('{"first":1}')
     })
 })
