@@ -18,7 +18,7 @@ export function genObjectToJsonFactory(fields: string[]): ObjectMeta<any>['toJso
     const valueField = nameof<ObjectFieldMeta<any, any>>('value')
     const toJsonField = nameof<BaseMeta<any, any>>('toJson')
     body += fields
-        .map((key, i) => `"${key}":\${f[${i}].${valueField}.${toJsonField}(f[${i}],v.${key},o)}`)
+        .map((key, i) => `"${key}":\${f[${i}].${valueField}.${toJsonField}(f[${i}].${valueField},v.${key},o)}`)
         .join(',')
     body += '}`'
     return new Function('m', 'v', 'o', body) as ObjectMeta<any>['toJson']
