@@ -1,10 +1,8 @@
-import { ConvertState, JsonReader, ParseContext, PrimitiveMeta } from "../../metadata/types"
+import { JsonReader, ParseContext, PrimitiveMeta } from "../../metadata/types"
 import { MINUS } from "../../utils/ascii_symbols"
 import { ReadResult, ReadResultType } from "../../utils/types"
 import { JSONParseError } from "../../utils/error"
 import { isDigitUnsafe } from "../../utils/ascii"
-
-type BigIntState = ConvertState & { lastIndex?: number }
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR

@@ -1,5 +1,5 @@
 import { JsonOptions } from "../options"
-import { ArrayPool, ArrayLikeWritable } from "../utils/array"
+import { ArrayPool } from "../utils/array"
 import { Stack } from "../utils/stack"
 import { ReadResult } from "../utils/types"
 import { BaseType } from "./baseTypes"
@@ -14,10 +14,10 @@ export type JsonReader = {
 export type ParseContext = {
     readonly reader: JsonReader,
     readonly options: JsonOptions,
-    readonly stack: Stack<ConvertState>
+    readonly stack: Stack<ParseState>
 }
 
-export type ConvertState = {
+export type ParseState = {
     isContinued: boolean,
     [key: string]: any
 }

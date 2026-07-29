@@ -1,5 +1,5 @@
 import { f64Format, toFloat, tryParseFloat } from "../../../src/converters/number/float"
-import { ConvertState, JsonReader } from "../../../src/metadata/types"
+import { ParseState, JsonReader } from "../../../src/metadata/types"
 import { defaultOptions } from "../../../src/options"
 import { Stack } from "../../../src/utils/stack"
 import { isNeedsMoreData, ReadResultType } from "../../../src/utils/types"
@@ -332,7 +332,7 @@ describe('tryParseFloat', () => {
       let result
       let index = 0
 
-      const stack = new Stack<ConvertState>()
+      const stack = new Stack<ParseState>()
       while ((ch = chunks.pop()) !== undefined) {
         const ctx = { reader: { bytes: ch, writable: chunks.length !== 0 }, options: defaultOptions, stack }
         result = toFloat({} as any, ctx, index, 0)
@@ -351,7 +351,7 @@ describe('tryParseFloat', () => {
       let result
       let index = 0
 
-      const stack = new Stack<ConvertState>()
+      const stack = new Stack<ParseState>()
       while ((ch = chunks.pop()) !== undefined) {
         const ctx = { reader: { bytes: ch, writable: chunks.length !== 0 }, options: defaultOptions, stack }
         result = toFloat({} as any, ctx, index, 0)
@@ -370,7 +370,7 @@ describe('tryParseFloat', () => {
       let result
       let index = 0
 
-      const stack = new Stack<ConvertState>()
+      const stack = new Stack<ParseState>()
       while ((ch = chunks.pop()) !== undefined) {
         const ctx = { reader: { bytes: ch, writable: chunks.length !== 0 }, options: defaultOptions, stack }
         result = toFloat({} as any, ctx, index, 0)
@@ -389,7 +389,7 @@ describe('tryParseFloat', () => {
       let result
       let index = 0
 
-      const stack = new Stack<ConvertState>()
+      const stack = new Stack<ParseState>()
       while ((ch = chunks.pop()) !== undefined) {
         const ctx = { reader: { bytes: ch, writable: chunks.length !== 0 }, options: defaultOptions, stack }
         result = toFloat({} as any, ctx, index, 0)
@@ -408,7 +408,7 @@ describe('tryParseFloat', () => {
       let result
       let index = 0
 
-      const stack = new Stack<ConvertState>()
+      const stack = new Stack<ParseState>()
       while ((ch = chunks.pop()) !== undefined) {
         const ctx = { reader: { bytes: ch, writable: chunks.length !== 0 }, options: defaultOptions, stack }
         result = toFloat({} as any, ctx, index, 0)

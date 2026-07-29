@@ -1,6 +1,6 @@
 import { CacheFactory, createCache } from "./cache/cache"
 import { defaultOptions, JsonOptions, mergeOptions } from "./options"
-import { BaseMeta, ConvertState } from "./metadata/types"
+import { BaseMeta, ParseState } from "./metadata/types"
 import { ArrayPool, useArrayPool } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
@@ -38,7 +38,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
 
     const defaultMetadata = useMetadata()
 
-    const defaultStack = new Stack<ConvertState>()
+    const defaultStack = new Stack<ParseState>()
 
     function deserialize<T>(
         value: ArrayBuffer | Uint8Array | string,
@@ -104,7 +104,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
             metadataCache.getOrAdd(type, (t) => defaultMetadata.toMetadata(t)) :
             type
 
-        const stack = new Stack<ConvertState>()
+        const stack = new Stack<ParseState>()
 
         const reader = json.getReader()
 

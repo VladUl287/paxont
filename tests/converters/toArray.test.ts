@@ -1,6 +1,6 @@
 import { toArray } from "../../src/converters/array"
 import { array, i16Array, i32Array, i64Array, i8Array, number, string, u16Array, u32Array, u64Array, u8Array } from "../../src/metadata/builder"
-import { ArrayMeta, ConvertState, ParseContext, PrimitiveMeta } from "../../src/metadata/types"
+import { ArrayMeta, ParseState, ParseContext, PrimitiveMeta } from "../../src/metadata/types"
 import { defaultOptions, defaultOptions as dfo } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
@@ -15,7 +15,7 @@ describe('toArray', () => {
         return toArray(meta, {
             reader: { bytes: data, writable: false },
             options: defaultOptions,
-            stack: new Stack<ConvertState>()
+            stack: new Stack<ParseState>()
         }, index, depth)
     }
 
@@ -26,7 +26,7 @@ describe('toArray', () => {
         let currentChunk
         let prevChunk: number[] = []
 
-        const stack = new Stack<ConvertState>()
+        const stack = new Stack<ParseState>()
 
         while ((currentChunk = chunks.pop()) !== undefined) {
             const context: ParseContext = {

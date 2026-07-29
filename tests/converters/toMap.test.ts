@@ -1,6 +1,6 @@
 import { toMap } from "../../src/converters/map"
 import { bool, map } from "../../src/metadata/builder"
-import { ConvertState, ParseContext } from "../../src/metadata/types"
+import { ParseState, ParseContext } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
@@ -18,7 +18,7 @@ describe('toMap', () => {
                 bytes,
                 writable: false
             },
-            stack: new Stack<ConvertState>(),
+            stack: new Stack<ParseState>(),
         }, 0, 0)
         return result
     }
@@ -30,7 +30,7 @@ describe('toMap', () => {
         let currentChunk
         let prevChunk: number[] = []
 
-        const stack = new Stack<ConvertState>()
+        const stack = new Stack<ParseState>()
 
         while ((currentChunk = chunks.pop()) !== undefined) {
             const context: ParseContext = {

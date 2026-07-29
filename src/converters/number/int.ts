@@ -1,4 +1,4 @@
-import { ConvertState, JsonReader, ParseContext, PrimitiveMeta } from "../../metadata/types"
+import { JsonReader, ParseContext, PrimitiveMeta } from "../../metadata/types"
 import { JSONParseError } from "../../utils/error"
 import { ReadResult, ReadResultType } from "../../utils/types"
 import { MINUS } from "../../utils/ascii_symbols"

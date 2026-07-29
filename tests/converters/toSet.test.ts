@@ -1,7 +1,7 @@
 import { toNullable } from "../../src/converters/nullable"
 import { toObject } from "../../src/converters/object"
 import { bool, field, nullable, number, object, set } from "../../src/metadata/builder"
-import { BaseMeta, ConvertState, ObjectMeta, ParseContext } from "../../src/metadata/types"
+import { BaseMeta, ParseState, ObjectMeta, ParseContext } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
@@ -19,7 +19,7 @@ describe('toSet', () => {
                 bytes,
                 writable: false
             },
-            stack: new Stack<ConvertState>(),
+            stack: new Stack<ParseState>(),
         }, 0, 0)
         return result
     }
@@ -30,7 +30,7 @@ describe('toSet', () => {
         let currentChunk
         let prevChunk: number[] = []
 
-        const stack = new Stack<ConvertState>()
+        const stack = new Stack<ParseState>()
 
         while ((currentChunk = chunks.pop()) !== undefined) {
             const ch = [...prevChunk, ...currentChunk]
