@@ -21,10 +21,10 @@ export type MetadataOptions = {
 }
 
 export type JType<T, M extends BaseMeta<T, M>> = {
-    readonly type: TypeName,
-    readonly isType: (data: any) => data is T
+    readonly name: TypeName,
+    readonly check: (data: any) => data is T
     readonly toMetadata: (data: T) => M
-    readonly priority: number
+    readonly order: number
 }
 
 const defaultOptions: MetadataOptions = Object.freeze({ withDefaults })
@@ -32,22 +32,22 @@ const defaultOptions: MetadataOptions = Object.freeze({ withDefaults })
 export function metadata(options: MetadataOptions = defaultOptions): Metadata {
     const types = new Map<TypeName, JType<any, any>>()
 
-    let orderedTypes = [...types.values()].sort((a, b) => a.priority - b.priority)
+    const orderTypes = (types: Map<TypeName, JType<any, any>>) => [...types.values()].sort((a, b) => a.order - b.order)
 
-    const orderTypes = (types: Map<TypeName, JType<any, any>>) => [...types.values()].sort((a, b) => a.priority - b.priority)
+    let orderedTypes = orderTypes(types)
 
     const add = <T, M extends BaseMeta<T, M>>(jtype: JType<T, M>): void => {
-        types.set(jtype.type, jtype)
+        types.set(jtype.name, jtype)
         orderedTypes = orderTypes(types)
     }
 
     const addMany = (...jtypes: JType<any, any>[]): void => {
-        jtypes.forEach((jtype) => types.set(jtype.type, jtype))
+        jtypes.forEach((jtype) => types.set(jtype.name, jtype))
         orderedTypes = orderTypes(types)
     }
 
     const remove = <T, M extends BaseMeta<T, M>>(jtype: TypeName | JType<T, M>): boolean => {
-        const type = typeof jtype === 'string' ? jtype : jtype.type
+        const type = typeof jtype === 'string' ? jtype : jtype.name
         const result = types.delete(type)
         orderedTypes = orderTypes(types)
         return result
@@ -60,7 +60,7 @@ export function metadata(options: MetadataOptions = defaultOptions): Metadata {
 
     const toMetadata = <T>(data: T): BaseMeta<T, any> => {
         for (const type of orderedTypes) {
-            if (type.isType(data))
+            if (type.check(data))
                 return type.toMetadata(data)
         }
         throw new Error(``)
@@ -81,7 +81,7 @@ export function withDefaults(m: Metadata): Metadata {
         check: (data: any) => data is MetaValue<M>,
         toMeta: (...args: any[]) => M,
         priority = 50
-    ): JType<MetaValue<M>, M> => ({ type, isType: check, toMetadata: toMeta, priority })
+    ): JType<MetaValue<M>, M> => ({ name: type, check: check, toMetadata: toMeta, order: priority })
 
     m.addMany(
         create<PrimitiveMeta<string>>(JSONT.STRING, (v) => typeof v === 'string', string),
