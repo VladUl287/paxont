@@ -31,3 +31,7 @@ export function isError<T>(
 }
 
 export type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
+
+export function nameof<T>(key: keyof T): keyof T {
+    return key
+}

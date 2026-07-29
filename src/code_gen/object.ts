@@ -1,7 +1,8 @@
-import { ObjectMeta } from "../metadata/types"
+import { BaseMeta, ObjectFieldMeta, ObjectMeta } from "../metadata/types"
+import { nameof } from "../utils/types"
 
 type FieldArrayToRecord<T extends readonly string[]> = {
-  [K in T[number]]: unknown
+    [K in T[number]]: unknown
 }
 
 export function genObjectFactory<T extends readonly string[]>(fields: T): (values: unknown[]) => FieldArrayToRecord<T> {
@@ -14,8 +15,10 @@ export function genObjectFactory<T extends readonly string[]>(fields: T): (value
 export function genObjectToJsonFactory(fields: string[]): ObjectMeta<any>['toJson'] {
     let body = 'var f = m.fields;'
     body += 'return `{'
+    const valueField = nameof<ObjectFieldMeta<any, any>>('value')
+    const toJsonField = nameof<BaseMeta<any, any>>('toJson')
     body += fields
-        .map((key, i) => `"${key}":\${f[${i}].value.toJson(f[${i}],v.${key},o)}`)
+        .map((key, i) => `"${key}":\${f[${i}].${valueField}.${toJsonField}(f[${i}],v.${key},o)}`)
         .join(',')
     body += '}`'
     return new Function('m', 'v', 'o', body) as ObjectMeta<any>['toJson']
