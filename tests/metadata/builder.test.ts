@@ -7,7 +7,7 @@ import { toFloat } from "../../src/converters/number/float"
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../../src/converters/number/int"
 import { toString } from "../../src/converters/string"
 import { JSONT } from "../../src/metadata/baseTypes"
-import { array, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array, arrayPool, u32Array, u64Array } from "../../src/metadata/builder"
+import { array, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array, arrayPool, u32Array, u64Array, i8Array, i16Array, i32Array, i64Array } from "../../src/metadata/builder"
 import { BaseMeta, TypeName } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { useArrayPool } from "../../src/utils/array"
@@ -203,5 +203,65 @@ describe('metadata builders', () => {
         expect(meta).toHaveProperty('pool')
         expect(meta.toValue).toBe(toArray)
         expect(meta.toJson(meta, new BigUint64Array([1n]), defaultOptions)).toBe('[1]')
+    })
+
+    test('i8array', () => {
+        const meta = i8Array()
+
+        expectBaseStructure(meta, JSONT.I8_ARRAY)
+        expect(meta).toHaveProperty('value')
+        expect(meta.value).toMatchObject({
+            type: JSONT.I8,
+            toJson: expect.any(Function),
+            toValue: toInt8
+        })
+        expect(meta).toHaveProperty('pool')
+        expect(meta.toValue).toBe(toArray)
+        expect(meta.toJson(meta, new Int8Array([1]), defaultOptions)).toBe('[1]')
+    })
+
+    test('i16array', () => {
+        const meta = i16Array()
+
+        expectBaseStructure(meta, JSONT.I16_ARRAY)
+        expect(meta).toHaveProperty('value')
+        expect(meta.value).toMatchObject({
+            type: JSONT.I16,
+            toJson: expect.any(Function),
+            toValue: toInt16
+        })
+        expect(meta).toHaveProperty('pool')
+        expect(meta.toValue).toBe(toArray)
+        expect(meta.toJson(meta, new Int16Array([1]), defaultOptions)).toBe('[1]')
+    })
+
+    test('i32array', () => {
+        const meta = i32Array()
+
+        expectBaseStructure(meta, JSONT.I32_ARRAY)
+        expect(meta).toHaveProperty('value')
+        expect(meta.value).toMatchObject({
+            type: JSONT.I32,
+            toJson: expect.any(Function),
+            toValue: toInt32
+        })
+        expect(meta).toHaveProperty('pool')
+        expect(meta.toValue).toBe(toArray)
+        expect(meta.toJson(meta, new Int32Array([1]), defaultOptions)).toBe('[1]')
+    })
+
+    test('i64array', () => {
+        const meta = i64Array()
+
+        expectBaseStructure(meta, JSONT.I64_ARRAY)
+        expect(meta).toHaveProperty('value')
+        expect(meta.value).toMatchObject({
+            type: JSONT.I64,
+            toJson: expect.any(Function),
+            toValue: toInt64
+        })
+        expect(meta).toHaveProperty('pool')
+        expect(meta.toValue).toBe(toArray)
+        expect(meta.toJson(meta, new BigInt64Array([1n]), defaultOptions)).toBe('[1]')
     })
 })
