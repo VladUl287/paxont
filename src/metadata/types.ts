@@ -54,9 +54,7 @@ export type ObjectFields<T extends Record<string, BaseMeta<any, any>>, Keys exte
 }
 
 export type ObjectFromMeta<T extends Record<string, BaseMeta<any, any>>> =
-    Expand<{
-        [E in keyof T]: T[E] extends BaseMeta<infer U, any> ? U : never
-    }>
+    Expand<{ [E in keyof T]: ExtractType<T[E]> }>
 
 export interface NullableMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<T | null, NullableMeta<T, M>> {
     readonly value: M
