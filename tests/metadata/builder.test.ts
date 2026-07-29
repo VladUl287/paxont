@@ -146,7 +146,6 @@ describe('metadata builders', () => {
     })
 
     test('u8array', () => {
-
         const meta = u8Array()
 
         expectBaseStructure(meta, JSONT.U8_ARRAY)
