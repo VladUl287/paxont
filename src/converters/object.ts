@@ -148,7 +148,8 @@ export function toObject<T extends Record<string, any>>(
 
         i = skipWhitespace(b, i)
 
-        const result = field.toValue(field, context, i, depth)
+        const fieldMeta = field.value
+        const result = fieldMeta.toValue(fieldMeta, context, i, depth)
 
         if (isError(result))
             return result

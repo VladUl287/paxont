@@ -314,7 +314,7 @@ describe('metadata builders', () => {
     test('field', () => {
         const meta = field('id', number())
 
-        expectBaseStructure(meta, JSONT.NUMBER)
+        expectBaseStructure(meta.value, JSONT.NUMBER)
         expect(meta).toHaveProperty('name', {
             value: 'id',
             bytes: new TextEncoder().encode('id'),
