@@ -92,10 +92,10 @@ export const nullable = <M extends BaseMeta<ExtractType<M>, M>>(
 }
 
 export const arrayPool =
-    <T, A extends ArrayLike<T>>(pool: ArrayPool<A>) =>
-        <M extends ArrayMeta<ExtractType<M>, ExtractType<M>[], any>>(metadata: M): M => ({
+    <A extends ArrayLike<any>>(pool: ArrayPool<A>) =>
+        <M extends ArrayMeta<any, A, any>>(metadata: M): M => ({
             ...metadata,
-            arrayPool: pool
+            pool: pool
         })
 
 const globalPools: Record<string, ArrayPool<any>> = Object.freeze({
@@ -126,7 +126,7 @@ export const array = <M extends BaseMeta<ExtractType<M>, M>>(
             return `[${value.map(c => toJson(metaValue, c, options)).join(',')}]`
         },
         value: value,
-        arrayPool: globalPools[value.type] ?? useArrayPool(Array)
+        pool: globalPools[value.type] ?? useArrayPool(Array)
     }
     return modifiers.reduce(applyModifier, defaultMeta)
 }
@@ -164,7 +164,7 @@ const typedArray = <T extends ArrayLikeWritable<number> & (IntegerTypedArray | F
             return `[${result}]`
         },
         value: value,
-        arrayPool: globalPools[value.type]
+        pool: globalPools[value.type]
     }
     return modifiers.reduce(applyModifier, defaultMeta)
 }
@@ -190,7 +190,7 @@ const bigIntTypedArray = <T extends ArrayLikeWritable<bigint> & BigIntTypedArray
             return `[${result}]`
         },
         value: value,
-        arrayPool: globalPools[value.type]
+        pool: globalPools[value.type]
     }
     return modifiers.reduce(applyModifier, defaultMeta)
 }

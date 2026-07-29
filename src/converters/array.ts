@@ -44,7 +44,7 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
     let buffer: A
     let bufferIndex: number
 
-    const { rent, release } = metadata.arrayPool
+    const { rent, release } = metadata.pool
 
     const stack = context.stack
     const state = stack.pop()
