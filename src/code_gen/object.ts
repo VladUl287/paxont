@@ -15,7 +15,7 @@ export function genObjectToJsonFactory(fields: string[]): ObjectMeta<any>['toJso
     let body = 'var f = m.fields;'
     body += 'return `{'
     body += fields
-        .map((key, i) => `"${key}":\${f[${i}].value.toJson(f[${i}],v.${key},o)}`)
+        .map((key, i) => `"${key}":\${f[${i}].toJson(f[${i}],v.${key},o)}`)
         .join(',')
     body += '}`'
     return new Function('m', 'v', 'o', body) as ObjectMeta<any>['toJson']

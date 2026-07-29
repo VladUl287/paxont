@@ -241,7 +241,7 @@ export const field = <K extends string, M extends BaseMeta<ExtractType<M>, M>>(
             value: name,
             bytes: encoder.encode(name)
         },
-        value: value
+        ...value
     }
 }
 
