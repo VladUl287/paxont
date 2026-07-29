@@ -1,7 +1,7 @@
 import { toArray } from "../converters/array"
 import {
     ArrayMeta,
-    BaseMeta, MetaValue, MapMeta, Modifier, NullableMeta, ObjectFieldMeta,
+    BaseMeta, MetaValue, MapMeta, NullableMeta, ObjectFieldMeta,
     ObjectMeta, PrimitiveMeta, SetMeta
 } from "./types"
 import { BaseType, JSONT } from "./baseTypes"
@@ -19,6 +19,8 @@ import { ArrayLikeWritable, ArrayPool, BigIntTypedArray, FloatTypedArray, Intege
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../converters/number/int"
 import { toFloat } from "../converters/number/float"
 import { Expand } from "../utils/types"
+
+export type Modifier<M extends BaseMeta<any, M>> = (metadata: M) => M
 
 export const string = (...modifiers: Modifier<PrimitiveMeta<string>>[]) =>
     primitive(JSONT.STRING, toString, (v) => `"${v}"`, ...modifiers)

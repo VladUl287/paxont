@@ -70,5 +70,3 @@ export interface MapMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<Map<strin
 }
 
 export type MetaValue<M> = M extends BaseMeta<infer U, any> ? U : never
-
-export type Modifier<M extends BaseMeta<any, M>> = (metadata: M) => M
