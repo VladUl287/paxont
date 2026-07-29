@@ -14,4 +14,3 @@ export class Uint8 { }
 export class Uint16 { }
 export class Uint32 { }
 export class Uint64 { }
-export class Float32 { }
