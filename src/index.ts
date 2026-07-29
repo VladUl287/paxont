@@ -10,7 +10,7 @@ import { Stack } from "./utils/stack"
 
 type ExtractType<T> = T extends BaseMeta<infer V, any> ? V : T
 
-type SerializerOptions = {
+type JSONTOptions = {
     readonly metadataBuilder: MetadataFactory
     readonly arrayPool: ArrayPool<Uint8Array>
     readonly jsonOptions: {
@@ -20,7 +20,7 @@ type SerializerOptions = {
     readonly createCache: CacheFactory
 }
 
-const defaultSerializerOptions: SerializerOptions = Object.freeze({
+const defaultJsontOptions: JSONTOptions = Object.freeze({
     metadataBuilder: useMetadata(),
     arrayPool: useArrayPool<Uint8Array<ArrayBufferLike>>(Uint8Array),
     jsonOptions: {
@@ -30,7 +30,7 @@ const defaultSerializerOptions: SerializerOptions = Object.freeze({
     createCache: createCache,
 })
 
-export function createSerializer(value: SerializerOptions = defaultSerializerOptions) {
+export function jsont(value: JSONTOptions = defaultJsontOptions) {
     const { arrayPool, createCache } = value
 
     const optionsCache = createCache<Partial<JsonOptions>, JsonOptions>()
@@ -151,4 +151,4 @@ export function createSerializer(value: SerializerOptions = defaultSerializerOpt
     }
 }
 
-export const { deserialize, deserializeAsync, serialize } = createSerializer(defaultSerializerOptions)
+export const { deserialize, deserializeAsync, serialize } = jsont(defaultJsontOptions)
