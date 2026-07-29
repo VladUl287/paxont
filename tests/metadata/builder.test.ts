@@ -6,10 +6,11 @@ import { toNullable } from "../../src/converters/nullable"
 import { toBigInt, toInt64, toUint64 } from "../../src/converters/number/bigint"
 import { toFloat } from "../../src/converters/number/float"
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../../src/converters/number/int"
+import { toObject } from "../../src/converters/object"
 import { toSet } from "../../src/converters/set"
 import { toString } from "../../src/converters/string"
 import { JSONT } from "../../src/metadata/baseTypes"
-import { array, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array, arrayPool, u32Array, u64Array, i8Array, i16Array, i32Array, i64Array, f64Array, map, set } from "../../src/metadata/builder"
+import { array, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array, arrayPool, u32Array, u64Array, i8Array, i16Array, i32Array, i64Array, f64Array, map, set, object, field } from "../../src/metadata/builder"
 import { BaseMeta, TypeName } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { useArrayPool } from "../../src/utils/array"
@@ -308,5 +309,31 @@ describe('metadata builders', () => {
         })
         expect(meta.toValue).toBe(toSet)
         expect(meta.toJson(meta, new Set([1, 1, 2]), defaultOptions)).toBe('[1,2]')
+    })
+
+    test('field', () => {
+        const meta = field('id', number())
+
+        expectBaseStructure(meta, JSONT.NUMBER)
+        expect(meta).toHaveProperty('name', {
+            value: 'id',
+            bytes: new TextEncoder().encode('id'),
+        })
+    })
+
+    test('object', () => {
+        const fields = [field('id', number()), field('name', string())]
+        const meta = object(...fields)
+
+        expectBaseStructure(meta, JSONT.OBJECT)
+        expect(meta).toHaveProperty('fields')
+        expect(meta.fields).toStrictEqual(fields)
+        expect(meta.toValue).toBe(toObject)
+        expect(meta.toJson(meta, { id: 1, name: 'test' } as any, defaultOptions)).toBe('{"id":1,"name":"test"}')
+        expect(meta).toHaveProperty('build')
+        expect(meta.build([1, "test"] as any)).toStrictEqual({ id: 1, name: "test" })
+        expect(meta).toHaveProperty('getFieldIndex')
+        expect(meta.getFieldIndex(new TextEncoder().encode("id"), 0)).toBe(0)
+        expect(meta.getFieldIndex(new TextEncoder().encode("name"), 0)).toBe(1)
     })
 })
