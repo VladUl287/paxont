@@ -7,7 +7,7 @@ import { toFloat } from "../../src/converters/number/float"
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../../src/converters/number/int"
 import { toString } from "../../src/converters/string"
 import { JSONT } from "../../src/metadata/baseTypes"
-import { array, arrayPool, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array } from "../../src/metadata/builder"
+import { array, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array, arrayPool } from "../../src/metadata/builder"
 import { BaseMeta, TypeName } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { useArrayPool } from "../../src/utils/array"
@@ -134,11 +134,13 @@ describe('metadata builders', () => {
 
     test('array', () => {
         const num = number()
-        const meta = array(num)
+        const pool = useArrayPool<Array<number>>(Array)
+        const usePool = arrayPool(pool)
+        const meta = array(num, usePool)
 
         expectBaseStructure(meta, JSONT.ARRAY)
         expect(meta).toHaveProperty('value', num)
-        expect(meta).toHaveProperty('arrayPool')
+        expect(meta).toHaveProperty('pool', pool)
         expect(meta.toValue).toBe(toArray)
         expect(meta.toJson(meta, [1], defaultOptions)).toBe('[1]')
     })
@@ -148,7 +150,7 @@ describe('metadata builders', () => {
 
         expectBaseStructure(meta, JSONT.U8_ARRAY)
         expect(meta).toHaveProperty('value', u8())
-        expect(meta).toHaveProperty('arrayPool')
+        expect(meta).toHaveProperty('pool')
         expect(meta.toValue).toBe(toArray)
         expect(meta.toJson(meta, new Uint8Array([1]), defaultOptions)).toBe('[1]')
     })
