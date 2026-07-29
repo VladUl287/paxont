@@ -60,8 +60,9 @@ export function metadata(options: MetadataOptions = defaultOptions): Metadata {
 
     const toMetadata = <T>(data: T): BaseMeta<T, any> => {
         for (const type of orderedTypes) {
-            if (type.check(data))
+            if (type.check(data)) {
                 return type.toMetadata(data)
+            }
         }
         throw new Error(``)
     }
@@ -84,35 +85,35 @@ export function withDefaults(m: Metadata): Metadata {
     ): JType<MetaValue<M>, M> => ({ name: type, check: check, toMetadata: toMeta, order: priority })
 
     m.addMany(
-        create<PrimitiveMeta<string>>(JSONT.STRING, (v) => typeof v === 'string', string),
-        create<PrimitiveMeta<number>>(JSONT.NUMBER, (v) => typeof v === 'number', number),
-        create<PrimitiveMeta<bigint>>(JSONT.BIGINT, (v) => typeof v === 'bigint', bigInt),
-        create<PrimitiveMeta<boolean>>(JSONT.BOOL, (v) => typeof v === 'boolean', bool),
+        create<PrimitiveMeta<string>>(JSONT.STRING, (v) => typeof v === 'string', () => string()),
+        create<PrimitiveMeta<number>>(JSONT.NUMBER, (v) => typeof v === 'number', () => number()),
+        create<PrimitiveMeta<bigint>>(JSONT.BIGINT, (v) => typeof v === 'bigint', () => bigInt()),
+        create<PrimitiveMeta<boolean>>(JSONT.BOOL, (v) => typeof v === 'boolean', () => bool()),
 
-        create<PrimitiveMeta<Date>>(JSONT.DATE, (v) => v instanceof Date, date),
-        create<PrimitiveMeta<number>>(JSONT.I8, (v): v is number => v instanceof Int8, i8),
-        create<PrimitiveMeta<number>>(JSONT.I16, (v): v is number => v instanceof Int16, i16),
-        create<PrimitiveMeta<number>>(JSONT.I32, (v): v is number => v instanceof Int32, i32),
-        create<PrimitiveMeta<bigint>>(JSONT.I64, (v): v is bigint => v instanceof Int64, i64),
-        create<PrimitiveMeta<number>>(JSONT.U8, (v): v is number => v instanceof Uint8, u8),
-        create<PrimitiveMeta<number>>(JSONT.U16, (v): v is number => v instanceof Uint16, u16),
-        create<PrimitiveMeta<number>>(JSONT.U32, (v): v is number => v instanceof Uint32, u32),
-        create<PrimitiveMeta<bigint>>(JSONT.U32, (v): v is bigint => v instanceof Uint64, u64),
+        create<PrimitiveMeta<Date>>(JSONT.DATE, (v) => v instanceof Date, () => date()),
+        create<PrimitiveMeta<number>>(JSONT.I8, (v): v is number => v instanceof Int8, () => i8()),
+        create<PrimitiveMeta<number>>(JSONT.I16, (v): v is number => v instanceof Int16, () => i16()),
+        create<PrimitiveMeta<number>>(JSONT.I32, (v): v is number => v instanceof Int32, () => i32()),
+        create<PrimitiveMeta<bigint>>(JSONT.I64, (v): v is bigint => v instanceof Int64, () => i64()),
+        create<PrimitiveMeta<number>>(JSONT.U8, (v): v is number => v instanceof Uint8, () => u8()),
+        create<PrimitiveMeta<number>>(JSONT.U16, (v): v is number => v instanceof Uint16, () => u16()),
+        create<PrimitiveMeta<number>>(JSONT.U32, (v): v is number => v instanceof Uint32, () => u32()),
+        create<PrimitiveMeta<bigint>>(JSONT.U32, (v): v is bigint => v instanceof Uint64, () => u64()),
 
-        create<NullableMeta<any, any>>(JSONT.NULLABLE, (v) => v instanceof Nullable, nullable),
+        create<NullableMeta<any, any>>(JSONT.NULLABLE, (v) => v instanceof Nullable, (v) => nullable(m.toMetadata(v.value))),
 
-        create<ArrayMeta<any, any[], any>>(JSONT.ARRAY, (v) => Array.isArray(v), array),
-        create<ArrayMeta<number, Int8Array, PrimitiveMeta<number>>>(JSONT.I8_ARRAY, (v) => v instanceof Int8Array, i8Array),
-        create<ArrayMeta<number, Int16Array, PrimitiveMeta<number>>>(JSONT.I16_ARRAY, (v) => v instanceof Int16Array, i16Array),
-        create<ArrayMeta<number, Int32Array, PrimitiveMeta<number>>>(JSONT.I32_ARRAY, (v) => v instanceof Int32Array, i32Array),
-        create<ArrayMeta<number, Uint8Array, PrimitiveMeta<number>>>(JSONT.U8_ARRAY, (v) => v instanceof Uint8Array, u8Array),
-        create<ArrayMeta<number, Uint16Array, PrimitiveMeta<number>>>(JSONT.U16_ARRAY, (v) => v instanceof Uint16Array, u16Array),
-        create<ArrayMeta<number, Uint32Array, PrimitiveMeta<number>>>(JSONT.U32_ARRAY, (v) => v instanceof Uint32Array, u32Array),
-        create<ArrayMeta<bigint, BigUint64Array, PrimitiveMeta<bigint>>>(JSONT.U64_ARRAY, (v) => v instanceof BigUint64Array, u64Array),
-        create<ArrayMeta<bigint, BigInt64Array, PrimitiveMeta<bigint>>>(JSONT.I64_ARRAY, (v) => v instanceof BigInt64Array, i64Array),
+        create<ArrayMeta<any, any[], any>>(JSONT.ARRAY, (v) => Array.isArray(v), (arr) => array(m.toMetadata(arr[0]))),
+        create<ArrayMeta<number, Int8Array, PrimitiveMeta<number>>>(JSONT.I8_ARRAY, (v) => v instanceof Int8Array, () => i8Array()),
+        create<ArrayMeta<number, Int16Array, PrimitiveMeta<number>>>(JSONT.I16_ARRAY, (v) => v instanceof Int16Array, () => i16Array()),
+        create<ArrayMeta<number, Int32Array, PrimitiveMeta<number>>>(JSONT.I32_ARRAY, (v) => v instanceof Int32Array, () => i32Array()),
+        create<ArrayMeta<number, Uint8Array, PrimitiveMeta<number>>>(JSONT.U8_ARRAY, (v) => v instanceof Uint8Array, () => u8Array()),
+        create<ArrayMeta<number, Uint16Array, PrimitiveMeta<number>>>(JSONT.U16_ARRAY, (v) => v instanceof Uint16Array, () => u16Array()),
+        create<ArrayMeta<number, Uint32Array, PrimitiveMeta<number>>>(JSONT.U32_ARRAY, (v) => v instanceof Uint32Array, () => u32Array()),
+        create<ArrayMeta<bigint, BigUint64Array, PrimitiveMeta<bigint>>>(JSONT.U64_ARRAY, (v) => v instanceof BigUint64Array, () => u64Array()),
+        create<ArrayMeta<bigint, BigInt64Array, PrimitiveMeta<bigint>>>(JSONT.I64_ARRAY, (v) => v instanceof BigInt64Array, () => i64Array()),
 
-        create<SetMeta<any, any>>(JSONT.SET, (v) => v instanceof Set, set),
-        create<MapMeta<any, any>>(JSONT.MAP, (v) => v instanceof Map, map),
+        create<SetMeta<any, any>>(JSONT.SET, (v) => v instanceof Set, (s) => set(m.toMetadata([...s.values()][0]))),
+        create<MapMeta<any, any>>(JSONT.MAP, (v) => v instanceof Map, (s) => map(m.toMetadata([...s.values()][0]))),
 
         create<ObjectMeta<{}>>(
             JSONT.OBJECT,
