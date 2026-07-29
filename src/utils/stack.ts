@@ -1,8 +1,10 @@
 export class Stack<T> {
-    private readonly stack: Array<T> = []
+    private readonly stack: Array<T>
     private length: number = 0
 
-    constructor() { }
+    constructor(length: number = 2) {
+        this.stack = new Array<T>(length)
+    }
 
     private ensureLength(length: number): void {
         const currentCapacity = this.stack.length
