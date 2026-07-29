@@ -134,7 +134,7 @@ export const array = <M extends BaseMeta<ExtractType<M>, M>>(
 export const u8Array = () => typedArray<Uint8Array>(JSONT.U8_ARRAY, u8())
 export const u16Array = () => typedArray<Uint16Array>(JSONT.U16_ARRAY, u16())
 export const u32Array = () => typedArray<Uint32Array>(JSONT.U32_ARRAY, u32())
-export const u64Array = () => bigIntTypedArray<BigUint64Array>(JSONT.U32_ARRAY, u64())
+export const u64Array = () => bigIntTypedArray<BigUint64Array>(JSONT.U64_ARRAY, u64())
 
 export const i8Array = () => typedArray<Int8Array>(JSONT.I8_ARRAY, i8())
 export const i16Array = () => typedArray<Int16Array>(JSONT.I16_ARRAY, i16())
