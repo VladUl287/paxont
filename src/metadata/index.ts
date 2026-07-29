@@ -1,5 +1,5 @@
 import { JSONT } from "./baseTypes"
-import { ArrayMeta, BaseMeta, ExtractType, MapMeta, NullableMeta, ObjectMeta, PrimitiveMeta, SetMeta, TypeName } from "./types"
+import { ArrayMeta, BaseMeta, MetaValue, MapMeta, NullableMeta, ObjectMeta, PrimitiveMeta, SetMeta, TypeName } from "./types"
 import {
     array, bigInt, bool, date, field, i16, i16Array, i32, i32Array, i64,
     i64Array, i8, i8Array, map, nullable, number, object, set, string, u16,
@@ -62,12 +62,12 @@ export function useMetadata(options: MetadataFactoryOptions = defaultOptions): M
 }
 
 export function withDefaultTypes(m: MetadataFactory): MetadataFactory {
-    const create = <M extends BaseMeta<ExtractType<M>, M>>(
+    const create = <M extends BaseMeta<MetaValue<M>, M>>(
         type: TypeName,
-        check: (data: any) => data is ExtractType<M>,
+        check: (data: any) => data is MetaValue<M>,
         toMeta: (...args: any[]) => M,
         priority = 50
-    ): JType<ExtractType<M>, M> => ({ type, isType: check, toMetadata: toMeta, priority })
+    ): JType<MetaValue<M>, M> => ({ type, isType: check, toMetadata: toMeta, priority })
 
     m.add(create<PrimitiveMeta<string>>(JSONT.STRING, (v) => typeof v === 'string', string))
     m.add(create<PrimitiveMeta<number>>(JSONT.NUMBER, (v) => typeof v === 'number', number))

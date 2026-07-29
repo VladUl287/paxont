@@ -1,6 +1,6 @@
 import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
-import { ParseContext, ObjectFromMeta, ObjectMeta, BaseMeta, ObjectFieldMeta } from "../metadata/types"
+import { ParseContext, AsObject, ObjectMeta, BaseMeta, ObjectFieldMeta } from "../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../utils/ascii_symbols"
 import { JSONParseError } from "../utils/error"
 
@@ -13,7 +13,7 @@ export function toObject<T extends Record<string, BaseMeta<any, any>>>(
     context: ParseContext,
     index: number,
     depth: number,
-): ReadResult<ObjectFromMeta<T>> {
+): ReadResult<AsObject<T>> {
     const { reader, options, stack } = context
 
     if (depth > options.maxDepth)

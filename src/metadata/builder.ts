@@ -1,7 +1,7 @@
 import { toArray } from "../converters/array"
 import {
     ArrayMeta,
-    BaseMeta, Expand, ExtractType, MapMeta, Modifier, NullableMeta, ObjectFieldMeta,
+    BaseMeta, MetaValue, MapMeta, Modifier, NullableMeta, ObjectFieldMeta,
     ObjectMeta, PrimitiveMeta, SetMeta
 } from "./types"
 import { BaseType, JSONT } from "./baseTypes"
@@ -18,6 +18,7 @@ import { toString } from "../converters/string"
 import { ArrayLikeWritable, ArrayPool, BigIntTypedArray, FloatTypedArray, IntegerTypedArray, useArrayPool } from "../utils/array"
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../converters/number/int"
 import { toFloat } from "../converters/number/float"
+import { Expand } from "../utils/types"
 
 export const string = (...modifiers: Modifier<PrimitiveMeta<string>>[]) =>
     primitive(JSONT.STRING, toString, (v) => `"${v}"`, ...modifiers)
@@ -75,11 +76,11 @@ const primitive = <T>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const nullable = <M extends BaseMeta<ExtractType<M>, M>>(
+export const nullable = <M extends BaseMeta<MetaValue<M>, M>>(
     value: M,
-    ...modifiers: Modifier<NullableMeta<ExtractType<M>, M>>[]
-): NullableMeta<ExtractType<M>, M> => {
-    const defaultMeta: NullableMeta<ExtractType<M>, M> = {
+    ...modifiers: Modifier<NullableMeta<MetaValue<M>, M>>[]
+): NullableMeta<MetaValue<M>, M> => {
+    const defaultMeta: NullableMeta<MetaValue<M>, M> = {
         type: JSONT.NULLABLE,
         toJson: (meta, value, options) => {
             if (value === null) return 'null'
@@ -113,11 +114,11 @@ const globalPools: Record<string, ArrayPool<any>> = Object.freeze({
     u64: useArrayPool(BigUint64Array),
 })
 
-export const array = <M extends BaseMeta<ExtractType<M>, M>>(
+export const array = <M extends BaseMeta<MetaValue<M>, M>>(
     value: M,
-    ...modifiers: Modifier<ArrayMeta<ExtractType<M>, ExtractType<M>[], M>>[]
-): ArrayMeta<ExtractType<M>, ExtractType<M>[], M> => {
-    let defaultMeta: ArrayMeta<ExtractType<M>, ExtractType<M>[], M> = {
+    ...modifiers: Modifier<ArrayMeta<MetaValue<M>, MetaValue<M>[], M>>[]
+): ArrayMeta<MetaValue<M>, MetaValue<M>[], M> => {
+    let defaultMeta: ArrayMeta<MetaValue<M>, MetaValue<M>[], M> = {
         type: JSONT.ARRAY,
         toValue: toArray,
         toJson: (meta, value, options) => {
@@ -195,11 +196,11 @@ const bigIntTypedArray = <T extends ArrayLikeWritable<bigint> & BigIntTypedArray
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const map = <M extends BaseMeta<ExtractType<M>, M>>(
+export const map = <M extends BaseMeta<MetaValue<M>, M>>(
     value: M,
-    ...modifiers: Modifier<MapMeta<ExtractType<M>, M>>[]
-): MapMeta<ExtractType<M>, M> => {
-    const defaultMeta: MapMeta<ExtractType<M>, M> = {
+    ...modifiers: Modifier<MapMeta<MetaValue<M>, M>>[]
+): MapMeta<MetaValue<M>, M> => {
+    const defaultMeta: MapMeta<MetaValue<M>, M> = {
         type: JSONT.MAP,
         key: string(),
         value: value,
@@ -213,11 +214,11 @@ export const map = <M extends BaseMeta<ExtractType<M>, M>>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const set = <M extends BaseMeta<ExtractType<M>, M>>(
+export const set = <M extends BaseMeta<MetaValue<M>, M>>(
     value: M,
-    ...modifiers: Modifier<SetMeta<ExtractType<M>, M>>[]
-): SetMeta<ExtractType<M>, M> => {
-    const defaultMeta: SetMeta<ExtractType<M>, M> = {
+    ...modifiers: Modifier<SetMeta<MetaValue<M>, M>>[]
+): SetMeta<MetaValue<M>, M> => {
+    const defaultMeta: SetMeta<MetaValue<M>, M> = {
         type: JSONT.SET,
         value: value,
         toValue: toSet,
@@ -233,7 +234,7 @@ export const set = <M extends BaseMeta<ExtractType<M>, M>>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const field = <K extends string, M extends BaseMeta<ExtractType<M>, M>>(
+export const field = <K extends string, M extends BaseMeta<MetaValue<M>, M>>(
     name: K, value: M, encoder: TextEncoder = new TextEncoder()
 ): ObjectFieldMeta<K, M> => {
     return {

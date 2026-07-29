@@ -29,3 +29,5 @@ export function isError<T>(
 ): result is Extract<ReadResult<T>, { type: ReadResultType.ERROR }> {
     return result.type === ERROR
 }
+
+export type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never

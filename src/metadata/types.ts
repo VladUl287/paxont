@@ -1,7 +1,7 @@
 import { JsonOptions } from "../options"
 import { ArrayPool } from "../utils/array"
 import { Stack } from "../utils/stack"
-import { ReadResult } from "../utils/types"
+import { Expand, ReadResult } from "../utils/types"
 import { BaseType } from "./baseTypes"
 
 export type TypeName = BaseType | (string & {})
@@ -30,10 +30,14 @@ export interface BaseMeta<T, M extends BaseMeta<T, M>> {
 
 export interface PrimitiveMeta<T> extends BaseMeta<T, PrimitiveMeta<T>> { }
 
-export interface ObjectMeta<M extends Record<string, BaseMeta<any, any>>>
-    extends BaseMeta<ObjectFromMeta<M>, ObjectMeta<M>> {
-    readonly fields: ObjectFields<M>
-    readonly build: (values: ObjectFieldsValues<M>) => ObjectFromMeta<M>
+type Obj = { [k: string]: BaseMeta<any, any> }
+type AsObject<T extends Obj> = Expand<{ [E in keyof T]: MetaValue<T[E]> }>
+type AsUnionArray<T extends Obj> = Expand<MetaValue<T[keyof T]>[]>
+type AsFieldsArray<T extends Obj> = Expand<ObjectFieldMeta<keyof T & string, T[keyof T]>[]>
+
+export interface ObjectMeta<T extends Obj> extends BaseMeta<AsObject<T>, ObjectMeta<T>> {
+    readonly fields: AsFieldsArray<T>
+    readonly build: (values: AsUnionArray<T>) => AsObject<T>
     readonly getFieldIndex: (bytes: Uint8Array, offset: number) => number
 }
 
@@ -44,17 +48,6 @@ export type ObjectFieldMeta<K extends string, M extends BaseMeta<any, M>> = {
     }
     readonly value: M
 }
-
-export type ObjectFieldsValues<T extends Record<string, BaseMeta<any, any>>, Keys extends (keyof T)[] = (keyof T)[]> = {
-    [K in keyof Keys]: ExtractType<T[Keys[K] & keyof T]>
-}
-
-export type ObjectFields<T extends Record<string, BaseMeta<any, any>>, Keys extends (keyof T)[] = (keyof T)[]> = {
-    [K in keyof Keys]: ObjectFieldMeta<Keys[K] & string, T[Keys[K] & keyof T]>
-}
-
-export type ObjectFromMeta<T extends Record<string, BaseMeta<any, any>>> =
-    Expand<{ [E in keyof T]: ExtractType<T[E]> }>
 
 export interface NullableMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<T | null, NullableMeta<T, M>> {
     readonly value: M
@@ -75,8 +68,6 @@ export interface MapMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<Map<strin
     readonly value: M
 }
 
-export type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
-
-export type ExtractType<M> = M extends BaseMeta<infer U, any> ? U : never
+export type MetaValue<M> = M extends BaseMeta<infer U, any> ? U : never
 
 export type Modifier<M extends BaseMeta<any, M>> = (metadata: M) => M
