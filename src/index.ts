@@ -4,7 +4,7 @@ import { BaseMeta, ParseState } from "./metadata/types"
 import { ArrayPool, useArrayPool } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
-import { MetadataFactory, useMetadata } from "./metadata"
+import { MetadataFactory, metadata } from "./metadata"
 import { isError, isNeedsMoreData } from "./utils/types"
 import { Stack } from "./utils/stack"
 
@@ -21,7 +21,7 @@ type JSONTOptions = {
 }
 
 const defaultJsontOptions: JSONTOptions = Object.freeze({
-    metadataBuilder: useMetadata(),
+    metadataBuilder: metadata(),
     arrayPool: useArrayPool<Uint8Array<ArrayBufferLike>>(Uint8Array),
     jsonOptions: {
         defaultOptions: defaultOptions,
@@ -36,7 +36,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
     const optionsCache = createCache<Partial<JsonOptions>, JsonOptions>()
     const metadataCache = createCache<any, BaseMeta<any, any>>()
 
-    const defaultMetadata = useMetadata()
+    const defaultMetadata = metadata()
 
     const defaultStack = new Stack<ParseState>()
 

@@ -30,7 +30,7 @@ export type MetadataFactoryOptions = {
 
 const defaultOptions: MetadataFactoryOptions = Object.freeze({ withDefaults: withDefaultTypes })
 
-export function useMetadata(options: MetadataFactoryOptions = defaultOptions): MetadataFactory {
+export function metadata(options: MetadataFactoryOptions = defaultOptions): MetadataFactory {
     const types = new Map<TypeName, JType<any, any>>()
 
     const add = <T, M extends BaseMeta<T, M>>(jtype: JType<T, M>): void => { types.set(jtype.type, jtype) }
