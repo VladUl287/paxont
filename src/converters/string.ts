@@ -176,7 +176,7 @@ function useDecoder(options: StringParseFactoryOptions) {
                 const ascii_only = get_ascii_only()
 
                 if (ascii_only === 1) {
-                    const ascii_length = index - 1
+                    const ascii_length = index - i
 
                     if (ascii_length <= 64) {
                         const factory = factories[ascii_length]
@@ -187,7 +187,7 @@ function useDecoder(options: StringParseFactoryOptions) {
                         }
                     }
 
-                    const view = new Uint8Array(b.buffer, i, index - 1)
+                    const view = new Uint8Array(b.buffer, i, ascii_length)
                     return {
                         type: COMPLETE,
                         value: unsafeDecoder8.decode(view),
