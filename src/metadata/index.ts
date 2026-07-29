@@ -8,29 +8,27 @@ import {
 import { Int16, Int32, Int64, Int8, Nullable, Uint16, Uint32, Uint64, Uint8 } from "./type-containers"
 import { isPlainObject } from "../utils/object"
 
-export type MetadataFactory = {
-    add: <T, M extends BaseMeta<T, M>>(type: JType<T, M>) => void
-    remove: <T, M extends BaseMeta<T, M>>(type: TypeName | JType<T, M>) => boolean
-    clear: () => void
-    toMetadata: <T>(data: T) => BaseMeta<T, any>
+export type Metadata = {
+    readonly add: <T, M extends BaseMeta<T, M>>(type: JType<T, M>) => void
+    readonly remove: <T, M extends BaseMeta<T, M>>(type: TypeName | JType<T, M>) => boolean
+    readonly clear: () => void
+    readonly toMetadata: <T>(data: T) => BaseMeta<T, any>
+}
+
+export type MetadataOptions = {
+    readonly withDefaults: (m: Metadata) => Metadata
 }
 
 export type JType<T, M extends BaseMeta<T, M>> = {
-    type: TypeName,
-    isType: (data: any) => data is T
-    toMetadata: (data: T) => M
-    priority: number
+    readonly type: TypeName,
+    readonly isType: (data: any) => data is T
+    readonly toMetadata: (data: T) => M
+    readonly priority: number
 }
 
-export type WithDefaults = (m: MetadataFactory) => MetadataFactory
+const defaultOptions: MetadataOptions = Object.freeze({ withDefaults })
 
-export type MetadataFactoryOptions = {
-    withDefaults: WithDefaults
-}
-
-const defaultOptions: MetadataFactoryOptions = Object.freeze({ withDefaults: withDefaultTypes })
-
-export function metadata(options: MetadataFactoryOptions = defaultOptions): MetadataFactory {
+export function metadata(options: MetadataOptions = defaultOptions): Metadata {
     const types = new Map<TypeName, JType<any, any>>()
 
     const add = <T, M extends BaseMeta<T, M>>(jtype: JType<T, M>): void => { types.set(jtype.type, jtype) }
@@ -61,7 +59,7 @@ export function metadata(options: MetadataFactoryOptions = defaultOptions): Meta
     })
 }
 
-export function withDefaultTypes(m: MetadataFactory): MetadataFactory {
+export function withDefaults(m: Metadata): Metadata {
     const create = <M extends BaseMeta<MetaValue<M>, M>>(
         type: TypeName,
         check: (data: any) => data is MetaValue<M>,

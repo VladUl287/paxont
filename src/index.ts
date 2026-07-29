@@ -4,14 +4,14 @@ import { BaseMeta, ParseState } from "./metadata/types"
 import { ArrayPool, useArrayPool } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
-import { MetadataFactory, metadata } from "./metadata"
+import { Metadata, metadata } from "./metadata"
 import { isError, isNeedsMoreData } from "./utils/types"
 import { Stack } from "./utils/stack"
 
 type ExtractType<T> = T extends BaseMeta<infer V, any> ? V : T
 
 type JSONTOptions = {
-    readonly metadataBuilder: MetadataFactory
+    readonly metadataBuilder: Metadata
     readonly arrayPool: ArrayPool<Uint8Array>
     readonly jsonOptions: {
         readonly defaultOptions: JsonOptions
