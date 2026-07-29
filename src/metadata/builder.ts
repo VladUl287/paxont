@@ -235,22 +235,20 @@ export const set = <M extends BaseMeta<ExtractType<M>, M>>(
 
 export const field = <K extends string, M extends BaseMeta<ExtractType<M>, M>>(
     name: K, value: M, encoder: TextEncoder = new TextEncoder()
-): ObjectFieldMeta<K, ExtractType<M>, M> => {
+): ObjectFieldMeta<K, M> => {
     return {
         name: {
             value: name,
             bytes: encoder.encode(name)
         },
-         value: value
+        value: value
     }
 }
 
-export type ObjectFromFields<T extends ObjectFieldMeta<string, any, any>[]> =
-    Expand<{
-        [E in T[number]as E['name']['value']]: E['value']
-    }>
+export type ObjectFromFields<T extends ObjectFieldMeta<string, any>[]> =
+    Expand<{ [E in T[number]as E['name']['value']]: E['value'] }>
 
-export const object = <M extends ObjectFieldMeta<any, any, any>[]>(...fields: M): ObjectMeta<ObjectFromFields<M>> => {
+export const object = <M extends ObjectFieldMeta<any, any>[]>(...fields: M): ObjectMeta<ObjectFromFields<M>> => {
     const keys = fields.map(f => f.name.value as string)
     const factory = genObjectFactory(keys) as any
 

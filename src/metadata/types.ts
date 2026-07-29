@@ -37,7 +37,7 @@ export interface ObjectMeta<M extends Record<string, BaseMeta<any, any>>>
     readonly getFieldIndex: (bytes: Uint8Array, offset: number) => number
 }
 
-export type ObjectFieldMeta<K extends string, T, M extends BaseMeta<T, M>> = {
+export type ObjectFieldMeta<K extends string, M extends BaseMeta<any, M>> = {
     readonly name: {
         value: K
         bytes: Uint8Array
@@ -50,7 +50,7 @@ export type ObjectFieldsValues<T extends Record<string, BaseMeta<any, any>>, Key
 }
 
 export type ObjectFields<T extends Record<string, BaseMeta<any, any>>, Keys extends (keyof T)[] = (keyof T)[]> = {
-    [K in keyof Keys]: ObjectFieldMeta<Keys[K] & string, ExtractType<T[Keys[K] & keyof T]>, T[Keys[K] & keyof T]>
+    [K in keyof Keys]: ObjectFieldMeta<Keys[K] & string, T[Keys[K] & keyof T]>
 }
 
 export type ObjectFromMeta<T extends Record<string, BaseMeta<any, any>>> =
