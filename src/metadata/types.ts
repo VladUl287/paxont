@@ -30,8 +30,9 @@ export interface BaseMeta<T, M extends BaseMeta<T, M>> {
 
 export interface PrimitiveMeta<T> extends BaseMeta<T, PrimitiveMeta<T>> { }
 
-type Obj = { [k: string]: BaseMeta<any, any> }
-type AsObject<T extends Obj> = Expand<{ [E in keyof T]: MetaValue<T[E]> }>
+export type Obj = { [k: string]: BaseMeta<any, any> }
+export type AsObject<T extends Obj> = Expand<{ [E in keyof T]: MetaValue<T[E]> }>
+
 type AsUnionArray<T extends Obj> = Expand<MetaValue<T[keyof T]>[]>
 type AsFieldsArray<T extends Obj> = Expand<ObjectFieldMeta<keyof T & string, T[keyof T]>[]>
 
