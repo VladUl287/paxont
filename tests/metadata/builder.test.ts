@@ -7,7 +7,7 @@ import { toFloat } from "../../src/converters/number/float"
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../../src/converters/number/int"
 import { toString } from "../../src/converters/string"
 import { JSONT } from "../../src/metadata/baseTypes"
-import { array, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array, arrayPool, u32Array, u64Array, i8Array, i16Array, i32Array, i64Array } from "../../src/metadata/builder"
+import { array, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array, arrayPool, u32Array, u64Array, i8Array, i16Array, i32Array, i64Array, f64Array } from "../../src/metadata/builder"
 import { BaseMeta, TypeName } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { useArrayPool } from "../../src/utils/array"
@@ -263,5 +263,20 @@ describe('metadata builders', () => {
         expect(meta).toHaveProperty('pool')
         expect(meta.toValue).toBe(toArray)
         expect(meta.toJson(meta, new BigInt64Array([1n]), defaultOptions)).toBe('[1]')
+    })
+
+    test('f64array', () => {
+        const meta = f64Array()
+
+        expectBaseStructure(meta, JSONT.F64_ARRAY)
+        expect(meta).toHaveProperty('value')
+        expect(meta.value).toMatchObject({
+            type: JSONT.NUMBER,
+            toJson: expect.any(Function),
+            toValue: toFloat
+        })
+        expect(meta).toHaveProperty('pool')
+        expect(meta.toValue).toBe(toArray)
+        expect(meta.toJson(meta, new Float64Array([1.1]), defaultOptions)).toBe('[1.1]')
     })
 })
