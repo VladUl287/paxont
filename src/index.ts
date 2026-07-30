@@ -1,4 +1,4 @@
-import { CacheFactory, createCache } from "./cache/cache"
+import { MemoFactory, memo } from "./utils/memo"
 import { defaultOptions, JsonOptions, mergeOptions } from "./options"
 import { BaseMeta, ParseState } from "./metadata/types"
 import { ArrayPool, createArrayPool } from "./utils/array"
@@ -17,7 +17,7 @@ type JSONTOptions = {
         readonly defaultOptions: JsonOptions
         readonly mergetOptions: typeof mergeOptions
     }
-    readonly createCache: CacheFactory
+    readonly memo: MemoFactory
 }
 
 const defaultJsontOptions: JSONTOptions = Object.freeze({
@@ -27,14 +27,14 @@ const defaultJsontOptions: JSONTOptions = Object.freeze({
         defaultOptions: defaultOptions,
         mergetOptions: mergeOptions
     },
-    createCache: createCache,
+    memo,
 })
 
 export function jsont(value: JSONTOptions = defaultJsontOptions) {
-    const { arrayPool, createCache } = value
+    const { arrayPool, memo } = value
 
-    const optionsCache = createCache<Partial<JsonOptions>, JsonOptions>()
-    const metadataCache = createCache<any, BaseMeta<any, any>>()
+    const optionsCache = memo<Partial<JsonOptions>, JsonOptions>()
+    const metadataCache = memo<any, BaseMeta<any, any>>()
 
     const defaultMetadata = metadata()
 

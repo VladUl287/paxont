@@ -1,10 +1,10 @@
-import { createCache, Cache } from "../../src/cache/cache"
+import { memo, Memo } from "../../src/utils/memo"
 
 describe('createCache', () => {
-    let cache: Cache<string, number>
+    let cache: Memo<string, number>
 
     beforeEach(() => {
-        cache = createCache<string, number>()
+        cache = memo<string, number>()
     })
 
     describe('getOrAdd', () => {
@@ -41,7 +41,7 @@ describe('createCache', () => {
                 breed: string
             }
 
-            const cache = createCache<string, Animal>()
+            const cache = memo<string, Animal>()
             const key = 'fido'
             const dog: Dog = { name: 'Fido', breed: 'Labrador' }
 
@@ -67,7 +67,7 @@ describe('createCache', () => {
 
         it('should handle different key types', () => {
 
-            const numberCache = createCache<number, string>()
+            const numberCache = memo<number, string>()
             const key = 123
             const value = 'test value'
             const factory = jest.fn().mockReturnValue(value)
@@ -83,7 +83,7 @@ describe('createCache', () => {
         it('should handle complex value types', () => {
 
             type User = { id: number; name: string }
-            const userCache = createCache<string, User>()
+            const userCache = memo<string, User>()
             const key = 'user1'
             const user: User = { id: 1, name: 'John Doe' }
 
@@ -174,8 +174,8 @@ describe('createCache', () => {
     describe('cache isolation', () => {
         it('should create independent cache instances', () => {
 
-            const cache1 = createCache<string, number>()
-            const cache2 = createCache<string, number>()
+            const cache1 = memo<string, number>()
+            const cache2 = memo<string, number>()
 
 
             cache1.getOrAdd('key1', () => 100)
@@ -193,11 +193,11 @@ describe('createCache', () => {
     describe('type safety', () => {
         it('should maintain type safety with different generic types', () => {
 
-            const stringCache = createCache<number, string>()
+            const stringCache = memo<number, string>()
             const result: string = stringCache.getOrAdd(1, () => 'test')
             expect(result).toBe('test')
 
-            const objCache = createCache<string, { id: number }>()
+            const objCache = memo<string, { id: number }>()
             const objResult: { id: number } = objCache.getOrAdd('test', () => ({ id: 123 }))
             expect(objResult).toEqual({ id: 123 })
         })
@@ -206,7 +206,7 @@ describe('createCache', () => {
             interface Base { id: number }
             interface Extended extends Base { extra: string }
 
-            const cache = createCache<string, Base>()
+            const cache = memo<string, Base>()
             const extendedValue: Extended = { id: 1, extra: 'extra' }
 
 
