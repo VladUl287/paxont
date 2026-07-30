@@ -22,7 +22,10 @@ export type ParseState = {
     [key: string]: any
 }
 
+export const JSONTMetaTag: unique symbol = Symbol("JSONTMetaTag")
+
 export interface BaseMeta<T, M extends BaseMeta<T, M>> {
+    readonly [JSONTMetaTag]: true
     readonly toValue: (metadata: M, context: ParseContext, index: number, depth: number) => ReadResult<T>
     readonly toJson: (metadata: M, value: T, options: JsonOptions) => string
     readonly type: TypeName
