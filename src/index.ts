@@ -1,7 +1,7 @@
 import { CacheFactory, createCache } from "./cache/cache"
 import { defaultOptions, JsonOptions, mergeOptions } from "./options"
 import { BaseMeta, ParseState } from "./metadata/types"
-import { ArrayPool, useArrayPool } from "./utils/array"
+import { ArrayPool, createArrayPool } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
 import { Metadata, metadata } from "./metadata"
@@ -22,7 +22,7 @@ type JSONTOptions = {
 
 const defaultJsontOptions: JSONTOptions = Object.freeze({
     metadataBuilder: metadata(),
-    arrayPool: useArrayPool<Uint8Array<ArrayBufferLike>>(Uint8Array),
+    arrayPool: createArrayPool<Uint8Array<ArrayBufferLike>>(Uint8Array),
     jsonOptions: {
         defaultOptions: defaultOptions,
         mergetOptions: mergeOptions

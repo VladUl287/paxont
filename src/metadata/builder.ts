@@ -15,7 +15,7 @@ import { toNullable } from "../converters/nullable"
 import { toBigInt, toInt64, toUint64 } from "../converters/number/bigint"
 import { toBoolean } from "../converters/boolean"
 import { toString } from "../converters/string"
-import { ArrayLikeWritable, ArrayPool, BigIntTypedArray, FloatTypedArray, IntegerTypedArray, useArrayPool } from "../utils/array"
+import { ArrayLikeWritable, ArrayPool, BigIntTypedArray, FloatTypedArray, IntegerTypedArray, createArrayPool } from "../utils/array"
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../converters/number/int"
 import { toFloat } from "../converters/number/float"
 import { Expand } from "../utils/types"
@@ -102,18 +102,18 @@ export const arrayPool =
         })
 
 const globalPools: Record<string, ArrayPool<any>> = Object.freeze({
-    number: useArrayPool<Array<number>>(Array),
-    string: useArrayPool<Array<string>>(Array),
-    object: useArrayPool<Array<object>>(Array),
-    undefined: useArrayPool<Array<any>>(Array),
-    i8: useArrayPool(Int8Array),
-    i16: useArrayPool(Int16Array),
-    i32: useArrayPool(Int32Array),
-    i64: useArrayPool(BigInt64Array),
-    u8: useArrayPool(Uint8Array),
-    u16: useArrayPool(Uint16Array),
-    u32: useArrayPool(Uint32Array),
-    u64: useArrayPool(BigUint64Array),
+    number: createArrayPool<Array<number>>(Array),
+    string: createArrayPool<Array<string>>(Array),
+    object: createArrayPool<Array<object>>(Array),
+    undefined: createArrayPool<Array<any>>(Array),
+    i8: createArrayPool(Int8Array),
+    i16: createArrayPool(Int16Array),
+    i32: createArrayPool(Int32Array),
+    i64: createArrayPool(BigInt64Array),
+    u8: createArrayPool(Uint8Array),
+    u16: createArrayPool(Uint16Array),
+    u32: createArrayPool(Uint32Array),
+    u64: createArrayPool(BigUint64Array),
 })
 
 export const array = <M extends BaseMeta<MetaValue<M>, M>>(
@@ -129,7 +129,7 @@ export const array = <M extends BaseMeta<MetaValue<M>, M>>(
             return `[${value.map(c => toJson(metaValue, c, options)).join(',')}]`
         },
         value: value,
-        pool: globalPools[value.type] ?? useArrayPool(Array)
+        pool: globalPools[value.type] ?? createArrayPool(Array)
     }
     return modifiers.reduce(applyModifier, defaultMeta)
 }

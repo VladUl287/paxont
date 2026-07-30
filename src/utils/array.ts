@@ -55,7 +55,7 @@ export const clampLength = (minLength: number): number => {
     return 1 << (32 - Math.clz32(n))
 }
 
-export function useArrayPool<A extends ArrayLike<any>>(ctor: new (length: number) => A): ArrayPool<A> {
+export function createArrayPool<A extends ArrayLike<any>>(ctor: new (length: number) => A): ArrayPool<A> {
     const MAX_LENGTH = 0x3fffffff
     const globalMinLength = 2
     const pool = new Map<number, Stack<A>>()
