@@ -29,31 +29,31 @@ export type JType<M extends BaseMeta<any, M>> = {
 const defaultOptions: MetadataOptions = Object.freeze({ withDefaults })
 
 export function metadata(this: Metadata, options: MetadataOptions = defaultOptions): Metadata {
-    const jtypes = new Map<TypeName, JType<any>>()
+    const jTypes = new Map<TypeName, JType<any>>()
 
     const sort = (types: Map<TypeName, JType<any>>) => [...types.values()].sort((a, b) => a.order - b.order)
 
-    let jtypesSorted = sort(jtypes)
+    let jTypesSorted = sort(jTypes)
 
     const add = <M extends BaseMeta<any, M>>(type: JType<M>): void => {
-        jtypes.set(type.name, type)
-        jtypesSorted = sort(jtypes)
+        jTypes.set(type.name, type)
+        jTypesSorted = sort(jTypes)
     }
 
     const remove = <M extends BaseMeta<any, M>>(type: TypeName | JType<M>): boolean => {
         const inputType = typeof type === 'string' ? type : type.name
-        const result = jtypes.delete(inputType)
-        jtypesSorted = sort(jtypes)
+        const result = jTypes.delete(inputType)
+        jTypesSorted = sort(jTypes)
         return result
     }
 
     const clear = (): void => {
-        jtypes.clear()
-        jtypesSorted = []
+        jTypes.clear()
+        jTypesSorted = []
     }
 
     const from = <T>(data: T): BaseMeta<T, any> => {
-        for (const type of jtypesSorted) {
+        for (const type of jTypesSorted) {
             if (type.check(data)) {
                 return type.toMeta(data, this)
             }
