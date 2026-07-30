@@ -1,4 +1,10 @@
-export class Stack<T> {
+export interface IStack<T> {
+    get isEmpty(): boolean
+    push(value: T): void
+    pop(): T | undefined
+}
+
+export class Stack<T> implements IStack<T> {
     private readonly stack: Array<T>
     private length: number = 0
 

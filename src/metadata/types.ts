@@ -1,6 +1,6 @@
 import { JsonOptions } from "../options"
 import { ArrayPool } from "../utils/array"
-import { Stack } from "../utils/stack"
+import { IStack } from "../utils/stack"
 import { Expand, ReadResult } from "../utils/types"
 import { BaseType } from "./baseTypes"
 
@@ -14,7 +14,7 @@ export type JsonReader = {
 export type ParseContext = {
     readonly reader: JsonReader,
     readonly options: JsonOptions,
-    readonly stack: Stack<ParseState>
+    readonly stack: IStack<ParseState>
 }
 
 export type ParseState = {
