@@ -27,28 +27,6 @@ export type BigIntTypedArray =
     | BigInt64Array
     | BigUint64Array
 
-export const groupBy = <K, V>(fields: V[], keySelector: (field: V) => K) => {
-    return fields.reduce((map, field) => {
-        const key = keySelector(field)
-        const fields = map.get(key)
-        if (fields) {
-            fields.push(field)
-            return map
-        }
-        return map.set(key, [field])
-    }, new Map<K, V[]>())
-}
-
-export const copyArray = <V, T extends ArrayLikeWritable<V>>(source: ArrayLike<V>, target: T): T => {
-    if (!source || !target) return target
-
-    const length = Math.min(source.length, target.length)
-    for (let i = 0; i < length; i++)
-        target[i] = source[i]
-
-    return target
-}
-
 export const clampLength = (minLength: number): number => {
     const n = (minLength >>> 0) - 1
     if (n <= 0) return 1
