@@ -28,7 +28,7 @@ export type JType<M extends BaseMeta<any, M>> = {
 
 const defaultOptions: MetadataOptions = Object.freeze({ withDefaults })
 
-export function metadata(this: Metadata, options: MetadataOptions = defaultOptions): Metadata {
+export function metadata(options: MetadataOptions = defaultOptions): Metadata {
     const jTypes = new Map<TypeName, JType<any>>()
 
     const sort = (types: Map<TypeName, JType<any>>) => [...types.values()].sort((a, b) => a.order - b.order)
@@ -52,21 +52,20 @@ export function metadata(this: Metadata, options: MetadataOptions = defaultOptio
         jTypesSorted = []
     }
 
+    const instance = build()
+
     const from = <T>(data: T): BaseMeta<T, any> => {
         for (const type of jTypesSorted) {
             if (type.check(data)) {
-                return type.toMeta(data, this)
+                return type.toMeta(data, instance)
             }
         }
         throw new Error(`Cannot create metadata for value of type ${typeof data}: ${JSON.stringify(data)}.`)
     }
 
-    return options.withDefaults({
-        add,
-        remove,
-        clear,
-        from,
-    })
+    function build() { return { add, remove, clear, from } }
+
+    return options.withDefaults(instance)
 }
 
 export function withDefaults(m: Metadata): Metadata {
