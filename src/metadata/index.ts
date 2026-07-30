@@ -52,8 +52,6 @@ export function metadata(options: MetadataOptions = defaultOptions): Metadata {
         jTypesSorted = []
     }
 
-    const instance = build()
-
     const from = <T>(data: T): BaseMeta<T, any> => {
         for (const type of jTypesSorted) {
             if (type.check(data)) {
@@ -63,7 +61,7 @@ export function metadata(options: MetadataOptions = defaultOptions): Metadata {
         throw new Error(`Cannot create metadata for value of type ${typeof data}: ${JSON.stringify(data)}.`)
     }
 
-    function build() { return { add, remove, clear, from } }
+    const instance = { add, remove, clear, from }
 
     return options.withDefaults(instance)
 }
