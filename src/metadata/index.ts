@@ -29,31 +29,31 @@ export type JType<M extends BaseMeta<any, M>> = {
 const defaultOptions: MetadataOptions = Object.freeze({ withDefaults })
 
 export function metadata(this: Metadata, options: MetadataOptions = defaultOptions): Metadata {
-    const types = new Map<TypeName, JType<any>>()
+    const jtypes = new Map<TypeName, JType<any>>()
 
-    const orderTypes = (types: Map<TypeName, JType<any>>) => [...types.values()].sort((a, b) => a.order - b.order)
+    const sort = (types: Map<TypeName, JType<any>>) => [...types.values()].sort((a, b) => a.order - b.order)
 
-    let orderedTypes = orderTypes(types)
+    let jtypesSorted = sort(jtypes)
 
-    const add = <M extends BaseMeta<any, M>>(jtype: JType<M>): void => {
-        types.set(jtype.name, jtype)
-        orderedTypes = orderTypes(types)
+    const add = <M extends BaseMeta<any, M>>(type: JType<M>): void => {
+        jtypes.set(type.name, type)
+        jtypesSorted = sort(jtypes)
     }
 
-    const remove = <M extends BaseMeta<any, M>>(jtype: TypeName | JType<M>): boolean => {
-        const type = typeof jtype === 'string' ? jtype : jtype.name
-        const result = types.delete(type)
-        orderedTypes = orderTypes(types)
+    const remove = <M extends BaseMeta<any, M>>(type: TypeName | JType<M>): boolean => {
+        const inputType = typeof type === 'string' ? type : type.name
+        const result = jtypes.delete(inputType)
+        jtypesSorted = sort(jtypes)
         return result
     }
 
     const clear = (): void => {
-        types.clear()
-        orderedTypes = []
+        jtypes.clear()
+        jtypesSorted = []
     }
 
     const from = <T>(data: T): BaseMeta<T, any> => {
-        for (const type of orderedTypes) {
+        for (const type of jtypesSorted) {
             if (type.check(data)) {
                 return type.toMeta(data, this)
             }
