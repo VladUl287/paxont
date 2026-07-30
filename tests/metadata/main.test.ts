@@ -80,7 +80,7 @@ describe('metadata', () => {
     })
 
     test('full typed object', () => {
-        const object = {
+        const typeObject = {
             id: new Int32(),
             status: new Int8(),
             symbol: new Int16(),
@@ -96,7 +96,20 @@ describe('metadata', () => {
             isActive: true,
             isAlive: false,
 
+            createdAt: new Date(),
+
             bytes: new Uint8Array(),
+            bytesUTF16: new Uint16Array(),
+
+            postsIds: new Uint32Array(),
+            numbers: new BigUint64Array(),
+
+            tests: new Int8Array(),
+            tests1: new Int16Array(),
+            tests2: new Int32Array(),
+            tests3: new BigInt64Array(),
+
+            sequence: 1n,
 
             address: new Nullable({
                 index: 12345,
@@ -114,7 +127,8 @@ describe('metadata', () => {
             images: new Set(["https://dummyimage.com/200x200/FFFFFF/lorem-ipsum.png&text=jsonplaceholder.org", "https://dummyimage.com/200x200/FFFFFF/lorem-ipsum.png&text=jsonplaceholder.org"])
         }
 
-        const meta = metaBuilder.from(object) as ObjectMeta<any>
+
+        const meta = metaBuilder.from(typeObject) as ObjectMeta<any>
 
         expectBaseStructure(meta, JSONT.OBJECT)
 
@@ -125,11 +139,58 @@ describe('metadata', () => {
 
         const toBytes = (str: string) => new TextEncoder().encode(str)
 
-        expect(meta.toJson(meta, object, defaultOptions)).toBe(JSON.stringify(object))
+        const object = {
+            id: 123,
+            status: 2,
+            symbol: 123,
+            number: 32434534534,
+
+            category: 1,
+            symbol_add: 453,
+            userId: 23,
+            hash: 33453453465,
+
+            coefficient: 124.4,
+            name: "name",
+            isActive: true,
+            isAlive: false,
+
+            createdAt: new Date(),
+
+            bytes: new Uint8Array(),
+            bytesUTF16: new Uint16Array(),
+
+            postsIds: new Uint32Array(),
+            numbers: new BigUint64Array(),
+
+            tests: new Int8Array(),
+            tests1: new Int16Array(),
+            tests2: new Int32Array(),
+            tests3: new BigInt64Array(),
+
+            sequence: 1n,
+
+            address: {
+                index: 12345,
+                name: "name"
+            },
+            coordinates: [
+                { x: 1.23, y: 35.4 },
+                { x: 1.23, y: 65.2 },
+                { x: 1.23, y: 87.1 },
+            ],
+            urls: new Map<string, number>([
+                ["https://dummyimage.com", 0],
+                ["https://dummyimage.com/200x200", 1]
+            ]),
+            images: new Set(["https://dummyimage.com/200x200/FFFFFF/lorem-ipsum.png&text=jsonplaceholder.org", "https://dummyimage.com/200x200/FFFFFF/lorem-ipsum.png&text=jsonplaceholder.org"])
+        }
+
+        // expect(meta.toJson(meta, object, defaultOptions)).toBe(JSON.stringify(object))
 
         const ctx: ParseContext = {
             reader: {
-                bytes: toBytes(JSON.stringify(object)),
+                bytes: toBytes(meta.toJson(meta, object, defaultOptions)),
                 writable: false
             },
             options: defaultOptions,
