@@ -50,7 +50,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
             defaultOptions
 
         const metadata = !isMetadata(type) ?
-            metadataCache.getOrAdd(type, (t) => defaultMetadata.toMetadata(t)) :
+            metadataCache.getOrAdd(type, (t) => defaultMetadata.from(t)) :
             type
 
         let bytes: Uint8Array
@@ -101,7 +101,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
             defaultOptions
 
         const metadata = !isMetadata(type) ?
-            metadataCache.getOrAdd(type, (t) => defaultMetadata.toMetadata(t)) :
+            metadataCache.getOrAdd(type, (t) => defaultMetadata.from(t)) :
             type
 
         const stack = new Stack<ParseState>()

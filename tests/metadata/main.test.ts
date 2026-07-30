@@ -38,7 +38,7 @@ describe('metadata', () => {
             ]
         }
 
-        const meta = metaBuilder.toMetadata(object) as ObjectMeta<any>
+        const meta = metaBuilder.from(object) as ObjectMeta<any>
 
         expectBaseStructure(meta, JSONT.OBJECT)
 
@@ -85,7 +85,7 @@ describe('metadata', () => {
             status: new Int8(),
             symbol: new Int16(),
             number: new Int64(),
-            
+
             category: new Uint8(),
             symbol_add: new Uint16(),
             userId: new Uint32(),
@@ -97,7 +97,7 @@ describe('metadata', () => {
             isAlive: false,
 
             bytes: new Uint8Array(),
-            
+
             address: new Nullable({
                 index: 12345,
                 name: "name"
@@ -114,7 +114,7 @@ describe('metadata', () => {
             images: new Set(["https://dummyimage.com/200x200/FFFFFF/lorem-ipsum.png&text=jsonplaceholder.org", "https://dummyimage.com/200x200/FFFFFF/lorem-ipsum.png&text=jsonplaceholder.org"])
         }
 
-        const meta = metaBuilder.toMetadata(object) as ObjectMeta<any>
+        const meta = metaBuilder.from(object) as ObjectMeta<any>
 
         expectBaseStructure(meta, JSONT.OBJECT)
 

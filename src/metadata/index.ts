@@ -13,7 +13,7 @@ export type Metadata = {
     readonly addMany: (...jtypes: JType<any, any>[]) => void
     readonly remove: <T, M extends BaseMeta<T, M>>(type: TypeName | JType<T, M>) => boolean
     readonly clear: () => void
-    readonly toMetadata: <T>(data: T) => BaseMeta<T, any>
+    readonly from: <T>(data: T) => BaseMeta<T, any>
 }
 
 export type MetadataOptions = {
@@ -58,7 +58,7 @@ export function metadata(options: MetadataOptions = defaultOptions): Metadata {
         orderedTypes = []
     }
 
-    const toMetadata = <T>(data: T): BaseMeta<T, any> => {
+    const from = <T>(data: T): BaseMeta<T, any> => {
         for (const type of orderedTypes) {
             if (type.check(data)) {
                 return type.toMetadata(data)
@@ -72,7 +72,7 @@ export function metadata(options: MetadataOptions = defaultOptions): Metadata {
         addMany,
         remove,
         clear,
-        toMetadata,
+        from,
     })
 }
 
@@ -100,9 +100,9 @@ export function withDefaults(m: Metadata): Metadata {
         create<PrimitiveMeta<number>>(JSONT.U32, (v): v is number => v instanceof Uint32, () => u32()),
         create<PrimitiveMeta<bigint>>(JSONT.U32, (v): v is bigint => v instanceof Uint64, () => u64()),
 
-        create<NullableMeta<any, any>>(JSONT.NULLABLE, (v) => v instanceof Nullable, (v) => nullable(m.toMetadata(v.value))),
+        create<NullableMeta<any, any>>(JSONT.NULLABLE, (v) => v instanceof Nullable, (v) => nullable(m.from(v.value))),
 
-        create<ArrayMeta<any, any[], any>>(JSONT.ARRAY, (v) => Array.isArray(v), (arr) => array(m.toMetadata(arr[0]))),
+        create<ArrayMeta<any, any[], any>>(JSONT.ARRAY, (v) => Array.isArray(v), (arr) => array(m.from(arr[0]))),
         create<ArrayMeta<number, Int8Array, PrimitiveMeta<number>>>(JSONT.I8_ARRAY, (v) => v instanceof Int8Array, () => i8Array()),
         create<ArrayMeta<number, Int16Array, PrimitiveMeta<number>>>(JSONT.I16_ARRAY, (v) => v instanceof Int16Array, () => i16Array()),
         create<ArrayMeta<number, Int32Array, PrimitiveMeta<number>>>(JSONT.I32_ARRAY, (v) => v instanceof Int32Array, () => i32Array()),
@@ -112,13 +112,13 @@ export function withDefaults(m: Metadata): Metadata {
         create<ArrayMeta<bigint, BigUint64Array, PrimitiveMeta<bigint>>>(JSONT.U64_ARRAY, (v) => v instanceof BigUint64Array, () => u64Array()),
         create<ArrayMeta<bigint, BigInt64Array, PrimitiveMeta<bigint>>>(JSONT.I64_ARRAY, (v) => v instanceof BigInt64Array, () => i64Array()),
 
-        create<SetMeta<any, any>>(JSONT.SET, (v) => v instanceof Set, (s) => set(m.toMetadata([...s.values()][0]))),
-        create<MapMeta<any, any>>(JSONT.MAP, (v) => v instanceof Map, (s) => map(m.toMetadata([...s.values()][0]))),
+        create<SetMeta<any, any>>(JSONT.SET, (v) => v instanceof Set, (s) => set(m.from([...s.values()][0]))),
+        create<MapMeta<any, any>>(JSONT.MAP, (v) => v instanceof Map, (s) => map(m.from([...s.values()][0]))),
 
         create<ObjectMeta<{}>>(
             JSONT.OBJECT,
             (v): v is {} => isPlainObject(v),
-            (d) => object(...Object.entries(d).map(([key, value]) => field(key, m.toMetadata(value))))
+            (d) => object(...Object.entries(d).map(([key, value]) => field(key, m.from(value))))
         )
     )
     return m
