@@ -8,7 +8,7 @@ import { Metadata, metadata } from "./metadata"
 import { isError, isNeedsMoreData } from "./utils/types"
 import { Stack } from "./utils/stack"
 
-type ExtractType<T> = T extends BaseMeta<infer V, any> ? V : T
+type MetaOrData<T> = T extends BaseMeta<infer V, any> ? V : T
 
 type JSONTOptions = {
     readonly metadataBuilder: Metadata
@@ -44,7 +44,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
         value: ArrayBuffer | Uint8Array | string,
         type: T,
         options?: Partial<JsonOptions>
-    ): ExtractType<T> {
+    ): MetaOrData<T> {
         const filledOptions = !!options ?
             optionsCache.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
             defaultOptions
@@ -95,7 +95,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
         json: ReadableStream<Uint8Array>,
         type: T,
         options?: Partial<JsonOptions>
-    ): Promise<ExtractType<T>> {
+    ): Promise<MetaOrData<T>> {
         const filledOptions = !!options ?
             optionsCache.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
             defaultOptions
