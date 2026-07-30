@@ -5,14 +5,14 @@ import {
     i64Array, i8, i8Array, map, nullable, number, object, set, string, u16,
     u16Array, u32, u32Array, u64, u64Array, u8, u8Array
 } from "./builder"
-import { Int16, Int32, Int64, Int8, Nullable, Uint16, Uint32, Uint64, Uint8 } from "./type-containers"
+import { Int16, Int32, Int64, Int8, Nullable, Uint16, Uint32, Uint64, Uint8, Unwrap } from "./type-containers"
 import { isPlainObject } from "../utils/object"
 
 export type Metadata = {
     readonly add: <M extends BaseMeta<any, M>>(type: JType<M>) => void
     readonly remove: <M extends BaseMeta<any, M>>(type: TypeName | JType<M>) => boolean
     readonly clear: () => void
-    readonly from: <T>(data: T) => BaseMeta<T, any>
+    readonly from: <T>(data: T) => BaseMeta<Unwrap<T>, any>
 }
 
 export type MetadataOptions = {
@@ -52,7 +52,7 @@ export function metadata(options: MetadataOptions = defaultOptions): Metadata {
         jTypesSorted = []
     }
 
-    const from = <T>(data: T): BaseMeta<T, any> => {
+    const from = <T>(data: T): BaseMeta<Unwrap<T>, any> => {
         for (const type of jTypesSorted) {
             if (type.check(data)) {
                 return type.toMeta(data, instance)
