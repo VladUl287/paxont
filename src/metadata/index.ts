@@ -58,7 +58,7 @@ export function metadata(this: Metadata, options: MetadataOptions = defaultOptio
                 return type.toMeta(data, this)
             }
         }
-        throw new Error(``)
+        throw new Error(`Cannot create metadata for value of type ${typeof data}: ${JSON.stringify(data)}.`)
     }
 
     return options.withDefaults({
