@@ -22,13 +22,13 @@ export type MetadataOptions = {
 export type JType<M extends BaseMeta<any, M>> = {
     readonly name: TypeName,
     readonly check: (data: any) => data is MetaValue<M>
-    readonly toMeta: (data: MetaValue<M>) => M
+    readonly toMeta: (data: MetaValue<M>, meta: Metadata) => M
     readonly order: number
 }
 
 const defaultOptions: MetadataOptions = Object.freeze({ withDefaults })
 
-export function metadata(options: MetadataOptions = defaultOptions): Metadata {
+export function metadata(this: Metadata, options: MetadataOptions = defaultOptions): Metadata {
     const types = new Map<TypeName, JType<any>>()
 
     const orderTypes = (types: Map<TypeName, JType<any>>) => [...types.values()].sort((a, b) => a.order - b.order)
@@ -55,7 +55,7 @@ export function metadata(options: MetadataOptions = defaultOptions): Metadata {
     const from = <T>(data: T): BaseMeta<T, any> => {
         for (const type of orderedTypes) {
             if (type.check(data)) {
-                return type.toMeta(data)
+                return type.toMeta(data, this)
             }
         }
         throw new Error(``)
@@ -86,10 +86,20 @@ export function withDefaults(m: Metadata): Metadata {
     m.add({ name: JSONT.U64, check: (v): v is bigint => v instanceof Uint64, toMeta: () => u64(), order: 50 })
 
     m.add<NullableMeta<any, any>>(
-        { name: JSONT.NULLABLE, check: (v) => v instanceof Nullable, toMeta: (v) => nullable(m.from(v.value)), order: 50 })
+        {
+            name: JSONT.NULLABLE,
+            check: (value) => value instanceof Nullable,
+            toMeta: (value, meta) => nullable(meta.from(value.value)),
+            order: 50
+        })
 
     m.add<ArrayMeta<any, any[], any>>(
-        { name: JSONT.ARRAY, check: (v) => Array.isArray(v), toMeta: (arr) => array(m.from(arr[0])), order: 50 })
+        {
+            name: JSONT.ARRAY,
+            check: (v) => Array.isArray(v),
+            toMeta: (arr, meta) => array(meta.from(arr[0])),
+            order: 50
+        })
 
     m.add({ name: JSONT.I8_ARRAY, check: (v) => v instanceof Int8Array, toMeta: () => i8Array(), order: 50 })
     m.add({ name: JSONT.I16_ARRAY, check: (v) => v instanceof Int16Array, toMeta: () => i16Array(), order: 50 })
@@ -100,14 +110,27 @@ export function withDefaults(m: Metadata): Metadata {
     m.add({ name: JSONT.U32_ARRAY, check: (v) => v instanceof Uint32Array, toMeta: () => u32Array(), order: 50 })
     m.add({ name: JSONT.U64_ARRAY, check: (v) => v instanceof BigUint64Array, toMeta: () => u64Array(), order: 50 })
 
-    m.add<SetMeta<any, any>>({ name: JSONT.SET, check: (v) => v instanceof Set, toMeta: (s) => set(m.from([...s.values()][0])), order: 50 })
-    m.add<MapMeta<any, any>>({ name: JSONT.MAP, check: (v) => v instanceof Map, toMeta: (s) => map(m.from([...s.values()][0])), order: 50 })
+    m.add<SetMeta<any, any>>({
+        name: JSONT.SET,
+        check: (v) => v instanceof Set,
+        toMeta: (s, meta) => set(meta.from([...s.values()][0])),
+        order: 50
+    })
+    m.add<MapMeta<any, any>>({
+        name: JSONT.MAP,
+        check: (v) => v instanceof Map,
+        toMeta: (m, meta) => map(meta.from([...m.values()][0])),
+        order: 50
+    })
 
     m.add<ObjectMeta<{}>>(
         {
             name: JSONT.OBJECT,
             check: (v): v is {} => isPlainObject(v),
-            toMeta: (d) => object(...Object.entries(d).map(([key, value]) => field(key, m.from(value)))),
+            toMeta: (o, meta) => {
+                const fields = Object.entries(o).map(([key, value]) => field(key, meta.from(value)))
+                return object(...fields)
+            },
             order: 50
         })
 
