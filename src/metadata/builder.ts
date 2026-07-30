@@ -15,7 +15,7 @@ import { toNullable } from "../converters/nullable"
 import { toBigInt, toInt64, toUint64 } from "../converters/number/bigint"
 import { toBoolean } from "../converters/boolean"
 import { toString } from "../converters/string"
-import { ArrayLikeWritable, ArrayPool, BigIntTypedArray, FloatTypedArray, IntegerTypedArray, createArrayPool } from "../utils/array"
+import { ArrayLikeWritable, ArrayPool, BigIntTypedArray, FloatTypedArray, IntegerTypedArray, arrayPool } from "../utils/array"
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../converters/number/int"
 import { toFloat } from "../converters/number/float"
 import { Expand } from "../utils/types"
@@ -94,7 +94,7 @@ export const nullable = <M extends BaseMeta<MetaValue<M>, M>>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const arrayPool =
+export const pool =
     <A extends ArrayLike<any>>(pool: ArrayPool<A>) =>
         <M extends ArrayMeta<any, A, any>>(metadata: M): M => ({
             ...metadata,
@@ -102,18 +102,18 @@ export const arrayPool =
         })
 
 const globalPools: Record<string, ArrayPool<any>> = Object.freeze({
-    number: createArrayPool<Array<number>>(Array),
-    string: createArrayPool<Array<string>>(Array),
-    object: createArrayPool<Array<object>>(Array),
-    undefined: createArrayPool<Array<any>>(Array),
-    i8: createArrayPool(Int8Array),
-    i16: createArrayPool(Int16Array),
-    i32: createArrayPool(Int32Array),
-    i64: createArrayPool(BigInt64Array),
-    u8: createArrayPool(Uint8Array),
-    u16: createArrayPool(Uint16Array),
-    u32: createArrayPool(Uint32Array),
-    u64: createArrayPool(BigUint64Array),
+    number: arrayPool<Array<number>>(Array),
+    string: arrayPool<Array<string>>(Array),
+    object: arrayPool<Array<object>>(Array),
+    undefined: arrayPool<Array<any>>(Array),
+    i8: arrayPool(Int8Array),
+    i16: arrayPool(Int16Array),
+    i32: arrayPool(Int32Array),
+    i64: arrayPool(BigInt64Array),
+    u8: arrayPool(Uint8Array),
+    u16: arrayPool(Uint16Array),
+    u32: arrayPool(Uint32Array),
+    u64: arrayPool(BigUint64Array),
 })
 
 export const array = <M extends BaseMeta<MetaValue<M>, M>>(
@@ -129,7 +129,7 @@ export const array = <M extends BaseMeta<MetaValue<M>, M>>(
             return `[${value.map(c => toJson(metaValue, c, options)).join(',')}]`
         },
         value: value,
-        pool: globalPools[value.type] ?? createArrayPool(Array)
+        pool: globalPools[value.type] ?? arrayPool(Array)
     }
     return modifiers.reduce(applyModifier, defaultMeta)
 }
