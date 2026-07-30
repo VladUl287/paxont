@@ -1,17 +1,16 @@
-import { BigIntTypedArray, FloatTypedArray, IntegerTypedArray } from "../utils/array"
-
 export declare const UNWRAP: unique symbol
 
 type Unwrappable<U> = { readonly [UNWRAP]: U }
 
+type HasUnwrappable<T> =
+    T extends object ? ([Extract<T[keyof T], Unwrappable<any>>] extends [never] ? false : true) : false
+
 export type Unwrap<T> =
     T extends Unwrappable<infer U> ? Unwrap<U> :
-    T extends Date ? T :
-    T extends IntegerTypedArray | FloatTypedArray | BigIntTypedArray ? T :
     T extends (infer U)[] ? Unwrap<U>[] :
     T extends Set<infer U> ? Set<Unwrap<U>> :
     T extends Map<infer K, infer V> ? Map<Unwrap<K>, Unwrap<V>> :
-    T extends Record<string, any> ? { [K in keyof T]: Unwrap<T[K]> } :
+    HasUnwrappable<T> extends true ? { [K in keyof T]: Unwrap<T[K]> } :
     T
 
 export class Nullable<T> {
