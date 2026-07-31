@@ -1,5 +1,5 @@
 import { JsonOptions } from "../options"
-import { ArrPool } from "../utils/array"
+import { ArrayPool } from "../utils/array"
 import { IStack } from "../utils/stack"
 import { Expand, ReadResult } from "../utils/types"
 import { BaseType } from "./baseTypes"
@@ -59,7 +59,7 @@ export interface NullableMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<T | 
 
 export interface ArrayMeta<T, A extends ArrayLike<T>, M extends BaseMeta<T, M>> extends BaseMeta<A, ArrayMeta<T, A, M>> {
     readonly value: M
-    readonly pool: ArrPool<A>
+    readonly pool: ArrayPool<A>
 }
 
 export interface SetMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<Set<T>, SetMeta<T, M>> {

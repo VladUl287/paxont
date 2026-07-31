@@ -13,7 +13,7 @@ import { JSONT } from "../../src/metadata/baseTypes"
 import { array, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array, u32Array, u64Array, i8Array, i16Array, i32Array, i64Array, f64Array, map, set, object, field } from "../../src/metadata/builder"
 import { BaseMeta, TypeName } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
-import { ArrayPool } from "../../src/utils/array"
+import { arrayPool } from "../../src/utils/array"
 
 describe('metadata builders', () => {
     function expectBaseStructure<M extends BaseMeta<any, any>>(meta: M, type: TypeName) {
@@ -137,8 +137,8 @@ describe('metadata builders', () => {
 
     test('array', () => {
         const num = number()
-        const pool = ArrayPool<Array<number>>(Array)
-        const usePool = ArrayPool(pool)
+        const pool = arrayPool<Array<number>>(Array)
+        const usePool = arrayPool(pool)
         const meta = array(num, usePool)
 
         expectBaseStructure(meta, JSONT.ARRAY)
