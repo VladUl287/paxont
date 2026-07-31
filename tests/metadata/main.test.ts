@@ -111,10 +111,10 @@ describe('metadata', () => {
 
             sequence: 1n,
 
-            addresses: new Array(nullable(object(
+            addresses: new Array(object(
                 field('index', number()),
                 field('name', string())
-            ))),
+            )),
             coordinates: [
                 { x: 1.23, y: 35.4 },
                 { x: 1.23, y: 65.2 },
@@ -198,7 +198,7 @@ describe('metadata', () => {
         }
         expect(meta.toValue(meta, ctx, 0, 0)).toStrictEqual({
             type: ReadResultType.COMPLETE,
-            value: object,
+            value: obj,
             nextIndex: ctx.reader.bytes.length
         })
     })
