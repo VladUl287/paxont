@@ -1,7 +1,7 @@
 import { MemoFactory, memo } from "./utils/memo"
 import { defaultOptions, JsonOptions, mergeOptions } from "./options"
 import { BaseMeta, ParseState } from "./metadata/types"
-import { ArrayPool, arrayPool } from "./utils/array"
+import { ArrPool, ArrayPool } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
 import { Metadata, metadata } from "./metadata"
@@ -12,7 +12,7 @@ type MetaOrData<T> = T extends BaseMeta<infer V, any> ? V : T
 
 type JSONTOptions = {
     readonly metadataBuilder: Metadata
-    readonly arrayPool: ArrayPool<Uint8Array>
+    readonly arrayPool: ArrPool<Uint8Array>
     readonly jsonOptions: {
         readonly defaultOptions: JsonOptions
         readonly mergetOptions: typeof mergeOptions
@@ -22,7 +22,7 @@ type JSONTOptions = {
 
 const defaultJsontOptions: JSONTOptions = Object.freeze({
     metadataBuilder: metadata(),
-    arrayPool: arrayPool<Uint8Array<ArrayBufferLike>>(Uint8Array),
+    arrayPool: ArrayPool<Uint8Array>(Uint8Array),
     jsonOptions: {
         defaultOptions: defaultOptions,
         mergetOptions: mergeOptions

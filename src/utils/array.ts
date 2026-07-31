@@ -6,7 +6,7 @@ export interface ArrayLikeWritable<T> {
     slice: (start?: number, end?: number) => this
 }
 
-export type ArrayPool<A extends ArrayLike<any>> = {
+export type ArrPool<A extends ArrayLike<any>> = {
     rent: (minLength: number) => A
     release: (array: A) => void
 }
@@ -33,7 +33,7 @@ export const clampLength = (minLength: number): number => {
     return 1 << (32 - Math.clz32(n))
 }
 
-export function arrayPool<A extends ArrayLike<any>>(ctor: new (length: number) => A): ArrayPool<A> {
+export function ArrayPool<A extends ArrayLike<any>>(ctor: new (length: number) => A): ArrPool<A> {
     const MAX_LENGTH = 0x3fffffff
     const globalMinLength = 2
     const pool = new Map<number, Stack<A>>()
