@@ -102,8 +102,8 @@ export function toMap<T, M extends BaseMeta<T, M>>(
 
         i = skipWhitespace(b, i)
 
-        if (b[i] === COMMA || b[i] === CURLY_CLOSE)
-            break
+        if (b[i] === COMMA) i++
+        else if (b[i] === CURLY_CLOSE) break
     }
 
     return {
