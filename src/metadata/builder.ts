@@ -1,7 +1,7 @@
 import { toArray } from "../converters/array"
 import {
     ArrayMeta,
-    BaseMeta, MetaValue, MapMeta, NullableMeta, ObjectFieldMeta,
+    BaseMeta, MetaValue, MapMeta, NullableMeta, ObjectField,
     ObjectMeta, PrimitiveMeta, SetMeta,
     JSONTMetaTag
 } from "./types"
@@ -254,7 +254,7 @@ export const set = <M extends BaseMeta<MetaValue<M>, M>>(
 
 export const field = <K extends string, M extends BaseMeta<MetaValue<M>, M>>(
     name: K, value: M, encoder: TextEncoder = new TextEncoder()
-): ObjectFieldMeta<K, M> => {
+): ObjectField<K, M> => {
     return {
         name: {
             value: name,
@@ -264,10 +264,9 @@ export const field = <K extends string, M extends BaseMeta<MetaValue<M>, M>>(
     }
 }
 
-export type ObjectFromFields<T extends ObjectFieldMeta<string, any>[]> =
-    Expand<{ [E in T[number]as E['name']['value']]: E['value'] }>
+type AsObject<T extends ObjectField<string, any>[]> = Expand<{ [E in T[number]as E['name']['value']]: E['value'] }>
 
-export const object = <M extends ObjectFieldMeta<any, any>[]>(...fields: M): ObjectMeta<ObjectFromFields<M>> => {
+export const object = <M extends ObjectField<any, any>[]>(...fields: M): ObjectMeta<AsObject<M>> => {
     const keys = fields.map(f => f.name.value as string)
     const factory = genObjectFactory(keys) as any
 
