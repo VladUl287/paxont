@@ -1,16 +1,29 @@
 import { JSONT } from "./baseTypes"
-import { ArrayMeta, BaseMeta, MetaValue, MapMeta, NullableMeta, ObjectMeta, PrimitiveMeta, SetMeta, TypeName } from "./types"
+import { ArrayMeta, BaseMeta, MapMeta, NullableMeta, ObjectMeta, PrimitiveMeta, SetMeta, TypeName } from "./types"
 import {
     array, bigInt, bool, date, field, i16, i16Array, i32, i32Array, i64,
     i64Array, i8, i8Array, map, nullable, number, object, set, string, u16,
     u16Array, u32, u32Array, u64, u64Array, u8, u8Array
 } from "./builder"
-import { Int16, Int32, Int64, Int8, Nullable, Uint16, Uint32, Uint64, Uint8, Unwrap } from "./type-containers"
 import { isPlainObject } from "../utils/object"
+import { ReadResult } from "../utils/types"
+import { isMetadata } from "./utils"
+
+type HasMeta<T> = T extends object ? ([Extract<T[keyof T], BaseMeta<any, any>>] extends [never] ? false : true) : false
+type ResultMeta<T extends BaseMeta<any, any>> = ReturnType<T['toValue']> extends ReadResult<infer U> ? U : never
+
+export type Unwrap<T> =
+    T extends BaseMeta<any, any> ? ResultMeta<T> :
+    T extends (infer U)[] ? Unwrap<U>[] :
+    T extends Set<infer U> ? Set<Unwrap<U>> :
+    T extends Map<string, infer V> ? Map<string, Unwrap<V>> :
+    HasMeta<T> extends true ? { [K in keyof T]: Unwrap<T[K]> } :
+    T
+
 
 export type Metadata = {
-    readonly add: <M extends BaseMeta<any, M>>(type: JType<M>) => void
-    readonly remove: <M extends BaseMeta<any, M>>(type: TypeName | JType<M>) => boolean
+    readonly add: <Input, M extends BaseMeta<any, any>>(type: JType<Input, M>) => void
+    readonly remove: (type: TypeName | JType<any, any>) => boolean
     readonly clear: () => void
     readonly from: <T>(data: T) => BaseMeta<Unwrap<T>, any>
 }
@@ -19,28 +32,28 @@ export type MetadataOptions = {
     readonly withDefaults: (m: Metadata) => Metadata
 }
 
-export type JType<M extends BaseMeta<any, M>> = {
+export type JType<Input, Meta extends BaseMeta<any, Meta>> = {
     readonly name: TypeName,
-    readonly check: (data: any) => data is MetaValue<M>
-    readonly toMeta: (data: MetaValue<M>, meta: Metadata) => M
+    readonly is: (input: any) => input is Input
+    readonly from: (input: Input, metadata: Metadata) => Meta
     readonly order: number
 }
 
 const defaultOptions: MetadataOptions = Object.freeze({ withDefaults })
 
 export function metadata(options: MetadataOptions = defaultOptions): Metadata {
-    const jTypes = new Map<TypeName, JType<any>>()
+    const jTypes = new Map<TypeName, JType<any, any>>()
 
-    const sort = (types: Map<TypeName, JType<any>>) => [...types.values()].sort((a, b) => a.order - b.order)
+    const sort = (types: Map<TypeName, JType<any, any>>) => [...types.values()].sort((a, b) => a.order - b.order)
 
     let jTypesSorted = sort(jTypes)
 
-    const add = <M extends BaseMeta<any, M>>(type: JType<M>): void => {
+    const add = <Input, M extends BaseMeta<any, any>>(type: JType<Input, M>): void => {
         jTypes.set(type.name, type)
         jTypesSorted = sort(jTypes)
     }
 
-    const remove = <M extends BaseMeta<any, M>>(type: TypeName | JType<M>): boolean => {
+    const remove = (type: TypeName | JType<any, any>): boolean => {
         const inputType = typeof type === 'string' ? type : type.name
         const result = jTypes.delete(inputType)
         jTypesSorted = sort(jTypes)
@@ -54,8 +67,8 @@ export function metadata(options: MetadataOptions = defaultOptions): Metadata {
 
     const from = <T>(data: T): BaseMeta<Unwrap<T>, any> => {
         for (const type of jTypesSorted) {
-            if (type.check(data)) {
-                return type.toMeta(data, instance)
+            if (type.is(data)) {
+                return type.from(data, instance)
             }
         }
         throw new Error(`Cannot create metadata for value of type ${typeof data}: ${JSON.stringify(data)}.`)
@@ -67,69 +80,77 @@ export function metadata(options: MetadataOptions = defaultOptions): Metadata {
 }
 
 export function withDefaults(m: Metadata): Metadata {
-    m.add({ name: JSONT.STRING, check: (v) => typeof v === 'string', toMeta: () => string(), order: 50 })
-    m.add({ name: JSONT.NUMBER, check: (v) => typeof v === 'number', toMeta: () => number(), order: 50 })
-    m.add({ name: JSONT.BIGINT, check: (v) => typeof v === 'bigint', toMeta: () => bigInt(), order: 50 })
-    m.add({ name: JSONT.BOOL, check: (v) => typeof v === 'boolean', toMeta: () => bool(), order: 50 })
+    function withNative(m: Metadata): Metadata {
+        m.add({ name: JSONT.STRING, is: (v) => typeof v === 'string', from: () => string(), order: 50 })
+        m.add({ name: JSONT.NUMBER, is: (v) => typeof v === 'number', from: () => number(), order: 50 })
+        m.add({ name: JSONT.BIGINT, is: (v) => typeof v === 'bigint', from: () => bigInt(), order: 50 })
+        m.add({ name: JSONT.BOOL, is: (v) => typeof v === 'boolean', from: () => bool(), order: 50 })
+        m.add({ name: JSONT.DATE, is: (v) => v instanceof Date, from: () => date(), order: 50 })
 
-    m.add({ name: JSONT.DATE, check: (v) => v instanceof Date, toMeta: () => date(), order: 50 })
-    m.add({ name: JSONT.I8, check: (v): v is number => v instanceof Int8, toMeta: () => i8(), order: 50 })
-    m.add({ name: JSONT.I16, check: (v): v is number => v instanceof Int16, toMeta: () => i16(), order: 50 })
-    m.add({ name: JSONT.I32, check: (v): v is number => v instanceof Int32, toMeta: () => i32(), order: 50 })
-    m.add({ name: JSONT.I64, check: (v): v is bigint => v instanceof Int64, toMeta: () => i64(), order: 50 })
-    m.add({ name: JSONT.U8, check: (v): v is number => v instanceof Uint8, toMeta: () => u8(), order: 50 })
-    m.add({ name: JSONT.U16, check: (v): v is number => v instanceof Uint16, toMeta: () => u16(), order: 50 })
-    m.add({ name: JSONT.U32, check: (v): v is number => v instanceof Uint32, toMeta: () => u32(), order: 50 })
-    m.add({ name: JSONT.U64, check: (v): v is bigint => v instanceof Uint64, toMeta: () => u64(), order: 50 })
+        m.add({ name: JSONT.I8_ARRAY, is: (v) => v instanceof Int8Array, from: () => i8Array(), order: 50 })
+        m.add({ name: JSONT.I16_ARRAY, is: (v) => v instanceof Int16Array, from: () => i16Array(), order: 50 })
+        m.add({ name: JSONT.I32_ARRAY, is: (v) => v instanceof Int32Array, from: () => i32Array(), order: 50 })
+        m.add({ name: JSONT.I64_ARRAY, is: (v) => v instanceof BigInt64Array, from: () => i64Array(), order: 50 })
+        m.add({ name: JSONT.U8_ARRAY, is: (v) => v instanceof Uint8Array, from: () => u8Array(), order: 50 })
+        m.add({ name: JSONT.U16_ARRAY, is: (v) => v instanceof Uint16Array, from: () => u16Array(), order: 50 })
+        m.add({ name: JSONT.U32_ARRAY, is: (v) => v instanceof Uint32Array, from: () => u32Array(), order: 50 })
+        m.add({ name: JSONT.U64_ARRAY, is: (v) => v instanceof BigUint64Array, from: () => u64Array(), order: 50 })
 
-    m.add<NullableMeta<any, any>>(
-        {
-            name: JSONT.NULLABLE,
-            check: (value) => value instanceof Nullable,
-            toMeta: (value, meta) => nullable(meta.from(value.value)),
-            order: 50
-        })
+        m.add({ name: JSONT.ARRAY, is: (v) => Array.isArray(v), from: (a, m) => array(m.from(a[0])), order: 50 })
+        m.add({ name: JSONT.SET, is: (v) => v instanceof Set, from: (s, m) => set(m.from([...s.values()][0])), order: 50 })
+        m.add({ name: JSONT.MAP, is: (v) => v instanceof Map, from: (ma, m) => map(m.from([...ma.values()][0])), order: 50 })
 
-    m.add<ArrayMeta<any, any[], any>>(
-        {
-            name: JSONT.ARRAY,
-            check: (v) => Array.isArray(v),
-            toMeta: (arr, meta) => array(meta.from(arr[0])),
-            order: 50
-        })
-
-    m.add({ name: JSONT.I8_ARRAY, check: (v) => v instanceof Int8Array, toMeta: () => i8Array(), order: 50 })
-    m.add({ name: JSONT.I16_ARRAY, check: (v) => v instanceof Int16Array, toMeta: () => i16Array(), order: 50 })
-    m.add({ name: JSONT.I32_ARRAY, check: (v) => v instanceof Int32Array, toMeta: () => i32Array(), order: 50 })
-    m.add({ name: JSONT.I64_ARRAY, check: (v) => v instanceof BigInt64Array, toMeta: () => i64Array(), order: 50 })
-    m.add({ name: JSONT.U8_ARRAY, check: (v) => v instanceof Uint8Array, toMeta: () => u8Array(), order: 50 })
-    m.add({ name: JSONT.U16_ARRAY, check: (v) => v instanceof Uint16Array, toMeta: () => u16Array(), order: 50 })
-    m.add({ name: JSONT.U32_ARRAY, check: (v) => v instanceof Uint32Array, toMeta: () => u32Array(), order: 50 })
-    m.add({ name: JSONT.U64_ARRAY, check: (v) => v instanceof BigUint64Array, toMeta: () => u64Array(), order: 50 })
-
-    m.add<SetMeta<any, any>>({
-        name: JSONT.SET,
-        check: (v) => v instanceof Set,
-        toMeta: (s, meta) => set(meta.from([...s.values()][0])),
-        order: 50
-    })
-    m.add<MapMeta<any, any>>({
-        name: JSONT.MAP,
-        check: (v) => v instanceof Map,
-        toMeta: (m, meta) => map(meta.from([...m.values()][0])),
-        order: 50
-    })
-
-    m.add<ObjectMeta<{}>>(
-        {
+        m.add({
             name: JSONT.OBJECT,
-            check: (v): v is {} => isPlainObject(v),
-            toMeta: (o, meta) => {
-                const fields = Object.entries(o).map(([key, value]) => field(key, meta.from(value)))
+            is: (v): v is {} => isPlainObject(v) && !isMetadata(v),
+            from: (o, m) => {
+                const fields = Object.entries(o).map(([key, value]) => field(key, m.from(value)))
                 return object(...fields)
             },
             order: 50
         })
+        return m
+    }
 
-    return m
+    function withMetadata(m: Metadata): Metadata {
+        const combine = <M extends BaseMeta<any, any>>(m: M) => (o: M) => ({ ...o, ...m })
+        const isMeta = (type: TypeName) => <T>(v: any): v is T => isMetadata(v) && v.type === type
+        const create = <M extends BaseMeta<any, any>>(type: TypeName, to: (m: M) => M, order = 50) =>
+            ({ name: type, is: isMeta(type), from: to, order })
+
+        m.add(create<PrimitiveMeta<string>>(JSONT.STRING, (m) => string(combine(m))))
+        m.add(create<PrimitiveMeta<number>>(JSONT.NUMBER, (m) => number(combine(m))))
+        m.add(create<PrimitiveMeta<bigint>>(JSONT.BIGINT, (m) => bigInt(combine(m))))
+        m.add(create<PrimitiveMeta<boolean>>(JSONT.BOOL, (m) => bool(combine(m))))
+        m.add(create<PrimitiveMeta<Date>>(JSONT.DATE, (m) => date(combine(m))))
+
+        m.add(create<PrimitiveMeta<number>>(JSONT.I8, (m) => i8(combine(m))))
+        m.add(create<PrimitiveMeta<number>>(JSONT.I16, (m) => i16(combine(m))))
+        m.add(create<PrimitiveMeta<number>>(JSONT.I32, (m) => i32(combine(m))))
+        m.add(create<PrimitiveMeta<bigint>>(JSONT.I64, (m) => i64(combine(m))))
+        m.add(create<PrimitiveMeta<number>>(JSONT.U8, (m) => u8(combine(m))))
+        m.add(create<PrimitiveMeta<number>>(JSONT.U16, (m) => u16(combine(m))))
+        m.add(create<PrimitiveMeta<number>>(JSONT.U32, (m) => u32(combine(m))))
+        m.add(create<PrimitiveMeta<bigint>>(JSONT.U64, (m) => u64(combine(m))))
+
+        m.add(create<NullableMeta<any, any>>(JSONT.NULLABLE, (m) => nullable({ ...m.value }, combine(m))))
+
+        m.add(create<ArrayMeta<any, any[], any>>(JSONT.ARRAY, (m) => array({ ...m.value }, combine(m))))
+        m.add(create<ArrayMeta<number, Int8Array, any>>(JSONT.I8_ARRAY, (m) => i8Array(combine(m))))
+        m.add(create<ArrayMeta<number, Int16Array, any>>(JSONT.I8_ARRAY, (m) => i16Array(combine(m))))
+        m.add(create<ArrayMeta<number, Int32Array, any>>(JSONT.I8_ARRAY, (m) => i32Array(combine(m))))
+        m.add(create<ArrayMeta<bigint, BigInt64Array, any>>(JSONT.I8_ARRAY, (m) => i64Array(combine(m))))
+        m.add(create<ArrayMeta<number, Uint8Array, any>>(JSONT.I8_ARRAY, (m) => u8Array(combine(m))))
+        m.add(create<ArrayMeta<number, Uint16Array, any>>(JSONT.I8_ARRAY, (m) => u16Array(combine(m))))
+        m.add(create<ArrayMeta<number, Uint32Array, any>>(JSONT.I8_ARRAY, (m) => u32Array(combine(m))))
+        m.add(create<ArrayMeta<bigint, BigUint64Array, any>>(JSONT.I8_ARRAY, (m) => u64Array(combine(m))))
+
+        m.add(create<SetMeta<any, any>>(JSONT.SET, (m) => set(m.value, combine(m))))
+        m.add(create<MapMeta<any, any>>(JSONT.MAP, (m) => map(m.value, combine(m))))
+
+        m.add(create<ObjectMeta<{}>>(JSONT.OBJECT, (m) => ({ ...object(...m.fields), ...m })))
+        return m
+    }
+
+    return withMetadata(withNative(m))
 }
