@@ -1,7 +1,7 @@
 import { toObject } from "../../src/converters/object"
 import { metadata } from "../../src/metadata"
 import { JSONT } from "../../src/metadata/baseTypes"
-import { Int16, Int32, Int64, Int8, Nullable, Uint16, Uint32, Uint64, Uint8 } from "../../src/metadata/type-containers"
+import { field, object, i16, i32, i64, i8, nullable, number, u16, u32, u64, u8, string } from "../../src/metadata/builder"
 import { BaseMeta, ObjectMeta, ParseContext, TypeName } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { Stack } from "../../src/utils/stack"
@@ -81,15 +81,15 @@ describe('metadata', () => {
 
     test('full typed object', () => {
         const typeObject = {
-            id: new Int32(),
-            status: new Int8(),
-            symbol: new Int16(),
-            number: new Int64(),
+            id: i32(),
+            status: i8(),
+            symbol: i16(),
+            number: i64(),
 
-            category: new Uint8(),
-            symbol_add: new Uint16(),
-            userId: new Uint32(),
-            hash: new Uint64(),
+            category: u8(),
+            symbol_add: u16(),
+            userId: u32(),
+            hash: u64(),
 
             coefficient: 124.4,
             name: "name",
@@ -111,10 +111,10 @@ describe('metadata', () => {
 
             sequence: 1n,
 
-            address: new Nullable({
-                index: 12345,
-                name: "name"
-            }),
+            addresses: new Array(nullable(object(
+                field('index', number()),
+                field('name', string())
+            ))),
             coordinates: [
                 { x: 1.23, y: 35.4 },
                 { x: 1.23, y: 65.2 },
@@ -128,7 +128,7 @@ describe('metadata', () => {
         }
 
 
-        const meta = metaBuilder.from(typeObject) as ObjectMeta<any>
+        const meta = metaBuilder.from(typeObject)
 
         expectBaseStructure(meta, JSONT.OBJECT)
 
@@ -139,16 +139,16 @@ describe('metadata', () => {
 
         const toBytes = (str: string) => new TextEncoder().encode(str)
 
-        const object = {
+        const obj = {
             id: 123,
             status: 2,
             symbol: 123,
-            number: 32434534534,
+            number: 32434534534n,
 
             category: 1,
             symbol_add: 453,
             userId: 23,
-            hash: 33453453465,
+            hash: 33453453465n,
 
             coefficient: 124.4,
             name: "name",
@@ -170,10 +170,10 @@ describe('metadata', () => {
 
             sequence: 1n,
 
-            address: {
+            addresses: new Array({
                 index: 12345,
                 name: "name"
-            },
+            }),
             coordinates: [
                 { x: 1.23, y: 35.4 },
                 { x: 1.23, y: 65.2 },
@@ -190,7 +190,7 @@ describe('metadata', () => {
 
         const ctx: ParseContext = {
             reader: {
-                bytes: toBytes(meta.toJson(meta, object, defaultOptions)),
+                bytes: toBytes(meta.toJson(meta, obj, defaultOptions)),
                 writable: false
             },
             options: defaultOptions,
