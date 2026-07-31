@@ -59,7 +59,7 @@ function fromString(context: ParseContext, i: number): ReadResult<Date> {
         return {
             type: COMPLETE,
             value: result.value,
-            nextIndex: result.nextIndex
+            nextIndex: ++result.nextIndex
         }
     }
 
