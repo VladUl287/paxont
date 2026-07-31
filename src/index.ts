@@ -116,30 +116,55 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
 
         const stack = new Stack<ParseState>()
 
+        const tempBuffer = arrayPool.rent(65535)
+        let tempBufferLength = 0
+        let bufferLength = 0
+
         const reader = json.getReader()
-        while (!reader.closed) {
+        while (true) {
             const chunk = await reader.read()
 
-            const value = chunk.value
+            if (!chunk.value) { break }
 
-            if (!value)
-                break
+            let buffer: Uint8Array
+
+            if (tempBufferLength > 0) {
+                buffer = arrayPool.rent(chunk.value.length + tempBufferLength)
+                buffer.set(tempBuffer.subarray(0, tempBufferLength))
+                buffer.set(chunk.value, tempBufferLength)
+                bufferLength = chunk.value.length + tempBufferLength
+            }
+            else {
+                buffer = chunk.value
+                bufferLength = chunk.value.length
+            }
 
             const result = metadata.toValue(metadata, {
                 options: filledOptions,
                 reader: {
-                    bytes: value,
+                    bytes: buffer,
                     writable: !chunk.done
                 },
                 stack
             }, 0, 0)
 
-            if (isNeedsMoreData(result)) { continue }
+            if (tempBufferLength > 0) {
+                arrayPool.release(buffer)
+            }
 
+            if (chunk.done) { break }
+            if (isNeedsMoreData(result)) {
+                const data = buffer.subarray(result.nextIndex, bufferLength)
+                tempBufferLength = data.length
+                tempBuffer.set(data)
+                continue
+            }
             if (isError(result)) { throw result.error }
 
             return result.value
         }
+
+        arrayPool.release(tempBuffer)
 
         throw new Error()
     }

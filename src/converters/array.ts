@@ -81,8 +81,12 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
             i = skipWhitespace(b, i)
 
             if (isContinued) {
-                if (b[i] === COMMA) i++
-                else if (b[i] === SQUARE_CLOSE) break
+                if (b[i] === COMMA) {
+                    i++
+                }
+                else if (b[i] === SQUARE_CLOSE) {
+                    break
+                }
             }
 
             const result = toValue(itemMetadata, context, i, depth)
@@ -103,8 +107,12 @@ export function toArray<T, A extends ArrayLikeWritable<T>, M extends BaseMeta<T,
 
             i = skipWhitespace(b, i)
 
-            if (b[i] === COMMA) i++
-            else if (b[i] === SQUARE_CLOSE) break
+            if (b[i] === COMMA) {
+                i++
+            }
+            else if (b[i] === SQUARE_CLOSE) {
+                break
+            }
             else {
                 if (i >= b.length && reader.writable) {
                     stack.push({ isContinued: true, buffer, bufferIndex: j })

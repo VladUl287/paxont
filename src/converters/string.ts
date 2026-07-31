@@ -126,13 +126,14 @@ function useDecoder(options: StringParseFactoryOptions) {
                 const currentLength = module.memory.buffer.byteLength
 
                 if (requiredLength > currentLength) {
-                    const pages = requiredLength / PAGE_SIZE_BYTES
+                    const pages = currentLength / PAGE_SIZE_BYTES
                     const requiredPages = Math.ceil(requiredLength / PAGE_SIZE_BYTES)
 
                     if (requiredPages > maxPagesCount)
                         return false
 
                     module.memory.grow(requiredPages - pages)
+                    memory = new Uint8Array(module.memory.buffer)
                     return true
                 }
                 return true
@@ -146,7 +147,7 @@ function useDecoder(options: StringParseFactoryOptions) {
         const unsafeDecoder8 = new TextDecoder('utf-8', { fatal: false })
         const unsafeDecoder16 = new TextDecoder('utf-16le', { fatal: false })
 
-        const memory = new Uint8Array(module.memory.buffer)
+        let memory = new Uint8Array(module.memory.buffer)
 
         const get_ascii_only = module.ascii_only
         const get_ascii_length = module.ascii_length
