@@ -55,12 +55,13 @@ function fromString(context: ParseContext, i: number): ReadResult<Date> {
         nextIndex: 0
     }
 
-    if (tryParseISO8601(b, i, result) || tryParseDefault(b, i, options, result))
+    if (tryParseISO8601(b, i, result) || tryParseDefault(b, i, options, result)) {
         return {
             type: COMPLETE,
             value: result.value,
             nextIndex: result.nextIndex
         }
+    }
 
     if (reader.writable && result.nextIndex === len)
         return {
@@ -219,7 +220,7 @@ function tryParseISO8601(b: Uint8Array, i: number, r: TryParseResult): boolean {
 
     if (i < len1 && b[i] === Z) { //Z
         r.value = new Date(utc(YYYY, MM, DD, HH, mm, ss, sss))
-        r.nextIndex = i
+        r.nextIndex = ++i
         return true
     }
 
@@ -243,7 +244,7 @@ function tryParseISO8601(b: Uint8Array, i: number, r: TryParseResult): boolean {
         return false
 
     r.value = new Date(utc(YYYY, MM, DD, HH - (ZHH * sign), mm - (zmm * sign), ss, sss))
-    r.nextIndex = i
+    r.nextIndex = ++i
     return true
 }
 
