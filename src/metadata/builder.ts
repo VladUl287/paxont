@@ -2,8 +2,7 @@ import { toArray } from "../converters/array"
 import {
     ArrayMeta,
     BaseMeta, MetaValue, MapMeta, NullableMeta, ObjectField,
-    ObjectMeta, PrimitiveMeta, SetMeta,
-    JSONTMetaTag
+    ObjectMeta, PrimitiveMeta, SetMeta
 } from "./types"
 import { BaseType, JSONT } from "./baseTypes"
 import { toDate } from "../converters/date"
@@ -72,7 +71,6 @@ const primitive = <T>(
     ...modifiers: Modifier<PrimitiveMeta<T>>[]
 ): PrimitiveMeta<T> => {
     const defaultMeta: PrimitiveMeta<T> = {
-        [JSONTMetaTag]: true,
         type: type,
         toValue: toValue,
         toJson: (m, v, _) => toJson(v)
@@ -85,7 +83,6 @@ export const nullable = <M extends BaseMeta<MetaValue<M>, M>>(
     ...modifiers: Modifier<NullableMeta<MetaValue<M>, M>>[]
 ): NullableMeta<MetaValue<M>, M> => {
     const defaultMeta: NullableMeta<MetaValue<M>, M> = {
-        [JSONTMetaTag]: true,
         type: JSONT.NULLABLE,
         toJson: (meta, value, options) => {
             if (value === null) return 'null'
@@ -124,7 +121,6 @@ export const array = <M extends BaseMeta<MetaValue<M>, M>>(
     ...modifiers: Modifier<ArrayMeta<MetaValue<M>, MetaValue<M>[], M>>[]
 ): ArrayMeta<MetaValue<M>, MetaValue<M>[], M> => {
     let defaultMeta: ArrayMeta<MetaValue<M>, MetaValue<M>[], M> = {
-        [JSONTMetaTag]: true,
         type: JSONT.ARRAY,
         toValue: toArray,
         toJson: (meta, value, options) => {
@@ -164,7 +160,6 @@ const typedArray = <T extends ArrayLikeWritable<number> & (IntegerTypedArray | F
     ...modifiers: Modifier<ArrayMeta<number, T, PrimitiveMeta<number>>>[]
 ): ArrayMeta<number, T, PrimitiveMeta<number>> => {
     const defaultMeta: ArrayMeta<number, T, PrimitiveMeta<number>> = {
-        [JSONTMetaTag]: true,
         type: type,
         toValue: toArray,
         toJson: (meta, value, options) => {
@@ -191,7 +186,6 @@ const bigIntTypedArray = <T extends ArrayLikeWritable<bigint> & BigIntTypedArray
     ...modifiers: Modifier<ArrayMeta<bigint, T, PrimitiveMeta<bigint>>>[]
 ): ArrayMeta<bigint, T, PrimitiveMeta<bigint>> => {
     const defaultMeta: ArrayMeta<bigint, T, PrimitiveMeta<bigint>> = {
-        [JSONTMetaTag]: true,
         type: type,
         toValue: toArray,
         toJson: (meta, value, options) => {
@@ -217,7 +211,6 @@ export const map = <M extends BaseMeta<MetaValue<M>, M>>(
     ...modifiers: Modifier<MapMeta<MetaValue<M>, M>>[]
 ): MapMeta<MetaValue<M>, M> => {
     const defaultMeta: MapMeta<MetaValue<M>, M> = {
-        [JSONTMetaTag]: true,
         type: JSONT.MAP,
         key: string(),
         value: value,
@@ -236,7 +229,6 @@ export const set = <M extends BaseMeta<MetaValue<M>, M>>(
     ...modifiers: Modifier<SetMeta<MetaValue<M>, M>>[]
 ): SetMeta<MetaValue<M>, M> => {
     const defaultMeta: SetMeta<MetaValue<M>, M> = {
-        [JSONTMetaTag]: true,
         type: JSONT.SET,
         value: value,
         toValue: toSet,
@@ -276,7 +268,6 @@ export const object = <M extends ObjectField<any, any>[]>(...fields: M): ObjectM
     const toJson = genObjectToJsonFactory(fields.map(c => c.name.value))
 
     return {
-        [JSONTMetaTag]: true,
         type: JSONT.OBJECT,
         fields: fields,
         build: factory,
