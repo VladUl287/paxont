@@ -12,7 +12,7 @@ type MetaOrData<T> = T extends BaseMeta<infer V, any> ? V : T
 
 type JSONTOptions = {
     readonly metadataBuilder: Metadata
-    readonly arrayPool: ArrayPool<Uint8Array>
+    readonly arrayPool: ArrayPool<Uint8Array<ArrayBuffer>>
     readonly jsonOptions: {
         readonly defaultOptions: JsonOptions
         readonly mergeOptions: typeof mergeOptions
@@ -22,7 +22,7 @@ type JSONTOptions = {
 
 const defaultJsontOptions: JSONTOptions = Object.freeze({
     metadataBuilder: metadata(),
-    arrayPool: arrayPool<Uint8Array>(Uint8Array),
+    arrayPool: arrayPool<Uint8Array<ArrayBuffer>>(Uint8Array),
     jsonOptions: {
         defaultOptions: defaultOptions,
         mergeOptions: mergeOptions
@@ -57,7 +57,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
             metadataMemo.getOrAdd(type, (t) => meta.from(t)) :
             type
 
-        let bytes: Uint8Array
+        let bytes: Uint8Array<ArrayBuffer>
 
         const isString = typeof value === 'string'
         if (isString) {
@@ -69,7 +69,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
             bytes = new Uint8Array(value)
         }
         else if (value instanceof Uint8Array) {
-            bytes = value
+            bytes = value as Uint8Array<ArrayBuffer>
         }
         else {
             throw new Error(`Invalid input type: expected string, ArrayBuffer, or Uint8Array, ` +
@@ -116,57 +116,39 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
 
         const stack = new Stack<ParseState>()
 
-        const tempBuffer = arrayPool.rent(65535)
-        let tempBufferLength = 0
-        let bufferLength = 0
+        const buffer = arrayPool.rent(65535)
 
-        const reader = json.getReader()
-        while (true) {
-            const chunk = await reader.read()
+        const reader = json.getReader({ mode: 'byob' })
+        try {
+            // TODO: use data from previous cycle
+            while (true) {
+                const chunk = await reader.read(buffer) //{ min: 1 }
+                if (chunk.done) { break }
 
-            if (!chunk.value) { break }
+                const result = metadata.toValue(metadata, {
+                    options: filledOptions,
+                    reader: {
+                        bytes: buffer,
+                        writable: true
+                    },
+                    stack
+                }, 0, 0)
 
-            let buffer: Uint8Array
+                if (isNeedsMoreData(result)) {
+                    buffer.copyWithin(0, result.nextIndex, buffer.length)
+                    continue
+                }
+                if (isError(result)) {
+                    throw result.error
+                }
 
-            if (tempBufferLength > 0) {
-                buffer = arrayPool.rent(chunk.value.length + tempBufferLength)
-                buffer.set(tempBuffer.subarray(0, tempBufferLength))
-                buffer.set(chunk.value, tempBufferLength)
-                bufferLength = chunk.value.length + tempBufferLength
-            }
-            else {
-                buffer = chunk.value
-                bufferLength = chunk.value.length
-            }
-
-            const result = metadata.toValue(metadata, {
-                options: filledOptions,
-                reader: {
-                    bytes: buffer,
-                    writable: !chunk.done
-                },
-                stack
-            }, 0, 0)
-
-            if (tempBufferLength > 0) {
-                arrayPool.release(buffer)
+                return result.value
             }
 
-            if (chunk.done) { break }
-            if (isNeedsMoreData(result)) {
-                const data = buffer.subarray(result.nextIndex, bufferLength)
-                tempBufferLength = data.length
-                tempBuffer.set(data)
-                continue
-            }
-            if (isError(result)) { throw result.error }
-
-            return result.value
+            throw new Error()
+        } finally {
+            arrayPool.release(buffer)
         }
-
-        arrayPool.release(tempBuffer)
-
-        throw new Error()
     }
 
     function serialize<T, M extends BaseMeta<T, any>>(value: T, metadata: M, options?: Partial<JsonOptions>): string {
