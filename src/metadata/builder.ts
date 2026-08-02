@@ -78,11 +78,11 @@ const primitive = <T>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const nullable = <M extends BaseMeta<MetaValue<M>, M>>(
+export const nullable = <M extends BaseMeta<any, M>>(
     value: M,
-    ...modifiers: Modifier<NullableMeta<MetaValue<M>, M>>[]
-): NullableMeta<MetaValue<M>, M> => {
-    const defaultMeta: NullableMeta<MetaValue<M>, M> = {
+    ...modifiers: Modifier<NullableMeta<M>>[]
+): NullableMeta<M> => {
+    const defaultMeta: NullableMeta<M> = {
         type: JSONT.NULLABLE,
         toJson: (meta, value, options) => {
             if (value === null) return 'null'
@@ -96,7 +96,7 @@ export const nullable = <M extends BaseMeta<MetaValue<M>, M>>(
 
 export const pool =
     <A extends ArrayLike<any>>(pool: ArrayPool<A>) =>
-        <M extends ArrayMeta<any, A, any>>(metadata: M): M => ({
+        <M extends ArrayMeta<A, any>>(metadata: M): M => ({
             ...metadata,
             pool: pool
         })
@@ -116,11 +116,11 @@ const globalPools: Record<string, ArrayPool<any>> = Object.freeze({
     u64: arrayPool(BigUint64Array),
 })
 
-export const array = <M extends BaseMeta<MetaValue<M>, M>>(
+export const array = <M extends BaseMeta<any, M>>(
     value: M,
-    ...modifiers: Modifier<ArrayMeta<MetaValue<M>, MetaValue<M>[], M>>[]
-): ArrayMeta<MetaValue<M>, MetaValue<M>[], M> => {
-    let defaultMeta: ArrayMeta<MetaValue<M>, MetaValue<M>[], M> = {
+    ...modifiers: Modifier<ArrayMeta<MetaValue<M>[], M>>[]
+): ArrayMeta<MetaValue<M>[], M> => {
+    let defaultMeta: ArrayMeta<MetaValue<M>[], M> = {
         type: JSONT.ARRAY,
         toValue: toArray,
         toJson: (meta, value, options) => {
@@ -134,32 +134,32 @@ export const array = <M extends BaseMeta<MetaValue<M>, M>>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const u8Array = (...modifiers: Modifier<ArrayMeta<number, Uint8Array, any>>[]) =>
+export const u8Array = (...modifiers: Modifier<ArrayMeta<Uint8Array, any>>[]) =>
     typedArray<Uint8Array>(JSONT.U8_ARRAY, u8(), ...modifiers)
-export const u16Array = (...modifiers: Modifier<ArrayMeta<number, Uint16Array, any>>[]) =>
+export const u16Array = (...modifiers: Modifier<ArrayMeta<Uint16Array, any>>[]) =>
     typedArray<Uint16Array>(JSONT.U16_ARRAY, u16(), ...modifiers)
-export const u32Array = (...modifiers: Modifier<ArrayMeta<number, Uint32Array, any>>[]) =>
+export const u32Array = (...modifiers: Modifier<ArrayMeta<Uint32Array, any>>[]) =>
     typedArray<Uint32Array>(JSONT.U32_ARRAY, u32(), ...modifiers)
-export const i8Array = (...modifiers: Modifier<ArrayMeta<number, Int8Array, any>>[]) =>
+export const i8Array = (...modifiers: Modifier<ArrayMeta<Int8Array, any>>[]) =>
     typedArray<Int8Array>(JSONT.I8_ARRAY, i8(), ...modifiers)
-export const i16Array = (...modifiers: Modifier<ArrayMeta<number, Int16Array, any>>[]) =>
+export const i16Array = (...modifiers: Modifier<ArrayMeta<Int16Array, any>>[]) =>
     typedArray<Int16Array>(JSONT.I16_ARRAY, i16(), ...modifiers)
-export const i32Array = (...modifiers: Modifier<ArrayMeta<number, Int32Array, any>>[]) =>
+export const i32Array = (...modifiers: Modifier<ArrayMeta<Int32Array, any>>[]) =>
     typedArray<Int32Array>(JSONT.I32_ARRAY, i32(), ...modifiers)
-export const f64Array = (...modifiers: Modifier<ArrayMeta<number, Float64Array, any>>[]) =>
+export const f64Array = (...modifiers: Modifier<ArrayMeta<Float64Array, any>>[]) =>
     typedArray<Float64Array>(JSONT.F64_ARRAY, number(), ...modifiers)
 
-export const u64Array = (...modifiers: Modifier<ArrayMeta<bigint, BigUint64Array, any>>[]) =>
+export const u64Array = (...modifiers: Modifier<ArrayMeta<BigUint64Array, any>>[]) =>
     bigIntTypedArray<BigUint64Array>(JSONT.U64_ARRAY, u64(), ...modifiers)
-export const i64Array = (...modifiers: Modifier<ArrayMeta<bigint, BigInt64Array, any>>[]) =>
+export const i64Array = (...modifiers: Modifier<ArrayMeta<BigInt64Array, any>>[]) =>
     bigIntTypedArray<BigInt64Array>(JSONT.I64_ARRAY, i64(), ...modifiers)
 
 const typedArray = <T extends ArrayLikeWritable<number> & (IntegerTypedArray | FloatTypedArray)>(
     type: BaseType,
     value: PrimitiveMeta<number>,
-    ...modifiers: Modifier<ArrayMeta<number, T, PrimitiveMeta<number>>>[]
-): ArrayMeta<number, T, PrimitiveMeta<number>> => {
-    const defaultMeta: ArrayMeta<number, T, PrimitiveMeta<number>> = {
+    ...modifiers: Modifier<ArrayMeta<T, PrimitiveMeta<number>>>[]
+): ArrayMeta<T, PrimitiveMeta<number>> => {
+    const defaultMeta: ArrayMeta<T, PrimitiveMeta<number>> = {
         type: type,
         toValue: toArray,
         toJson: (meta, value, options) => {
@@ -183,9 +183,9 @@ const typedArray = <T extends ArrayLikeWritable<number> & (IntegerTypedArray | F
 const bigIntTypedArray = <T extends ArrayLikeWritable<bigint> & BigIntTypedArray>(
     type: BaseType,
     value: PrimitiveMeta<bigint>,
-    ...modifiers: Modifier<ArrayMeta<bigint, T, PrimitiveMeta<bigint>>>[]
-): ArrayMeta<bigint, T, PrimitiveMeta<bigint>> => {
-    const defaultMeta: ArrayMeta<bigint, T, PrimitiveMeta<bigint>> = {
+    ...modifiers: Modifier<ArrayMeta<T, PrimitiveMeta<bigint>>>[]
+): ArrayMeta<T, PrimitiveMeta<bigint>> => {
+    const defaultMeta: ArrayMeta<T, PrimitiveMeta<bigint>> = {
         type: type,
         toValue: toArray,
         toJson: (meta, value, options) => {
@@ -206,11 +206,11 @@ const bigIntTypedArray = <T extends ArrayLikeWritable<bigint> & BigIntTypedArray
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const map = <M extends BaseMeta<MetaValue<M>, M>>(
+export const map = <M extends BaseMeta<any, M>>(
     value: M,
-    ...modifiers: Modifier<MapMeta<MetaValue<M>, M>>[]
-): MapMeta<MetaValue<M>, M> => {
-    const defaultMeta: MapMeta<MetaValue<M>, M> = {
+    ...modifiers: Modifier<MapMeta<M>>[]
+): MapMeta<M> => {
+    const defaultMeta: MapMeta<M> = {
         type: JSONT.MAP,
         key: string(),
         value: value,
@@ -224,11 +224,11 @@ export const map = <M extends BaseMeta<MetaValue<M>, M>>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const set = <M extends BaseMeta<MetaValue<M>, M>>(
+export const set = <M extends BaseMeta<any, M>>(
     value: M,
-    ...modifiers: Modifier<SetMeta<MetaValue<M>, M>>[]
-): SetMeta<MetaValue<M>, M> => {
-    const defaultMeta: SetMeta<MetaValue<M>, M> = {
+    ...modifiers: Modifier<SetMeta<M>>[]
+): SetMeta<M> => {
+    const defaultMeta: SetMeta<M> = {
         type: JSONT.SET,
         value: value,
         toValue: toSet,
@@ -244,7 +244,7 @@ export const set = <M extends BaseMeta<MetaValue<M>, M>>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const field = <K extends string, M extends BaseMeta<MetaValue<M>, M>>(
+export const field = <K extends string, M extends BaseMeta<any, M>>(
     name: K, value: M, encoder: TextEncoder = new TextEncoder()
 ): ObjectField<K, M> => {
     return {

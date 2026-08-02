@@ -50,21 +50,21 @@ export type ObjectField<K extends string, M extends BaseMeta<any, M>> = {
     readonly value: M
 }
 
-export interface NullableMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<T | null, NullableMeta<T, M>> {
+export interface NullableMeta<M extends BaseMeta<any, M>> extends BaseMeta<MetaValue<M> | null, NullableMeta<M>> {
     readonly value: M
 }
 
-export interface ArrayMeta<T, A extends ArrayLike<T>, M extends BaseMeta<T, M>> extends BaseMeta<A, ArrayMeta<T, A, M>> {
+export interface ArrayMeta<A extends ArrayLike<MetaValue<M>>, M extends BaseMeta<any, M>> extends BaseMeta<A, ArrayMeta<A, M>> {
     readonly value: M
     readonly pool: ArrayPool<A>
 }
 
-export interface SetMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<Set<T>, SetMeta<T, M>> {
+export interface SetMeta<M extends BaseMeta<any, M>> extends BaseMeta<Set<MetaValue<M>>, SetMeta<M>> {
     readonly value: M,
-    readonly getIdentity?: (value: T) => any
+    readonly getIdentity?: (value: MetaValue<M>) => any
 }
 
-export interface MapMeta<T, M extends BaseMeta<T, M>> extends BaseMeta<Map<string, T>, MapMeta<T, M>> {
+export interface MapMeta<M extends BaseMeta<any, M>> extends BaseMeta<Map<string, MetaValue<M>>, MapMeta<M>> {
     readonly key: PrimitiveMeta<string>
     readonly value: M
 }

@@ -135,20 +135,20 @@ export function withDefaults(m: Metadata): Metadata {
         m.add(create<PrimitiveMeta<number>>(JSONT.U32, (m) => u32(combine(m))))
         m.add(create<PrimitiveMeta<bigint>>(JSONT.U64, (m) => u64(combine(m))))
 
-        m.add(create<NullableMeta<any, any>>(JSONT.NULLABLE, (m) => nullable({ ...m.value }, combine(m))))
+        m.add(create<NullableMeta<any>>(JSONT.NULLABLE, (m) => nullable({ ...m.value }, combine(m))))
 
-        m.add(create<ArrayMeta<any, any[], any>>(JSONT.ARRAY, (m) => array({ ...m.value }, combine(m))))
-        m.add(create<ArrayMeta<number, Int8Array, any>>(JSONT.I8_ARRAY, (m) => i8Array(combine(m))))
-        m.add(create<ArrayMeta<number, Int16Array, any>>(JSONT.I8_ARRAY, (m) => i16Array(combine(m))))
-        m.add(create<ArrayMeta<number, Int32Array, any>>(JSONT.I8_ARRAY, (m) => i32Array(combine(m))))
-        m.add(create<ArrayMeta<bigint, BigInt64Array, any>>(JSONT.I8_ARRAY, (m) => i64Array(combine(m))))
-        m.add(create<ArrayMeta<number, Uint8Array, any>>(JSONT.I8_ARRAY, (m) => u8Array(combine(m))))
-        m.add(create<ArrayMeta<number, Uint16Array, any>>(JSONT.I8_ARRAY, (m) => u16Array(combine(m))))
-        m.add(create<ArrayMeta<number, Uint32Array, any>>(JSONT.I8_ARRAY, (m) => u32Array(combine(m))))
-        m.add(create<ArrayMeta<bigint, BigUint64Array, any>>(JSONT.I8_ARRAY, (m) => u64Array(combine(m))))
+        m.add(create<ArrayMeta<any[], any>>(JSONT.ARRAY, (m) => array({ ...m.value }, combine(m))))
+        m.add(create<ArrayMeta<Int8Array, PrimitiveMeta<number>>>(JSONT.I8_ARRAY, (m) => i8Array(combine(m))))
+        m.add(create<ArrayMeta<Int16Array, PrimitiveMeta<number>>>(JSONT.I8_ARRAY, (m) => i16Array(combine(m))))
+        m.add(create<ArrayMeta<Int32Array, PrimitiveMeta<number>>>(JSONT.I8_ARRAY, (m) => i32Array(combine(m))))
+        m.add(create<ArrayMeta<BigInt64Array, PrimitiveMeta<bigint>>>(JSONT.I8_ARRAY, (m) => i64Array(combine(m))))
+        m.add(create<ArrayMeta<Uint8Array, PrimitiveMeta<number>>>(JSONT.I8_ARRAY, (m) => u8Array(combine(m))))
+        m.add(create<ArrayMeta<Uint16Array, PrimitiveMeta<number>>>(JSONT.I8_ARRAY, (m) => u16Array(combine(m))))
+        m.add(create<ArrayMeta<Uint32Array, PrimitiveMeta<number>>>(JSONT.I8_ARRAY, (m) => u32Array(combine(m))))
+        m.add(create<ArrayMeta<BigUint64Array, PrimitiveMeta<bigint>>>(JSONT.I8_ARRAY, (m) => u64Array(combine(m))))
 
-        m.add(create<SetMeta<any, any>>(JSONT.SET, (m) => set(m.value, combine(m))))
-        m.add(create<MapMeta<any, any>>(JSONT.MAP, (m) => map(m.value, combine(m))))
+        m.add(create<SetMeta<any>>(JSONT.SET, (m) => set(m.value, combine(m))))
+        m.add(create<MapMeta<any>>(JSONT.MAP, (m) => map(m.value, combine(m))))
 
         m.add(create<ObjectMeta<{}>>(JSONT.OBJECT, (m) => ({ ...object(...m.fields), ...m })))
         return m
