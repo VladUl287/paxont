@@ -50,19 +50,16 @@ export function metadata(options: MetadataOptions = defaultOptions): Metadata {
         const inputType = typeof type === 'string' ? type : type.name
 
         let count = 0
-        jTypes.sort((a, b) => {
+        jTypes.sort((a, _) => {
             const result = a.name === inputType ? 1 : 0
             count += result
             return result
         })
         jTypes.splice(jTypes.length - count, count)
-
         return count > 0
     }
 
-    const clear = (): void => {
-        jTypes.splice(0, jTypes.length)
-    }
+    const clear = (): void => { jTypes.splice(0) }
 
     const from = <T>(data: T): BaseMeta<Unwrap<T>, any> => {
         for (const type of jTypes) {
