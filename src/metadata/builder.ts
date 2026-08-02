@@ -2,7 +2,8 @@ import { toArray } from "../converters/array"
 import {
     ArrayMeta,
     BaseMeta, MetaValue, MapMeta, NullableMeta, ObjectField,
-    ObjectMeta, PrimitiveMeta, SetMeta
+    ObjectMeta, PrimitiveMeta, SetMeta,
+    TypeName
 } from "./types"
 import { BaseType, JSONT } from "./baseTypes"
 import { toDate } from "../converters/date"
@@ -101,11 +102,17 @@ export const pool =
             pool: pool
         })
 
-const globalPools: Record<string, ArrayPool<any>> = Object.freeze({
+const globalPools: Record<TypeName, ArrayPool<any>> = {
     number: arrayPool<Array<number>>(Array),
     string: arrayPool<Array<string>>(Array),
     object: arrayPool<Array<object>>(Array),
-    undefined: arrayPool<Array<any>>(Array),
+    boolean: arrayPool<Array<boolean>>(Array),
+    date: arrayPool<Array<Date>>(Array),
+    bigint: arrayPool<Array<bigint>>(Array),
+    set: arrayPool<Array<Set<any>>>(Array),
+    map: arrayPool<Array<Map<string, any>>>(Array),
+    array: arrayPool<Array<object>>(Array),
+    nullable: arrayPool(Array),
     i8: arrayPool(Int8Array),
     i16: arrayPool(Int16Array),
     i32: arrayPool(Int32Array),
@@ -114,12 +121,28 @@ const globalPools: Record<string, ArrayPool<any>> = Object.freeze({
     u16: arrayPool(Uint16Array),
     u32: arrayPool(Uint32Array),
     u64: arrayPool(BigUint64Array),
-})
+    'i8[]': arrayPool<Array<Int8Array>>(Array),
+    'i16[]': arrayPool<Array<Int16Array>>(Array),
+    'i32[]': arrayPool<Array<Int32Array>>(Array),
+    'i64[]': arrayPool<Array<BigInt64Array>>(Array),
+    'u8[]': arrayPool<Array<Uint8Array>>(Array),
+    'u16[]': arrayPool<Array<Uint16Array>>(Array),
+    'u32[]': arrayPool<Array<Uint32Array>>(Array),
+    'u64[]': arrayPool<Array<BigUint64Array>>(Array),
+    'f64[]': arrayPool<Array<Float64Array>>(Array),
+}
 
 export const array = <M extends BaseMeta<any, M>>(
     value: M,
     ...modifiers: Modifier<ArrayMeta<MetaValue<M>[], M>>[]
 ): ArrayMeta<MetaValue<M>[], M> => {
+    if (value.type === 'nullable') {
+        globalPools[(value as any as NullableMeta<any>).value.type] ??= arrayPool(Array)
+    }
+    else {
+        globalPools[value.type] ??= arrayPool(Array)
+    }
+
     let defaultMeta: ArrayMeta<MetaValue<M>[], M> = {
         type: JSONT.ARRAY,
         toValue: toArray,
@@ -129,7 +152,7 @@ export const array = <M extends BaseMeta<any, M>>(
             return `[${value.map(c => toJson(metaValue, c, options)).join(',')}]`
         },
         value: value,
-        pool: globalPools[value.type] ?? arrayPool(Array)
+        pool: globalPools[value.type]
     }
     return modifiers.reduce(applyModifier, defaultMeta)
 }
