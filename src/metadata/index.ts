@@ -1,25 +1,22 @@
 import { JSONT } from "./baseTypes"
-import { ArrayMeta, BaseMeta, MapMeta, NullableMeta, ObjectMeta, PrimitiveMeta, SetMeta, TypeName } from "./types"
+import { ArrayMeta, BaseMeta, MapMeta, MetaValue, NullableMeta, ObjectMeta, PrimitiveMeta, SetMeta, TypeName } from "./types"
 import {
     array, bigInt, bool, date, field, i16, i16Array, i32, i32Array, i64,
     i64Array, i8, i8Array, map, nullable, number, object, set, string, u16,
     u16Array, u32, u32Array, u64, u64Array, u8, u8Array
 } from "./builder"
 import { isPlainObject } from "../utils/object"
-import { ReadResult } from "../utils/types"
 import { isMetadata } from "./utils"
 
 type HasMeta<T> = T extends object ? ([Extract<T[keyof T], BaseMeta<any, any>>] extends [never] ? false : true) : false
-type ResultMeta<T extends BaseMeta<any, any>> = ReturnType<T['toValue']> extends ReadResult<infer U> ? U : never
 
 export type Unwrap<T> =
-    T extends BaseMeta<any, any> ? ResultMeta<T> :
+    T extends BaseMeta<any, any> ? MetaValue<T> :
     T extends (infer U)[] ? Unwrap<U>[] :
     T extends Set<infer U> ? Set<Unwrap<U>> :
     T extends Map<string, infer V> ? Map<string, Unwrap<V>> :
     HasMeta<T> extends true ? { [K in keyof T]: Unwrap<T[K]> } :
     T
-
 
 export type Metadata = {
     readonly add: <Input, M extends BaseMeta<any, any>>(type: JType<Input, M>) => void
