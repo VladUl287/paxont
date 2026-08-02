@@ -8,7 +8,7 @@ const COMPLETE = ReadResultType.COMPLETE
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toNullable<T, M extends BaseMeta<T, M>>(
-    metadata: NullableMeta<T, M>,
+    metadata: NullableMeta<M>,
     context: ParseContext,
     index: number,
     depth: number

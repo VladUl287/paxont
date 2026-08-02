@@ -122,8 +122,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
         try {
             // TODO: use data from previous cycle
             while (true) {
-                const chunk = await reader.read(buffer) //{ min: 1 }
-                if (chunk.done) { break }
+                const chunk = await reader.read(buffer, { min: buffer.length }) //{ min: 1 }
 
                 const result = metadata.toValue(metadata, {
                     options: filledOptions,

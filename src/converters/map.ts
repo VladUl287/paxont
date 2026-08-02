@@ -9,7 +9,7 @@ const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toMap<T, M extends BaseMeta<T, M>>(
-    metadata: MapMeta<T, M>,
+    metadata: MapMeta<M>,
     context: ParseContext,
     index: number,
     depth: number,
