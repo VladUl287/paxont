@@ -95,7 +95,7 @@ export const nullable = <M extends BaseMeta<any, M>>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const pool =
+export const usePool =
     <A extends ArrayLike<any>>(pool: ArrayPool<A>) =>
         <M extends ArrayMeta<A, any>>(metadata: M): M => ({
             ...metadata,
