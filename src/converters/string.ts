@@ -14,13 +14,30 @@ const { decode } = useDecoder({
     useUtf16: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM),
 
     newUtf16: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM) ?
-        (arrayBuffer: ArrayBuffer) => {
-            const buffer = Buffer.from(arrayBuffer)
+        (bytes: Uint8Array) => {
+            const buffer = Buffer.from(bytes.buffer)
             return (start, end) => buffer.toString('utf16le', start, end)
         } :
-        (arrayBuffer: ArrayBuffer) => (start, end) => unsafeDecoder16.decode(new Uint8Array(arrayBuffer, start, end - start)),
+        (bytes: Uint8Array) => (start, end) => unsafeDecoder16.decode(new Uint8Array(bytes.buffer, start, end - start)),
 
-    newUtf8: (arrayBuffer: ArrayBuffer) => (start, end) => unsafeDecoder8.decode(new Uint8Array(arrayBuffer, start, end - start)),
+    newUtf8: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM) ?
+        (bytes: Uint8Array) => {
+            const buffer = Buffer.from(bytes.buffer)
+            return (start, end) => {
+                const length = end - start
+                if (length <= 64) {
+                    return factories[length](buffer, start)
+                }
+                return buffer.toString('utf8', start, end)
+            }
+        } :
+        (bytes: Uint8Array) => (start, end) => {
+            const length = end - start
+            if (length <= 64) {
+                return factories[length](bytes, start)
+            }
+            return unsafeDecoder8.decode(new Uint8Array(bytes.buffer, start, end - start))
+        }
 })
 
 const COMPLETE = ReadResultType.COMPLETE
@@ -45,8 +62,8 @@ type ParserOptions = {
     readonly maxWasmMemoryPages: number
     readonly initialWasmMemoryPages: number
     readonly useUtf16: boolean,
-    newUtf16: (arrayBuffer: ArrayBuffer) => (start: number, end: number) => string,
-    newUtf8: (arrayBuffer: ArrayBuffer) => (start: number, end: number) => string
+    newUtf16: (bytes: Uint8Array) => (start: number, end: number) => string,
+    newUtf8: (bytes: Uint8Array) => (start: number, end: number) => string
 }
 
 export function stringParser(options: ParserOptions) {
@@ -76,8 +93,8 @@ export function stringParser(options: ParserOptions) {
         return 0
     })
 
-    let utf16 = options.newUtf16(memory.buffer)
-    let utf8 = options.newUtf8(memory.buffer)
+    let utf16 = options.newUtf16(new Uint8Array(memory.buffer))
+    let utf8 = options.newUtf8(new Uint8Array(memory.buffer))
 
     const decodeFactory = () => {
         if (options.useUtf16) {
@@ -340,10 +357,9 @@ function useDecoder(options: ParserOptions) {
                         }
                     }
 
-                    const view = new Uint8Array(b.buffer, i, ascii_length)
                     return {
                         type: COMPLETE,
-                        value: unsafeDecoder8.decode(view),
+                        value: buffer.toString('utf8', i, ascii_length),
                         nextIndex: index + 1
                     }
                 }
