@@ -214,7 +214,7 @@ export function stringParser(options: ParserOptions) {
             let start = index
             let end = b.length
 
-            const length = end - start
+            let length = end - start
             const max_length = length * 3
 
             if (ensureMemory(memory, max_length, setView)) {
@@ -257,95 +257,53 @@ export function stringParser(options: ParserOptions) {
                 }
             }
 
-            if (ensureMemory(memory, length, setView)) {
-
-                return {} as any
-            }
-
             ensureMemory(memory, MAX_MEMORY, setView)
 
-            end = Math.min(MAX_MEMORY / 2, length)
+            length = Math.min(MAX_MEMORY / 3, length)
 
+            let ch = ''
             while (true) {
-                memoryView.set(b.subarray(start, end))
+                memoryView.set(new Uint8Array(b.buffer, start, length))
 
-                const index = utf16Module.utf8_to_utf16(start, end, end + 1)
-            }
-
-            if (ensureMemory(memory, max_length * 3, (m) => { memoryView = new Uint8Array(m.buffer) })) {
-                memoryView.set(b.subarray(start, end))
-
-                const index = utf16Module.utf8_to_utf16(i, end, end + 1)
-
-                if (index === -1) {
-                    if (!reader.writable) throw new Error('invalid string value')
-                    return {} as any
-                }
-
+                const index = utf8_to_utf16(0, length, length + 1)
+                const dq_index = get_dq_index()
                 const ascii_only = get_ascii_only()
+
+                if (dq_index === -1) {
+                    // if(last chunk) {}
+                    if (reader.writable) {
+                        stack.push({
+                            isContinued: true,
+                            chunk: ascii_only === 1 ? utf8(start, index) : utf16(end + 1, index)
+                        })
+                        return {
+                            type: NEEDS_MORE_DATA,
+                            nextIndex: index
+                        }
+                    }
+                    return {
+                        type: ERROR,
+                        error: new JSONParseError('')
+                    }
+                }
 
                 if (ascii_only === 1) {
                     return {
                         type: COMPLETE,
-                        value: utf8(i, index),
+                        value: ch.concat(utf8(start, index)),
                         nextIndex: index + 1
                     }
                 }
 
+                const utf16_end = get_utf16_end_index()
                 return {
                     type: COMPLETE,
-                    value: utf16(end + 1, index),
+                    value: ch.concat(utf16(end + 1, utf16_end)),
                     nextIndex: index + 1
                 }
             }
-
-            while (true) {
-
-            }
         }
 
-        // if (options.canExtendToUtf16) {
-        //     let enoughMemory = ensureMemory(memory, b.length * 3, (m) => { memoryView = new Uint8Array(m.buffer) })
-        //     if (enoughMemory) {
-        //         memoryView.set(b)
-        //         return decodeUTF16Inexact(reader, index, b.length)
-        //     }
-
-        //     const end = tryFindEndOfString(i)
-        //     if (end > -1) {
-        //         const len = end - i
-        //         enoughMemory = ensureMemory(memory, len * 3, (m) => { memoryView = new Uint8Array(m.buffer) })
-
-        //         if (enoughMemory) {
-        //             memoryView.set(new Uint8Array(b.buffer, i, len))
-        //             return decodeUTF16Inexact(reader, 0, len)
-        //         }
-        //     }
-
-        //     // concat chunks
-        //     // while {
-
-        //     // }
-        //     return {} as any
-        // }
-
-        // const end = tryFindEndOfString(i)
-
-        // if (ensureMemory(memory, b.length)) {
-        //     new Uint8Array(memory.buffer).set(b)
-        //     return decodeUTF8Exact(reader, index, end ?? b.length)
-        // }
-
-        // const len = end - i
-        // if (ensureMemory(memory, len)) {
-        //     new Uint8Array(memory.buffer).set(new Uint8Array(b.buffer, i, len))
-        //     return decodeUTF8Exact(reader, 0, len)
-        // }
-
-        // concat chunks
-        // while {
-
-        // }
         return {} as any
     }
 
