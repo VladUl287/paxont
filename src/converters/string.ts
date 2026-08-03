@@ -145,7 +145,7 @@ export function stringParser(options: ParserOptions) {
         }
     }
 
-    const ensureMemory = (memory: WebAssembly.Memory, reqLength: number, options: ParserOptions): boolean => {
+    const ensureMemory = (memory: WebAssembly.Memory, options: ParserOptions, reqLength: number): boolean => {
         try {
             const maxPagesCount = options.maxWasmMemoryPages
 
@@ -206,14 +206,15 @@ export function stringParser(options: ParserOptions) {
 
         const dataLength = b.length
         const multipleOfTwo = (dataLength + 1) & ~1
+        const dataEnd = multipleOfTwo + dataLength * 2
 
-        if (ensureMemory(memory, multipleOfTwo, options)) {
+        if (ensureMemory(memory, options, dataEnd)) {
             new Uint8Array(memory.buffer).set(b)
 
         }
 
         const end = tryFindEndOfString(i)
-        if (ensureMemory(memory, end, options)) {
+        if (ensureMemory(memory, options, end)) {
 
         }
 
