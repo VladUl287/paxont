@@ -6,29 +6,21 @@ import { DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
 import { JSONParseError } from "../utils/error"
 
 const unsafeDecoder8 = new TextDecoder('utf-8', { fatal: false })
-
-const decodeUtf8 = (buffer: ArrayBuffer, start: number, end: number): string =>
-    unsafeDecoder8.decode(new Uint8Array(buffer, start, end - start))
-
 const unsafeDecoder16 = new TextDecoder('utf-16le', { fatal: false })
-const decodeUtf16 = isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM) ?
-    (buffer: ArrayBuffer, start: number, end: number): string => {
-        const utf16Length = end - start
-        if (utf16Length <= 128) {
-            const view = new Uint16Array(buffer, start, utf16Length / 2)
-            const factory = factories[view.length]
-            return factory(view, 0)
-        }
-        return Buffer.from(buffer, start, end).toString('utf16le')
-    } :
-    (buffer: ArrayBuffer, start: number, end: number): string => unsafeDecoder16.decode(new Uint8Array(buffer, start, end - start))
 
 const { decode } = useDecoder({
     initialWasmMemoryPages: 1, //~64KiB
     maxWasmMemoryPages: 128, //~8MiB,
     useUtf16: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM),
-    utf16: decodeUtf16,
-    utf8: decodeUtf8
+
+    newUtf16: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM) ?
+        (arrayBuffer: ArrayBuffer) => {
+            const buffer = Buffer.from(arrayBuffer)
+            return (start, end) => buffer.toString('utf16le', start, end)
+        } :
+        (arrayBuffer: ArrayBuffer) => (start, end) => unsafeDecoder16.decode(new Uint8Array(arrayBuffer, start, end - start)),
+
+    newUtf8: (arrayBuffer: ArrayBuffer) => (start, end) => unsafeDecoder8.decode(new Uint8Array(arrayBuffer, start, end - start)),
 })
 
 const COMPLETE = ReadResultType.COMPLETE
@@ -53,8 +45,8 @@ type ParserOptions = {
     readonly maxWasmMemoryPages: number
     readonly initialWasmMemoryPages: number
     readonly useUtf16: boolean,
-    utf16: (buffer: ArrayBuffer, start: number, end: number) => string,
-    utf8: (buffer: ArrayBuffer, start: number, end: number) => string
+    newUtf16: (arrayBuffer: ArrayBuffer) => (start: number, end: number) => string,
+    newUtf8: (arrayBuffer: ArrayBuffer) => (start: number, end: number) => string
 }
 
 export function stringParser(options: ParserOptions) {
@@ -84,6 +76,9 @@ export function stringParser(options: ParserOptions) {
         return 0
     })
 
+    let utf16 = options.newUtf16(memory.buffer)
+    let utf8 = options.newUtf8(memory.buffer)
+
     const decodeFactory = () => {
         if (options.useUtf16) {
             const module = wasmInstance<ParseModule>(new Uint8Array([
@@ -108,7 +103,7 @@ export function stringParser(options: ParserOptions) {
                     const utf16_end = get_utf16_length()
                     const utf16Length = utf16_end - multipleOfTwo
 
-                    const result = options.utf16(memory.buffer, multipleOfTwo, utf16Length)
+                    const result = utf16(multipleOfTwo, utf16Length)
                     return {
                         type: COMPLETE,
                         value: result,
@@ -127,7 +122,7 @@ export function stringParser(options: ParserOptions) {
             const end_index = end ?? tryFindEndOfString(start)
             return {
                 type: COMPLETE,
-                value: options.utf8(memory.buffer, start, end_index),
+                value: utf8(start, end_index),
                 nextIndex: end_index + 1
             }
         }
@@ -304,6 +299,7 @@ function useDecoder(options: ParserOptions) {
         const unsafeDecoder16 = new TextDecoder('utf-16le', { fatal: false })
 
         let memory = new Uint8Array(module.memory.buffer)
+        const buffer = Buffer.from(module.memory.buffer)
 
         const get_ascii_only = module.ascii_only
         const get_ascii_length = module.ascii_length
@@ -355,20 +351,9 @@ function useDecoder(options: ParserOptions) {
                 const utf16_end = get_utf16_length()
                 const utf16Length = utf16_end - multipleOfTwo
 
-                if (utf16Length <= 128) {
-                    const view = new Uint16Array(memory.buffer, multipleOfTwo, utf16Length / 2)
-                    const factory = factories[view.length]
-                    return {
-                        type: COMPLETE,
-                        value: factory(view, 0),
-                        nextIndex: index + 1
-                    }
-                }
-
-                const buffer = Buffer.from(memory.buffer, multipleOfTwo, utf16Length)
                 return {
                     type: COMPLETE,
-                    value: buffer.toString('utf16le'),
+                    value: buffer.toString('utf16le', multipleOfTwo, utf16Length),
                     nextIndex: index + 1
                 }
             }
