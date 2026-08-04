@@ -50,7 +50,9 @@
             (return (global.get $dq_index))))
 
         (if (i32.eq (local.get $temp) (local.get $len))
-          (then (return (local.get $temp))))
+          (then 
+            (global.set $ascii_only (i32.const 1))
+            (return (local.get $temp))))
 
         (call $extend_ascii_block (local.get $i) (local.get $temp) (local.get $utf16_ptr))
         
