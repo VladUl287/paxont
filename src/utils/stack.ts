@@ -2,6 +2,7 @@ export interface IStack<T> {
     get isEmpty(): boolean
     push(value: T): void
     pop(): T | undefined
+    peek(): T | undefined
 }
 
 export class Stack<T> implements IStack<T> {
@@ -37,6 +38,10 @@ export class Stack<T> implements IStack<T> {
             return result
         }
         return undefined
+    }
+
+    peek(): T | undefined {
+        return this.stack[this.length - 1]
     }
 
     get isEmpty(): boolean {
