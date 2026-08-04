@@ -1,7 +1,7 @@
 import { DOT, E, MINUS, PLUS, ZERO } from "../../utils/ascii_symbols"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/types"
 import { ParseContext, JsonReader, PrimitiveMeta } from "../../metadata/types"
-import { isDigitU as isDigitUnsafe } from "../../utils/ascii"
+import { isDigitU } from "../../utils/ascii"
 import { JSONParseError } from "../../utils/error"
 
 export type FloatFormat = {
@@ -25,7 +25,8 @@ export type FloatFormat = {
 
 type Store = {
     mantissa: number,
-    mantissaU32: Uint32Array,
+    mLow: number,
+    mHigh: number,
     digitsCount: number,
     exponent: number,
     index: number
@@ -53,8 +54,6 @@ export const f64Format: Readonly<FloatFormat> = Object.freeze({
     maxExponentRoundToEven: 55,
     infinityExponent: 2047
 })
-
-const mantissaU32 = new Uint32Array(2)
 
 export function toFloat(
     metadata: PrimitiveMeta<number>,
@@ -85,22 +84,19 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
     const negative = b[i] === MINUS
     if (negative) i++
 
-    mantissaU32[0] = 0
-    mantissaU32[1] = 0
     const s: Store = {
         index: i,
         exponent: 0,
         mantissa: 0,
-        mantissaU32: mantissaU32,
         digitsCount: 0,
+        mLow: 0 >>> 0,
+        mHigh: 0 >>> 0
     }
 
     if (tryFastParse(b, s)) {
-        i = s.index
+        let { index: i, mantissa: m, mLow, mHigh, digitsCount, exponent: e } = s
 
-        let m = s.mantissa
-
-        if (m === 0 && s.digitsCount > 0 && s.mantissaU32[0] === 0 && s.mantissaU32[1] === 0) {
+        if (m === 0 && (mLow | mHigh) === 0 && digitsCount > 0) {
             return {
                 type: COMPLETE,
                 value: negative ? -0 : 0,
@@ -108,9 +104,7 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
             }
         }
 
-        const e = s.exponent
         const eabs = Math.abs(e)
-
         if (m > 0 && eabs <= format.maxExponentFastPath) {
             if (e < 0)
                 m /= POW10[eabs]
@@ -123,9 +117,12 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
             }
         }
 
-        if (m > 0) splitTo32(m, s.mantissaU32)
+        if (m > 0) {
+            mLow = m >>> 0
+            mHigh = Math.floor(m / 0x100000000)
+        }
 
-        const f64 = toFloatMidpath(s.mantissaU32, e, format)
+        const f64 = toFloatMidpath(new Uint32Array([mLow, mHigh]), e, format)
         if (f64) return {
             type: COMPLETE,
             value: f64,
@@ -134,7 +131,7 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
     }
 
     const isNumberByte = (b: number) =>
-        isDigitUnsafe(b) || b === DOT || (b | 32) === E || b === PLUS || b === MINUS
+        isDigitU(b) || b === DOT || (b | 32) === E || b === PLUS || b === MINUS
 
     while (i < len && isNumberByte(b[i])) i++
 
@@ -214,13 +211,13 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
         i += 4
     }
 
-    if (i < len && isDigitUnsafe(b[i])) {
+    if (i < len && isDigitU(b[i])) {
         m = m * 10 + (b[i++] & 0x0F)
 
-        if (i < len && isDigitUnsafe(b[i])) {
+        if (i < len && isDigitU(b[i])) {
             m = m * 10 + (b[i++] & 0x0F)
 
-            if (i < len && isDigitUnsafe(b[i])) {
+            if (i < len && isDigitU(b[i])) {
                 const dc = i - st
                 const digit = (b[i++] & 0x0F)
 
@@ -230,7 +227,7 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
                 else {
                     m = m * 10 + digit
 
-                    if (i < b.length && isDigitUnsafe(b[i]))
+                    if (i < b.length && isDigitU(b[i]))
                         state ^= STATE_LONG
                 }
             }
@@ -247,13 +244,14 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
 function tryParseLong(b: Uint8Array, s: Store): boolean {
     let i = s.index
     let m = s.mantissa
-    let m32 = s.mantissaU32
     let dc = s.digitsCount
     let dcInitial = dc
 
-    const len = Math.min(b.length, i + MAX_SAFE_LONG_DIGITS + 1 - dc)
-    splitTo32(m, m32)
+    let mLow = m >>> 0
+    let mHigh = Math.floor(m / 0x100000000)
     m = 0
+
+    const len = Math.min(b.length, i + MAX_SAFE_LONG_DIGITS + 1 - dc)
 
     while (i < len) {
         const d = (b[i] - 48) >>> 0
@@ -264,18 +262,17 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
     }
 
     const digitsCount = dc - dcInitial
-    const pow = POW10[digitsCount]
+    const mul = POW10[digitsCount]
 
-    if (dc > MAX_SAFE_LONG_DIGITS || (dc === MAX_SAFE_LONG_DIGITS && willOverflow1(m32[1], m32[0], pow, m)))
+    if (dc > MAX_SAFE_LONG_DIGITS || (dc === MAX_SAFE_LONG_DIGITS && willOverflow1(mHigh, mLow, mul, m)))
         return false
-
-    const low = m32[0] * pow + m
-    m32[0] = low >>> 0
-    m32[1] = m32[1] * pow + Math.floor(low / 0x100000000)
 
     s.index = i
     s.mantissa = 0
     s.digitsCount = dc
+    const l = mLow * mul + m
+    s.mLow = l >>> 0
+    s.mHigh = mHigh * mul + Math.floor(l / 0x100000000)
     return true
 }
 
@@ -331,14 +328,16 @@ function tryParseDecimal(b: Uint8Array, s: Store): boolean {
 function tryParseDecimalLong(b: Uint8Array, s: Store, dc: number, start: number): boolean {
     let i = s.index
     let m = s.mantissa
-    let m32 = s.mantissaU32
+    let mLow = s.mLow
+    let mHigh = s.mHigh
 
     const length = b.length
     if (i < length && ((b[i] - 48) >>> 0) > 9)
         return true
 
     if (m > 0) {
-        splitTo32(m, m32)
+        mLow = m >>> 0
+        mHigh = Math.floor(m / 0x100000000)
         m = 0
     }
 
@@ -358,10 +357,10 @@ function tryParseDecimalLong(b: Uint8Array, s: Store, dc: number, start: number)
     }
 
     if (localDc > 0) {
-        const pow = POW10[localDc]
-        const low = m32[0] * pow + m
-        m32[0] = low >>> 0
-        m32[1] = m32[1] * pow + Math.floor(low / 0x100000000)
+        const mul = POW10[localDc]
+        const low = mLow * mul + m
+        mLow = low >>> 0
+        mHigh = mHigh * mul + Math.floor(low / 0x100000000)
         m = 0
     }
 
@@ -369,7 +368,8 @@ function tryParseDecimalLong(b: Uint8Array, s: Store, dc: number, start: number)
     s.mantissa = m
     s.exponent = start - i
     s.digitsCount = dc
-
+    s.mLow = mLow
+    s.mHigh = mHigh
     return true
 }
 
