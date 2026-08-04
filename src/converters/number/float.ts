@@ -232,6 +232,9 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
         }
     }
 
+    if (st === i)
+        return false
+
     s.i = i
     s.m = m
     s.dc += i - st
