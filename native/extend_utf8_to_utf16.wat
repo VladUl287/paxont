@@ -4,21 +4,19 @@
 
   (global $ascii_only (mut i32) (i32.const 0))
   (global $dq_index (mut i32) (i32.const 0))
-
   (global $ascii_length (mut i32) (i32.const 0))
   (global $utf16_length (mut i32) (i32.const 0))
 
   (func (export "ascii_only") (result i32)
     (global.get $ascii_only))
 
-  (func (export "ascii_length") (result i32)
-    (global.get $ascii_length))
+  (func (export "dq_index") (result i32)
+    (global.get $dq_index))
 
   (func (export "utf16_length") (result i32)
     (global.get $utf16_length))
 
   (func (export "utf8_to_utf16") (param $i i32) (param $len i32) (param $utf16_ptr i32) (result i32)
-    (local $ascii_length i32)
     (local $ascii v128)
     (local $zero v128)
     (local $mask i32)
@@ -32,7 +30,6 @@
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
 
     (global.set $ascii_only (i32.const 0))
-    (global.set $ascii_length (i32.const 0))
     (global.set $utf16_length (i32.const 0))
 
     i32.const 128
@@ -47,21 +44,19 @@
       (local.tee $temp (call $parse_ascii_prefix (local.get $i) (local.get $len) (i32.const -1)))
       (local.get $i))
       (then
-        (local.set $ascii_length (i32.sub (local.get $temp) (local.get $i)))
-
         (if (global.get $dq_index)
-          (then 
-            (global.set $ascii_length (local.get $ascii_length))
+          (then
             (global.set $ascii_only (i32.const 1))
             (return (global.get $dq_index))))
 
         (if (i32.eq (local.get $temp) (local.get $len))
-          (then (return (i32.const -1))))
+          (then (return (local.get $temp))))
 
         (call $extend_ascii_block (local.get $i) (local.get $temp) (local.get $utf16_ptr))
         
+        (local.set $utf16_ptr 
+          (i32.add (local.get $utf16_ptr) (i32.shl (i32.sub (local.get $temp) (local.get $i)) (i32.const 1))))
         (local.set $i (local.get $temp))
-        (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.shl (local.get $ascii_length) (i32.const 1))))
       ))
 
     ;; non ascii block
@@ -76,18 +71,12 @@
                   (local.get $utf16_ptr) 
                   (i32.shl (i32.sub (local.get $temp) (local.get $i)) (i32.const 1))))
 
-            (local.set $ascii_length 
-              (i32.add 
-                (local.get $ascii_length) 
-                (i32.sub (local.get $temp) (local.get $i))))
-
             (local.set $i (local.get $temp))
 
             (if (global.get $dq_index)
-              (then 
-                (global.set $ascii_length (local.get $ascii_length))
+              (then
                 (global.set $utf16_length (local.get $utf16_ptr))
-                (return (local.get $i))
+                (return (global.get $dq_index))
               ))
           ))
 
@@ -143,7 +132,6 @@
                     (i32.store16 (local.get $utf16_ptr) (i32.load8_u (local.get $i)))
                     (local.set $i (i32.add (local.get $i) (i32.const 1)))
                     (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
-                    (local.set $ascii_length (i32.add (local.get $ascii_length) (i32.const 1)))
                   ))
   
                 (br $two_byte_loop)
@@ -287,8 +275,7 @@
                 (if (i32.ge_u (call $find_unescaped_quote (local.get $i) (local.get $i)) (i32.const 0))
                   (then 
                     (global.set $utf16_length (local.get $utf16_ptr))
-                    (global.set $ascii_length (local.get $ascii_length))
-                    (return (local.get $i)))
+                    (return (global.get $dq_index)))
                 )
               )
             )
@@ -296,7 +283,6 @@
             (i32.store16 (local.get $utf16_ptr) (local.get $temp))
             (local.set $i (i32.add (local.get $i) (i32.const 1)))
             (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
-            (local.set $ascii_length (i32.add (local.get $ascii_length) (i32.const 1)))
             br $non_ascii_loop_tail
           )
         )
@@ -511,8 +497,6 @@
                     (local.tee $temp (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (i32.const 4))))
                     (i32.const 0))
                   (then
-                    (global.set $dq_index (local.get $temp))
-
                     (if (i32.gt_s (local.get $target) (i32.const -1))
                       (then
                         (local.set $temp_v128 (i32x4.splat (local.get $byte)))
@@ -553,8 +537,6 @@
                   (local.tee $temp (call $find_unescaped_quote (local.get $i) (local.get $i))) 
                   (i32.const 0)))
               (then
-                (global.set $dq_index (local.get $temp))
-
                 (if (i32.gt_s (local.get $target) (i32.const -1))
                   (then
                     (i32.store16 (local.get $target) (local.get $byte))
@@ -624,7 +606,9 @@
 
             ;; if not escaped, the prefix ends here
             (if (i32.eqz (local.get $is_escaped))
-              (then (return (local.get $i)))
+              (then 
+                (global.set $dq_index (local.get $i))
+                (return (local.get $i)))
             )
           )
         )
