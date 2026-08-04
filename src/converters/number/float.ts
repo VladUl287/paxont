@@ -121,18 +121,12 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
             }
         }
 
-        return {
+        const f64 = toFloatMidpath(new Uint32Array([mLow, mHigh]), e, format)
+        if (f64) return {
             type: COMPLETE,
-            value: neg ? -mLow : mHigh,
+            value: f64,
             nextIndex: i
         }
-
-        // const f64 = toFloatMidpath(s.mantissaU32, e, format)
-        // if (f64) return {
-        //     type: COMPLETE,
-        //     value: f64,
-        //     nextIndex: i
-        // }
     }
 
     const isNumberByte = (b: number) =>
@@ -175,19 +169,24 @@ for (let i = -1024; i <= 1024; i++) {
 }
 
 function tryFastParse(b: Uint8Array, s: Store): boolean {
-    return tryParseInteger(b, s) &&
-        (b[s.i] !== DOT || tryParseDecimal(b, s)) &&
-        ((b[s.i] | 32) !== E || tryParseExponent(b, s))
+    return tryParseInteger(b, s)
+        && (b[s.i] !== DOT || tryParseDecimal(b, s))
+        && ((b[s.i] | 32) !== E || tryParseExponent(b, s))
 }
 
 function willOverflow1(h: number, l: number, m: number, d: number) {
-    if (Math.abs(h) > 0x7FFFFFFF / m) {
-        const result = BigInt(h) * BigInt(m) + BigInt((BigInt(l) * BigInt(m) + BigInt(d)) >> 32n)
-        return result > 0x7FFFFFFFn || result < -0x80000000n
-    }
+    // if (Math.abs(h) > 0x7FFFFFFF / m) {
+    //     const result = BigInt(h) * BigInt(m) + BigInt((BigInt(l) * BigInt(m) + BigInt(d)) >> 32n)
+    //     return result > 0x7FFFFFFFn || result < -0x80000000n
+    // }
 
-    const lm = l * m + d
-    const hr = h * m + ((lm >>> 0) < (l * m >>> 0) ? 1 : 0)
+    // const lm = l * m + d
+    // const hr = h * m + ((lm >>> 0) < (l * m >>> 0) ? 1 : 0)
+    // return ((hr ^ h) & 0x80000000) !== 0
+
+    const lm = ((l * m) >>> 0) + (d >>> 0)
+    const carry = (lm >>> 0) < ((l * m) >>> 0) ? 1 : 0
+    const hr = ((h * m) >>> 0) + carry
     return ((hr ^ h) & 0x80000000) !== 0
 }
 
@@ -196,12 +195,13 @@ function willOverflow2(n: number, m: number, d: number) {
 }
 
 function tryParseInteger(b: Uint8Array, s: Store): boolean {
+    let m = s.m
     let i = s.i
+    let dc = s.dc
 
     const st = i
-    const len = Math.min(b.length, st + MAX_SAFE_INT_DIGITS)
+    const len = Math.min(b.length, st + MAX_SAFE_INT_DIGITS - dc)
 
-    let m = 0
     while (i < len - 4) {
         const d = b[i], d2 = b[i + 1], d3 = b[i + 2], d4 = b[i + 3]
 
@@ -227,13 +227,6 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
                         m = m * 10 + digit
                         i++
                     }
-
-                    if (i < b.length && isDigitU(b[i])) {
-                        s.i = i
-                        s.m = m
-                        s.dc = i - st
-                        return tryParseLong(b, s)
-                    }
                 }
             }
         }
@@ -241,7 +234,11 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
 
     s.i = i
     s.m = m
-    s.dc = i - st
+    s.dc += i - st
+
+    if (i < b.length && isDigitU(b[i]))
+        return tryParseLong(b, s)
+
     return true
 }
 
@@ -253,7 +250,7 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
     m = 0
 
     const intDc = dc
-    const len = Math.min(b.length, i + MAX_SAFE_LONG_DIGITS - s.dc)
+    const len = Math.min(b.length, 1 + i + MAX_SAFE_LONG_DIGITS - s.dc)
 
     while (i < len) {
         const d = (b[i] - 48) >>> 0
@@ -270,114 +267,38 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
     s.m = 0
     s.i = i
     s.dc = dc
-
     const l = mLow * mul + m
-    s.mLow = l
+    s.mLow = l >>> 0
     s.mHigh = mHigh * mul + Math.floor(l / 0x100000000)
-
     return true
 }
 
 function tryParseDecimal(b: Uint8Array, s: Store): boolean {
-    const len = b.length
-    let i = s.i
-    let dc = s.dc
+    let { i, dc, mLow, mHigh } = s
 
     if (b[i++] !== DOT)
         return false
 
-    if (dc >= MAX_SAFE_INT_DIGITS) {
+    if ((mLow | mHigh) !== 0) {
         s.i = i
-        return tryParseDecimalLong(b, s, dc, i)
+        return tryParseLong(b, s)
     }
 
-    let m = s.m
-
-    const start = i
     if (dc === 0)
-        while (i < len && b[i] === ZERO) i++
-
-    let overflow = false
-    while (i < len && dc <= MAX_SAFE_INT_DIGITS) {
-        const d = (b[i] - 48) >>> 0
-        if (d > 9) break
-
-        const temp = m * 10 + d
-        if (temp > MAX_SAFE_INTEGER) {
-            overflow = true
-            break
-        }
-
-        m = m * 10 + d
-        dc++
-        i++
-    }
-
-    if (i < len && (dc > MAX_SAFE_INT_DIGITS || overflow)) {
-        s.i = i
-        s.m = m
-        return tryParseDecimalLong(b, s, dc, start)
-    }
+        while (i < b.length && b[i] === ZERO) i++
 
     s.i = i
-    s.m = m
-    s.e = start - i
-    s.dc = dc
-    return true
-}
-
-function tryParseDecimalLong(b: Uint8Array, s: Store, dc: number, start: number): boolean {
-    let i = s.i
-    let m = s.m
-    let m32 = s.mantissaU32
-
-    const length = b.length
-    if (i < length && ((b[i] - 48) >>> 0) > 9)
-        return true
-
-    if (m > 0) {
-        splitTo32(m, m32)
-        m = 0
-    }
-
-    let localDc = 0
-    while (i < length && dc < MAX_SAFE_LONG_DIGITS) {
-        const d = (b[i] - 48) >>> 0
-        if (d > 9) break
-
-        m = m * 10 + d
-        localDc++
-        dc++
-        i++
-    }
-
-    if (dc === MAX_SAFE_LONG_DIGITS && ((b[i] - 48) >>> 0) <= 9) {
-        return false
-    }
-
-    if (localDc > 0) {
-        const pow = POW10[localDc]
-        const low = m32[0] * pow + m
-        m32[0] = low >>> 0
-        m32[1] = m32[1] * pow + Math.floor(low / 0x100000000)
-        m = 0
-    }
-
-    s.i = i
-    s.m = m
-    s.e = start - i
-    s.dc = dc
-
-    return true
+    const res = tryParseInteger(b, s)
+    s.e = dc - s.dc
+    return res
 }
 
 function tryParseExponent(b: Uint8Array, s: Store): boolean {
     const len = b.length
     let i = s.i
 
-    if (i >= len || (b[i] | 32) !== E)
-        return true
-    i++
+    if ((b[i++] | 32) !== E)
+        return false
 
     let sign = 1
     if (b[i] === MINUS) {
@@ -392,10 +313,8 @@ function tryParseExponent(b: Uint8Array, s: Store): boolean {
     while (i < len) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
-
         if (e < 0x10000)
             e = e * 10 + d
-
         i++
     }
 
