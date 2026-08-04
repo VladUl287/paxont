@@ -8,7 +8,7 @@ import { JSONParseError } from "../utils/error"
 const unsafeDecoder8 = new TextDecoder('utf-8', { fatal: false })
 const unsafeDecoder16 = new TextDecoder('utf-16le', { fatal: false })
 
-const { decode } = useDecoder({
+export const defaultParseOptions: ParserOptions = {
     initialWasmMemoryPages: 1, //~64KiB
     maxWasmMemoryPages: 128, //~8MiB,
 
@@ -39,7 +39,9 @@ const { decode } = useDecoder({
             }
             return unsafeDecoder8.decode(new Uint8Array(bytes.buffer, start, end - start))
         }
-})
+}
+
+const { decode } = useDecoder(defaultParseOptions)
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
@@ -232,14 +234,10 @@ export function stringParser(options: ParserOptions) {
                 const b = reader.bytes
                 const stack = ctx.stack
 
-                let isContinued: boolean = false
-                let chunk: string = ''
-
                 const state = stack.pop()
-                if (state !== undefined) {
-                    isContinued = state.isContinued
-                    chunk = state.chunk
-                }
+
+                let isContinued: boolean = state?.isContinued ?? false
+                let chunk: string = state?.chunk ?? ''
 
                 let start = i
                 let end = b.length
@@ -255,7 +253,7 @@ export function stringParser(options: ParserOptions) {
                         if (i >= b.length && end_index > i && reader.writable) {
                             stack.push({
                                 isContinued: true,
-                                chunk: utf8(i, end_index)
+                                chunk: !isContinued ? utf8(0, end_index) : chunk.concat(utf8(0, end_index))
                             })
                             return {
                                 type: NEEDS_MORE_DATA,
@@ -270,7 +268,7 @@ export function stringParser(options: ParserOptions) {
 
                     return {
                         type: COMPLETE,
-                        value: utf8(0, end_index),
+                        value: !isContinued ? utf8(0, dq_index) : chunk.concat(utf8(0, dq_index)),
                         nextIndex: end_index + 1
                     }
                 }
