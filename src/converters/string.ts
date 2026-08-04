@@ -115,14 +115,10 @@ export function stringParser(options: ParserOptions) {
                     const b = reader.bytes
                     const stack = ctx.stack
 
-                    let isContinued: boolean = false
-                    let chunk: string = ''
-
                     const state = stack.pop()
-                    if (state !== undefined) {
-                        isContinued = state.isContinued
-                        chunk = state.chunk
-                    }
+
+                    let isContinued: boolean = state?.isContinued ?? false
+                    let chunk: string = state?.chunk ?? ''
 
                     let start = i
                     let end = b.length
@@ -173,22 +169,25 @@ export function stringParser(options: ParserOptions) {
 
                     ensureMemory(memory, MAX_MEMORY, setView)
 
-                    length = Math.min(MAX_MEMORY / 3, length)
-
-                    let ch = ''
                     while (true) {
+                        const length = Math.min(Math.floor(MAX_MEMORY / 3), b.length - start)
+
                         memoryView.set(new Uint8Array(b.buffer, start, length))
 
                         const index = utf8_to_utf16(0, length, length + 1)
+                        start += index
+
                         const dq_index = get_dq_index()
                         const ascii_only = get_ascii_only()
 
                         if (dq_index === -1) {
-                            // if(last chunk) {}
-                            if (reader.writable) {
+                            if (start >= b.length && reader.writable) {
+                                const utf16_end = get_utf16_length()
                                 stack.push({
                                     isContinued: true,
-                                    chunk: ascii_only === 1 ? utf8(start, index) : utf16(end + 1, index)
+                                    chunk: ascii_only === 1 ?
+                                        chunk.concat(utf8(start, index)) :
+                                        chunk.concat(utf16(length + 1, utf16_end))
                                 })
                                 return {
                                     type: NEEDS_MORE_DATA,
@@ -204,7 +203,7 @@ export function stringParser(options: ParserOptions) {
                         if (ascii_only === 1) {
                             return {
                                 type: COMPLETE,
-                                value: ch.concat(utf8(start, index)),
+                                value: chunk.concat(utf8(start, index)),
                                 nextIndex: index + 1
                             }
                         }
@@ -212,7 +211,7 @@ export function stringParser(options: ParserOptions) {
                         const utf16_end = get_utf16_length()
                         return {
                             type: COMPLETE,
-                            value: ch.concat(utf16(end + 1, utf16_end)),
+                            value: chunk.concat(utf16(end + 1, utf16_end)),
                             nextIndex: index + 1
                         }
                     }
