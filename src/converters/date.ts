@@ -5,7 +5,7 @@ import { COLON, DOT, DOUBLE_QUOTE, MINUS, PLUS, T_UPPER, Z } from "../utils/asci
 import { isComplete, ReadResult, ReadResultType } from "../utils/types"
 import { JSONParseError } from "../utils/error"
 import { f64Format, tryParseFloat } from "./number/float"
-import { isDigitUnsafe } from "../utils/ascii"
+import { isDigitU } from "../utils/ascii"
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
@@ -25,7 +25,7 @@ export function toDate(
         if (b[index] === DOUBLE_QUOTE)
             return fromString(context, index + 1)
 
-        if (isDigitUnsafe(b[index]))
+        if (isDigitU(b[index]))
             return fromTimestamp(reader, index)
     }
     else if (reader.writable)
@@ -125,7 +125,7 @@ function tryParseDefault(b: Uint8Array, i: number, o: JsonOptions, r: TryParseRe
     return !isNaN(date.getTime())
 }
 
-const nonDigit = (b: number) => !isDigitUnsafe(b)
+const nonDigit = (b: number) => !isDigitU(b)
 
 function expectFourDigits(b: Uint8Array, i: number): number {
     if (i + 4 >= b.length || nonDigit(b[i]) || nonDigit(b[++i]) || nonDigit(b[++i]) || nonDigit(b[++i]))

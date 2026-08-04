@@ -2,7 +2,7 @@ import { JsonReader, ParseContext, PrimitiveMeta } from "../../metadata/types"
 import { JSONParseError } from "../../utils/error"
 import { ReadResult, ReadResultType } from "../../utils/types"
 import { MINUS } from "../../utils/ascii_symbols"
-import { isDigitUnsafe } from "../../utils/ascii"
+import { isDigitU } from "../../utils/ascii"
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
@@ -69,10 +69,10 @@ export function tryParseInt(
     let m = 0 >>> 0
 
     const length = Math.min(len, i + maxDigits)
-    while (i < length && isDigitUnsafe(b[i]))
+    while (i < length && isDigitU(b[i]))
         m = m * 10 + (b[i++] & 0x0F)
 
-    if (i < len && isDigitUnsafe(b[i]))
+    if (i < len && isDigitU(b[i]))
         return {
             type: ERROR,
             error: new JSONParseError(``)

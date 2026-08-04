@@ -2,7 +2,7 @@ import { JsonReader, ParseContext, PrimitiveMeta } from "../../metadata/types"
 import { MINUS } from "../../utils/ascii_symbols"
 import { ReadResult, ReadResultType } from "../../utils/types"
 import { JSONParseError } from "../../utils/error"
-import { isDigitUnsafe } from "../../utils/ascii"
+import { isDigitU } from "../../utils/ascii"
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
@@ -48,7 +48,7 @@ export function toBigInt(
             i += 4
         }
 
-        while (i < len && isDigitUnsafe(b[i])) i++
+        while (i < len && isDigitU(b[i])) i++
 
         // if (i === len && ctx.writable) {
         //     state.isContinued = true
@@ -108,7 +108,7 @@ export function parseInt64(reader: JsonReader, i: number, minValue: bigint, maxV
     while (i < len) {
         const byte = b[i]
 
-        if (!isDigitUnsafe(byte))
+        if (!isDigitU(byte))
             break
 
         const d = byte & 0x0F

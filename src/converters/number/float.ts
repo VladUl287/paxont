@@ -1,7 +1,7 @@
 import { DOT, E, MINUS, PLUS, ZERO } from "../../utils/ascii_symbols"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/types"
 import { ParseContext, JsonReader, PrimitiveMeta } from "../../metadata/types"
-import { isDigitUnsafe } from "../../utils/ascii"
+import { isDigitU } from "../../utils/ascii"
 import { JSONParseError } from "../../utils/error"
 
 export type FloatFormat = {
@@ -24,11 +24,12 @@ export type FloatFormat = {
 }
 
 type Store = {
-    mantissa: number,
-    mantissaU32: Uint32Array,
-    digitsCount: number,
-    exponent: number,
-    index: number
+    m: number,
+    mLow: number,
+    mHigh: number
+    dc: number,
+    e: number,
+    i: number
 }
 
 const COMPLETE = ReadResultType.COMPLETE
@@ -81,34 +82,31 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
     const len = b.length
 
     let i = index
-    let start = i
-    const negative = b[i] === MINUS
-    if (negative) i++
+    let st = i
+    const neg = b[i] === MINUS
+    if (neg) i++
 
-    mantissaU32[0] = 0
-    mantissaU32[1] = 0
     const s: Store = {
-        index: i,
-        exponent: 0,
-        mantissa: 0,
-        mantissaU32: mantissaU32,
-        digitsCount: 0,
+        i: i,
+        e: 0,
+        dc: 0,
+        m: 0,
+        mLow: 0 >>> 0,
+        mHigh: 0 >>> 0,
     }
 
     if (tryFastParse(b, s)) {
-        i = s.index
+        let { i, m, mLow, mHigh } = s
 
-        let m = s.mantissa
-
-        if (m === 0 && s.digitsCount > 0 && s.mantissaU32[0] === 0 && s.mantissaU32[1] === 0) {
+        if ((m | mLow | mHigh) === 0) {
             return {
                 type: COMPLETE,
-                value: negative ? -0 : 0,
+                value: neg ? -0 : 0,
                 nextIndex: i
             }
         }
 
-        const e = s.exponent
+        const e = s.e
         const eabs = Math.abs(e)
 
         if (m > 0 && eabs <= format.maxExponentFastPath) {
@@ -118,27 +116,31 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
                 m *= POW10[eabs]
             return {
                 type: COMPLETE,
-                value: negative ? -m : m,
+                value: neg ? -m : m,
                 nextIndex: i
             }
         }
 
-        if (m > 0) splitTo32(m, s.mantissaU32)
-
-        const f64 = toFloatMidpath(s.mantissaU32, e, format)
-        if (f64) return {
+        return {
             type: COMPLETE,
-            value: f64,
+            value: neg ? -mLow : mHigh,
             nextIndex: i
         }
+
+        // const f64 = toFloatMidpath(s.mantissaU32, e, format)
+        // if (f64) return {
+        //     type: COMPLETE,
+        //     value: f64,
+        //     nextIndex: i
+        // }
     }
 
     const isNumberByte = (b: number) =>
-        isDigitUnsafe(b) || b === DOT || (b | 32) === E || b === PLUS || b === MINUS
+        isDigitU(b) || b === DOT || (b | 32) === E || b === PLUS || b === MINUS
 
     while (i < len && isNumberByte(b[i])) i++
 
-    const result = new TextDecoder().decode(b.subarray(start, i))
+    const result = new TextDecoder().decode(b.subarray(st, i))
     if (result === "") {
         if (i >= b.length && reader.writable) {
             return {
@@ -174,8 +176,8 @@ for (let i = -1024; i <= 1024; i++) {
 
 function tryFastParse(b: Uint8Array, s: Store): boolean {
     return tryParseInteger(b, s) &&
-        tryParseDecimal(b, s) &&
-        tryParseExponent(b, s)
+        (b[s.i] !== DOT || tryParseDecimal(b, s)) &&
+        ((b[s.i] | 32) !== E || tryParseExponent(b, s))
 }
 
 function willOverflow1(h: number, l: number, m: number, d: number) {
@@ -194,66 +196,64 @@ function willOverflow2(n: number, m: number, d: number) {
 }
 
 function tryParseInteger(b: Uint8Array, s: Store): boolean {
-    let i = s.index
+    let i = s.i
 
     const st = i
     const len = Math.min(b.length, st + MAX_SAFE_INT_DIGITS)
-
-    const STATE_LONG = 0x01
-    let state = 0 >>> 0
 
     let m = 0
     while (i < len - 4) {
         const d = b[i], d2 = b[i + 1], d3 = b[i + 2], d4 = b[i + 3]
 
         const w = (d | d2 << 8 | d3 << 16 | d4 << 24) - 0x30303030
-        const nonDigit = ((w + 0x76767676) | w) & 0x80808080
-        if (nonDigit !== 0) break
+        if ((((w + 0x76767676) | w) & 0x80808080) !== 0) break
 
         m = m * 10000 + ((d & 0x0F) * 1000 + (d2 & 0x0F) * 100 + (d3 & 0x0F) * 10 + (d4 & 0x0F))
         i += 4
     }
 
-    if (i < len && isDigitUnsafe(b[i])) {
+    if (i < len && isDigitU(b[i])) {
         m = m * 10 + (b[i++] & 0x0F)
 
-        if (i < len && isDigitUnsafe(b[i])) {
+        if (i < len && isDigitU(b[i])) {
             m = m * 10 + (b[i++] & 0x0F)
 
-            if (i < len && isDigitUnsafe(b[i])) {
-                const dc = i - st
-                const digit = (b[i++] & 0x0F)
+            if (i < len && isDigitU(b[i])) {
+                m = m * 10 + (b[i++] & 0x0F)
 
-                if (dc === MAX_SAFE_INT_DIGITS - 1 && willOverflow2(m, 10, digit)) {
-                    state ^= STATE_LONG
-                }
-                else {
-                    m = m * 10 + digit
+                if (i < len && isDigitU(b[i])) {
+                    const digit = (b[i] & 0x0F)
+                    if (!willOverflow2(m, 10, digit)) {
+                        m = m * 10 + digit
+                        i++
+                    }
 
-                    if (i < b.length && isDigitUnsafe(b[i]))
-                        state ^= STATE_LONG
+                    if (i < b.length && isDigitU(b[i])) {
+                        s.i = i
+                        s.m = m
+                        s.dc = i - st
+                        return tryParseLong(b, s)
+                    }
                 }
             }
         }
     }
 
-    s.index = i
-    s.mantissa = m
-    s.digitsCount = i - st
-
-    return (state & STATE_LONG) ? tryParseLong(b, s) : true
+    s.i = i
+    s.m = m
+    s.dc = i - st
+    return true
 }
 
 function tryParseLong(b: Uint8Array, s: Store): boolean {
-    let i = s.index
-    let m = s.mantissa
-    let m32 = s.mantissaU32
-    let dc = s.digitsCount
-    let dcInitial = dc
+    let { i, dc, m, mLow, mHigh } = s
 
-    const len = Math.min(b.length, i + MAX_SAFE_LONG_DIGITS + 1 - dc)
-    splitTo32(m, m32)
+    mLow = m >>> 0
+    mHigh = Math.floor(m / 0x100000000)
     m = 0
+
+    const intDc = dc
+    const len = Math.min(b.length, i + MAX_SAFE_LONG_DIGITS - s.dc)
 
     while (i < len) {
         const d = (b[i] - 48) >>> 0
@@ -263,37 +263,35 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
         i++
     }
 
-    const digitsCount = dc - dcInitial
-    const pow = POW10[digitsCount]
-
-    if (dc > MAX_SAFE_LONG_DIGITS || (dc === MAX_SAFE_LONG_DIGITS && willOverflow1(m32[1], m32[0], pow, m)))
+    const mul = POW10[dc - intDc]
+    if (dc > MAX_SAFE_LONG_DIGITS || (dc === MAX_SAFE_LONG_DIGITS && willOverflow1(mHigh, mLow, mul, m)))
         return false
 
-    const low = m32[0] * pow + m
-    m32[0] = low >>> 0
-    m32[1] = m32[1] * pow + Math.floor(low / 0x100000000)
+    s.m = 0
+    s.i = i
+    s.dc = dc
 
-    s.index = i
-    s.mantissa = 0
-    s.digitsCount = dc
+    const l = mLow * mul + m
+    s.mLow = l
+    s.mHigh = mHigh * mul + Math.floor(l / 0x100000000)
+
     return true
 }
 
 function tryParseDecimal(b: Uint8Array, s: Store): boolean {
     const len = b.length
-    let i = s.index
-    let dc = s.digitsCount
+    let i = s.i
+    let dc = s.dc
 
-    if (i >= len || b[i] !== DOT)
-        return true
-    i++
+    if (b[i++] !== DOT)
+        return false
 
     if (dc >= MAX_SAFE_INT_DIGITS) {
-        s.index = i
+        s.i = i
         return tryParseDecimalLong(b, s, dc, i)
     }
 
-    let m = s.mantissa
+    let m = s.m
 
     const start = i
     if (dc === 0)
@@ -316,21 +314,21 @@ function tryParseDecimal(b: Uint8Array, s: Store): boolean {
     }
 
     if (i < len && (dc > MAX_SAFE_INT_DIGITS || overflow)) {
-        s.index = i
-        s.mantissa = m
+        s.i = i
+        s.m = m
         return tryParseDecimalLong(b, s, dc, start)
     }
 
-    s.index = i
-    s.mantissa = m
-    s.exponent = start - i
-    s.digitsCount = dc
+    s.i = i
+    s.m = m
+    s.e = start - i
+    s.dc = dc
     return true
 }
 
 function tryParseDecimalLong(b: Uint8Array, s: Store, dc: number, start: number): boolean {
-    let i = s.index
-    let m = s.mantissa
+    let i = s.i
+    let m = s.m
     let m32 = s.mantissaU32
 
     const length = b.length
@@ -365,17 +363,17 @@ function tryParseDecimalLong(b: Uint8Array, s: Store, dc: number, start: number)
         m = 0
     }
 
-    s.index = i
-    s.mantissa = m
-    s.exponent = start - i
-    s.digitsCount = dc
+    s.i = i
+    s.m = m
+    s.e = start - i
+    s.dc = dc
 
     return true
 }
 
 function tryParseExponent(b: Uint8Array, s: Store): boolean {
     const len = b.length
-    let i = s.index
+    let i = s.i
 
     if (i >= len || (b[i] | 32) !== E)
         return true
@@ -401,8 +399,8 @@ function tryParseExponent(b: Uint8Array, s: Store): boolean {
         i++
     }
 
-    s.index = i
-    s.exponent += (e * sign)
+    s.i = i
+    s.e += (e * sign)
     return true
 }
 
