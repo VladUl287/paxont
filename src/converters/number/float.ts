@@ -109,7 +109,7 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
         const e = s.e
         const eabs = Math.abs(e)
 
-        if (m > 0 && eabs <= format.maxExponentFastPath) {
+        if (eabs <= format.maxExponentFastPath) {
             if (e < 0)
                 m /= POW10[eabs]
             else
