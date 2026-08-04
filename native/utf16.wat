@@ -4,7 +4,6 @@
 
   (global $ascii_only (mut i32) (i32.const 0))
   (global $dq_index (mut i32) (i32.const 0))
-  (global $ascii_length (mut i32) (i32.const 0))
   (global $utf16_length (mut i32) (i32.const 0))
 
   (func (export "ascii_only") (result i32)
@@ -17,8 +16,6 @@
     (global.get $utf16_length))
 
   (func (export "utf8_to_utf16") (param $i i32) (param $len i32) (param $utf16_ptr i32) (result i32)
-    (local $ascii v128)
-    (local $zero v128)
     (local $mask i32)
     (local $temp i32)
     (local $temp_v128 v128)
@@ -31,14 +28,6 @@
 
     (global.set $ascii_only (i32.const 0))
     (global.set $utf16_length (i32.const 0))
-
-    i32.const 128
-    i8x16.splat
-    local.set $ascii
-
-    i32.const 0
-    i8x16.splat
-    local.set $zero
 
     (if (i32.gt_u
       (local.tee $temp (call $parse_ascii_prefix (local.get $i) (local.get $len) (i32.const -1)))
