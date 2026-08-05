@@ -227,7 +227,7 @@ export function stringParser(options: ParserOptions) {
                         return {
                             type: COMPLETE,
                             value: base.length === 0 ? utf16(length + 1, utf16_end) : base.concat(utf16(length + 1, utf16_end)),
-                            nextIndex: end_index + 1
+                            nextIndex: i + 1
                         }
                     }
                 }
@@ -325,7 +325,7 @@ export function stringParser(options: ParserOptions) {
                     return {
                         type: COMPLETE,
                         value: base.concat(utf8(0, end_index)),
-                        nextIndex: end_index + 1
+                        nextIndex: i + 1
                     }
                 }
             }
