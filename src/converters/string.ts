@@ -374,13 +374,13 @@ export function stringParser(options: ParserOptions) {
             const b = reader.bytes
             const end_index = findEndOfString(b, i)
 
-            const utf8 = options.decoder.decode
+            const utf8 = options.decoder
 
             if (end_index === -1) {
                 if (reader.writable) {
                     stack.push({
                         isContinued: true,
-                        base: base.length === 0 ? utf8(b) : base.concat(utf8(b))
+                        base: base.length === 0 ? utf8.decode(b) : base.concat(utf8.decode(b))
                     })
                     return {
                         type: NEEDS_MORE_DATA,
@@ -396,8 +396,8 @@ export function stringParser(options: ParserOptions) {
             return {
                 type: COMPLETE,
                 value: base.length === 0 ?
-                    utf8(new Uint8Array(b.buffer, 0, end_index)) :
-                    base.concat(utf8(new Uint8Array(b.buffer, 0, end_index))),
+                    utf8.decode(new Uint8Array(b.buffer, 0, end_index)) :
+                    base.concat(utf8.decode(new Uint8Array(b.buffer, 0, end_index))),
                 nextIndex: end_index
             }
         }
