@@ -19,11 +19,25 @@ export const defaultParseOptions: ParserOptions = {
     newUtf16: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM) ?
         (bytes: Uint8Array) => {
             const buffer = Buffer.from(bytes.buffer)
-            return (start, end) => buffer.toString('utf16le', start, end)
+            return (start, end) => {
+                const length = end - start
+                if (length <= 64) {
+                    const factory = (factories[length] ??= genUnrolledFromCharCode(length))
+                    return factory(buffer, start)
+                }
+                return buffer.toString('utf16le', start, end)
+            }
         } :
         (bytes: Uint8Array) => {
             const unsafeDecoder16 = new TextDecoder('utf-16le', { fatal: false })
-            return (start, end) => unsafeDecoder16.decode(new Uint8Array(bytes.buffer, start, end - start))
+            return (start, end) => {
+                const length = end - start
+                if (length <= 64) {
+                    const factory = (factories[length] ??= genUnrolledFromCharCode(length))
+                    return factory(bytes, start)
+                }
+                return unsafeDecoder16.decode(new Uint8Array(bytes.buffer, start, end - start))
+            }
         },
 
     newUtf8: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM) ?
