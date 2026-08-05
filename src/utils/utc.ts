@@ -1,4 +1,4 @@
-export function createUTC(options: { minYear: number, maxYear: number }) {
+export function precomputeUTC(options: { minYear: number, maxYear: number }) {
     const months = new Uint16Array([0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334])
     const monthsLeap = new Uint16Array([0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335])
 
@@ -28,4 +28,4 @@ export function createUTC(options: { minYear: number, maxYear: number }) {
     return { utc }
 }
 
-export const { utc } = createUTC({ minYear: 0, maxYear: 4096 })
+export const { utc } = precomputeUTC({ minYear: 0, maxYear: 4096 })
