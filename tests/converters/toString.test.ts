@@ -1,39 +1,189 @@
-import { toString } from "../../src/converters/string"
-import { JsonReader } from "../../src/metadata/types"
+import { createStringParser, defaultParseOptions } from "../../src/converters/string"
+import { JsonReader, ParseContext, PrimitiveMeta } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
+import { Stack } from "../../src/utils/stack"
+import { isComplete, isNeedsMoreData, ReadResult, ReadResultType } from "../../src/utils/types"
 
 describe('tryParseString', () => {
     const encoder = new TextEncoder()
 
-    describe('different strings', () => {
-        utf8TestStrings()
+    const expectToParse = (toString: PrimitiveMeta<string>['toValue'], str: string) => {
+        const bytes = encoder.encode(str)
+
+        const reader: JsonReader = {
+            bytes: bytes,
+            writable: false
+        }
+
+        const ctx: ParseContext = {
+            reader: reader,
+            options: defaultOptions,
+            stack: new Stack(),
+        }
+
+        const metaMock: any = {}
+
+        const value = toString(metaMock, ctx, 0, 0)
+
+        expect(value).toStrictEqual({
+            type: ReadResultType.COMPLETE,
+            value: str.substring(1, str.length - 1),
+            nextIndex: bytes.length
+        })
+    }
+
+    const expectToParsePartially = (toString: PrimitiveMeta<string>['toValue'], str: string) => {
+        for (let i = 0; i < str.length; i++) {
+            const chunks = [encoder.encode(str.substring(0, i)), encoder.encode(str.substring(i))].reverse()
+            const fullLength = chunks.reduce((acc, arr) => acc + arr.length, 0)
+
+            const metaMock: any = {}
+
+            let ch
+            let nextIndex = 0
+            let value: ReadResult<string> = {} as any
+
+            const stack = new Stack<any>()
+
+            while ((ch = chunks.pop()) !== undefined) {
+                const reader: JsonReader = {
+                    bytes: ch,
+                    writable: chunks.length > 0
+                }
+
+                const ctx: ParseContext = {
+                    reader: reader,
+                    options: defaultOptions,
+                    stack: stack,
+                }
+
+                value = toString(metaMock, ctx, nextIndex, 0)
+                if (isComplete(value)) {
+                    break
+                }
+
+                if (isNeedsMoreData(value)) {
+                    nextIndex = value.nextIndex
+                    continue
+                }
+            }
+
+            expect(value).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: str.substring(1, str.length - 1),
+                nextIndex: fullLength
+            })
+        }
+    }
+
+    describe('utf16 string parser', () => {
+        jsonTestStrings()
             .forEach(str => {
-                test(str, () => {
-                    const bytes = encoder.encode(str)
-
-                    const reader: JsonReader = {
-                        bytes: bytes,
-                        writable: false,
-                        options: defaultOptions
-                    }
-
-                    const metaMock: any = {}
-
-                    const { value, nextIndex } = toString(reader, metaMock, 0, 0, {})
-
-                    expect(value).not.toBeUndefined()
-                    expect(value).toBe(str.substring(1, str.length - 1))
-                    expect(nextIndex).toBe(bytes.length)
+                test(str.substring(0, 32), () => {
+                    const { toString } = createStringParser({
+                        ...defaultParseOptions,
+                        useUtf16: true
+                    })
+                    expectToParse(toString, str)
                 })
             })
     })
 
-    describe('partial strings', () => { })
+    describe('utf8 string parser', () => {
+        jsonTestStrings()
+            .forEach(str => {
+                test(str.substring(0, 32), () => {
+                    const { toString } = createStringParser({
+                        ...defaultParseOptions,
+                        useUtf16: false
+                    })
+                    expectToParse(toString, str)
+                })
+            })
+    })
 
-    describe('long strings', () => { })
+    describe('restrict memory string parser', () => {
+        jsonTestStrings()
+            .forEach(str => {
+                test(str.substring(0, 32), () => {
+                    const { toString } = createStringParser({
+                        ...defaultParseOptions,
+                        maxWasmMemoryPages: 1
+                    })
+                    expectToParse(toString, str)
+                })
+            })
+    })
+
+    describe('wasmless string parser', () => {
+        jsonTestStrings()
+            .forEach(str => {
+                test(str.substring(0, 32), () => {
+                    const { toString } = createStringParser({
+                        ...defaultParseOptions,
+                        wasmInstance: (b, m) => undefined
+                    })
+                    expectToParse(toString, str)
+                })
+            })
+    })
+
+    describe('partial strings parser', () => {
+        describe('utf16 string parser', () => {
+            jsonTestStrings()
+                .forEach(str => {
+                    test(str.substring(0, 32), () => {
+                        const { toString } = createStringParser({
+                            ...defaultParseOptions,
+                            useUtf16: true
+                        })
+                        expectToParsePartially(toString, str)
+                    })
+                })
+        })
+
+        describe('utf8 string parser', () => {
+            jsonTestStrings()
+                .forEach(str => {
+                    test(str.substring(0, 32), () => {
+                        const { toString } = createStringParser({
+                            ...defaultParseOptions,
+                            useUtf16: false
+                        })
+                        expectToParsePartially(toString, str)
+                    })
+                })
+        })
+
+        describe('restrict memory string parser', () => {
+            jsonTestStrings()
+                .forEach(str => {
+                    test(str.substring(0, 32), () => {
+                        const { toString } = createStringParser({
+                            ...defaultParseOptions,
+                            maxWasmMemoryPages: 1
+                        })
+                        expectToParsePartially(toString, str)
+                    })
+                })
+        })
+
+        describe('wasmless string parser', () => {
+            jsonTestStrings()
+                .forEach(str => {
+                    test(str.substring(0, 32), () => {
+                        const { toString } = createStringParser({
+                            ...defaultParseOptions,
+                            wasmInstance: (b, m) => undefined
+                        })
+                        expectToParsePartially(toString, str)
+                    })
+                })
+        })
+    })
 })
 
-function utf8TestStrings() {
+function jsonTestStrings() {
     return [
         // Basic ASCII (1-byte sequences)
         "\"Hello World\"",
@@ -181,6 +331,9 @@ function utf8TestStrings() {
         "\"ᚠᚢᚦᚨᚩ\"",
 
         // Cherokee
-        "\"ᎠᎡᎢᎣᎤ\""
+        "\"ᎠᎡᎢᎣᎤ\"",
+
+        // Very long string
+        `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(1000)}"`
     ]
 }
