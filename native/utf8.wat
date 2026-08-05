@@ -2,7 +2,7 @@
   (import "env" "memory" (memory 1 128))
   (export "memory" (memory 0))
 
-  (global $dq_index (mut i32) (i32.const 0))
+  (global $dq_index (mut i32) (i32.const -1))
 
   (func (export "dq_index") (result i32)
     (global.get $dq_index))
@@ -25,7 +25,7 @@
             (local.tee $temp (call $parse_ascii (local.get $i) (local.get $len)))
             (local.set $i)
 
-            (if (global.get $dq_index)
+            (if (i32.ge_u (global.get $dq_index) (i32.const 0))
               (then (return (global.get $dq_index))))
 
             (if (i32.eq (local.get $temp) (local.get $len))
@@ -183,7 +183,7 @@
     (local $temp_v128 v128)        
     (local $quote_vec v128)
 
-    (global.set $dq_index (i32.const 0))
+    (global.set $dq_index (i32.const -1))
     
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
 
