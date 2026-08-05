@@ -1,52 +1,23 @@
 import { toArray } from "../../src/converters/array"
 import { array, i16Array, i32Array, i64Array, i8Array, number, string, u16Array, u32Array, u64Array, u8Array } from "../../src/metadata/builder"
-import { ArrayMeta, ParseState, ParseContext, PrimitiveMeta } from "../../src/metadata/types"
+import { ArrayMeta, ParseState, ParseContext, PrimitiveMeta, BaseMeta } from "../../src/metadata/types"
 import { defaultOptions, defaultOptions as dfo } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
-import { isNeedsMoreData, ReadResult, ReadResultType } from "../../src/utils/types"
+import { ReadResult, ReadResultType } from "../../src/utils/types"
+import { deserializePartially } from "./utils"
 
 describe('toArray', () => {
     const encoder = new TextEncoder()
 
     const toBytes = (str: string): Uint8Array => encoder.encode(str)
 
-    const deserialize = (meta: ArrayMeta<any, any, any>, data: Uint8Array, index = 0, depth = 0) => {
+    const deserialize = (meta: ArrayMeta<any, any>, data: Uint8Array, index = 0, depth = 0) => {
         return toArray(meta, {
             reader: { bytes: data, writable: false },
             options: defaultOptions,
             stack: new Stack<ParseState>()
         }, index, depth)
-    }
-
-    const deserializePartially = (chunks: Uint8Array[]) => {
-        let result
-        let index = 0
-
-        let currentChunk
-        let prevChunk: number[] = []
-
-        const stack = new Stack<ParseState>()
-
-        while ((currentChunk = chunks.pop()) !== undefined) {
-            const context: ParseContext = {
-                reader: {
-                    bytes: new Uint8Array([...prevChunk, ...currentChunk]),
-                    writable: chunks.length !== 0
-                },
-                options: defaultOptions,
-                stack: stack
-            }
-            result = toArray(arrayMeta, context, index, 0)
-
-            if (isNeedsMoreData(result)) {
-                index = result.nextIndex - currentChunk.length
-                prevChunk = [...currentChunk.slice(result.nextIndex)]
-                continue
-            }
-
-            return result
-        }
     }
 
     const arrayMeta = array(number())
@@ -94,7 +65,7 @@ describe('toArray', () => {
                 ...m,
                 toValue: (m: PrimitiveMeta<number>, c: ParseContext, i: number, d: number): ReadResult<number> => error
             })))
-             const result = deserialize(numericArray, bytes)
+            const result = deserialize(numericArray, bytes)
             expect(result).toEqual(error)
         })
 
@@ -106,45 +77,20 @@ describe('toArray', () => {
     })
 
     describe('partial array', () => {
-        test('start splitted', () => {
-            const chunks = [toBytes("["), toBytes("1,2,3]")].reverse()
-            const result = deserializePartially(chunks)
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 6 })
-        })
-        test('start splitted with whitespace', () => {
-            const chunks = [toBytes("[ "), toBytes("1,2,3]")].reverse()
-            const result = deserializePartially(chunks)
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 6 })
-        })
-        test('value splitted', () => {
-            const chunks = [toBytes("[1"), toBytes(",2,3]")].reverse()
-            const result = deserializePartially(chunks)
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 6 })
-        })
-        test('value splitted with whitespace', () => {
-            const chunks = [toBytes("[1 "), toBytes(",2,3]")].reverse()
-            const result = deserializePartially(chunks)
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 5 })
-        })
-        test('comma splitted', () => {
-            const chunks = [toBytes("[1,"), toBytes("2,3]")].reverse()
-            const result = deserializePartially(chunks)
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 4 })
-        })
-        test('comma splitted with whitespace', () => {
-            const chunks = [toBytes("[1, "), toBytes("2,3]")].reverse()
-            const result = deserializePartially(chunks)
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 4 })
-        })
-        test('end splited', () => {
-            const chunks = [toBytes("[1, 2, 3"), toBytes("]")].reverse()
-            const result = deserializePartially(chunks)
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 2 })
-        })
-        test('end splited with whitespace', () => {
-            const chunks = [toBytes("[1, 2, 3"), toBytes(" ]")].reverse()
-            const result = deserializePartially(chunks)
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: [1, 2, 3], nextIndex: 3 })
+        test('should parse partial all over array', () => {
+            const input = [1, 12, 123, 1234, 12345]
+            const str = JSON.stringify(input, undefined, 4)
+
+            for (let i = 0; i < str.length; i++) {
+                const chunks = [
+                    toBytes(str.substring(0, i)),
+                    toBytes(str.substring(i))
+                ].reverse()
+
+                const result = deserializePartially(arrayMeta, chunks)
+
+                expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: input, nextIndex: chunks[0].length })
+            }
         })
     })
 
