@@ -29,9 +29,9 @@ export const defaultParseOptions: ParserOptions = {
     newUtf8: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM) ?
         (bytes: Uint8Array) => {
             const buffer = Buffer.from(bytes.buffer)
-            return (start, end) => {
+            return (start, end, ascii_only = false) => {
                 const length = end - start
-                if (length <= 64) {
+                if (ascii_only && length <= 64) {
                     const factory = (factories[length] ??= genUnrolledFromCharCode(length))
                     return factory(buffer, start)
                 }
@@ -40,9 +40,9 @@ export const defaultParseOptions: ParserOptions = {
         } :
         (bytes: Uint8Array) => {
             const unsafeDecoder8 = new TextDecoder('utf-8', { fatal: false })
-            return (start, end) => {
+            return (start, end, ascii_only = false) => {
                 const length = end - start
-                if (length <= 64) {
+                if (ascii_only && length <= 64) {
                     const factory = (factories[length] ??= genUnrolledFromCharCode(length))
                     return factory(bytes, start)
                 }
@@ -57,6 +57,7 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 type UTF8Module = {
     readonly memory: WebAssembly.Memory
+    readonly ascii_only: () => number
     readonly dq_index: () => number
     readonly utf8_to_utf8: (start: number, length: number) => number
 }
@@ -74,8 +75,8 @@ type ParserOptions = {
     readonly maxWasmMemoryPages: number
     readonly initialWasmMemoryPages: number
     readonly useUtf16: boolean,
-    newUtf16: (bytes: Uint8Array) => (start: number, end: number) => string,
-    newUtf8: (bytes: Uint8Array) => (start: number, end: number) => string
+    newUtf16: (bytes: Uint8Array) => (start: number, end: number, ascii_only?: boolean) => string,
+    newUtf8: (bytes: Uint8Array) => (start: number, end: number, ascii_only?: boolean) => string
 }
 
 export function createStringParser(options: ParserOptions) {
@@ -232,6 +233,7 @@ export function createStringParser(options: ParserOptions) {
         ]), memory)
 
         if (utf8Module) {
+            const get_ascii_only = utf8Module.ascii_only
             const get_dq_index = utf8Module.dq_index
             const utf8_to_utf8 = utf8Module.utf8_to_utf8
 
@@ -253,11 +255,15 @@ export function createStringParser(options: ParserOptions) {
                     }
 
                     const dq_index = get_dq_index()
+                    const ascii_only = get_ascii_only() === 1
+
                     if (end_index !== dq_index) {
                         if (end_index >= length && reader.writable) {
                             stack.push({
                                 isContinued: true,
-                                base: base.length === 0 ? utf8(0, end_index) : base.concat(utf8(0, end_index))
+                                base: base.length === 0 ?
+                                    utf8(0, end_index, ascii_only) :
+                                    base.concat(utf8(0, end_index, ascii_only))
                             })
                             return {
                                 type: NEEDS_MORE_DATA,
@@ -272,7 +278,9 @@ export function createStringParser(options: ParserOptions) {
 
                     return {
                         type: COMPLETE,
-                        value: base.length === 0 ? utf8(0, dq_index) : base.concat(utf8(0, dq_index)),
+                        value: base.length === 0 ?
+                            utf8(0, dq_index, ascii_only) :
+                            base.concat(utf8(0, dq_index, ascii_only)),
                         nextIndex: end_index + 1
                     }
                 }
