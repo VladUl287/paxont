@@ -25,7 +25,7 @@
             (local.tee $temp (call $parse_ascii (local.get $i) (local.get $len)))
             (local.set $i)
 
-            (if (i32.ge_u (global.get $dq_index) (i32.const 0))
+            (if (i32.ge_s (global.get $dq_index) (i32.const 0))
               (then (return (global.get $dq_index))))
 
             (if (i32.eq (local.get $temp) (local.get $len))

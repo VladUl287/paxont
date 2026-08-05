@@ -33,8 +33,10 @@
       (local.tee $temp (call $parse_ascii_prefix (local.get $i) (local.get $len) (i32.const -1)))
       (local.get $i))
       (then
-        (if (i32.ge_u (global.get $dq_index) (i32.const 0))
-          (then (return (global.get $dq_index))))
+        (if (i32.ge_s (global.get $dq_index) (i32.const 0))
+          (then 
+            (global.set $ascii_only (i32.const 1))
+            (return (global.get $dq_index))))
 
         (if (i32.eq (local.get $temp) (local.get $len))
           (then
