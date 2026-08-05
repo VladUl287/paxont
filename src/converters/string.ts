@@ -1,5 +1,5 @@
 import { genUnrolledFromCharCode } from "../code_gen/string"
-import { ParseContext, JsonReader, PrimitiveMeta } from "../metadata/types"
+import { ParseContext, PrimitiveMeta } from "../metadata/types"
 import { CURRENT_PLATFORM, isBun, isNode } from "../utils/platform"
 import { ReadResult, ReadResultType } from "../utils/types"
 import { DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
@@ -331,14 +331,12 @@ export function stringParser(options: ParserOptions) {
             }
         }
 
-
-        function decode(reader: JsonReader, i: number): ReadResult<string> {
-            const b = reader.bytes
+        function findEndOfString(b: Uint8Array, i: number): number {
             const len = b.length
 
             while (i < len && (i & 3)) {
                 if (b[i] === DQ) {
-
+                    return i
                 }
                 i++
             }
@@ -346,50 +344,76 @@ export function stringParser(options: ParserOptions) {
             const u32 = new Uint32Array(b.buffer, i, Math.floor((len - i) / 4))
             const len32 = u32.length
 
+            const MASK = 0x22222222
+
             let j = 0
-            const quote_mask = 0x22222222
             while (j < len32 - 4) {
-                const x1 = u32[j] ^ quote_mask
-                const x2 = u32[j + 1] ^ quote_mask
-                const x3 = u32[j + 2] ^ quote_mask
-                const x4 = u32[j + 3] ^ quote_mask
+                const x1 = u32[j] ^ MASK
+                const x2 = u32[j + 1] ^ MASK
+                const x3 = u32[j + 2] ^ MASK
+                const x4 = u32[j + 3] ^ MASK
 
-                const c = (x1 & x2 & x3 & x4)
-
-                if ((((c - 0x01010101) ^ c) & 0x80808080) !== 0)
+                const chunk = (x1 & x2 & x3 & x4)
+                if ((((chunk - 0x01010101) ^ chunk) & 0x80808080) !== 0)
                     break
 
                 j += 4
             }
 
             while (j < len32) {
-                const x1 = u32[j] ^ quote_mask
+                const chunk = u32[j] ^ MASK
 
-                if ((((x1 - 0x01010101) ^ x1) & 0x80808080) !== 0) {
-                    i = i + j * 4
-                }
+                if ((((chunk - 0x01010101) ^ chunk) & 0x80808080) !== 0)
+                    break
 
                 j++
             }
 
-            i = i + j * 4
+            i += j * 4
+
             while (i < len) {
                 if (b[i] === DQ) {
-
+                    return i
                 }
                 i++
             }
 
-            throw new Error('')
+            return -1
         }
 
-        return (base: string, ctx: ParseContext, i: number): ReadResult<string> => {
+        function decode(base: string, { reader, stack }: ParseContext, i: number): ReadResult<string> {
+            const b = reader.bytes
+            const end_index = findEndOfString(b, i)
+
+            if (end_index === -1) {
+                if (reader.writable) {
+                    stack.push({
+                        isContinued: true,
+                        base: base.length === 0 ?
+                            utf8(0, b.length) :
+                            base.concat(utf8(0, b.length))
+                    })
+                    return {
+                        type: NEEDS_MORE_DATA,
+                        nextIndex: end_index
+                    }
+                }
+                return {
+                    type: ERROR,
+                    error: new JSONParseError('')
+                }
+            }
+
             return {
                 type: COMPLETE,
-                value: utf8(i, i + 1),
-                nextIndex: i + 1
+                value: base.length === 0 ?
+                    utf8(0, b.length) :
+                    base.concat(utf8(0, b.length)),
+                nextIndex: end_index
             }
         }
+
+        return decode
     }
 
     const ensureMemory = (memory: WebAssembly.Memory, reqLength: number, onGrow: (memory: WebAssembly.Memory) => void): boolean => {
