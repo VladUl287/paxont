@@ -2,7 +2,11 @@
   (import "env" "memory" (memory 1 128))
   (export "memory" (memory 0))
 
+  (global $ascii_only (mut i32) (i32.const 0))
   (global $dq_index (mut i32) (i32.const -1))
+
+  (func (export "ascii_only") (result i32)
+    (global.get $ascii_only))
 
   (func (export "dq_index") (result i32)
     (global.get $dq_index))
@@ -15,7 +19,9 @@
     (local $byte_mask i32)
     (local $trailing i32)
     (local $byte_count i32)
-    
+
+    (global.set $ascii_only (i32.const 1))
+
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
 
     (block $non_ascii_block
@@ -31,6 +37,8 @@
             (if (i32.eq (local.get $temp) (local.get $len))
               (then (return (local.get $temp))))
           ))
+
+        (global.set $ascii_only (i32.const 0))
 
         ;; two byte value
         (if (i32.lt_u (local.tee $temp (i32.load8_u (local.get $i))) (i32.const 224))
