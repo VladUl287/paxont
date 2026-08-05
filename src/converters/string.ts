@@ -131,13 +131,13 @@ export function createStringParser(options: ParserOptions) {
                         }
 
                         const dq_index = get_dq_index()
-                        const ascii_only = get_ascii_only()
+                        const ascii_only = get_ascii_only() === 1
 
                         if (end_index !== dq_index) {
                             if (end_index >= length && reader.writable) {
                                 stack.push({
                                     isContinued: true,
-                                    base: ascii_only === 1 ? utf8(0, end_index) : utf16(length + 1, get_utf16_length())
+                                    base: ascii_only ? utf8(0, end_index, ascii_only) : utf16(length + 1, get_utf16_length())
                                 })
                                 return {
                                     type: NEEDS_MORE_DATA,
@@ -150,10 +150,10 @@ export function createStringParser(options: ParserOptions) {
                             }
                         }
 
-                        if (ascii_only === 1) {
+                        if (ascii_only) {
                             return {
                                 type: COMPLETE,
-                                value: base.length === 0 ? utf8(0, end_index) : base.concat(utf8(0, end_index)),
+                                value: base.length === 0 ? utf8(0, end_index, ascii_only) : base.concat(utf8(0, end_index, ascii_only)),
                                 nextIndex: end_index + 1
                             }
                         }
