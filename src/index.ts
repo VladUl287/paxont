@@ -17,7 +17,7 @@ type JSONTOptions = {
         readonly defaultOptions: JsonOptions
         readonly mergeOptions: typeof mergeOptions
     }
-    readonly memo: MemoizeFactory
+    readonly memoize: MemoizeFactory
 }
 
 const defaultJsontOptions: JSONTOptions = Object.freeze({
@@ -27,14 +27,14 @@ const defaultJsontOptions: JSONTOptions = Object.freeze({
         defaultOptions: defaultOptions,
         mergeOptions: mergeOptions
     },
-    memo: memoize,
+    memoize: memoize,
 })
 
 export function jsont(value: JSONTOptions = defaultJsontOptions) {
-    const { arrayPool, memo } = value
+    const { arrayPool, memoize } = value
 
-    const optionsMemo = memo<Partial<JsonOptions>, JsonOptions>()
-    const metadataMemo = memo<any, BaseMeta<any, any>>()
+    const optionsMemo = memoize<Partial<JsonOptions>, JsonOptions>()
+    const metadataMemo = memoize<any, BaseMeta<any, any>>()
 
     const meta = metadata()
 
