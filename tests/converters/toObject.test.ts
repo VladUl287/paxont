@@ -1,11 +1,11 @@
-import { toNullable } from "../../src/converters/nullable"
 import { toObject } from "../../src/converters/object"
-import { bool, field, nullable, number, object } from "../../src/metadata/builder"
-import { ParseState, ObjectMeta, ParseContext } from "../../src/metadata/types"
+import { bool, field, number, object } from "../../src/metadata/builder"
+import { ParseState, ObjectMeta } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
-import { isNeedsMoreData, ReadResultType } from "../../src/utils/types"
+import { ReadResultType } from "../../src/utils/types"
+import { deserializePartially } from "./utils"
 
 describe('toNullable', () => {
     const toBytes = (str: string) => new TextEncoder().encode(str)
@@ -25,38 +25,6 @@ describe('toNullable', () => {
             stack: new Stack<ParseState>(),
         }, 0, 0)
         return result
-    }
-
-    const deserializePartially = (chunks: Uint8Array[], meta: ObjectMeta<any> = _meta) => {
-        let result
-
-        let currentChunk
-        let prevChunk: number[] = []
-
-        const stack = new Stack<ParseState>()
-
-        while ((currentChunk = chunks.pop()) !== undefined) {
-            const ch = [...prevChunk, ...currentChunk]
-            const bytes = new Uint8Array(ch)
-
-            const context: ParseContext = {
-                reader: {
-                    bytes: bytes,
-                    writable: chunks.length !== 0
-                },
-                options: defaultOptions,
-                stack: stack
-            }
-            result = toObject(meta, context, 0, 0)
-
-            if (isNeedsMoreData(result)) {
-                prevChunk = [...currentChunk.slice(result.nextIndex)]
-                continue
-            }
-
-            chunks[0] = bytes
-            return result
-        }
     }
 
     describe('basic parsing', () => {
@@ -103,7 +71,7 @@ describe('toNullable', () => {
                     toBytes(str.substring(i))
                 ].reverse()
 
-                const result = deserializePartially(chunks)
+                const result = deserializePartially(_meta, chunks)
                 const lastChunk = chunks[0]
 
                 expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: input, nextIndex: lastChunk.length })
