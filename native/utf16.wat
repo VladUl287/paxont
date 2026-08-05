@@ -64,11 +64,10 @@
 
             (local.set $i (local.get $temp))
 
-            (if (global.get $dq_index)
+            (if (i32.ge_s (global.get $dq_index) (i32.const 0))
               (then
                 (global.set $utf16_length (local.get $utf16_ptr))
-                (return (global.get $dq_index))
-              ))
+                (return (global.get $dq_index))))
           ))
 
         ;; two byte value
@@ -117,15 +116,8 @@
   
                 (local.set $i (i32.add (local.get $i) (local.get $byte_count)))
                 (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (local.get $byte_count)))
-  
-                (if (i32.lt_u (i32.load8_u (local.get $i)) (i32.const 128)) 
-                  (then
-                    (i32.store16 (local.get $utf16_ptr) (i32.load8_u (local.get $i)))
-                    (local.set $i (i32.add (local.get $i) (i32.const 1)))
-                    (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
-                  ))
-  
-                (br $two_byte_loop)
+    
+                (br $non_ascii_loop)
               end
   
               (br_if $non_ascii_block
@@ -145,7 +137,7 @@
                       (i32.const 32960)) 
                     (i32.const 49376))
                   (i32.const 0)))
-              br_if $two_byte_block
+              (br_if $two_byte_block)
   
               (call $in_range_inclusive
                 (i32.and (local.get $mask) (i32.const 0xC0FF0000))
@@ -165,10 +157,8 @@
                   (i32.gt_u
                     (i32.add (local.get $i) (i32.const 4))
                     (local.get $len)
-                  )
-                )
-  
-                br $two_byte_loop
+                  ))
+                (br $two_byte_loop)
               end
   
               (i32.store16 
@@ -177,7 +167,7 @@
   
               (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
               (local.set $i (i32.add (local.get $i) (i32.const 2)))
-              br $non_ascii_loop
+              (br $non_ascii_loop)
             ))
         end
 
@@ -213,7 +203,7 @@
   
             (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
             (local.set $i (i32.add (local.get $i) (i32.const 3)))
-            br $non_ascii_loop
+            (br $non_ascii_loop)
           end
         end
 
@@ -241,7 +231,7 @@
   
             (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 4)))
             (local.set $i (i32.add (local.get $i) (i32.const 4)))
-            br $non_ascii_loop
+            (br $non_ascii_loop)
           end
         end
 
