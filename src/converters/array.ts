@@ -15,24 +15,25 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
     i: number,
     depth: number
 ): ReadResult<A> {
-    const reader = context.reader
-    const options = context.options
+    const { reader, stack, options } = context
 
-    if (depth > options.maxDepth)
+    if (depth > options.maxDepth) {
         return {
             type: ReadResultType.ERROR,
             error: new JSONParseError(`Maximum depth exceeded`, { depth, index: i, metadata })
         }
+    }
 
     const b = reader.bytes
     const len = b.length
 
     if (i >= len) {
-        if (reader.writable)
+        if (reader.writable) {
             return {
                 type: NEEDS_MORE_DATA,
                 nextIndex: i
             }
+        }
 
         return {
             type: ERROR,
@@ -40,41 +41,34 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
         }
     }
 
-    let isContinued: boolean
-    let buffer: A
-    let bufferIndex: number
-
     const { rent, release } = metadata.pool
 
-    const stack = context.stack
     const state = stack.pop()
-    if (state !== undefined) {
-        isContinued = state.isContinued
-        buffer = state.buffer
-        bufferIndex = state.bufferIndex
-    }
-    else {
-        isContinued = false
-        buffer = rent(b.length - i)
-        bufferIndex = 0
-    }
+
+    let isContinued: boolean = state?.isContinued ?? false
+    let buffer: A = state?.buffer ?? rent(b.length - i)
+    let bufferIndex: number = state?.bufferIndex ?? 0
 
     if (!isContinued) {
-        if (b[i] !== SQUARE_OPEN) return {
-            type: ERROR,
-            error: new JSONParseError(`Expected '[' but found '${String.fromCharCode(b[i])}'`, { depth, index: i, metadata })
+        if (b[i] !== SQUARE_OPEN) {
+            return {
+                type: ERROR,
+                error: new JSONParseError(`Expected '[' but found '${String.fromCharCode(b[i])}'`, { depth, index: i, metadata })
+            }
         }
 
-        if (b[++i] === SQUARE_CLOSE) return {
-            type: COMPLETE,
-            value: buffer.slice(0, 0),
-            nextIndex: ++i
+        if (b[++i] === SQUARE_CLOSE) {
+            return {
+                type: COMPLETE,
+                value: buffer.slice(0, 0),
+                nextIndex: ++i
+            }
         }
     }
 
     try {
-        const itemMetadata = metadata.value
-        const toValue = itemMetadata.toValue
+        const item = metadata.value
+        const toValue = item.toValue
 
         let j = bufferIndex
         while (true) {
@@ -89,7 +83,7 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
                 }
             }
 
-            const result = toValue(itemMetadata, context, i, depth)
+            const result = toValue(item, context, i, depth)
 
             if (isError(result)) {
                 release(buffer)
