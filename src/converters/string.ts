@@ -118,30 +118,32 @@ export function stringParser(options: ParserOptions) {
                 const get_utf16_length = utf16Module.utf16_length
                 const utf8_to_utf16 = utf16Module.utf8_to_utf16
 
-                return (base: string, ctx: ParseContext, i: number): ReadResult<string> => {
-                    const reader = ctx.reader
+                return (base: string, { reader, stack }: ParseContext, i: number): ReadResult<string> => {
                     const b = reader.bytes
-                    const stack = ctx.stack
 
-                    let start = i
                     let end = b.length
-                    let length = end - start
-
+                    let length = end - i
                     const max_length = length * 3
 
                     if (ensureMemory(memory, max_length, setView)) {
-                        memoryView.set(new Uint8Array(b.buffer, start, length))
+                        memoryView.set(new Uint8Array(b.buffer, i, length))
 
                         const end_index = utf8_to_utf16(0, length, length + 1)
+                        if (end_index === -1) {
+                            return {
+                                type: ERROR,
+                                error: new JSONParseError('Invalid data')
+                            }
+                        }
+
                         const dq_index = get_dq_index()
                         const ascii_only = get_ascii_only()
 
-                        if (dq_index === -1) {
-                            if (end_index >= b.length && reader.writable) {
-                                const utf16_end = get_utf16_length()
+                        if (end_index !== dq_index) {
+                            if (end_index >= length && reader.writable) {
                                 stack.push({
                                     isContinued: true,
-                                    base: ascii_only === 1 ? utf8(0, end_index) : utf16(length + 1, utf16_end)
+                                    base: ascii_only === 1 ? utf8(0, end_index) : utf16(length + 1, get_utf16_length())
                                 })
                                 return {
                                     type: NEEDS_MORE_DATA,
@@ -173,33 +175,32 @@ export function stringParser(options: ParserOptions) {
                     ensureMemory(memory, MAX_MEMORY, setView)
 
                     while (true) {
-                        const length = Math.min(Math.floor(MAX_MEMORY / 3), b.length - start)
+                        const length = Math.min(Math.floor(MAX_MEMORY / 3), b.length - i)
+                        memoryView.set(new Uint8Array(b.buffer, i, length))
 
-                        memoryView.set(new Uint8Array(b.buffer, start, length))
-
-                        const index = utf8_to_utf16(0, length, length + 1)
-                        start += index
+                        const end_index = utf8_to_utf16(0, length, length + 1)
+                        if (end_index === -1) {
+                            return {
+                                type: ERROR,
+                                error: new JSONParseError('Invalid data')
+                            }
+                        }
+                        i += end_index
 
                         const dq_index = get_dq_index()
                         const ascii_only = get_ascii_only()
 
-                        if (index >= length && dq_index === 0) {
-                            if (start < b.length) {
-                                base = ascii_only === 1 ?
-                                    base.concat(utf8(0, index)) :
-                                    base.concat(utf16(length + 1, get_utf16_length()))
-                                continue
-                            }
-                            if (reader.writable) {
+                        if (end_index !== dq_index) {
+                            if (end_index >= length && reader.writable) {
                                 stack.push({
                                     isContinued: true,
                                     base: ascii_only === 1 ?
-                                        base.concat(utf8(start, index)) :
+                                        base.concat(utf8(0, end_index)) :
                                         base.concat(utf16(length + 1, get_utf16_length()))
                                 })
                                 return {
                                     type: NEEDS_MORE_DATA,
-                                    nextIndex: index
+                                    nextIndex: end_index
                                 }
                             }
                             return {
@@ -211,16 +212,16 @@ export function stringParser(options: ParserOptions) {
                         if (ascii_only === 1) {
                             return {
                                 type: COMPLETE,
-                                value: base.concat(utf8(0, index)),
-                                nextIndex: index + 1
+                                value: base.length === 0 ? utf8(0, end_index) : base.concat(utf8(0, end_index)),
+                                nextIndex: end_index + 1
                             }
                         }
 
                         const utf16_end = get_utf16_length()
                         return {
                             type: COMPLETE,
-                            value: base.concat(utf16(length + 1, utf16_end)),
-                            nextIndex: index + 1
+                            value: base.length === 0 ? utf16(length + 1, utf16_end) : base.concat(utf16(length + 1, utf16_end)),
+                            nextIndex: end_index + 1
                         }
                     }
                 }
@@ -235,10 +236,8 @@ export function stringParser(options: ParserOptions) {
             const get_dq_index = utf8Module.dq_index
             const utf8_to_utf8 = utf8Module.utf8_to_utf8
 
-            return (base: string, ctx: ParseContext, i: number): ReadResult<string> => {
-                const reader = ctx.reader
+            return (base: string, { reader, stack }: ParseContext, i: number): ReadResult<string> => {
                 const b = reader.bytes
-                const stack = ctx.stack
 
                 let start = i
                 let end = b.length
