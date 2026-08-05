@@ -41,6 +41,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
     const emptyStack: IStack<ParseState> = Object.freeze({
         isEmpty: true,
         pop: () => undefined,
+        peek: () => undefined,
         push: () => { }
     })
 
