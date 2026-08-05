@@ -5,14 +5,8 @@ import { ReadResult, ReadResultType } from "../utils/types"
 import { DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
 import { JSONParseError } from "../utils/error"
 
-const unsafeDecoder8 = new TextDecoder('utf-8', { fatal: false })
-const unsafeDecoder16 = new TextDecoder('utf-16le', { fatal: false })
-
 const factories = new Array<(data: ArrayLike<number>, i: number) => string>(64)
 factories[0] = (_a, _i) => ""
-for (let i = 1; i <= 64; i++) {
-    factories[i] = genUnrolledFromCharCode(i)
-}
 
 export const defaultParseOptions: ParserOptions = {
     initialWasmMemoryPages: 1, //~64KiB
@@ -25,7 +19,10 @@ export const defaultParseOptions: ParserOptions = {
             const buffer = Buffer.from(bytes.buffer)
             return (start, end) => buffer.toString('utf16le', start, end)
         } :
-        (bytes: Uint8Array) => (start, end) => unsafeDecoder16.decode(new Uint8Array(bytes.buffer, start, end - start)),
+        (bytes: Uint8Array) => {
+            const unsafeDecoder16 = new TextDecoder('utf-16le', { fatal: false })
+            return (start, end) => unsafeDecoder16.decode(new Uint8Array(bytes.buffer, start, end - start))
+        },
 
     newUtf8: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM) ?
         (bytes: Uint8Array) => {
@@ -33,17 +30,22 @@ export const defaultParseOptions: ParserOptions = {
             return (start, end) => {
                 const length = end - start
                 if (length <= 64) {
-                    return factories[length](buffer, start)
+                    const factory = (factories[length] ??= genUnrolledFromCharCode(length))
+                    return factory(buffer, start)
                 }
                 return buffer.toString('utf8', start, end)
             }
         } :
-        (bytes: Uint8Array) => (start, end) => {
-            const length = end - start
-            if (length <= 64) {
-                return factories[length](bytes, start)
+        (bytes: Uint8Array) => {
+            const unsafeDecoder8 = new TextDecoder('utf-8', { fatal: false })
+            return (start, end) => {
+                const length = end - start
+                if (length <= 64) {
+                    const factory = (factories[length] ??= genUnrolledFromCharCode(length))
+                    return factory(bytes, start)
+                }
+                return unsafeDecoder8.decode(new Uint8Array(bytes.buffer, start, end - start))
             }
-            return unsafeDecoder8.decode(new Uint8Array(bytes.buffer, start, end - start))
         }
 }
 
@@ -54,7 +56,7 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 type UTF8Module = {
     readonly memory: WebAssembly.Memory
     readonly dq_index: () => number
-    readonly try_find_end_of_string: (start: number) => number
+    readonly utf8_to_utf8: (start: number, length: number) => number
 }
 
 type UTF16Module = {
@@ -62,7 +64,7 @@ type UTF16Module = {
     readonly ascii_only: () => number
     readonly dq_index: () => number
     readonly utf16_length: () => number
-    readonly utf8_to_utf16: (start: number, end: number, target: number) => number
+    readonly utf8_to_utf16: (start: number, length: number, target: number) => number
 }
 
 type ParserOptions = {
@@ -116,15 +118,10 @@ export function stringParser(options: ParserOptions) {
                 const get_utf16_length = utf16Module.utf16_length
                 const utf8_to_utf16 = utf16Module.utf8_to_utf16
 
-                return (ctx: ParseContext, i: number): ReadResult<string> => {
+                return (base: string, ctx: ParseContext, i: number): ReadResult<string> => {
                     const reader = ctx.reader
                     const b = reader.bytes
                     const stack = ctx.stack
-
-                    const state = stack.pop()
-
-                    let isContinued: boolean = state?.isContinued ?? false
-                    let chunk: string = state?.chunk ?? ''
 
                     let start = i
                     let end = b.length
@@ -144,7 +141,7 @@ export function stringParser(options: ParserOptions) {
                                 const utf16_end = get_utf16_length()
                                 stack.push({
                                     isContinued: true,
-                                    chunk: ascii_only === 1 ? utf8(0, end_index) : utf16(length + 1, utf16_end)
+                                    base: ascii_only === 1 ? utf8(0, end_index) : utf16(length + 1, utf16_end)
                                 })
                                 return {
                                     type: NEEDS_MORE_DATA,
@@ -160,7 +157,7 @@ export function stringParser(options: ParserOptions) {
                         if (ascii_only === 1) {
                             return {
                                 type: COMPLETE,
-                                value: !isContinued ? utf8(0, end_index) : chunk.concat(utf8(0, end_index)),
+                                value: base.length === 0 ? utf8(0, end_index) : base.concat(utf8(0, end_index)),
                                 nextIndex: end_index + 1
                             }
                         }
@@ -168,7 +165,7 @@ export function stringParser(options: ParserOptions) {
                         const utf16_end = get_utf16_length()
                         return {
                             type: COMPLETE,
-                            value: !isContinued ? utf16(length + 1, utf16_end) : chunk.concat(utf16(length + 1, utf16_end)),
+                            value: base.length === 0 ? utf16(length + 1, utf16_end) : base.concat(utf16(length + 1, utf16_end)),
                             nextIndex: end_index + 1
                         }
                     }
@@ -188,17 +185,17 @@ export function stringParser(options: ParserOptions) {
 
                         if (index >= length && dq_index === 0) {
                             if (start < b.length) {
-                                chunk = ascii_only === 1 ?
-                                    chunk.concat(utf8(0, index)) :
-                                    chunk.concat(utf16(length + 1, get_utf16_length()))
+                                base = ascii_only === 1 ?
+                                    base.concat(utf8(0, index)) :
+                                    base.concat(utf16(length + 1, get_utf16_length()))
                                 continue
                             }
                             if (reader.writable) {
                                 stack.push({
                                     isContinued: true,
-                                    chunk: ascii_only === 1 ?
-                                        chunk.concat(utf8(start, index)) :
-                                        chunk.concat(utf16(length + 1, get_utf16_length()))
+                                    base: ascii_only === 1 ?
+                                        base.concat(utf8(start, index)) :
+                                        base.concat(utf16(length + 1, get_utf16_length()))
                                 })
                                 return {
                                     type: NEEDS_MORE_DATA,
@@ -214,7 +211,7 @@ export function stringParser(options: ParserOptions) {
                         if (ascii_only === 1) {
                             return {
                                 type: COMPLETE,
-                                value: chunk.concat(utf8(0, index)),
+                                value: base.concat(utf8(0, index)),
                                 nextIndex: index + 1
                             }
                         }
@@ -222,7 +219,7 @@ export function stringParser(options: ParserOptions) {
                         const utf16_end = get_utf16_length()
                         return {
                             type: COMPLETE,
-                            value: chunk.concat(utf16(length + 1, utf16_end)),
+                            value: base.concat(utf16(length + 1, utf16_end)),
                             nextIndex: index + 1
                         }
                     }
@@ -236,17 +233,12 @@ export function stringParser(options: ParserOptions) {
 
         if (utf8Module) {
             const get_dq_index = utf8Module.dq_index
-            const try_find_end_of_string = utf8Module.try_find_end_of_string
+            const utf8_to_utf8 = utf8Module.utf8_to_utf8
 
-            return (ctx: ParseContext, i: number): ReadResult<string> => {
+            return (base: string, ctx: ParseContext, i: number): ReadResult<string> => {
                 const reader = ctx.reader
                 const b = reader.bytes
                 const stack = ctx.stack
-
-                const state = stack.pop()
-
-                let isContinued: boolean = state?.isContinued ?? false
-                let chunk: string = state?.chunk ?? ''
 
                 let start = i
                 let end = b.length
@@ -255,14 +247,20 @@ export function stringParser(options: ParserOptions) {
                 if (ensureMemory(memory, length, setView)) {
                     memoryView.set(new Uint8Array(b.buffer, start, length))
 
-                    const end_index = try_find_end_of_string(i)
-                    const dq_index = get_dq_index()
+                    const end_index = utf8_to_utf8(0, length)
+                    if (end_index === -1) {
+                        return {
+                            type: ERROR,
+                            error: new JSONParseError('Invalid data')
+                        }
+                    }
 
-                    if (dq_index === -1) {
-                        if (i >= b.length && end_index > i && reader.writable) {
+                    const dq_index = get_dq_index()
+                    if (end_index !== dq_index) {
+                        if (end_index >= length && reader.writable) {
                             stack.push({
                                 isContinued: true,
-                                chunk: !isContinued ? utf8(0, end_index) : chunk.concat(utf8(0, end_index))
+                                base: base.length === 0 ? utf8(0, end_index) : base.concat(utf8(0, end_index))
                             })
                             return {
                                 type: NEEDS_MORE_DATA,
@@ -277,7 +275,7 @@ export function stringParser(options: ParserOptions) {
 
                     return {
                         type: COMPLETE,
-                        value: !isContinued ? utf8(0, dq_index) : chunk.concat(utf8(0, dq_index)),
+                        value: base.length === 0 ? utf8(0, dq_index) : base.concat(utf8(0, dq_index)),
                         nextIndex: end_index + 1
                     }
                 }
@@ -287,17 +285,17 @@ export function stringParser(options: ParserOptions) {
                 while (true) {
                     memoryView.set(new Uint8Array(b.buffer, start, Math.min(MAX_MEMORY, b.length - start)))
 
-                    const end_index = try_find_end_of_string(i)
+                    const end_index = utf8_to_utf8(0, length)
                     const dq_index = get_dq_index()
 
-                    chunk = chunk.concat(utf8(0, end_index))
+                    base = base.concat(utf8(0, end_index))
                     start += end_index
 
                     if (dq_index === -1) {
                         if (start >= b.length && reader.writable) {
                             stack.push({
                                 isContinued: true,
-                                chunk
+                                base: base
                             })
                             return {
                                 type: NEEDS_MORE_DATA,
@@ -312,7 +310,7 @@ export function stringParser(options: ParserOptions) {
 
                     return {
                         type: COMPLETE,
-                        value: chunk,
+                        value: base,
                         nextIndex: dq_index + 1
                     }
                 }
@@ -371,7 +369,7 @@ export function stringParser(options: ParserOptions) {
             throw new Error('')
         }
 
-        return (ctx: ParseContext, i: number): ReadResult<string> => {
+        return (base: string, ctx: ParseContext, i: number): ReadResult<string> => {
             return {
                 type: COMPLETE,
                 value: utf8(i, i + 1),
@@ -413,16 +411,14 @@ export function stringParser(options: ParserOptions) {
         let isContinued: boolean = false
         let chunk: string = ''
 
-        const state = stack.peek()
+        const state = stack.pop()
         if (state !== undefined) {
             isContinued = state.isContinued
             chunk = state.chunk
         }
 
         const b = reader.bytes
-
         let i = index
-
         if (!isContinued) {
             if (b[i] !== DQ) {
                 if (i >= b.length && reader.writable) {
@@ -439,7 +435,7 @@ export function stringParser(options: ParserOptions) {
             i++
         }
 
-        return decode(context, i)
+        return decode(chunk, context, i)
     }
 
     return {
