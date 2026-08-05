@@ -348,26 +348,15 @@ export function stringParser(options: ParserOptions) {
             const MASK = 0x22222222
 
             let j = 0
-            while (j < len32 - 4) {
+            while (j < len32 - 2) {
                 const x1 = u32[j] ^ MASK
                 const x2 = u32[j + 1] ^ MASK
-                const x3 = u32[j + 2] ^ MASK
-                const x4 = u32[j + 3] ^ MASK
 
-                const chunk = (x1 & x2 & x3 & x4)
+                const chunk = (x1 | x2)
                 if ((((chunk - 0x01010101) ^ chunk) & 0x80808080) !== 0)
                     break
 
-                j += 4
-            }
-
-            while (j < len32) {
-                const chunk = u32[j] ^ MASK
-
-                if ((((chunk - 0x01010101) ^ chunk) & 0x80808080) !== 0)
-                    break
-
-                j++
+                j += 2
             }
 
             i += j * 4
@@ -381,17 +370,17 @@ export function stringParser(options: ParserOptions) {
             return -1
         }
 
-        function decode(base: string, { reader, stack }: ParseContext, i: number): ReadResult<string> {
+        function decode(base: string, { reader, stack, options }: ParseContext, i: number): ReadResult<string> {
             const b = reader.bytes
             const end_index = findEndOfString(b, i)
+
+            const utf8 = options.decoder.decode
 
             if (end_index === -1) {
                 if (reader.writable) {
                     stack.push({
                         isContinued: true,
-                        base: base.length === 0 ?
-                            utf8(0, b.length) :
-                            base.concat(utf8(0, b.length))
+                        base: base.length === 0 ? utf8(b) : base.concat(utf8(b))
                     })
                     return {
                         type: NEEDS_MORE_DATA,
@@ -407,8 +396,8 @@ export function stringParser(options: ParserOptions) {
             return {
                 type: COMPLETE,
                 value: base.length === 0 ?
-                    utf8(0, b.length) :
-                    base.concat(utf8(0, b.length)),
+                    utf8(new Uint8Array(b.buffer, 0, end_index)) :
+                    base.concat(utf8(new Uint8Array(b.buffer, 0, end_index))),
                 nextIndex: end_index
             }
         }
