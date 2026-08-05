@@ -1,10 +1,10 @@
 import { BaseMeta, ParseContext, ParseState } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { Stack } from "../../src/utils/stack"
-import { isNeedsMoreData } from "../../src/utils/types"
+import { isNeedsMoreData, ReadResult } from "../../src/utils/types"
 
 export const deserializePartially = <M extends BaseMeta<any, any>>(meta: M, chunks: Uint8Array[]) => {
-    let result
+    let result: ReadResult<any>
 
     let currentChunk
     let prevChunk: number[] = []
@@ -33,4 +33,6 @@ export const deserializePartially = <M extends BaseMeta<any, any>>(meta: M, chun
         chunks[0] = bytes
         return result
     }
+
+    throw new Error('chunks not presented')
 }
