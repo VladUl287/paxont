@@ -157,24 +157,24 @@ export const array = <M extends BaseMeta<any, M>>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const u8Array = (...modifiers: Modifier<ArrayMeta<Uint8Array, any>>[]) =>
+export const u8Array = (...modifiers: Modifier<ArrayMeta<Uint8Array, PrimitiveMeta<number>>>[]) =>
     typedArray<Uint8Array>(JSONT.U8_ARRAY, u8(), ...modifiers)
-export const u16Array = (...modifiers: Modifier<ArrayMeta<Uint16Array, any>>[]) =>
+export const u16Array = (...modifiers: Modifier<ArrayMeta<Uint16Array, PrimitiveMeta<number>>>[]) =>
     typedArray<Uint16Array>(JSONT.U16_ARRAY, u16(), ...modifiers)
-export const u32Array = (...modifiers: Modifier<ArrayMeta<Uint32Array, any>>[]) =>
+export const u32Array = (...modifiers: Modifier<ArrayMeta<Uint32Array, PrimitiveMeta<number>>>[]) =>
     typedArray<Uint32Array>(JSONT.U32_ARRAY, u32(), ...modifiers)
-export const i8Array = (...modifiers: Modifier<ArrayMeta<Int8Array, any>>[]) =>
+export const i8Array = (...modifiers: Modifier<ArrayMeta<Int8Array, PrimitiveMeta<number>>>[]) =>
     typedArray<Int8Array>(JSONT.I8_ARRAY, i8(), ...modifiers)
-export const i16Array = (...modifiers: Modifier<ArrayMeta<Int16Array, any>>[]) =>
+export const i16Array = (...modifiers: Modifier<ArrayMeta<Int16Array, PrimitiveMeta<number>>>[]) =>
     typedArray<Int16Array>(JSONT.I16_ARRAY, i16(), ...modifiers)
-export const i32Array = (...modifiers: Modifier<ArrayMeta<Int32Array, any>>[]) =>
+export const i32Array = (...modifiers: Modifier<ArrayMeta<Int32Array, PrimitiveMeta<number>>>[]) =>
     typedArray<Int32Array>(JSONT.I32_ARRAY, i32(), ...modifiers)
-export const f64Array = (...modifiers: Modifier<ArrayMeta<Float64Array, any>>[]) =>
+export const f64Array = (...modifiers: Modifier<ArrayMeta<Float64Array, PrimitiveMeta<number>>>[]) =>
     typedArray<Float64Array>(JSONT.F64_ARRAY, number(), ...modifiers)
 
-export const u64Array = (...modifiers: Modifier<ArrayMeta<BigUint64Array, any>>[]) =>
+export const u64Array = (...modifiers: Modifier<ArrayMeta<BigUint64Array, PrimitiveMeta<bigint>>>[]) =>
     bigIntTypedArray<BigUint64Array>(JSONT.U64_ARRAY, u64(), ...modifiers)
-export const i64Array = (...modifiers: Modifier<ArrayMeta<BigInt64Array, any>>[]) =>
+export const i64Array = (...modifiers: Modifier<ArrayMeta<BigInt64Array, PrimitiveMeta<bigint>>>[]) =>
     bigIntTypedArray<BigInt64Array>(JSONT.I64_ARRAY, i64(), ...modifiers)
 
 const typedArray = <T extends ArrayLikeWritable<number> & (IntegerTypedArray | FloatTypedArray)>(
