@@ -1,6 +1,6 @@
 import { memo, Memo } from "../../src/utils/memo"
 
-describe('createCache', () => {
+describe('memo', () => {
     let cache: Memo<string, number>
 
     beforeEach(() => {
