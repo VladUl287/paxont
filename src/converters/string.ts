@@ -129,19 +129,20 @@ export function createStringParser(options: ParserOptions) {
                                 error: new JSONParseError('Invalid data')
                             }
                         }
+                        i += end_index
 
                         const dq_index = get_dq_index()
                         const ascii_only = get_ascii_only() === 1
 
                         if (end_index !== dq_index) {
-                            if (end_index >= length && reader.writable) {
+                            if (i >= b.length && reader.writable) {
                                 stack.push({
                                     isContinued: true,
                                     base: ascii_only ? utf8(0, end_index, ascii_only) : utf16(length + 1, get_utf16_length())
                                 })
                                 return {
                                     type: NEEDS_MORE_DATA,
-                                    nextIndex: end_index
+                                    nextIndex: i
                                 }
                             }
                             return {
@@ -154,7 +155,7 @@ export function createStringParser(options: ParserOptions) {
                             return {
                                 type: COMPLETE,
                                 value: base.length === 0 ? utf8(0, end_index, ascii_only) : base.concat(utf8(0, end_index, ascii_only)),
-                                nextIndex: end_index + 1
+                                nextIndex: i + 1
                             }
                         }
 
@@ -162,7 +163,7 @@ export function createStringParser(options: ParserOptions) {
                         return {
                             type: COMPLETE,
                             value: base.length === 0 ? utf16(length + 1, utf16_end) : base.concat(utf16(length + 1, utf16_end)),
-                            nextIndex: end_index + 1
+                            nextIndex: i + 1
                         }
                     }
 
@@ -182,20 +183,20 @@ export function createStringParser(options: ParserOptions) {
                         i += end_index
 
                         const dq_index = get_dq_index()
-                        const ascii_only = get_ascii_only()
+                        const ascii_only = get_ascii_only() === 1
 
                         if (end_index !== dq_index) {
                             if (i < b.length) {
-                                base = ascii_only === 1 ?
-                                    base.concat(utf8(0, end_index)) :
+                                base = ascii_only ?
+                                    base.concat(utf8(0, end_index, ascii_only)) :
                                     base.concat(utf16(length + 1, get_utf16_length()))
                                 continue
                             }
                             if (i >= b.length && reader.writable) {
                                 stack.push({
                                     isContinued: true,
-                                    base: ascii_only === 1 ?
-                                        base.concat(utf8(0, end_index)) :
+                                    base: ascii_only ?
+                                        base.concat(utf8(0, end_index, ascii_only)) :
                                         base.concat(utf16(length + 1, get_utf16_length()))
                                 })
                                 return {
@@ -209,10 +210,10 @@ export function createStringParser(options: ParserOptions) {
                             }
                         }
 
-                        if (ascii_only === 1) {
+                        if (ascii_only) {
                             return {
                                 type: COMPLETE,
-                                value: base.length === 0 ? utf8(0, end_index) : base.concat(utf8(0, end_index)),
+                                value: base.length === 0 ? utf8(0, end_index, ascii_only) : base.concat(utf8(0, end_index)),
                                 nextIndex: end_index + 1
                             }
                         }
@@ -253,12 +254,13 @@ export function createStringParser(options: ParserOptions) {
                             error: new JSONParseError('Invalid data')
                         }
                     }
+                    i += end_index
 
                     const dq_index = get_dq_index()
                     const ascii_only = get_ascii_only() === 1
 
                     if (end_index !== dq_index) {
-                        if (end_index >= length && reader.writable) {
+                        if (i >= b.length && reader.writable) {
                             stack.push({
                                 isContinued: true,
                                 base: base.length === 0 ?
@@ -267,7 +269,7 @@ export function createStringParser(options: ParserOptions) {
                             })
                             return {
                                 type: NEEDS_MORE_DATA,
-                                nextIndex: end_index
+                                nextIndex: i
                             }
                         }
                         return {
@@ -281,7 +283,7 @@ export function createStringParser(options: ParserOptions) {
                         value: base.length === 0 ?
                             utf8(0, dq_index, ascii_only) :
                             base.concat(utf8(0, dq_index, ascii_only)),
-                        nextIndex: end_index + 1
+                        nextIndex: i + 1
                     }
                 }
 
@@ -314,7 +316,7 @@ export function createStringParser(options: ParserOptions) {
                             })
                             return {
                                 type: NEEDS_MORE_DATA,
-                                nextIndex: end_index
+                                nextIndex: i
                             }
                         }
                         return {
