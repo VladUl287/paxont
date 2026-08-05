@@ -78,7 +78,7 @@ type ParserOptions = {
     newUtf8: (bytes: Uint8Array) => (start: number, end: number) => string
 }
 
-export function stringParser(options: ParserOptions) {
+export function createStringParser(options: ParserOptions) {
     const { initialWasmMemoryPages, maxWasmMemoryPages, newUtf8, newUtf16, wasmInstance } = options
 
     const memory = new WebAssembly.Memory({
@@ -470,4 +470,4 @@ export function stringParser(options: ParserOptions) {
     }
 }
 
-export const { toString } = stringParser(defaultParseOptions)
+export const { toString } = createStringParser(defaultParseOptions)
