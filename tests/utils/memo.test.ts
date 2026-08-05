@@ -1,10 +1,10 @@
-import { memo, Memo } from "../../src/utils/memo"
+import { memoize, Memoize } from "../../src/utils/memo"
 
 describe('memo', () => {
-    let cache: Memo<string, number>
+    let memo: Memoize<string, number>
 
     beforeEach(() => {
-        cache = memo<string, number>()
+        memo = memoize<string, number>()
     })
 
     describe('getOrAdd', () => {
@@ -13,9 +13,9 @@ describe('memo', () => {
             const existingValue = 42
             const factory = jest.fn().mockReturnValue(100)
 
-            cache.getOrAdd(key, () => existingValue)
+            memo.getOrAdd(key, () => existingValue)
 
-            const result = cache.getOrAdd(key, factory)
+            const result = memo.getOrAdd(key, factory)
 
             expect(result).toBe(existingValue)
             expect(factory).not.toHaveBeenCalled()
@@ -26,7 +26,7 @@ describe('memo', () => {
             const expectedValue = 123
             const factory = jest.fn().mockReturnValue(expectedValue)
 
-            const result = cache.getOrAdd(key, factory)
+            const result = memo.getOrAdd(key, factory)
 
             expect(result).toBe(expectedValue)
             expect(factory).toHaveBeenCalledWith(key)
@@ -41,7 +41,7 @@ describe('memo', () => {
                 breed: string
             }
 
-            const cache = memo<string, Animal>()
+            const cache = memoize<string, Animal>()
             const key = 'fido'
             const dog: Dog = { name: 'Fido', breed: 'Labrador' }
 
@@ -59,7 +59,7 @@ describe('memo', () => {
             const factory = jest.fn().mockReturnValue(42)
 
 
-            cache.getOrAdd(key, factory)
+            memo.getOrAdd(key, factory)
 
 
             expect(factory).toHaveBeenCalledWith(key)
@@ -67,7 +67,7 @@ describe('memo', () => {
 
         it('should handle different key types', () => {
 
-            const numberCache = memo<number, string>()
+            const numberCache = memoize<number, string>()
             const key = 123
             const value = 'test value'
             const factory = jest.fn().mockReturnValue(value)
@@ -83,7 +83,7 @@ describe('memo', () => {
         it('should handle complex value types', () => {
 
             type User = { id: number; name: string }
-            const userCache = memo<string, User>()
+            const userCache = memoize<string, User>()
             const key = 'user1'
             const user: User = { id: 1, name: 'John Doe' }
 
@@ -102,8 +102,8 @@ describe('memo', () => {
             const factory = jest.fn().mockReturnValue(nullValue)
 
 
-            const result1 = cache.getOrAdd(key, factory)
-            const result2 = cache.getOrAdd(key, () => 999)
+            const result1 = memo.getOrAdd(key, factory)
+            const result2 = memo.getOrAdd(key, () => 999)
 
 
             expect(result1).toBeNull()
@@ -117,9 +117,9 @@ describe('memo', () => {
             const factory = jest.fn().mockReturnValue(42)
 
 
-            cache.getOrAdd(key, factory)
-            cache.getOrAdd(key, factory)
-            cache.getOrAdd(key, factory)
+            memo.getOrAdd(key, factory)
+            memo.getOrAdd(key, factory)
+            memo.getOrAdd(key, factory)
 
 
             expect(factory).toHaveBeenCalledTimes(1)
@@ -130,9 +130,9 @@ describe('memo', () => {
             const factory = (key: string) => key.length
 
 
-            const result1 = cache.getOrAdd('one', factory)
-            const result2 = cache.getOrAdd('two', factory)
-            const result3 = cache.getOrAdd('three', factory)
+            const result1 = memo.getOrAdd('one', factory)
+            const result2 = memo.getOrAdd('two', factory)
+            const result3 = memo.getOrAdd('three', factory)
 
 
             expect(result1).toBe(3)
@@ -148,12 +148,12 @@ describe('memo', () => {
             })
 
 
-            expect(() => cache.getOrAdd(key, factory)).toThrow('Factory error')
+            expect(() => memo.getOrAdd(key, factory)).toThrow('Factory error')
             expect(factory).toHaveBeenCalledWith(key)
 
 
             const safeFactory = jest.fn().mockReturnValue(42)
-            const result = cache.getOrAdd(key, safeFactory)
+            const result = memo.getOrAdd(key, safeFactory)
             expect(result).toBe(42)
             expect(safeFactory).toHaveBeenCalled()
         })
@@ -163,7 +163,7 @@ describe('memo', () => {
             const asyncFactory = jest.fn().mockResolvedValue(42)
 
 
-            const result = cache.getOrAdd('asyncKey', asyncFactory)
+            const result = memo.getOrAdd('asyncKey', asyncFactory)
 
 
             await expect(result).resolves.toBe(42)
@@ -174,8 +174,8 @@ describe('memo', () => {
     describe('cache isolation', () => {
         it('should create independent cache instances', () => {
 
-            const cache1 = memo<string, number>()
-            const cache2 = memo<string, number>()
+            const cache1 = memoize<string, number>()
+            const cache2 = memoize<string, number>()
 
 
             cache1.getOrAdd('key1', () => 100)
@@ -193,11 +193,11 @@ describe('memo', () => {
     describe('type safety', () => {
         it('should maintain type safety with different generic types', () => {
 
-            const stringCache = memo<number, string>()
+            const stringCache = memoize<number, string>()
             const result: string = stringCache.getOrAdd(1, () => 'test')
             expect(result).toBe('test')
 
-            const objCache = memo<string, { id: number }>()
+            const objCache = memoize<string, { id: number }>()
             const objResult: { id: number } = objCache.getOrAdd('test', () => ({ id: 123 }))
             expect(objResult).toEqual({ id: 123 })
         })
@@ -206,7 +206,7 @@ describe('memo', () => {
             interface Base { id: number }
             interface Extended extends Base { extra: string }
 
-            const cache = memo<string, Base>()
+            const cache = memoize<string, Base>()
             const extendedValue: Extended = { id: 1, extra: 'extra' }
 
 
@@ -222,11 +222,11 @@ describe('memo', () => {
             const value = 42
 
 
-            cache.getOrAdd(key, () => value)
+            memo.getOrAdd(key, () => value)
 
 
-            const result1 = cache.getOrAdd(key, () => 999)
-            const result2 = cache.getOrAdd(key, () => 999)
+            const result1 = memo.getOrAdd(key, () => 999)
+            const result2 = memo.getOrAdd(key, () => 999)
 
 
             expect(result1).toBe(value)
@@ -239,13 +239,13 @@ describe('memo', () => {
 
 
             for (let i = 0; i < numEntries; i++) {
-                cache.getOrAdd(`key${i}`, (k) => k.length)
+                memo.getOrAdd(`key${i}`, (k) => k.length)
             }
 
 
-            const result1 = cache.getOrAdd('key0', () => 999)
-            const result500 = cache.getOrAdd('key500', () => 999)
-            const result999 = cache.getOrAdd('key999', () => 999)
+            const result1 = memo.getOrAdd('key0', () => 999)
+            const result500 = memo.getOrAdd('key500', () => 999)
+            const result999 = memo.getOrAdd('key999', () => 999)
 
             expect(result1).toBe(4)
             expect(result500).toBe(6)

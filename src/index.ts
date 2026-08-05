@@ -1,4 +1,4 @@
-import { MemoFactory, memo } from "./utils/memo"
+import { MemoizeFactory, memoize } from "./utils/memo"
 import { defaultOptions, JsonOptions, mergeOptions } from "./options"
 import { BaseMeta, ParseState } from "./metadata/types"
 import { ArrayPool, arrayPool } from "./utils/array"
@@ -17,7 +17,7 @@ type JSONTOptions = {
         readonly defaultOptions: JsonOptions
         readonly mergeOptions: typeof mergeOptions
     }
-    readonly memo: MemoFactory
+    readonly memo: MemoizeFactory
 }
 
 const defaultJsontOptions: JSONTOptions = Object.freeze({
@@ -27,7 +27,7 @@ const defaultJsontOptions: JSONTOptions = Object.freeze({
         defaultOptions: defaultOptions,
         mergeOptions: mergeOptions
     },
-    memo,
+    memo: memoize,
 })
 
 export function jsont(value: JSONTOptions = defaultJsontOptions) {
