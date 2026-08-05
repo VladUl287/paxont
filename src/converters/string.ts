@@ -347,7 +347,7 @@ export function createStringParser(options: ParserOptions) {
             }
 
             while (i < len && (i & 3)) {
-                if (b[i] === DQ && !isEscaped(b, i--))
+                if (b[i] === DQ && !isEscaped(b, i - 1))
                     return i
                 i++
             }
@@ -372,7 +372,7 @@ export function createStringParser(options: ParserOptions) {
             i += j * 4
 
             while (i < len) {
-                if (b[i] === DQ && !isEscaped(b, i--))
+                if (b[i] === DQ && !isEscaped(b, i - 1))
                     return i
                 i++
             }
@@ -390,11 +390,13 @@ export function createStringParser(options: ParserOptions) {
                 if (reader.writable) {
                     stack.push({
                         isContinued: true,
-                        base: base.length === 0 ? utf8.decode(b) : base.concat(utf8.decode(b))
+                        base: base.length === 0 ?
+                            utf8.decode(new Uint8Array(b.buffer, i)) :
+                            base.concat(utf8.decode(new Uint8Array(b.buffer, i)))
                     })
                     return {
                         type: NEEDS_MORE_DATA,
-                        nextIndex: end_index
+                        nextIndex: b.length
                     }
                 }
                 return {
@@ -406,9 +408,9 @@ export function createStringParser(options: ParserOptions) {
             return {
                 type: COMPLETE,
                 value: base.length === 0 ?
-                    utf8.decode(new Uint8Array(b.buffer, 0, end_index)) :
-                    base.concat(utf8.decode(new Uint8Array(b.buffer, 0, end_index))),
-                nextIndex: end_index
+                    utf8.decode(new Uint8Array(b.buffer, i, end_index - 1)) :
+                    base.concat(utf8.decode(new Uint8Array(b.buffer, i, end_index - 1))),
+                nextIndex: end_index + 1
             }
         }
 
@@ -445,20 +447,17 @@ export function createStringParser(options: ParserOptions) {
         const reader = context.reader
         const stack = context.stack
 
-        let isContinued: boolean = false
-        let chunk: string = ''
-
         const state = stack.pop()
-        if (state !== undefined) {
-            isContinued = state.isContinued
-            chunk = state.chunk
-        }
+
+        let isContinued: boolean = state?.isContinued ?? false
+        let chunk: string = state?.chunk ?? ''
 
         const b = reader.bytes
         let i = index
         if (!isContinued) {
             if (b[i] !== DQ) {
                 if (i >= b.length && reader.writable) {
+                    stack.push({ isContinued: true })
                     return {
                         type: NEEDS_MORE_DATA,
                         nextIndex: i
