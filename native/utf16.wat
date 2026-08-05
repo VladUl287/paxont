@@ -3,7 +3,7 @@
   (export "memory" (memory 0))
 
   (global $ascii_only (mut i32) (i32.const 0))
-  (global $dq_index (mut i32) (i32.const 0))
+  (global $dq_index (mut i32) (i32.const -1))
   (global $utf16_length (mut i32) (i32.const 0))
 
   (func (export "ascii_only") (result i32)
@@ -33,13 +33,11 @@
       (local.tee $temp (call $parse_ascii_prefix (local.get $i) (local.get $len) (i32.const -1)))
       (local.get $i))
       (then
-        (if (global.get $dq_index)
-          (then
-            (global.set $ascii_only (i32.const 1))
-            (return (global.get $dq_index))))
+        (if (i32.ge_u (global.get $dq_index) (i32.const 0))
+          (then (return (global.get $dq_index))))
 
         (if (i32.eq (local.get $temp) (local.get $len))
-          (then 
+          (then
             (global.set $ascii_only (i32.const 1))
             (return (local.get $temp))))
 
@@ -259,14 +257,14 @@
           )
         )
         
-        (if (i32.le_u (local.tee $temp (i32.load8_u (local.get $i))) (i32.const 127))
+        (if (i32.lt_u (local.tee $temp (i32.load8_u (local.get $i))) (i32.const 128))
           (then
             (if (i32.eq (local.get $temp) (i32.const 34)) 
               (then
-                (if (i32.ge_u (call $find_unescaped_quote (local.get $i) (local.get $i)) (i32.const 0))
+                (if (i32.ge_u (local.tee $temp (call $find_unescaped_quote (local.get $i) (local.get $i))) (i32.const 0))
                   (then 
                     (global.set $utf16_length (local.get $utf16_ptr))
-                    (return (global.get $dq_index)))
+                    (return (local.get $temp)))
                 )
               )
             )
@@ -402,7 +400,7 @@
     (v128.or (local.get $leads) (local.get $conts))
   )
 
-  (func $parse_ascii_prefix (export "parse_ascii_prefix") (param $i i32) (param $len i32) (param $target i32) (result i32)
+  (func $parse_ascii_prefix (param $i i32) (param $len i32) (param $target i32) (result i32)
     (local $temp i32)
     (local $byte_count i32)
     (local $trailing i32)
@@ -410,8 +408,6 @@
     (local $temp_v128 v128)
     (local $ascii_vec v128)          
     (local $quote_vec v128)
-
-    (global.set $dq_index (i32.const 0))
 
     (local.set $ascii_vec (i8x16.splat (i32.const 128)))
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
@@ -447,9 +443,7 @@
                           (local.get $i) 
                           (local.get $byte_count))))
                     (i32.const 0))
-                  (then 
-                    (global.set $dq_index (local.get $temp))
-
+                  (then
                     (local.set $byte_count (i32.sub (local.get $i) (local.get $temp)))
 
                     (if (i32.gt_s (local.get $target) (i32.const -1))
@@ -558,6 +552,8 @@
     (local $j i32)
     (local $is_escaped i32)
     
+    (global.set $dq_index (i32.const -1))
+
     (local.set $start (local.get $i))
 
     (block $scan_done
@@ -606,10 +602,8 @@
 
         (local.set $i (i32.add (local.get $i) (i32.const 1)))
         (br $scan_loop)
-      )
-    )
-
-    i32.const -1
+      ))
+    (return (i32.const -1))
   )
  
   (func $rotate_r (param $value i32) (param $offset i32) (result i32)

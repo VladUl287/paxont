@@ -182,8 +182,6 @@
     (local $byte i32)
     (local $temp_v128 v128)        
     (local $quote_vec v128)
-
-    (global.set $dq_index (i32.const -1))
     
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
 
@@ -273,6 +271,8 @@
     (local $j i32)
     (local $is_escaped i32)
     
+    (global.set $dq_index (i32.const -1))
+
     (local.set $start (local.get $i))
 
     (block $scan_done
