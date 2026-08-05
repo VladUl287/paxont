@@ -2,6 +2,11 @@
   (import "env" "memory" (memory 1 128))
   (export "memory" (memory 0))
 
+  (global $dq_index (mut i32) (i32.const 0))
+
+  (func (export "dq_index") (result i32)
+    (global.get $dq_index))
+
   (func (export "utf8_to_utf8") (param $i i32) (param $len i32) (result i32)
     (local $mask i32)
     (local $temp i32)
@@ -19,9 +24,12 @@
           (then
             (local.tee $temp (call $parse_ascii (local.get $i) (local.get $len)))
             (local.set $i)
+
+            (if (global.get $dq_index)
+              (then (return (global.get $dq_index))))
+
             (if (i32.eq (local.get $temp) (local.get $len))
               (then (return (local.get $temp))))
-            ;; try find dq
           ))
 
         ;; two byte value
@@ -172,13 +180,11 @@
     (local $byte_count i32)
     (local $trailing i32)
     (local $byte i32)
-    (local $temp_v128 v128)
-    (local $ascii_vec v128)          
+    (local $temp_v128 v128)        
     (local $quote_vec v128)
 
     (global.set $dq_index (i32.const 0))
-
-    (local.set $ascii_vec (i8x16.splat (i32.const 128)))
+    
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
 
     (block $ascii_byte_block
@@ -205,37 +211,14 @@
             (if (i8x16.bitmask (i8x16.eq (local.get $temp_v128) (local.get $quote_vec)))
               (then 
                 (if (i32.ge_u
-                    (local.tee $temp 
-                      (call $find_unescaped_quote 
-                        (local.get $i) 
-                        (i32.add 
-                          (local.get $i) 
-                          (local.get $byte_count))))
-                    (i32.const 0))
-                  (then 
-                    (global.set $dq_index (local.get $temp))
-
-                    (local.set $byte_count (i32.sub (local.get $i) (local.get $temp)))
-
-                    (if (i32.gt_s (local.get $target) (i32.const -1))
-                      (then
-                        (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
-                        (v128.store (i32.add (local.get $target) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $temp_v128)))
-                        (local.set $target (i32.add (local.get $target) (i32.shl (local.get $byte_count) (i32.const 1))))
-                      ))
-
-                    (return (local.get $temp))
-                  ))))
+                  (local.tee $temp
+                    (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (local.get $byte_count))))
+                  (i32.const 0))
+                  (then (return (local.get $temp)))
+                )))
     
             (if (i32.eqz (local.get $byte_count)) (then (return (local.get $i))))
 
-            (if (i32.gt_s (local.get $target) (i32.const -1))
-              (then
-                (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
-                (v128.store (i32.add (local.get $target) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $temp_v128)))
-                (local.set $target (i32.add (local.get $target) (i32.shl (local.get $byte_count) (i32.const 1))))
-              ))
-          
             (local.set $i (i32.add (local.get $i) (local.get $byte_count)))
             
             (br_if $ascii_byte_loop (i32.eq (local.get $byte_count) (i32.const 16)))
@@ -252,25 +235,7 @@
                 (if (i32.gt_s 
                     (local.tee $temp (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (i32.const 4))))
                     (i32.const 0))
-                  (then
-                    (if (i32.gt_s (local.get $target) (i32.const -1))
-                      (then
-                        (local.set $temp_v128 (i32x4.splat (local.get $byte)))
-                        (local.set $temp_v128 (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
-                        (v128.store64_lane 0 (local.get $target) (local.get $temp_v128))
-                        (local.set $target (i32.add (local.get $target) (i32.const 8)))
-                      ))
-
-                    (return (local.get $temp))
-                  ))
-
-                (if (i32.gt_s (local.get $target) (i32.const -1))
-                  (then
-                    (local.set $temp_v128 (i32x4.splat (local.get $byte)))
-                    (local.set $temp_v128 (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
-                    (v128.store64_lane 0 (local.get $target) (local.get $temp_v128))
-                    (local.set $target (i32.add (local.get $target) (i32.const 8)))
-                  ))
+                  (then (return (local.get $temp))))
 
                 (local.set $i (i32.add (local.get $i) (i32.const 4)))
                 (br $ascii_byte_loop)
@@ -292,26 +257,11 @@
                 (i32.gt_s 
                   (local.tee $temp (call $find_unescaped_quote (local.get $i) (local.get $i))) 
                   (i32.const 0)))
-              (then
-                (if (i32.gt_s (local.get $target) (i32.const -1))
-                  (then
-                    (i32.store16 (local.get $target) (local.get $byte))
-                    (local.set $target (i32.add (local.get $target) (i32.const 2)))
-                  ))
-
-                (return (local.get $temp))
-              ))
-
-            (if (i32.gt_s (local.get $target) (i32.const -1))
-              (then
-                (i32.store16 (local.get $target) (local.get $byte))
-                (local.set $target (i32.add (local.get $target) (i32.const 2)))
-              ))
+              (then (return (local.get $temp))))
 
             (local.set $i (i32.add (local.get $i) (i32.const 1)))
             (br $ascii_tail_loop)
           ))
-
         (return (local.get $i))
       ))
     (return (local.get $i))
