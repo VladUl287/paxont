@@ -26,3 +26,4 @@ export const S = 115
 export const Y = 89
 export const Z = 90
 export const N = 110
+export const BACKSLASH = 92

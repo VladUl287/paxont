@@ -2,7 +2,7 @@ import { genUnrolledFromCharCode } from "../code_gen/string"
 import { ParseContext, PrimitiveMeta } from "../metadata/types"
 import { CURRENT_PLATFORM, isBun, isNode } from "../utils/platform"
 import { ReadResult, ReadResultType } from "../utils/types"
-import { DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
+import { BACKSLASH, DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
 import { JSONParseError } from "../utils/error"
 import { wasmInstance } from "../utils/wasm"
 
@@ -327,10 +327,18 @@ export function stringParser(options: ParserOptions) {
         function findEndOfString(b: Uint8Array, i: number): number {
             const len = b.length
 
-            while (i < len && (i & 3)) {
-                if (b[i] === DQ) {
-                    return i
+            function isEscaped(b: Uint8Array, i: number): boolean {
+                let escaped = false
+                while (b[i] === BACKSLASH) {
+                    escaped = !escaped
+                    i--
                 }
+                return escaped
+            }
+
+            while (i < len && (i & 3)) {
+                if (b[i] === DQ && !isEscaped(b, i--))
+                    return i
                 i++
             }
 
@@ -365,9 +373,8 @@ export function stringParser(options: ParserOptions) {
             i += j * 4
 
             while (i < len) {
-                if (b[i] === DQ) {
+                if (b[i] === DQ && !isEscaped(b, i--))
                     return i
-                }
                 i++
             }
 
