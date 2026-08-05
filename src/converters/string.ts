@@ -4,6 +4,7 @@ import { CURRENT_PLATFORM, isBun, isNode } from "../utils/platform"
 import { ReadResult, ReadResultType } from "../utils/types"
 import { DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
 import { JSONParseError } from "../utils/error"
+import { wasmInstance } from "../utils/wasm"
 
 const factories = new Array<(data: ArrayLike<number>, i: number) => string>(64)
 factories[0] = (_a, _i) => ""
@@ -11,8 +12,9 @@ factories[0] = (_a, _i) => ""
 export const defaultParseOptions: ParserOptions = {
     initialWasmMemoryPages: 1, //~64KiB
     maxWasmMemoryPages: 128, //~8MiB,
-
     useUtf16: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM),
+
+    wasmInstance: wasmInstance,
 
     newUtf16: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM) ?
         (bytes: Uint8Array) => {
@@ -68,6 +70,7 @@ type UTF16Module = {
 }
 
 type ParserOptions = {
+    wasmInstance: <T>(bytes: Uint8Array<ArrayBuffer>, memory: WebAssembly.Memory) => T | undefined
     readonly maxWasmMemoryPages: number
     readonly initialWasmMemoryPages: number
     readonly useUtf16: boolean,
@@ -76,7 +79,7 @@ type ParserOptions = {
 }
 
 export function stringParser(options: ParserOptions) {
-    const { initialWasmMemoryPages, maxWasmMemoryPages, newUtf8, newUtf16 } = options
+    const { initialWasmMemoryPages, maxWasmMemoryPages, newUtf8, newUtf16, wasmInstance } = options
 
     const memory = new WebAssembly.Memory({
         initial: initialWasmMemoryPages,
@@ -95,16 +98,6 @@ export function stringParser(options: ParserOptions) {
 
     const PAGE_SIZE_BYTES = Math.ceil(memory.buffer.byteLength / initialWasmMemoryPages)
     const MAX_MEMORY = PAGE_SIZE_BYTES * maxWasmMemoryPages
-
-    const wasmInstance = <T>(bytes: Uint8Array<ArrayBuffer>, memory: WebAssembly.Memory): T | undefined => {
-        try {
-            return new WebAssembly.Instance(new WebAssembly.Module(bytes), { env: { memory: memory } }).exports as T
-        }
-        catch (error) {
-            console.error(error)
-            return undefined
-        }
-    }
 
     const decodeFactory = (opt: ParserOptions) => {
         if (opt.useUtf16) {
