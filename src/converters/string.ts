@@ -363,6 +363,10 @@ export function createStringParser(options: ParserOptions) {
                 i++
             }
 
+            if (i === len) {
+                return -1
+            }
+
             const u32 = new Uint32Array(b.buffer, i, Math.floor((len - i) / 4))
             const len32 = u32.length
 
@@ -391,23 +395,55 @@ export function createStringParser(options: ParserOptions) {
             return -1
         }
 
+        function getLastCharIndex(b: Uint8Array, i: number): number {
+            function isContinuationByte(b: number) {
+                return ((b - 128) >>> 0) < 64
+            }
+
+            const len = i
+
+            while (i >= 0 && isContinuationByte(b[i])) { i-- }
+            if (i < 0) return 0
+
+            const byte = b[i]
+            if (byte < 128) { return i }
+
+            const startByte = (b[i] - 194) >>> 0
+            if (startByte < 30) {
+                if (i + 1 <= len) { return i + 1 }
+                return i - 1
+            }
+
+            if (startByte < 46) {
+                if (i + 2 <= len) { return i + 2 }
+                return i - 1
+            }
+
+            if (startByte < 50) {
+                if (i + 3 <= len) { return i + 3 }
+                return i - 1
+            }
+
+            return 0
+        }
+
         function decode(base: string, { reader, stack, options }: ParseContext, i: number): ReadResult<string> {
             const b = reader.bytes
+            const utf8 = options.decoder
             const end_index = findEndOfString(b, i)
 
-            const utf8 = options.decoder
-
-            if (end_index === -1) {
+            if (end_index < 0) {
                 if (reader.writable) {
+                    const lastCharIndex = getLastCharIndex(b, b.length - 1) + 1
                     stack.push({
                         isContinued: true,
                         base: base.length === 0 ?
-                            utf8.decode(new Uint8Array(b.buffer, i)) :
-                            base.concat(utf8.decode(new Uint8Array(b.buffer, i)))
+                            utf8.decode(new Uint8Array(b.buffer, i, lastCharIndex - i)) :
+                            base.concat(utf8.decode(new Uint8Array(b.buffer, i, lastCharIndex - i)))
                     })
                     return {
                         type: NEEDS_MORE_DATA,
-                        nextIndex: b.length
+                        nextIndex: lastCharIndex
                     }
                 }
                 return {
@@ -419,8 +455,8 @@ export function createStringParser(options: ParserOptions) {
             return {
                 type: COMPLETE,
                 value: base.length === 0 ?
-                    utf8.decode(new Uint8Array(b.buffer, i, end_index - 1)) :
-                    base.concat(utf8.decode(new Uint8Array(b.buffer, i, end_index - 1))),
+                    utf8.decode(new Uint8Array(b.buffer, i, end_index - i)) :
+                    base.concat(utf8.decode(new Uint8Array(b.buffer, i, end_index - i))),
                 nextIndex: end_index + 1
             }
         }
