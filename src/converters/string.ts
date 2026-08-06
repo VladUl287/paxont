@@ -1,4 +1,4 @@
-import { genUnrolledFromCharCode } from "../code_gen/string"
+import { genUnrolledFromCharCode, genUnrolledFromCharCode16 } from "../code_gen/string"
 import { ParseContext, PrimitiveMeta } from "../metadata/types"
 import { CURRENT_PLATFORM, isBun, isNode } from "../utils/platform"
 import { ReadResult, ReadResultType } from "../utils/types"
@@ -8,6 +8,8 @@ import { wasmInstance } from "../utils/wasm"
 
 const factories = new Array<(data: ArrayLike<number>, i: number) => string>(64)
 factories[0] = (_a, _i) => ""
+const factories16 = new Array<(data: ArrayLike<number>, i: number) => string>(64)
+factories16[0] = (_a, _i) => ""
 
 export const defaultParseOptions: ParserOptions = {
     initialWasmMemoryPages: 1, //~64KiB
@@ -19,11 +21,25 @@ export const defaultParseOptions: ParserOptions = {
     newUtf16: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM) ?
         (bytes: Uint8Array) => {
             const buffer = Buffer.from(bytes.buffer)
-            return (start, end) => buffer.toString('utf16le', start, end)
+            return (start, end) => {
+                const length = end - start
+                if (length <= 128) {
+                    const factory = (factories[length / 2] ??= genUnrolledFromCharCode16(length))
+                    return factory(buffer, start)
+                }
+                return buffer.toString('utf16le', start, end)
+            }
         } :
         (bytes: Uint8Array) => {
             const unsafeDecoder16 = new TextDecoder('utf-16le', { fatal: false })
-            return (start, end) => unsafeDecoder16.decode(new Uint8Array(bytes.buffer, start, end - start))
+            return (start, end) => {
+                const length = end - start
+                if (length <= 128) {
+                    const factory = (factories[length / 2] ??= genUnrolledFromCharCode16(length))
+                    return factory(bytes, start)
+                }
+                return unsafeDecoder16.decode(new Uint8Array(bytes.buffer, start, end - start))
+            }
         },
 
     newUtf8: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM) ?
