@@ -214,12 +214,12 @@ function tryParseISO8601(b: Uint8Array, i: number, r: ISOResult): boolean {
         return true
     }
 
-    const sign = b[i] === MINUS ? -1 : 1
+    const sign = b[i++] === MINUS ? -1 : 1
 
-    if ((i = expectTwoDigits(b, i)) < 0 || b[++i] !== COLON || (i = expectTwoDigits(b, i)) < 0) //HH:mm
+    if ((i = expectTwoDigits(b, i)) < 0 || b[i++] !== COLON || (i = expectTwoDigits(b, i)) < 0) //HH:mm
         return false
 
-    const ZHH = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
+    const ZHH = ((b[i - 5] & 0x0F) * 10) + (b[i - 4] & 0x0F)
     if (ZHH < 0 || ZHH > 23)
         return false
 
@@ -228,7 +228,7 @@ function tryParseISO8601(b: Uint8Array, i: number, r: ISOResult): boolean {
         return false
 
     r.value = new Date(utc(YYYY, MM, DD, HH - (ZHH * sign), mm - (zmm * sign), ss, sss))
-    r.nextIndex = ++i
+    r.nextIndex = i
     return true
 }
 
