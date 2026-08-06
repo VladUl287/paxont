@@ -22,7 +22,7 @@ export function toDate(
 
     if (index < len) {
         if (b[index] === DOUBLE_QUOTE)
-            return fromString(context, index + 1)
+            return fromString(context, index)
 
         if (isDigitU(b[index]))
             return fromTimestamp(reader, index)
@@ -48,6 +48,20 @@ function fromString(context: ParseContext, i: number): ReadResult<Date> {
     const len = b.length
     const start = i
 
+    if (b[i] !== DOUBLE_QUOTE) {
+        if (i >= b.length && reader.writable) {
+            return {
+                type: NEEDS_MORE_DATA,
+                nextIndex: i
+            }
+        }
+        return {
+            type: ERROR,
+            error: new JSONParseError('')
+        }
+    }
+    i++
+
     if (!reader.writable) {
         const result: ISOResult = {
             type: COMPLETE,
@@ -56,6 +70,7 @@ function fromString(context: ParseContext, i: number): ReadResult<Date> {
         }
 
         if (tryParseISO8601(b, i, result)) {
+            result.nextIndex += 1
             return result
         }
     }
@@ -75,7 +90,8 @@ function fromString(context: ParseContext, i: number): ReadResult<Date> {
         }
     }
 
-    const view = new Uint8Array(b.buffer, start, i - start)
+    const st = start + 1
+    const view = new Uint8Array(b.buffer, st, i - st)
     const date = options.decoder.decode(view)
     const value = new Date(date)
 
@@ -89,7 +105,7 @@ function fromString(context: ParseContext, i: number): ReadResult<Date> {
     return {
         type: COMPLETE,
         value: value,
-        nextIndex: i
+        nextIndex: i + 1
     }
 }
 
