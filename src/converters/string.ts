@@ -8,7 +8,7 @@ import { wasmInstance } from "../utils/wasm"
 
 const factories = new Array<(data: ArrayLike<number>, i: number) => string>(64)
 factories[0] = (_a, _i) => ""
-const factories16 = new Array<(data: ArrayLike<number>, i: number) => string>(64)
+const factories16 = new Array<(data: ArrayLike<number>, i: number) => string>(32)
 factories16[0] = (_a, _i) => ""
 
 export const defaultParseOptions: ParserOptions = {
@@ -23,7 +23,7 @@ export const defaultParseOptions: ParserOptions = {
             const buffer = Buffer.from(bytes.buffer)
             return (start, end) => {
                 const length = end - start
-                if (length <= 128) {
+                if (length <= 64) {
                     const factory = (factories[length / 2] ??= genUnrolledFromCharCode16(length))
                     return factory(buffer, start)
                 }
@@ -34,7 +34,7 @@ export const defaultParseOptions: ParserOptions = {
             const unsafeDecoder16 = new TextDecoder('utf-16le', { fatal: false })
             return (start, end) => {
                 const length = end - start
-                if (length <= 128) {
+                if (length <= 64) {
                     const factory = (factories[length / 2] ??= genUnrolledFromCharCode16(length))
                     return factory(bytes, start)
                 }
