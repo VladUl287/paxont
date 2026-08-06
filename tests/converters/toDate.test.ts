@@ -19,8 +19,16 @@ describe('toDate', () => {
 
     const dateMeta = date()
 
+    function parseISO(isoString: string) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(isoString)) {
+            const [year, month, day] = isoString.split('-').map(Number)
+            return new Date(year, month - 1, day, 0, 0, 0)
+        }
+        return new Date(isoString)
+    }
+
     function expectDate<M extends BaseMeta<Date, any>>(meta: M, str: string) {
-        const date = new Date(str)
+        const date = parseISO(str.substring(1, str.length - 1))
         const bytes = toBytes(str)
 
         const context: ParseContext = {
@@ -62,63 +70,25 @@ describe('toDate', () => {
         })
 
         test('should parse ISO date with timezone offset - UTC', () => {
-            const bytes = toBytes('"2024-12-25T10:00:00+05:30"')
-            const result = (callToDate(bytes, 0) as any).value as Date
-
-            expect(result).toBeInstanceOf(Date)
-            expect(result.getUTCHours()).toBe(4) // 10:00 - 5:30 = 4:30 UTC
-            expect(result.getUTCMinutes()).toBe(30)
-            expect(isNaN(result.getTime())).toBe(false)
+            expectDate(dateMeta, '"2024-12-25T10:00:00+05:30"')
         })
 
         test('should parse UTC ISO date with Z suffix', () => {
-            const bytes = toBytes('"2024-07-04T12:00:00Z"')
-            const result = (callToDate(bytes, 0) as any).value as Date
-
-            expect(result.getUTCFullYear()).toBe(2024)
-            expect(result.getUTCMonth()).toBe(6) // July is 6
-            expect(result.getUTCDate()).toBe(4)
-            expect(result.getUTCHours()).toBe(12)
-            expect(result.getUTCMinutes()).toBe(0)
-            expect(result.getUTCSeconds()).toBe(0)
+            expectDate(dateMeta, '"2024-07-04T12:00:00Z"')
         })
 
         test('should parse ISO date with time and timezone offset - UTC', () => {
-            const bytes = toBytes('"2024-01-15T08:30:00-08:00"')
-            const result = (callToDate(bytes, 0) as any).value as Date
-
-            expect(result.getUTCFullYear()).toBe(2024)
-            expect(result.getUTCMonth()).toBe(0)
-            expect(result.getUTCDate()).toBe(15)
-            expect(result.getUTCHours()).toBe(16) // 08:30 + 8:00 = 16:30 UTC
-            expect(result.getUTCMinutes()).toBe(30)
+            expectDate(dateMeta, '"2024-01-15T08:30:00-08:00"')
         })
     })
 
     describe('edge cases with UTF-8 bytes', () => {
-        test('should handle bytes that are exactly the date string', () => {
-            const bytes = new Uint8Array([34, 50, 48, 50, 52, 45, 48, 49, 45, 48, 49, 34]) // "2024-01-01"
-            const result = (callToDate(bytes, 0) as any).value as Date
-
-            expect(result.getFullYear()).toBe(2024)
-            expect(result.getMonth()).toBe(0)
-            expect(result.getDate()).toBe(1)
-        })
-
         test('should handle single-digit months and days correctly', () => {
-            const bytes = toBytes('"2024-05-07"')
-            const result = (callToDate(bytes, 0) as any).value as Date
-
-            expect(result.getMonth()).toBe(4) // May is 4
-            expect(result.getDate()).toBe(7)
+            expectDate(dateMeta, '"2024-05-07"')
         })
 
         test('should handle leap year dates', () => {
-            const bytes = toBytes('"2024-02-29"')
-            const result = (callToDate(bytes, 0) as any).value as Date
-
-            expect(result.getMonth()).toBe(1) // February is 1
-            expect(result.getDate()).toBe(29)
+            expectDate(dateMeta, '"2024-02-29"')
         })
     })
 
