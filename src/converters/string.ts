@@ -177,11 +177,15 @@ export function createStringParser(options: ParserOptions) {
                     ensureMemory(memory, MAX_MEMORY, setView)
 
                     while (true) {
-                        const length = Math.min(Math.floor(MAX_MEMORY / 3), b.length - i)
+                        const memory = Math.floor(MAX_MEMORY / 3)
+                        const length = Math.min(memory, b.length - i)
+                        const lastChunk = length < memory
+                        const chunkPartial = lastChunk ? partial : 1
+
                         memoryView.set(new Uint8Array(b.buffer, i, length))
 
-                        const end_index = utf8_to_utf16(0, length, length + 1, partial)
-                        if (end_index === -1) {
+                        const end_index = utf8_to_utf16(0, length, length + 1, chunkPartial)
+                        if (end_index < 0) {
                             return {
                                 type: ERROR,
                                 error: new JSONParseError('Invalid data')
@@ -192,14 +196,14 @@ export function createStringParser(options: ParserOptions) {
                         const dq_index = get_dq_index()
                         const ascii_only = get_ascii_only() === 1
 
-                        if (end_index !== dq_index) {
-                            if (i < b.length) {
+                        if (dq_index === -1) {
+                            if (!lastChunk) {
                                 base = ascii_only ?
                                     base.concat(utf8(0, end_index, ascii_only)) :
                                     base.concat(utf16(length + 1, get_utf16_length()))
                                 continue
                             }
-                            if (i >= b.length && reader.writable) {
+                            if (reader.writable) {
                                 stack.push({
                                     isContinued: true,
                                     base: ascii_only ?
@@ -208,7 +212,7 @@ export function createStringParser(options: ParserOptions) {
                                 })
                                 return {
                                     type: NEEDS_MORE_DATA,
-                                    nextIndex: end_index
+                                    nextIndex: i
                                 }
                             }
                             return {
@@ -220,15 +224,19 @@ export function createStringParser(options: ParserOptions) {
                         if (ascii_only) {
                             return {
                                 type: COMPLETE,
-                                value: base.length === 0 ? utf8(0, end_index, ascii_only) : base.concat(utf8(0, end_index)),
-                                nextIndex: end_index + 1
+                                value: base.length === 0 ?
+                                    utf8(0, end_index, ascii_only) :
+                                    base.concat(utf8(0, end_index)),
+                                nextIndex: i + 1
                             }
                         }
 
                         const utf16_end = get_utf16_length()
                         return {
                             type: COMPLETE,
-                            value: base.length === 0 ? utf16(length + 1, utf16_end) : base.concat(utf16(length + 1, utf16_end)),
+                            value: base.length === 0 ?
+                                utf16(length + 1, utf16_end) :
+                                base.concat(utf16(length + 1, utf16_end)),
                             nextIndex: i + 1
                         }
                     }
@@ -298,10 +306,14 @@ export function createStringParser(options: ParserOptions) {
                 ensureMemory(memory, MAX_MEMORY, setView)
 
                 while (true) {
-                    const length = Math.min(MAX_MEMORY, b.length - i)
+                    const memory = Math.floor(MAX_MEMORY / 3)
+                    const length = Math.min(memory, b.length - i)
+                    const lastChunk = length < memory
+                    const chunkPartial = lastChunk ? partial : 1
+
                     memoryView.set(new Uint8Array(b.buffer, i, length))
 
-                    const end_index = utf8_to_utf8(0, length, partial)
+                    const end_index = utf8_to_utf8(0, length, chunkPartial)
                     if (end_index < 0) {
                         return {
                             type: ERROR,
@@ -314,7 +326,7 @@ export function createStringParser(options: ParserOptions) {
                     const ascii_only = get_ascii_only() === 1
 
                     if (dq_index === -1) {
-                        if (i < b.length) {
+                        if (!lastChunk) {
                             base = base.concat(utf8(0, end_index, ascii_only))
                             continue
                         }
