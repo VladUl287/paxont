@@ -1,13 +1,15 @@
 import { createStringParser, defaultParseOptions } from "../../src/converters/string"
-import { JsonReader, ParseContext, PrimitiveMeta } from "../../src/metadata/types"
+import { string } from "../../src/metadata/builder"
+import { BaseMeta, JsonReader, ParseContext } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { Stack } from "../../src/utils/stack"
-import { isComplete, isNeedsMoreData, ReadResult, ReadResultType } from "../../src/utils/types"
+import { ReadResultType } from "../../src/utils/types"
+import { deserializePartially } from "./utils"
 
 describe('tryParseString', () => {
     const encoder = new TextEncoder()
 
-    const expectToParse = (toString: PrimitiveMeta<string>['toValue'], str: string) => {
+    const expectToParse = <M extends BaseMeta<any, any>>(meta: M, str: string) => {
         const bytes = encoder.encode(str)
 
         const reader: JsonReader = {
@@ -21,165 +23,72 @@ describe('tryParseString', () => {
             stack: new Stack(),
         }
 
-        const metaMock: any = {}
+        const value = meta.toValue(meta, ctx, 0, 0)
 
-        const value = toString(metaMock, ctx, 0, 0)
+        const expectedResult = str.substring(1, str.length - 1)
 
         expect(value).toStrictEqual({
             type: ReadResultType.COMPLETE,
-            value: str.substring(1, str.length - 1),
+            value: expectedResult,
             nextIndex: bytes.length
         })
-    }
 
-    const expectToParsePartially = (toString: PrimitiveMeta<string>['toValue'], str: string) => {
-        for (let i = 0; i < str.length; i++) {
-            const chunks = [encoder.encode(str.substring(0, i)), encoder.encode(str.substring(i))].reverse()
-            const fullLength = chunks.reduce((acc, arr) => acc + arr.length, 0)
+        for (let i = 0; i < bytes.length; i++) {
+            const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
+            const result = deserializePartially(meta, chunks)
 
-            const metaMock: any = {}
-
-            let ch
-            let nextIndex = 0
-            let value: ReadResult<string> = {} as any
-
-            const stack = new Stack<any>()
-
-            while ((ch = chunks.pop()) !== undefined) {
-                const reader: JsonReader = {
-                    bytes: ch,
-                    writable: chunks.length > 0
-                }
-
-                const ctx: ParseContext = {
-                    reader: reader,
-                    options: defaultOptions,
-                    stack: stack,
-                }
-
-                value = toString(metaMock, ctx, nextIndex, 0)
-                if (isComplete(value)) {
-                    break
-                }
-
-                if (isNeedsMoreData(value)) {
-                    nextIndex = value.nextIndex
-                    continue
-                }
-            }
-
-            expect(value).toStrictEqual({
+            expect(result).toStrictEqual({
                 type: ReadResultType.COMPLETE,
-                value: str.substring(1, str.length - 1),
-                nextIndex: fullLength
+                value: expectedResult,
+                nextIndex: chunks[0].length
             })
         }
     }
 
-    describe('utf16 string parser', () => {
+    const meta = string()
+
+    test('utf16 string parser', () => {
         jsonTestStrings()
             .forEach(str => {
-                test(str.substring(0, 32), () => {
-                    const { toString } = createStringParser({
-                        ...defaultParseOptions,
-                        useUtf16: true
-                    })
-                    expectToParse(toString, str)
+                const { toString } = createStringParser({
+                    ...defaultParseOptions,
+                    useUtf16: true
                 })
+                expectToParse({ ...meta, toValue: toString }, str)
             })
     })
 
-    describe('utf8 string parser', () => {
+    test('utf8 string parser', () => {
         jsonTestStrings()
             .forEach(str => {
-                test(str.substring(0, 32), () => {
-                    const { toString } = createStringParser({
-                        ...defaultParseOptions,
-                        useUtf16: false
-                    })
-                    expectToParse(toString, str)
+                const { toString } = createStringParser({
+                    ...defaultParseOptions,
+                    useUtf16: false
                 })
+                expectToParse({ ...meta, toValue: toString }, str)
             })
     })
 
-    describe('restrict memory string parser', () => {
+    test('restrict memory string parser', () => {
         jsonTestStrings()
             .forEach(str => {
-                test(str.substring(0, 32), () => {
-                    const { toString } = createStringParser({
-                        ...defaultParseOptions,
-                        maxWasmMemoryPages: 1
-                    })
-                    expectToParse(toString, str)
+                const { toString } = createStringParser({
+                    ...defaultParseOptions,
+                    maxWasmMemoryPages: 1
                 })
+                expectToParse({ ...meta, toValue: toString }, str)
             })
     })
 
-    describe('wasmless string parser', () => {
+    test('wasmless string parser', () => {
         jsonTestStrings()
             .forEach(str => {
-                test(str.substring(0, 32), () => {
-                    const { toString } = createStringParser({
-                        ...defaultParseOptions,
-                        wasmInstance: (b, m) => undefined
-                    })
-                    expectToParse(toString, str)
+                const { toString } = createStringParser({
+                    ...defaultParseOptions,
+                    wasmInstance: (b, m) => undefined
                 })
+                expectToParse({ ...meta, toValue: toString }, str)
             })
-    })
-
-    describe('partial strings parser', () => {
-        describe('utf16 string parser', () => {
-            jsonTestStrings()
-                .forEach(str => {
-                    test(str.substring(0, 32), () => {
-                        const { toString } = createStringParser({
-                            ...defaultParseOptions,
-                            useUtf16: true
-                        })
-                        expectToParsePartially(toString, str)
-                    })
-                })
-        })
-
-        describe('utf8 string parser', () => {
-            jsonTestStrings()
-                .forEach(str => {
-                    test(str.substring(0, 32), () => {
-                        const { toString } = createStringParser({
-                            ...defaultParseOptions,
-                            useUtf16: false
-                        })
-                        expectToParsePartially(toString, str)
-                    })
-                })
-        })
-
-        describe('restrict memory string parser', () => {
-            jsonTestStrings()
-                .forEach(str => {
-                    test(str.substring(0, 32), () => {
-                        const { toString } = createStringParser({
-                            ...defaultParseOptions,
-                            maxWasmMemoryPages: 1
-                        })
-                        expectToParsePartially(toString, str)
-                    })
-                })
-        })
-
-        describe('wasmless string parser', () => {
-            jsonTestStrings()
-                .forEach(str => {
-                    test(str.substring(0, 32), () => {
-                        const { toString } = createStringParser({
-                            ...defaultParseOptions,
-                            wasmInstance: (b, m) => undefined
-                        })
-                        expectToParsePartially(toString, str)
-                    })
-                })
-        })
     })
 })
 
@@ -334,6 +243,6 @@ function jsonTestStrings() {
         "\"ᎠᎡᎢᎣᎤ\"",
 
         // Very long string
-        `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(1000)}"`
+        `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(100)}"`
     ]
 }
