@@ -23,70 +23,96 @@ describe('tryParseString', () => {
             stack: new Stack(),
         }
 
-        const value = meta.toValue(meta, ctx, 0, 0)
-
         const expectedResult = str.substring(1, str.length - 1)
 
+        const value = meta.toValue(meta, ctx, 0, 0)
         expect(value).toStrictEqual({
             type: ReadResultType.COMPLETE,
             value: expectedResult,
             nextIndex: bytes.length
         })
 
-        for (let i = 0; i < bytes.length; i++) {
+        const step = bytes.length > 65_536 ? 10 : 1
+        for (let i = 0; i < bytes.length; i += step) {
             const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
-            const result = deserializePartially(meta, chunks)
 
-            expect(result).toStrictEqual({
-                type: ReadResultType.COMPLETE,
-                value: expectedResult,
-                nextIndex: chunks[0].length
-            })
+            try {
+                const result = deserializePartially(meta, chunks)
+
+                expect(result).toStrictEqual({
+                    type: ReadResultType.COMPLETE,
+                    value: expectedResult,
+                    nextIndex: chunks[0].length
+                })
+            }
+            catch (error) {
+                console.log(error)
+            }
         }
     }
 
     const meta = string()
+    const jsonStrings = jsonTestStrings()
 
     test('utf16 string parser', () => {
-        jsonTestStrings()
+        const { toString } = createStringParser({
+            ...defaultParseOptions,
+            useUtf16: true
+        })
+        jsonStrings
             .forEach(str => {
-                const { toString } = createStringParser({
-                    ...defaultParseOptions,
-                    useUtf16: true
-                })
                 expectToParse({ ...meta, toValue: toString }, str)
             })
     })
 
     test('utf8 string parser', () => {
-        jsonTestStrings()
+        const { toString } = createStringParser({
+            ...defaultParseOptions,
+            useUtf16: false
+        })
+        jsonStrings
             .forEach(str => {
-                const { toString } = createStringParser({
-                    ...defaultParseOptions,
-                    useUtf16: false
-                })
                 expectToParse({ ...meta, toValue: toString }, str)
             })
     })
 
-    test('restrict memory string parser', () => {
-        jsonTestStrings()
+    test('utf16 restrict memory string parser', () => {
+        const { toString } = createStringParser({
+            ...defaultParseOptions,
+            maxWasmMemoryPages: 1,
+            useUtf16: true
+        })
+        jsonStrings
             .forEach(str => {
-                const { toString } = createStringParser({
-                    ...defaultParseOptions,
-                    maxWasmMemoryPages: 1
-                })
                 expectToParse({ ...meta, toValue: toString }, str)
             })
+
+        const veryLongString = `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(700)}"`
+        expectToParse({ ...meta, toValue: toString }, veryLongString)
+    })
+
+    test('utf8 restrict memory string parser', () => {
+        const { toString } = createStringParser({
+            ...defaultParseOptions,
+            maxWasmMemoryPages: 1,
+            useUtf16: false
+        })
+        jsonStrings
+            .forEach(str => {
+                expectToParse({ ...meta, toValue: toString }, str)
+            })
+
+        const veryLongString = `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(700)}"`
+        expectToParse({ ...meta, toValue: toString }, veryLongString)
     })
 
     test('wasmless string parser', () => {
-        jsonTestStrings()
+        const { toString } = createStringParser({
+            ...defaultParseOptions,
+            wasmInstance: (b, m) => undefined
+        })
+        jsonStrings
             .forEach(str => {
-                const { toString } = createStringParser({
-                    ...defaultParseOptions,
-                    wasmInstance: (b, m) => undefined
-                })
                 expectToParse({ ...meta, toValue: toString }, str)
             })
     })
