@@ -15,14 +15,13 @@
   (func (export "utf16_length") (result i32)
     (global.get $utf16_length))
 
-  (func (export "utf8_to_utf16") (param $i i32) (param $len i32) (param $utf16_ptr i32) (result i32)
+  (func (export "utf8_to_utf16") (param $i i32) (param $len i32) (param $utf16_ptr i32) (param $partial i32) (result i32)
     (local $mask i32)
     (local $temp i32)
     (local $temp_v128 v128)
     (local $quote_vec v128)
     (local $byte_mask i32)
     (local $trailing i32)
-    (local $byte_count i32)
     
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
 
@@ -51,7 +50,6 @@
         (local.set $i (local.get $temp))
       ))
 
-    ;; non ascii block
     (block $non_ascii_block
       (loop $non_ascii_loop
         (if (i32.lt_u (i32.load8_u (local.get $i)) (i32.const 128)) 
@@ -91,33 +89,19 @@
   
                 (if (i32.eq (local.get $byte_mask) (i32.const 0xFFFF))
                   (then
-                    (v128.store
-                      (local.get $utf16_ptr) (call $decode_8_two_byte_sequences (local.get $temp_v128)))
+                    (v128.store (local.get $utf16_ptr) (call $decode_8_two_byte_sequences (local.get $temp_v128)))
   
                     (local.set $i (i32.add (local.get $i) (i32.const 16)))
                     (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 16)))
   
                     (br $two_byte_loop)
-                  )
-                )
-  
-                (local.set $trailing
-                  (i32.ctz
-                    (i32.xor (local.get $byte_mask) (i32.const 0xFFFF))))
-  
-                (if (i32.eq (local.get $trailing) (i32.const 32))
-                  (then (local.set $byte_count (i32.const 16)))
-                  (else (local.set $byte_count (local.get $trailing)))
-                )
+                  ))
+
+                (v128.store (local.get $utf16_ptr) (call $decode_8_two_byte_sequences (local.get $temp_v128)))
                 
-                (br_if $non_ascii_loop (i32.eqz (local.get $byte_count)))
-  
-                (v128.store
-                  (local.get $utf16_ptr) (call $decode_8_two_byte_sequences (local.get $temp_v128)))
-  
-                (local.set $i (i32.add (local.get $i) (local.get $byte_count)))
-                (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (local.get $byte_count)))
-    
+                (local.set $trailing (i32.ctz (i32.xor (local.get $byte_mask) (i32.const 0xFFFF))))
+                (local.set $i (i32.add (local.get $i) (local.get $trailing)))
+                (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (local.get $trailing)))
                 (br $non_ascii_loop)
               end
   
@@ -125,8 +109,7 @@
                 (i32.gt_u
                   (i32.add (local.get $i) (i32.const 4))
                   (local.get $len)
-                )
-              )
+                ))
 
               (local.set $mask (i32.load offset=0 align=1 (local.get $i)))
 
@@ -236,7 +219,9 @@
           end
         end
 
-        (br $non_ascii_block)
+        (if (i32.and (local.get $partial) (i32.gt_u (i32.add (local.get $i) (i32.const 4)) (local.get $len)))
+          (then (return (local.get $i)))
+          (else (return (i32.const -1))))
       )
     )
     
@@ -247,8 +232,7 @@
           (i32.gt_u
             (i32.add (local.get $i) (i32.const 1))
             (local.get $len)
-          )
-        )
+          ))
         
         (if (i32.lt_u (local.tee $temp (i32.load8_u (local.get $i))) (i32.const 128))
           (then
@@ -258,9 +242,7 @@
                   (then 
                     (global.set $utf16_length (local.get $utf16_ptr))
                     (return (local.get $temp)))
-                )
-              )
-            )
+                )))
 
             (i32.store16 (local.get $utf16_ptr) (local.get $temp))
             (local.set $i (i32.add (local.get $i) (i32.const 1)))
@@ -272,11 +254,12 @@
         (if (i32.lt_u (local.get $temp) (i32.const 224))
           (then
             (if (i32.ge_u (i32.add (local.get $i) (i32.const 1)) (local.get $len)) 
-              (then (return (i32.const -1)))
-            )
+              (then
+                (global.set $utf16_length (local.get $utf16_ptr))
+                (return (local.get $i))))
+
             (if (i32.gt_u (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 191)) 
-              (then (return (i32.const -1)))
-            )
+              (then (return (i32.const -1))))
 
             (i32.store16
               (local.get $utf16_ptr)
@@ -290,15 +273,17 @@
             
             (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
             (local.set $i (i32.add (local.get $i) (i32.const 2)))
-            br $non_ascii_loop_tail
+            (br $non_ascii_loop_tail)
           )
         )
 
         (if (i32.lt_u (local.get $temp) (i32.const 240))
           (then
             (if (i32.ge_u (i32.add (local.get $i) (i32.const 2)) (local.get $len)) 
-              (then (return (i32.const -1)))
-            )
+              (then
+                (global.set $utf16_length (local.get $utf16_ptr))
+                (return (local.get $i))))
+            
             (if (i32.or 
               (i32.gt_u (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 191)) 
               (i32.gt_u (i32.load8_u (i32.add (local.get $i) (i32.const 2))) (i32.const 191)))
@@ -312,9 +297,8 @@
                   (i32.shl (i32.and (local.get $temp) (i32.const 0x0F)) (i32.const 12))
                   (i32.shl (i32.and (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 0x3F)) (i32.const 6))
                 )
-                (i32.and (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 0x3F))
-              )
-            )
+                (i32.and (i32.load8_u (i32.add (local.get $i) (i32.const 2))) (i32.const 0x3F))
+              ))
             
             (local.set $utf16_ptr (i32.add (local.get $utf16_ptr) (i32.const 2)))
             (local.set $i (i32.add (local.get $i) (i32.const 3)))
@@ -324,7 +308,12 @@
       )
     )
 
-    i32.const -1
+    (if (i32.and (local.get $partial) (i32.gt_u (i32.add (local.get $i) (i32.const 4)) (local.get $len)))
+      (then 
+        (global.set $utf16_length (local.get $utf16_ptr))
+        (return (local.get $i))))
+    
+    (return (i32.const -1))
   )
 
   (func $extend_ascii_block (param $src i32) (param $len i32) (param $target i32)

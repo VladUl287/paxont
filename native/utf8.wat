@@ -125,7 +125,7 @@
               ))
           ))
 
-        (if (i32.and (local.get $partial) (i32.ge_u (i32.add (local.get $i) (i32.const 4)) (local.get $len)))
+        (if (i32.and (local.get $partial) (i32.gt_u (i32.add (local.get $i) (i32.const 4)) (local.get $len)))
           (then (return (local.get $i)))
           (else (return (i32.const -1))))
       ))
@@ -150,7 +150,7 @@
         (if (i32.lt_u (local.get $temp) (i32.const 224))
           (then
             (if (i32.ge_u (i32.add (local.get $i) (i32.const 1)) (local.get $len)) 
-              (then (return (i32.sub (local.get $i) (i32.const 1)))))
+              (then (return (local.get $i))))
 
             (if (i32.gt_u (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 191)) 
               (then (return (i32.const -1))))
@@ -163,7 +163,7 @@
         (if (i32.lt_u (local.get $temp) (i32.const 240))
           (then
             (if (i32.ge_u (i32.add (local.get $i) (i32.const 2)) (local.get $len)) 
-              (then (return (i32.sub (local.get $i) (i32.const 1)))))
+              (then (return (local.get $i))))
             
             (if (i32.or 
               (i32.gt_u (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 191)) 
@@ -176,6 +176,9 @@
         )
       ))
 
+    (if (i32.and (local.get $partial) (i32.gt_u (i32.add (local.get $i) (i32.const 4)) (local.get $len)))
+      (then (return (local.get $i))))
+    
     (return (i32.const -1))
   )
 
