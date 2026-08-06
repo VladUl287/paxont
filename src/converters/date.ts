@@ -1,5 +1,4 @@
 import { ParseContext, JsonReader, PrimitiveMeta } from "../metadata/types"
-import { JsonOptions } from "../options"
 import { utc } from "../utils/utc"
 import { COLON, DOT, DOUBLE_QUOTE, MINUS, PLUS, T_UPPER, Z } from "../utils/ascii_symbols"
 import { isComplete, ReadResult, ReadResultType } from "../utils/types"
@@ -28,11 +27,12 @@ export function toDate(
         if (isDigitU(b[index]))
             return fromTimestamp(reader, index)
     }
-    else if (reader.writable)
+    else if (reader.writable) {
         return {
             type: NEEDS_MORE_DATA,
             nextIndex: index
         }
+    }
 
     return {
         type: ERROR,
@@ -40,89 +40,57 @@ export function toDate(
     }
 }
 
-type TryParseResult = {
-    value: Date,
-    nextIndex: number
-}
+type ISOResult = Extract<ReadResult<Date>, { type: ReadResultType.COMPLETE }>;
 
 function fromString(context: ParseContext, i: number): ReadResult<Date> {
     const { reader, options } = context
     const b = reader.bytes
     const len = b.length
+    const start = i
 
-    const result: TryParseResult = {
-        value: Date.prototype,
-        nextIndex: 0
-    }
-
-    if (tryParseISO8601(b, i, result) || tryParseDefault(b, i, options, result)) {
-        return {
+    if (!reader.writable) {
+        const result: ISOResult = {
             type: COMPLETE,
-            value: result.value,
-            nextIndex: ++result.nextIndex
+            value: Date.prototype,
+            nextIndex: 0
+        }
+
+        if (tryParseISO8601(b, i, result)) {
+            return result
         }
     }
 
-    if (reader.writable && result.nextIndex === len)
-        return {
-            type: NEEDS_MORE_DATA,
-            nextIndex: i
+    while (i < len && b[i] !== DOUBLE_QUOTE) i++
+
+    if (b[i] !== DOUBLE_QUOTE) {
+        if (reader.writable) {
+            return {
+                type: NEEDS_MORE_DATA,
+                nextIndex: start
+            }
         }
-
-    return {
-        type: ERROR,
-        error: new JSONParseError(`Invalid date value '${b[i]}' at index ${i}`)
-    }
-}
-
-function fromTimestamp(reader: JsonReader, i: number): ReadResult<Date> {
-    const maxValue = 8_640_000_000_000_000
-    const minValue = -8_640_000_000_000_000
-
-    const result = tryParseFloat(reader, i, f64Format)
-
-    if (isComplete(result)) {
-        const value = result.value
-
-        if (value < minValue || value > maxValue)
-            return {
-                type: ERROR,
-                error: new JSONParseError('')
-            }
-
-        const date = new Date(value)
-
-        if (!isNaN(date.getTime()))
-            return {
-                type: COMPLETE,
-                value: date,
-                nextIndex: result.nextIndex
-            }
-
         return {
             type: ERROR,
             error: new JSONParseError('')
         }
     }
 
-    return result
-}
-
-function tryParseDefault(b: Uint8Array, i: number, o: JsonOptions, r: TryParseResult): boolean {
-    let start = i
-
-    const len = b.length
-    while (i < len && b[i] !== DOUBLE_QUOTE) i++
-
-    const decoder = o.decoder
     const view = new Uint8Array(b.buffer, start, i - start)
-    const dateString = decoder.decode(view)
+    const date = options.decoder.decode(view)
+    const value = new Date(date)
 
-    const date = new Date(dateString)
-    r.value = date
-    r.nextIndex = ++i
+    if (isNaN(value.getTime())) {
+        return {
+            type: ERROR,
+            error: new JSONParseError('')
+        }
+    }
 
-    return !isNaN(date.getTime())
+    return {
+        type: COMPLETE,
+        value: value,
+        nextIndex: i
+    }
 }
 
 const nonDigit = (b: number) => !isDigitU(b)
@@ -145,7 +113,7 @@ function expectTwoDigits(b: Uint8Array, i: number): number {
     return ++i
 }
 
-function tryParseISO8601(b: Uint8Array, i: number, r: TryParseResult): boolean {
+function tryParseISO8601(b: Uint8Array, i: number, r: ISOResult): boolean {
     const len1 = b.length - 1
 
     if ((i = expectFourDigits(b, i)) < 0) //YYYY
@@ -248,3 +216,37 @@ function tryParseISO8601(b: Uint8Array, i: number, r: TryParseResult): boolean {
     return true
 }
 
+function fromTimestamp(reader: JsonReader, i: number): ReadResult<Date> {
+    const maxValue = 8_640_000_000_000_000
+    const minValue = -8_640_000_000_000_000
+
+    const result = tryParseFloat(reader, i, f64Format)
+
+    if (isComplete(result)) {
+        const value = result.value
+
+        if (value < minValue || value > maxValue) {
+            return {
+                type: ERROR,
+                error: new JSONParseError('')
+            }
+        }
+
+        const date = new Date(value)
+
+        if (isNaN(date.getTime())) {
+            return {
+                type: ERROR,
+                error: new JSONParseError('')
+            }
+        }
+
+        return {
+            type: COMPLETE,
+            value: date,
+            nextIndex: result.nextIndex
+        }
+    }
+
+    return result
+}
