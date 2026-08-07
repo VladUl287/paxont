@@ -11,26 +11,83 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 export function toMap<T, M extends BaseMeta<T, M>>(
     metadata: MapMeta<M>,
     context: ParseContext,
-    index: number,
+    i: number,
     depth: number,
 ): ReadResult<Map<string, T>> {
-    const { reader, stack } = context
-    const b = reader.bytes
-    const len = b.length
+    const { reader, stack, options } = context
 
-    let i = index
+    if (depth > options.maxDepth) {
+        return {
+            type: ReadResultType.ERROR,
+            error: new JSONParseError(`Maximum depth exceeded`, { depth, index: i, metadata })
+        }
+    }
 
     const state = stack.pop()
-    if (!state || !state.isContinued) {
-        if (b[i] !== CURLY_OPEN)
+
+    let isContinued: boolean = state?.isContinued ?? false
+    let value: Map<string, T> = state?.value ?? new Map<string, T>()
+    let keyValue: string | undefined = state?.keyValue ?? undefined
+    let colonIndex: number | undefined = state?.colonIndex ?? undefined
+
+    const b = reader.bytes
+    if (i >= b.length) {
+        if (reader.writable) {
+            return {
+                type: NEEDS_MORE_DATA,
+                nextIndex: i
+            }
+        }
+
+        return {
+            type: ERROR,
+            error: new JSONParseError(`Unexpected end of input`, {})
+        }
+    }
+
+    let commaIndex = -1
+    if (!isContinued) {
+        if (b[i] !== CURLY_OPEN) {
             return {
                 type: ERROR,
                 error: new JSONParseError(``)
             }
+        }
         i++
     }
+    else {
+        i = skipWhitespace(b, i)
+        if (b[i] === COMMA) {
+            commaIndex = i
+            i++
+        }
+        else if (b[i] === CURLY_CLOSE) {
+            return {
+                type: COMPLETE,
+                value: value,
+                nextIndex: ++i
+            }
+        }
+    }
 
-    const result = new Map<string, T>()
+    if (i >= b.length && reader.writable) {
+        stack.push({
+            isContinued: true,
+            value
+        })
+        return {
+            type: NEEDS_MORE_DATA,
+            nextIndex: i
+        }
+    }
+
+    if (b[i] === CURLY_CLOSE) {
+        return {
+            type: COMPLETE,
+            value: value,
+            nextIndex: ++i
+        }
+    }
 
     const keyMeta = metadata.key
     const tryParseKey = metadata.key.toValue
@@ -38,50 +95,49 @@ export function toMap<T, M extends BaseMeta<T, M>>(
     const tryParseValue = valueMeta.toValue
 
     while (true) {
-        i = skipWhitespace(b, i)
+        if (!keyValue) {
+            i = skipWhitespace(b, i)
 
-        let keyState = state?.keyState ?? {}
-        if (state?.keyState)
-            state.keyState = undefined
+            const keyResult = tryParseKey(keyMeta, context, i, depth)
 
-        const keyResult = tryParseKey(keyMeta, context, i, depth)
+            if (isError(keyResult))
+                return keyResult
 
-        if (isError(keyResult))
-            return keyResult
+            if (isNeedsMoreData(keyResult)) {
+                stack.push({
+                    isContinued: true,
+                    value
+                })
+                return keyResult
+            }
 
-        if (isNeedsMoreData(keyResult)) {
-            stack.push({
-                isContinued: true,
-                keyState
-            })
-            return keyResult
+            i = keyResult.nextIndex
+            keyValue = keyResult.value
         }
 
-        i = keyResult.nextIndex
-
-        if (i >= len) {
-            if (reader.writable) {
-                stack.push({ isContinued: true })
+        if (colonIndex === undefined) {
+            if (b[i] !== COLON) {
+                if (i >= b.length && reader.writable) {
+                    stack.push({
+                        isContinued: true,
+                        value,
+                        keyValue
+                    })
+                    return {
+                        type: NEEDS_MORE_DATA,
+                        nextIndex: i
+                    }
+                }
                 return {
-                    type: NEEDS_MORE_DATA,
-                    nextIndex: i
+                    type: ERROR,
+                    error: new JSONParseError('')
                 }
             }
+            i++
+            colonIndex = i
         }
-
-        if (b[i] !== COLON) {
-            return {
-                type: ERROR,
-                error: new JSONParseError('')
-            }
-        }
-        i++
 
         i = skipWhitespace(b, i)
-
-        let valueState = state?.valueState ?? {}
-        if (state?.valueState)
-            state.valueState = undefined
 
         const valueResult = tryParseValue(valueMeta, context, i, depth)
 
@@ -91,24 +147,75 @@ export function toMap<T, M extends BaseMeta<T, M>>(
         if (isNeedsMoreData(valueResult)) {
             stack.push({
                 isContinued: true,
-                valueState
+                value,
+                keyValue,
+                colonIndex
             })
             return valueResult
         }
 
         i = valueResult.nextIndex
 
-        result.set(keyResult.value, valueResult.value)
+        value.set(keyValue, valueResult.value)
 
         i = skipWhitespace(b, i)
 
-        if (b[i] === COMMA) i++
-        else if (b[i] === CURLY_CLOSE) break
+        keyValue = undefined
+        colonIndex = undefined
+
+        if (i >= b.length && reader.writable) {
+            stack.push({
+                isContinued: true,
+                value
+            })
+            return {
+                type: NEEDS_MORE_DATA,
+                nextIndex: i
+            }
+        }
+
+        if (b[i] === COMMA) {
+            commaIndex = i
+            i++
+            continue
+        }
+
+        commaIndex = -1
+
+        if (b[i] === CURLY_CLOSE) { break }
+        else if (i >= b.length) {
+            if (reader.writable) {
+                stack.push({
+                    isContinued: true,
+                    value
+                })
+                return {
+                    type: NEEDS_MORE_DATA,
+                    nextIndex: i
+                }
+            }
+            return {
+                type: ERROR,
+                error: new JSONParseError('')
+            }
+        }
+
+        return {
+            type: ERROR,
+            error: new JSONParseError('')
+        }
+    }
+
+    if (commaIndex >= 0) {
+        return {
+            type: ERROR,
+            error: new JSONParseError('Trail comma')
+        }
     }
 
     return {
         type: COMPLETE,
-        value: result,
+        value: value,
         nextIndex: ++i
     }
 }
