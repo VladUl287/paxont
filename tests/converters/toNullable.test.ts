@@ -1,111 +1,88 @@
-import { toNullable } from "../../src/converters/nullable"
 import { bool, nullable } from "../../src/metadata/builder"
-import { ParseState, ParseContext } from "../../src/metadata/types"
+import { ParseContext, NullableMeta, PrimitiveMeta } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
-import { isNeedsMoreData, ReadResultType } from "../../src/utils/types"
+import { isComplete, ReadResultType } from "../../src/utils/types"
+import { deserializePartially } from "./utils"
 
 describe('toNullable', () => {
     const toBytes = (str: string) => new TextEncoder().encode(str)
 
     const meta = nullable(bool())
 
-    const deserialize = (bytes: Uint8Array) => {
-        const result = toNullable(meta, {
+    function expectNullable(meta: NullableMeta<PrimitiveMeta<boolean>>, str: string) {
+        const bytes = toBytes(str)
+
+        const context: ParseContext = {
+            reader: { bytes: bytes, writable: false },
             options: defaultOptions,
-            reader: {
-                bytes,
-                writable: false
-            },
-            stack: new Stack<ParseState>(),
-        }, 0, 0)
-        return result
+            stack: new Stack()
+        }
+
+        const result = meta.toValue(meta, context, 0, 0)
+
+        expect(result).toStrictEqual({
+            type: ReadResultType.COMPLETE,
+            value: JSON.parse(str),
+            nextIndex: bytes.length
+        })
+
+        for (let i = 0; i < bytes.length; i++) {
+            const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
+            const result = deserializePartially(meta, chunks)
+
+            expect(result).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: JSON.parse(str),
+                nextIndex: chunks[0].length
+            })
+        }
     }
 
-    const deserializePartially = (chunks: Uint8Array[]) => {
-        let result
-        let index = 0
+    function expectError(meta: NullableMeta<PrimitiveMeta<boolean>>, str: string) {
+        const bytes = toBytes(str)
 
-        let currentChunk
-        let prevChunk: number[] = []
+        const context: ParseContext = {
+            reader: { bytes: bytes, writable: false },
+            options: defaultOptions,
+            stack: new Stack()
+        }
 
-        const stack = new Stack<ParseState>()
+        const result = meta.toValue(meta, context, 0, 0)
 
-        while ((currentChunk = chunks.pop()) !== undefined) {
-            const context: ParseContext = {
-                reader: {
-                    bytes: new Uint8Array([...prevChunk, ...currentChunk]),
-                    writable: chunks.length !== 0
-                },
-                options: defaultOptions,
-                stack: stack
-            }
-            result = toNullable(meta, context, index, 0)
+        expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
 
-            if (isNeedsMoreData(result)) {
-                index = result.nextIndex
-                prevChunk = [...currentChunk.slice(result.nextIndex)]
-                continue
-            }
+        for (let i = 0; i < bytes.length; i++) {
+            const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
+            const result = deserializePartially(meta, chunks)
 
-            return result
+            expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
         }
     }
 
     describe('basic parsing', () => {
         test('should parse simple null', () => {
-            const bytes = toBytes('null')
-            const result = deserialize(bytes)
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: null, nextIndex: bytes.length })
+            expectNullable(meta, 'null')
         })
 
         test('should handle nullable value', () => {
-            const bytes = toBytes('false')
-            const result = deserialize(bytes)
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: false, nextIndex: bytes.length })
+            expectNullable(meta, 'false')
+            expectNullable(meta, 'true')
         })
     })
 
     describe('error handling', () => {
         test('should throw error for invalid JSON', () => {
-            const bytes = toBytes('NULL')
-            const result = deserialize(bytes)
-            expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+            expectError(meta, 'NULL')
         })
 
         test('should throw error for not enough data', () => {
-            const bytes = toBytes('NU')
-            const result = deserialize(bytes)
-            expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+            expectError(meta, 'NU')
         })
 
         test('should throw error for invalid value JSON', () => {
-            const bytes = toBytes('FALSE')
-            const result = deserialize(bytes)
-            expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
-        })
-    })
-
-    describe('partial parsing', () => {
-        test('should parse partial null', () => {
-            const chunks = [toBytes('nu'), toBytes('ll')].reverse()
-            const fullLength = chunks.reduce((res, ch) => ch.length + res, 0)
-            const result = deserializePartially(chunks)
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: null, nextIndex: fullLength })
-        })
-
-        test('should parse partial nullable value', () => {
-            const chunks = [toBytes('fal'), toBytes('se')].reverse()
-            const fullLength = chunks.reduce((res, ch) => ch.length + res, 0)
-            const result = deserializePartially(chunks)
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: false, nextIndex: fullLength })
-        })
-
-        test('should throw error for invalid JSON', () => {
-            const chunks = [toBytes('NU'), toBytes('LL')].reverse()
-            const result = deserializePartially(chunks)
-            expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+            expectError(meta, 'FALSE')
         })
     })
 })
