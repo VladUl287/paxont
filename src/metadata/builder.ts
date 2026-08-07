@@ -299,3 +299,27 @@ export const object = <M extends ObjectField<any, any>[]>(...fields: M): ObjectM
         toJson: toJson
     }
 }
+
+// type Mod3<M extends ObjectMeta<any>> = (input: M) => M & { fields: [...M['fields'], unknown] }
+
+// type CombineModifiers<Modifiers extends any[], Acc = {}> =
+//     Modifiers extends [infer First, ...infer Rest]
+//     ? First extends Mod3<infer M> ? ReturnType<First> & CombineModifiers<Rest, Acc> : never
+//     : Acc  
+
+// const _field = <M extends ObjectMeta<any>, U extends ObjectField<string, any>>(field: U) => (m: M): M & { fields: [...M['fields'], U] } => {
+//     return {} as any
+// }
+
+// const builder = <M extends ObjectMeta<any>>(build: M['build']) => (m: M): M => {
+//     return {} as any
+// }
+
+// const b = <Mods extends Mod3<ObjectMeta<any>>[]>(...mods: Mods): CombineModifiers<Mods, ObjectMeta<{}>> => {
+//     return {} as any
+// }
+
+// const result = b(
+//     _field(field('id', number())),
+//     _field(field('name', string()))
+// )
