@@ -59,7 +59,7 @@ describe('toMap', () => {
 
         expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
 
-        for (let i = 24; i < bytes.length; i++) {
+        for (let i = 0; i < bytes.length; i++) {
             const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
             const result = deserializePartially(meta, chunks)
             try {
