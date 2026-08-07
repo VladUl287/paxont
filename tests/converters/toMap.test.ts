@@ -31,7 +31,7 @@ describe('toMap', () => {
         expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: expect.any(Map), nextIndex: bytes.length })
 
         if (isComplete(result)) {
-            expect(mapToString(result.value)).toEqual(mapToString(result.value))
+            expect(mapToString(result.value)).toEqual(str)
         }
 
         for (let i = 0; i < bytes.length; i++) {
@@ -41,7 +41,7 @@ describe('toMap', () => {
             expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: expect.any(Map), nextIndex: chunks[0].length })
 
             if (isComplete(result)) {
-                expect(mapToString(result.value)).toEqual(mapToString(result.value))
+                expect(mapToString(result.value)).toEqual(str)
             }
         }
     }
