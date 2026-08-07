@@ -156,7 +156,15 @@ export function toObject<T extends Obj>(
 
         i = result.nextIndex
 
-        if (b[i] === COMMA) i++
+        if (b[i] === COMMA) {
+            if (j === fields.length - 1) {
+                return {
+                    type: ERROR,
+                    error: new JSONParseError('trailing comma')
+                }
+            }
+            i++
+        }
 
         buffer[index] = result.value
         j++
