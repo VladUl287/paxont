@@ -59,6 +59,13 @@ export function toSet<V, M extends BaseMeta<V, any>>(
         }
         i++
 
+        if (i >= b.length && reader.writable) {
+            return {
+                type: NEEDS_MORE_DATA,
+                nextIndex: i - 1
+            }
+        }
+
         if (b[i] === SQUARE_CLOSE) return {
             type: COMPLETE,
             value: new Set<V>(),
