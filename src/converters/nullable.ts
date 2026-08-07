@@ -1,5 +1,5 @@
-import { BaseMeta, ParseContext, NullableMeta } from "../metadata/types"
-import { isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
+import { BaseMeta, ParseContext, NullableMeta, MetaValue } from "../metadata/types"
+import { ReadResult, ReadResultType } from "../utils/types"
 import { L, N, U } from "../utils/ascii_symbols"
 
 const NULL = N | U << 8 | L << 16 | L << 24
@@ -7,12 +7,12 @@ const NULL = N | U << 8 | L << 16 | L << 24
 const COMPLETE = ReadResultType.COMPLETE
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toNullable<T, M extends BaseMeta<T, M>>(
-    metadata: NullableMeta<M>,
+export function toNullable<M extends BaseMeta<any, M>>(
+    { value }: NullableMeta<M>,
     context: ParseContext,
     index: number,
     depth: number
-): ReadResult<T | null> {
+): ReadResult<MetaValue<M> | null> {
     const reader = context.reader
     const b = reader.bytes
     const len = b.length
@@ -31,6 +31,5 @@ export function toNullable<T, M extends BaseMeta<T, M>>(
             nextIndex: i
         }
 
-    const metaValue = metadata.value
-    return metaValue.toValue(metaValue, context, i, depth)
+    return value.toValue(value, context, i, depth)
 }
