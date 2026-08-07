@@ -301,13 +301,13 @@ export const object = <M extends ObjectField<any, any>[]>(...fields: M): ObjectM
     }
 }
 
-type FieldModifier<K extends string, V extends BaseMeta<any, any>> = 
+type FieldModifier<K extends string, V extends BaseMeta<any, any>> =
     <T extends {}>(obj: ObjectMeta<T>) => ObjectMeta<ExpandObj<T & { [P in K]: V }>>
 
-const _field = <K extends string, V extends BaseMeta<any, any>>(name: K, value: V): FieldModifier<K, V> => 
+const _field = <K extends string, V extends BaseMeta<any, any>>(name: K, value: V): FieldModifier<K, V> =>
     <T extends {}>(obj: ObjectMeta<T>): ObjectMeta<ExpandObj<T & { [P in K]: V }>> => ({} as any)
 
-const _builder = <M extends ObjectMeta<any>>(build: M['build']) => (m: M): M => {
+const _builder = <M extends ObjectMeta<{}>>(build: M['build']) => (m: M): M => {
     return {} as any
 }
 
@@ -323,10 +323,11 @@ type AsObj<Mods extends any[], Acc extends Obj> =
     ? AsObj<Rest, ApplyModifier<First, Acc>>
     : Acc
 
-export const _object = <Mods extends FieldModifier<any, any>[]>(...mods: Mods): ObjectMeta<AsObj<Mods, {}>> => {
+export const _object = <Mods extends Modifier<ObjectMeta<any>>[]>(...mods: Mods): ObjectMeta<AsObj<Mods, {}>> => {
     return {} as any
 }
 
 const obj = _object(
-    _field('id', number())
+    _field('id', number()),
+    _builder({} as any)
 )
