@@ -1,7 +1,33 @@
 import { BaseMeta, ParseContext, ParseState } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
+import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
-import { isNeedsMoreData, ReadResult } from "../../src/utils/types"
+import { isNeedsMoreData, ReadResult, ReadResultType } from "../../src/utils/types"
+
+const encoder = new TextEncoder()
+export function toBytes(str: string): Uint8Array {
+    return encoder.encode(str)
+}
+
+export function expectError<M extends BaseMeta<any, any>>(meta: M, str: string) {
+    const bytes = toBytes(str)
+
+    const context: ParseContext = {
+        reader: { bytes: bytes, writable: false },
+        options: defaultOptions,
+        stack: new Stack()
+    }
+
+    const result = meta.toValue(meta, context, 0, 0)
+
+    expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+
+    for (let i = 0; i < bytes.length; i++) {
+        const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
+        const result = deserializePartially(meta, chunks)
+        expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+    }
+}
 
 export const deserializePartially = <M extends BaseMeta<any, any>>(meta: M, chunks: Uint8Array[]) => {
     let result: ReadResult<any>
