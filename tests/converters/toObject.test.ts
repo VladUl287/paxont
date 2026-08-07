@@ -1,6 +1,5 @@
-import { toObject } from "../../src/converters/object"
 import { bool, field, number, object } from "../../src/metadata/builder"
-import { ParseState, ObjectMeta } from "../../src/metadata/types"
+import { ObjectMeta, ParseContext } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
@@ -10,72 +9,90 @@ import { deserializePartially } from "./utils"
 describe('toNullable', () => {
     const toBytes = (str: string) => new TextEncoder().encode(str)
 
-    const _meta = object(
+    const meta = object(
         field("id", number()),
         field("isActive", bool())
     )
 
-    const deserialize = (bytes: Uint8Array, meta: ObjectMeta<any> = _meta) => {
-        const result = toObject(meta, {
+    function expectObject(meta: ObjectMeta<any>, str: string) {
+        const bytes = toBytes(str)
+        const obj = JSON.parse(str)
+
+        const context: ParseContext = {
+            reader: { bytes: bytes, writable: false },
             options: defaultOptions,
-            reader: {
-                bytes,
-                writable: false
-            },
-            stack: new Stack<ParseState>(),
-        }, 0, 0)
-        return result
+            stack: new Stack()
+        }
+
+        const result = meta.toValue(meta, context, 0, 0)
+
+        expect(result).toStrictEqual({
+            type: ReadResultType.COMPLETE,
+            value: obj,
+            nextIndex: bytes.length
+        })
+
+        for (let i = 0; i < bytes.length; i++) {
+            const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
+            const result = deserializePartially(meta, chunks)
+
+            expect(result).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: obj,
+                nextIndex: chunks[0].length
+            })
+        }
+    }
+
+    function expectError(meta: ObjectMeta<any>, str: string) {
+        const bytes = toBytes(str)
+
+        const context: ParseContext = {
+            reader: { bytes: bytes, writable: false },
+            options: defaultOptions,
+            stack: new Stack()
+        }
+
+        const result = meta.toValue(meta, context, 0, 0)
+
+        expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+
+        for (let i = 0; i < bytes.length; i++) {
+            const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
+            const result = deserializePartially(meta, chunks)
+            expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+        }
     }
 
     describe('basic parsing', () => {
         test('should parse simple object', () => {
             const input = { id: 1, isActive: false }
-            const bytes = toBytes(JSON.stringify(input))
-            const result = deserialize(bytes)
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: input, nextIndex: bytes.length })
+            expectObject(meta, JSON.stringify(input))
         })
 
         test('should parse empty object', () => {
             const input = {}
-            const bytes = toBytes(JSON.stringify(input))
-            const result = deserialize(bytes, object())
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: input, nextIndex: bytes.length })
+            const meta = object()
+            expectObject(meta, JSON.stringify(input))
         })
     })
 
     describe('error handling', () => {
         test('should throw error if more data presented', () => {
-            const input = { id: 1, isActive: false }
-            const bytes = toBytes(JSON.stringify(input))
             const meta = object(field("id", number()))
-            const result = deserialize(bytes, meta)
-            expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+            const input = { id: 1, isActive: false }
+            expectError(meta, JSON.stringify(input))
         })
 
         test('should throw error if data not presented', () => {
             const input = { id: 1 }
-            const bytes = toBytes(JSON.stringify(input))
-            const result = deserialize(bytes, _meta)
-            expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+            expectError(meta, JSON.stringify(input))
         })
-    })
 
-    describe('partial parsing', () => {
-        test('should parse partial all over object', () => {
-            const input = { id: 1, isActive: false }
-            const str = JSON.stringify(input)
-
-            for (let i = 0; i < str.length; i++) {
-                const chunks = [
-                    toBytes(str.substring(0, i)),
-                    toBytes(str.substring(i))
-                ].reverse()
-
-                const result = deserializePartially(_meta, chunks)
-                const lastChunk = chunks[0]
-
-                expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: input, nextIndex: lastChunk.length })
-            }
+        test('should throw error on trailing comma', () => {
+            const input = '{ "id": 1, }'
+            const meta = object(field("id", number()))
+            expectError(meta, input)
         })
     })
 })
