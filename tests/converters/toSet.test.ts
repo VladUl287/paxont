@@ -1,118 +1,75 @@
-import { toNullable } from "../../src/converters/nullable"
-import { toObject } from "../../src/converters/object"
-import { bool, field, nullable, number, object, set } from "../../src/metadata/builder"
-import { BaseMeta, ParseState, ObjectMeta, ParseContext } from "../../src/metadata/types"
+import { number, set } from "../../src/metadata/builder"
+import { ParseContext, SetMeta } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
-import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
-import { isNeedsMoreData, ReadResultType } from "../../src/utils/types"
+import { isComplete, ReadResultType } from "../../src/utils/types"
+import { deserializePartially, expectError, toBytes } from "./utils"
 
 describe('toSet', () => {
-    const toBytes = (str: string) => new TextEncoder().encode(str)
+    const meta = set(number())
 
-    const setMeta = set(number())
-
-    const deserialize = <M extends BaseMeta<any, any>>(bytes: Uint8Array, meta: M) => {
-        const result = meta.toValue(meta, {
-            options: defaultOptions,
-            reader: {
-                bytes,
-                writable: false
-            },
-            stack: new Stack<ParseState>(),
-        }, 0, 0)
-        return result
+    function setToString(set: Set<any>): string {
+        return JSON.stringify([...set])
     }
 
-    const deserializePartially = <M extends BaseMeta<any, any>>(chunks: Uint8Array[], meta: M) => {
-        let result
+    function expectSet(meta: SetMeta<any>, str: string) {
+        const bytes = toBytes(str)
 
-        let currentChunk
-        let prevChunk: number[] = []
+        const context: ParseContext = {
+            reader: { bytes: bytes, writable: false },
+            options: defaultOptions,
+            stack: new Stack()
+        }
 
-        const stack = new Stack<ParseState>()
+        const result = meta.toValue(meta, context, 0, 0)
 
-        while ((currentChunk = chunks.pop()) !== undefined) {
-            const ch = [...prevChunk, ...currentChunk]
-            const bytes = new Uint8Array(ch)
+        expect(result).toStrictEqual({
+            type: ReadResultType.COMPLETE,
+            value: expect.any(Set),
+            nextIndex: bytes.length
+        })
 
-            const context: ParseContext = {
-                reader: {
-                    bytes: bytes,
-                    writable: chunks.length !== 0
-                },
-                options: defaultOptions,
-                stack: stack
+        if (isComplete(result)) {
+            expect(setToString(result.value)).toEqual(str)
+        }
+
+        for (let i = 0; i < bytes.length; i++) {
+            const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
+            const result = deserializePartially(meta, chunks)
+
+            expect(result).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: expect.any(Set),
+                nextIndex: chunks[0].length
+            })
+
+            if (isComplete(result)) {
+                expect(setToString(result.value)).toEqual(str)
             }
-            result = meta.toValue(meta, context, 0, 0)
-
-            if (isNeedsMoreData(result)) {
-                prevChunk = [...currentChunk.slice(result.nextIndex)]
-                continue
-            }
-
-            chunks[0] = bytes
-            return result
         }
     }
 
     describe('basic parsing', () => {
         test('should parse simple set', () => {
-            const arr = [1, 2, 3]
-            const input = new Set(arr)
-            const bytes = toBytes(JSON.stringify(arr))
-            const result = deserialize(bytes, setMeta)
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: input, nextIndex: bytes.length })
+            const str = JSON.stringify([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+            expectSet(meta, str)
         })
 
         test('should parse empty set', () => {
-            const arr: number[] = []
-            const input = new Set(arr)
-            const bytes = toBytes(JSON.stringify(arr))
-            const result = deserialize(bytes, setMeta)
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: input, nextIndex: bytes.length })
+            const str = JSON.stringify([])
+            expectSet(meta, str)
         })
     })
 
     describe('error handling', () => {
         test('should throw error if invalid data presented', () => {
             const input = { id: 1, isActive: false }
-            const bytes = toBytes(JSON.stringify(input))
-            const result = deserialize(bytes, setMeta)
-            expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
-        })
-
-        test('should throw error if data presented partially', () => {
-            const arr: number[] = []
-            const input = new Set(arr)
-            const bytes = toBytes(JSON.stringify(arr).replace(']', ''))
-            const result = deserialize(bytes, setMeta)
-            expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+            const json = JSON.stringify(input)
+            expectError(meta, json)
         })
 
         test('should throw error if data not presented', () => {
-            const result = deserialize(new Uint8Array(), setMeta)
-            expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
-        })
-    })
-
-    describe('partial parsing', () => {
-        test('should parse partial all over object', () => {
-            const arr = [1, 2, 3, 4, 5, 6, 7, 8]
-            const input = new Set(arr)
-            const str = JSON.stringify(arr)
-
-            for (let i = 0; i < str.length; i++) {
-                const chunks = [
-                    toBytes(str.substring(0, i)),
-                    toBytes(str.substring(i))
-                ].reverse()
-
-                const result = deserializePartially(chunks, setMeta)
-                const lastChunk = chunks[0]
-
-                expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: input, nextIndex: lastChunk.length })
-            }
+            expectError(meta, '')
         })
     })
 })
