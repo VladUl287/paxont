@@ -1,7 +1,7 @@
 import { number, string } from "./builder"
 import { BaseMeta, Obj, ObjectMeta } from "./types"
 
-type Expand<T> = T extends object ? { [K in keyof T]: T[K] } : T
+type Expand<T> = T extends object ? { [K in keyof T]: T[K] } & {} : T
 
 type FieldModifier<K extends string, V extends BaseMeta<any, any>> = <T extends {}>(obj: ObjectMeta<T>) =>
   ObjectMeta<Expand<T & { [P in K]: V }>>
