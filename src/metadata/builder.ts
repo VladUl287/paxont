@@ -3,7 +3,8 @@ import {
     ArrayMeta,
     BaseMeta, MetaValue, MapMeta, NullableMeta, ObjectField,
     ObjectMeta, PrimitiveMeta, SetMeta,
-    TypeName
+    TypeName,
+    Obj
 } from "./types"
 import { BaseType, JSONT } from "./baseTypes"
 import { toDate } from "../converters/date"
@@ -300,36 +301,32 @@ export const object = <M extends ObjectField<any, any>[]>(...fields: M): ObjectM
     }
 }
 
-type Mod3<M extends ObjectMeta<any>> = (input: M) => M & { fields: [...M['fields'], unknown] }
+type FieldModifier<K extends string, V extends BaseMeta<any, any>> = 
+    <T extends {}>(obj: ObjectMeta<T>) => ObjectMeta<ExpandObj<T & { [P in K]: V }>>
 
-// type CombineModifiers<Modifiers extends any[], Acc = {}> =
-//     Modifiers extends [infer First, ...infer Rest]
-//     ? First extends Mod3<infer M> ? ReturnType<First> & CombineModifiers<Rest, Acc> : never
-//     : Acc
+const _field = <K extends string, V extends BaseMeta<any, any>>(name: K, value: V): FieldModifier<K, V> => 
+    <T extends {}>(obj: ObjectMeta<T>): ObjectMeta<ExpandObj<T & { [P in K]: V }>> => ({} as any)
 
-// type CombineModifiers<Modifiers extends any[], Acc = {}> =
-//     Modifiers extends [infer First, ...infer Rest]
-//     ? First extends (input: any) => infer R ? CombineModifiers<Rest, Acc & R> : never
-    // : Acc
-
-type CombineModifiers<Modifiers extends any[], Acc extends ObjectMeta<any>> =
-    Modifiers extends [infer First, ...infer Rest]
-    ? First extends (input: any) => infer R ? CombineModifiers<Rest, Acc & R> : never
-    : ObjectMeta<AsObject<Acc['fields']>>
-
-const _field = <M extends ObjectMeta<any>, U extends ObjectField<string, any>>(field: U) => (m: M): M & { fields: [...M['fields'], U] } => {
+const _builder = <M extends ObjectMeta<any>>(build: M['build']) => (m: M): M => {
     return {} as any
 }
 
-const builder = <M extends ObjectMeta<any>>(build: M['build']) => (m: M): M => {
+type ExpandObj<T> = T extends object ? { [K in keyof T]: T[K] } & {} : T
+
+type ApplyModifier<Mod, O> =
+    Mod extends (obj: ObjectMeta<any>) => ObjectMeta<infer R>
+    ? ExpandObj<O & R>
+    : never
+
+type AsObj<Mods extends any[], Acc extends Obj> =
+    Mods extends [infer First, ...infer Rest]
+    ? AsObj<Rest, ApplyModifier<First, Acc>>
+    : Acc
+
+export const _object = <Mods extends FieldModifier<any, any>[]>(...mods: Mods): ObjectMeta<AsObj<Mods, {}>> => {
     return {} as any
 }
 
-const b = <Mods extends Mod3<ObjectMeta<any>>[]>(...mods: Mods): CombineModifiers<Mods, ObjectMeta<any>> => {
-    return {} as any
-}
-
-const result = b(
-    _field(field('id', number())),
-    _field(field('name', string()))
+const obj = _object(
+    _field('id', number())
 )
