@@ -33,12 +33,9 @@ export interface PrimitiveMeta<T> extends BaseMeta<T, PrimitiveMeta<T>> { }
 export type Obj = { [k: string]: BaseMeta<any, any> }
 export type AsObject<T extends Obj> = Expand<{ [E in keyof T]: MetaValue<T[E]> }>
 
-type AsValuesArray<T extends Obj> = Expand<MetaValue<T[keyof T]>[]>
-type AsFieldsArray<T extends Obj> = Expand<ObjectField<keyof T & string, T[keyof T]>[]>
-
 export interface ObjectMeta<T extends Obj> extends BaseMeta<AsObject<T>, ObjectMeta<T>> {
-    readonly fields: AsFieldsArray<T>
-    readonly build: (values: AsValuesArray<T>) => AsObject<T>
+    readonly fields: ObjectField<keyof T & string, T[keyof T]>[]
+    readonly build: (values: MetaValue<T[keyof T]>[]) => AsObject<T>
     readonly getFieldIndex: (bytes: Uint8Array, offset: number) => number
 }
 

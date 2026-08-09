@@ -280,35 +280,65 @@ export const field = <K extends string, M extends BaseMeta<any, M>>(
     }
 }
 
-type AsObject<T extends ObjectField<string, any>[]> = Expand<{ [E in T[number]as E['name']['value']]: E['value'] }>
+type ObjectParam<M extends ObjectParam<M>[]> = ObjectField<string, any> | Modifier<ObjectMeta<AsObject<M>>>
 
-export const object = <M extends ObjectField<any, any>[]>(...fields: M): ObjectMeta<AsObject<M>> => {
-    const keys = fields.map(f => f.name.value as string)
-    const factory = genObjectFactory(keys) as any
+type Filter<T, U> = T extends U ? T : never;
+type FilterArray<T, A> = T extends (infer U)[] ? Filter<U, A>[] : never
 
-    const keysBytes = fields.map(f => f.name.bytes)
-    const fieldIndex = generateTrie(keysBytes) as any
+type FilterFields<M extends ObjectParam<M>[]> = FilterArray<M, ObjectField<string, any>>
+type AsObject<M extends ObjectParam<M>[]> = Expand<{ [E in FilterFields<M>[number]as E['name']['value']]: E['value'] }>
 
-    const toJson = genObjectToJsonFactory(fields.map(c => c.name.value))
+export const object = <M extends ObjectParam<M>[]>(...args: M): ObjectMeta<AsObject<M>> => {
+    const fields = args.filter((f): f is ObjectField<keyof AsObject<M> & string, any> => {
+        return {} as any
+    })
 
-    return {
+    const objectMeta: ObjectMeta<AsObject<M>> = {
         type: JSONT.OBJECT,
         fields: fields,
-        build: factory,
-        getFieldIndex: fieldIndex,
         toValue: toObject,
-        toJson: toJson
+        build: genObjectFactory<ObjectMeta<AsObject<M>>>(fields),
+        getFieldIndex: generateTrie(fields.map(f => f.name.bytes)),
+        toJson: genObjectToJsonFactory<ObjectMeta<AsObject<M>>>(fields)
     }
+
+    return args
+        .filter((f): f is Modifier<ObjectMeta<AsObject<M>>> => true)
+        .reduce(applyModifier, objectMeta)
 }
 
-const _field = <K extends string, V extends BaseMeta<any, any>>(name: K, value: V) =>
-    <T extends {}>(obj: ObjectMeta<T>): ObjectMeta<ExpandObj<T & { [P in K]: V }>> => ({} as any)
-
-const _builder = <M extends ObjectMeta<{}>>(build: M['build']) => (m: M): M => {
+const builder = <M extends ObjectMeta<any>>(build: M['build']) => (m: M): M => {
     return {} as any
 }
 
-type ExpandObj<T> = T extends object ? { [K in keyof T]: T[K] } & {} : T
+const ob = object(
+    field('id', number()),
+    field('name', string()),
+    builder({} as any)
+)
+
+// ob.build()
+
+const _field = <K extends string, M extends BaseMeta<any, M>>(name: K, value: M, encoder: TextEncoder = new TextEncoder()) =>
+    <T extends {}>(obj: ObjectMeta<T>): ObjectMeta<ExpandObj<T & { [P in K]: M }>> => {
+        // obj.fields.push({
+        //     name: {
+        //         value: name,
+        //         bytes: encoder.encode(name)
+        //     },
+        //     value: value
+        // })
+        return {
+            ...obj,
+            toJson: {} as any,
+            toValue: {} as any,
+            build: {} as any,
+            fields: {} as any,
+            // fields: [...obj.fields]
+        }
+    }
+
+type ExpandObj<T> = T extends object ? { [K in keyof T]: T[K] } : T
 
 type ApplyModifier<Mod, O> =
     Mod extends (obj: ObjectMeta<any>) => ObjectMeta<infer R>
@@ -326,5 +356,9 @@ export const _object = <Mods extends Modifier<ObjectMeta<any>>[]>(...mods: Mods)
 
 const obj = _object(
     _field('id', number()),
-    _builder({} as any)
+    _field('name', number()),
+    builder({} as any)
 )
+obj.fields
+// ObjectMeta<{ id: PrimitiveMeta<number>; name: PrimitiveMeta<number>; }>.fields: ObjectField<"id" | "name", PrimitiveMeta<number>>[]
+// ObjectMeta<{ id: PrimitiveMeta<number>; name: PrimitiveMeta<number>; }>.fields: ObjectField<"id" | "name", PrimitiveMeta<number>>[]

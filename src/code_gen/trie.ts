@@ -1,4 +1,4 @@
-export function generateTrie(values: Uint8Array[]) {
+export function generateTrie(values: Uint8Array[]): (bytes: Uint8Array, offset: number) => number {
     type Value = {
         readonly bytes: Uint8Array,
         readonly index: number
@@ -127,10 +127,10 @@ export function generateTrie(values: Uint8Array[]) {
         }
     }
 
-    const mappedValues = values.map((b, i) => ({ 
+    const mappedValues = values.map((b, i) => ({
         bytes: b,
         index: i
     }))
     const functionBody = `${build(mappedValues, 0)}return -1;`
-    return new Function('a', 'i', functionBody)
+    return new Function('a', 'i', functionBody) as any
 }
