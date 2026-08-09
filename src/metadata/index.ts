@@ -24,7 +24,7 @@ export type Metadata = {
     readonly add: <Input, M extends BaseMeta<any, any>>(type: JType<Input, M>) => void
     readonly remove: (type: TypeName | JType<any, any>) => boolean
     readonly clear: () => void
-    readonly from: <T>(data: T) => BaseMeta<Unwrap<T>, any>
+    readonly from: <T, R extends BaseMeta<any, any> = BaseMeta<Unwrap<T>, any>>(data: T) => R
 }
 
 export type MetadataOptions = {
@@ -63,7 +63,7 @@ export function metadata(options: MetadataOptions = defaultOptions): Metadata {
 
     const clear = (): void => { jTypes.splice(0) }
 
-    const from = <T>(data: T): BaseMeta<Unwrap<T>, any> => {
+    const from = <T, R extends BaseMeta<any, any> = BaseMeta<Unwrap<T>, any>>(data: T): R => {
         for (const type of jTypes) {
             if (type.is(data)) {
                 return type.from(data, instance)
