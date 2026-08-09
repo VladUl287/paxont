@@ -8,8 +8,10 @@ import {
 import { isPlainObject } from "../utils/object"
 import { isMetadata } from "./utils"
 
-type HasMeta<T> = T extends object
-    ? [Extract<T[keyof T], BaseMeta<any, any>>] extends [never] ? HasMeta<T[keyof T]> : true
+type HasMeta<T> =
+    T extends BaseMeta<any, any> ? true :
+    T extends Function ? false :
+    T extends object ? true extends { [K in keyof T]: HasMeta<T[K]> }[keyof T] ? true : false
     : false
 
 export type Unwrap<T> =
