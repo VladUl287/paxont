@@ -21,6 +21,7 @@ import { ArrayLikeWritable, ArrayPool, BigIntTypedArray, FloatTypedArray, Intege
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../converters/number/int"
 import { toFloat } from "../converters/number/float"
 import { Expand } from "../utils/types"
+import { isMetadata } from "./utils"
 
 export type Modifier<M extends BaseMeta<any, M>> = (metadata: M) => M
 
@@ -268,18 +269,6 @@ export const set = <M extends BaseMeta<any, M>>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const field = <K extends string, M extends BaseMeta<any, M>>(
-    name: K, value: M, encoder: TextEncoder = new TextEncoder()
-): ObjectField<K, M> => {
-    return {
-        name: {
-            value: name,
-            bytes: encoder.encode(name)
-        },
-        value: value
-    }
-}
-
 type ObjectParam<M extends ObjectParam<M>[]> = ObjectField<string, any> | Modifier<ObjectMeta<AsObject<M>>>
 
 type Filter<T, U> = T extends U ? T : never;
@@ -289,8 +278,8 @@ type FilterFields<M extends ObjectParam<M>[]> = FilterArray<M, ObjectField<strin
 type AsObject<M extends ObjectParam<M>[]> = Expand<{ [E in FilterFields<M>[number]as E['name']['value']]: E['value'] }>
 
 export const object = <M extends ObjectParam<M>[]>(...args: M): ObjectMeta<AsObject<M>> => {
-    const fields = args.filter((f): f is ObjectField<keyof AsObject<M> & string, any> => {
-        return {} as any
+    const fields = args.filter((arg): arg is ObjectField<keyof AsObject<M> & string, any> => {
+        return arg && typeof arg === 'object' && typeof arg['name'] === 'string' && isMetadata(arg.value)
     })
 
     const objectMeta: ObjectMeta<AsObject<M>> = {
@@ -303,10 +292,22 @@ export const object = <M extends ObjectParam<M>[]>(...args: M): ObjectMeta<AsObj
     }
 
     return args
-        .filter((f): f is Modifier<ObjectMeta<AsObject<M>>> => true)
+        .filter((arg): arg is Modifier<ObjectMeta<AsObject<M>>> => {
+            return arg && typeof arg === 'function'
+        })
         .reduce(applyModifier, objectMeta)
 }
 
-const builder = <M extends ObjectMeta<any>>(build: M['build']) => (m: M): M => {
-    return {} as any
+export const field = <K extends string, M extends BaseMeta<any, M>>(
+    name: K, value: M, encoder: TextEncoder = new TextEncoder()
+): ObjectField<K, M> => {
+    return {
+        name: {
+            value: name,
+            bytes: encoder.encode(name)
+        },
+        value: value
+    }
 }
+
+export const builder = <M extends ObjectMeta<any>>(build: M['build']) => (m: M): M => ({ ...m, build })
