@@ -58,7 +58,7 @@ export interface ArrayMeta<A extends ArrayLike<MetaValue<M>>, M extends BaseMeta
 
 export interface SetMeta<M extends BaseMeta<any, M>> extends BaseMeta<Set<MetaValue<M>>, SetMeta<M>> {
     readonly value: M,
-    readonly getIdentity?: (value: MetaValue<M>) => any
+    readonly key?: (value: MetaValue<M>) => any
 }
 
 export interface MapMeta<M extends BaseMeta<any, M>> extends BaseMeta<Map<string, MetaValue<M>>, MapMeta<M>> {
