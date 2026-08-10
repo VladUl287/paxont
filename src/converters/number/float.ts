@@ -68,7 +68,7 @@ function getNumberEndIndex(b: Uint8Array, i: number): number {
 
         const chunkLength = Math.min(i + 4, len)
         while (i < chunkLength) {
-            if (!isNumberByte(b[i])) { return i }
+            if (!isNumberByte(b[i])) { return Math.min(0, i - 1) }
             i++
         }
     }
