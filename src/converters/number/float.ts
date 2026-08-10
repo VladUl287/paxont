@@ -5,6 +5,7 @@ import { isDigitU } from "../../utils/ascii"
 import { float64, FloatFormat } from "./floatFormats"
 import { genUnrolledFromCharCode } from "../../code_gen/string"
 import { wasmInstance } from "../../utils/wasm"
+import { isGreaterThan, isGreaterThanOrEqual, isLessThan, shiftRight } from "../../utils/long_bitwise"
 
 type Store = {
     mantissa: number,
@@ -416,7 +417,7 @@ function toFloatCompute(low: number, high: number, e: number, f: FloatFormat): n
         return Infinity
 
     const lz = clz1(low, high);
-    [low, high] = shiftLeft1(low, high, lz, product128)
+    [low, high] = shiftLeft(low, high, lz, product128)
 
     const [alow, ahigh, blow, bhigh] = computeProduct1(low, high, e, f.denormalMantissaBits + 3, product128)
 
@@ -427,7 +428,7 @@ function toFloatCompute(low: number, high: number, e: number, f: FloatFormat): n
     const upperBit = bhigh >>> 31
     const shiftAmount = upperBit + 64 - f.denormalMantissaBits - 3;
 
-    [low, high] = shiftRight1(blow, bhigh, shiftAmount, product128)
+    [low, high] = shiftRight(blow, bhigh, shiftAmount, product128)
 
     const power = (((152170 + 65536) * e) >> 16) + 63
     let exponent = power + upperBit - lz + f.maxBinaryExponent
@@ -437,7 +438,7 @@ function toFloatCompute(low: number, high: number, e: number, f: FloatFormat): n
             return undefined
         }
 
-        [low, high] = shiftRight1(low, high, -exponent + 1, product128)
+        [low, high] = shiftRight(low, high, -exponent + 1, product128)
 
         const isOdd = (low & 1) !== 0
         if (isOdd) {
@@ -451,7 +452,7 @@ function toFloatCompute(low: number, high: number, e: number, f: FloatFormat): n
             high = newHigh
         }
 
-        [low, high] = shiftRight1(low, high, 1, product128)
+        [low, high] = shiftRight(low, high, 1, product128)
 
         exponent = isLessThan(low, high, halfValue.low, halfValue.high) ? 0 : 1
     }
@@ -459,7 +460,7 @@ function toFloatCompute(low: number, high: number, e: number, f: FloatFormat): n
         const lessOrEqualToOne = ahigh === 0 && alow <= 1
         const isExactlyHalfway = (low & 3) === 1
         if (lessOrEqualToOne && insideSafeExponent && isExactlyHalfway) { //round down
-            const [checkLow, checkHigh] = shiftLeft1(low, high, shiftAmount, product128)
+            const [checkLow, checkHigh] = shiftLeft(low, high, shiftAmount, product128)
             if (checkLow === blow && checkHigh === bhigh) {
                 low &= ~1
             }
@@ -477,7 +478,7 @@ function toFloatCompute(low: number, high: number, e: number, f: FloatFormat): n
             high = newHigh
         }
 
-        [low, high] = shiftRight1(low, high, 1, product128)
+        [low, high] = shiftRight(low, high, 1, product128)
 
         if (isGreaterThanOrEqual(low, high, maxValue.low, maxValue.high)) {
             exponent++
@@ -582,71 +583,6 @@ export function clz1(low: number, high: number): number {
     return 32 + Math.clz32(low)
 }
 
-function shiftLeft1(low: number, high: number, bits: number, output: Uint32Array): Uint32Array {
-    if (bits === 0) {
-        output[0] = low
-        output[1] = high
-        return output
-    }
-
-    if (bits < 32) {
-        output[0] = low << bits
-        output[1] = (high << bits) | (low >>> (32 - bits))
-        return output
-    }
-
-    if (bits < 64) {
-        output[0] = 0
-        output[1] = low << (bits - 32)
-        return output
-    }
-
-    output[0] = 0
-    output[1] = 0
-    return output
-}
-
-function shiftRight1(low: number, high: number, bits: number, output: Uint32Array): Uint32Array {
-    if (bits === 0) {
-        output[0] = low
-        output[1] = high
-        return output
-    }
-
-    if (bits < 32) {
-        output[0] = (low >>> bits) | (high << (32 - bits))
-        output[1] = high >>> bits
-        return output
-    }
-
-    if (bits < 64) {
-        output[0] = high >>> (bits - 32)
-        output[1] = 0
-        return output
-    }
-
-    output[0] = 0
-    output[1] = 0
-    return output
-}
-
-function isGreaterThan(al: number, ah: number, bl: number, bh: number) {
-    if (ah > bh) return true
-    if (ah < bh) return false
-    return (al >>> 0) > (bl >>> 0)
-}
-
-function isGreaterThanOrEqual(al: number, ah: number, bl: number, bh: number) {
-    if (ah > bh) return true
-    if (ah < bh) return false
-    return (al >>> 0) >= (bl >>> 0)
-}
-
-function isLessThan(al: number, ah: number, bl: number, bh: number) {
-    if (ah < bh) return true
-    if (ah > bh) return false
-    return (al >>> 0) < (bl >>> 0)
-}
 
 export function splitTo64(value: bigint): { high: number, low: number } {
     return {
