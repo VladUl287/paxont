@@ -1,8 +1,7 @@
-import { DOT, E, E_UPPER, MINUS, PLUS, ZERO } from "../../utils/ascii_symbols"
+import { DOT, E, MINUS, PLUS, ZERO } from "../../utils/ascii_symbols"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/types"
-import { ParseContext, JsonReader, PrimitiveMeta } from "../../metadata/types"
+import { ParseContext, PrimitiveMeta } from "../../metadata/types"
 import { isDigitU } from "../../utils/ascii"
-import { JSONParseError } from "../../utils/error"
 import { float64, FloatFormat } from "./floatFormats"
 import { genUnrolledFromCharCode } from "../../code_gen/string"
 
@@ -121,11 +120,13 @@ export function tryParseFloat({ reader, options }: ParseContext, i: number, form
             mHigh = Math.floor(m / 0x100000000)
         }
 
-        const f64 = toFloatMidpath(new Uint32Array([mLow, mHigh]), e, format)
-        if (f64) return {
-            type: COMPLETE,
-            value: f64,
-            nextIndex: i
+        const f64 = toFloatCompute(mLow, mHigh, e, format)
+        if (f64 !== undefined) {
+            return {
+                type: COMPLETE,
+                value: f64,
+                nextIndex: i
+            }
         }
     }
 
@@ -404,6 +405,112 @@ const maxValue = splitTo64(9007199254740992n)
 const halfValue = splitTo64(4503599627370496n)
 
 const product128 = new Uint32Array(4)
+const f64Product = new Float64Array(product128.buffer)
+
+function toFloatCompute(low: number, high: number, e: number, f: FloatFormat): number | undefined {
+    if ((low | high) === 0 || e < f.minSafeExponent)
+        return 0
+
+    if (e > f.maxSafeExponent)
+        return Infinity
+
+    const lz = clz1(low, high);
+    [low, high] = shiftLeft1(low, high, lz, product128)
+
+    const [alow, ahigh, blow, bhigh] = computeProduct1(low, high, e, f.denormalMantissaBits + 3, product128)
+
+    const insideSafeExponent = e >= f.minExponentRoundToEven && e <= f.maxExponentRoundToEven
+    if ((alow & ahigh) === 0xFFFFFFFF && !insideSafeExponent)
+        return undefined
+
+    const upperBit = bhigh >>> 31
+    const shiftAmount = upperBit + 64 - f.denormalMantissaBits - 3;
+
+    [low, high] = shiftRight1(blow, bhigh, shiftAmount, product128)
+
+    const power = (((152170 + 65536) * e) >> 16) + 63
+    let exponent = power + upperBit - lz + f.maxBinaryExponent
+
+    if (exponent <= 0) {
+        if (-exponent + 1 >= 64) {
+            return undefined
+        }
+
+        [low, high] = shiftRight1(low, high, -exponent + 1, product128)
+
+        const isOdd = (low & 1) !== 0
+        if (isOdd) {
+            let newLow = low + 1
+            let newHigh = high
+
+            if ((newLow >>> 0) < low)
+                newHigh++
+
+            low = newLow
+            high = newHigh
+        }
+
+        [low, high] = shiftRight1(low, high, 1, product128)
+
+        exponent = isLessThan(low, high, halfValue.low, halfValue.high) ? 0 : 1
+    }
+    else {
+        const lessOrEqualToOne = ahigh === 0 && alow <= 1
+        const isExactlyHalfway = (low & 3) === 1
+        if (lessOrEqualToOne && insideSafeExponent && isExactlyHalfway) { //round down
+            const [checkLow, checkHigh] = shiftLeft1(low, high, shiftAmount, product128)
+            if (checkLow === blow && checkHigh === bhigh) {
+                low &= ~1
+            }
+        }
+
+        const isOdd = (low & 1) !== 0
+        if (isOdd) {
+            let newLow = low + 1
+            let newHigh = high
+
+            if ((newLow >>> 0) < low)
+                newHigh++
+
+            low = newLow
+            high = newHigh
+        }
+
+        [low, high] = shiftRight1(low, high, 1, product128)
+
+        if (isGreaterThanOrEqual(low, high, maxValue.low, maxValue.high)) {
+            exponent++
+
+            if (exponent >= f.infinityExponent)
+                return Infinity
+
+            return POW2[exponent + 1]
+        }
+
+        if (exponent >= f.infinityExponent)
+            return Infinity
+
+        high &= ~(1 << 20)
+    }
+
+    if (exponent <= 0)
+        return undefined
+
+    if (exponent === f.infinityExponent && (low | high) === 0)
+        return Infinity
+
+    if (exponent === f.infinityExponent && (low | high) !== 0)
+        return NaN
+
+    const mantissaLow = low
+    const mantissaHigh = high & 0xFFFFF // upper 20 bits (bits 32‑51)
+    const exponentBits = (exponent & 2047) << 20 // shift exponent to bits 20‑30 of upper word
+
+    product128[0] = mantissaLow
+    product128[1] = mantissaHigh | exponentBits // sign bit (bit 31) is zero
+
+    return f64Product[0]
+}
 
 function toFloatMidpath(m: Uint32Array, e: number, f: FloatFormat): number | undefined {
     const m32 = m
@@ -411,10 +518,10 @@ function toFloatMidpath(m: Uint32Array, e: number, f: FloatFormat): number | und
     const high = m32[1]
 
     if ((low === 0 && high === 0) || e < f.minSafeExponent)
-        return undefined
+        return 0
 
     if (e > f.maxSafeExponent)
-        return NaN
+        return Infinity
 
     const lz = clz(m32)
     const normalizedM = shiftLeft(m32, lz)
@@ -432,7 +539,7 @@ function toFloatMidpath(m: Uint32Array, e: number, f: FloatFormat): number | und
 
     const upperBit = bhigh >>> 31
     const shiftAmount = upperBit + 64 - f.denormalMantissaBits - 3
-    const mantissaU32 = shiftRight2(ahigh, bhigh, shiftAmount, m32)
+    const mantissaU32 = shiftRight1(ahigh, bhigh, shiftAmount, m32)
 
     function calculatePower(q: number): number {
         return (((152170 + 65536) * q) >> 16) + 63
@@ -524,6 +631,53 @@ function toFloatMidpath(m: Uint32Array, e: number, f: FloatFormat): number | und
 
 const precisionMasks = new Array(64).fill(0).map((_, i) => splitTo64(0xFFFFFFFFFFFFFFFFn >> BigInt(i + 1)))
 const precisionMaskAll = splitTo64(0xFFFFFFFFFFFFFFFFn)
+
+const precisionMasks1 = new Array(65)
+    .fill(0)
+    .map((_, i) => splitTo64(0xFFFFFFFFFFFFFFFFn >> BigInt(i + 1)))
+precisionMasks1[64] = splitTo64(0xFFFFFFFFFFFFFFFFn)
+
+function computeProduct1(mlow: number, mhigh: number, e: number, bits: number, output: Uint32Array): Uint32Array {
+    const index = 2 * (e + 342)
+
+    const plow = POW5_64_LOW[index]
+    const phigh = POW5_64_HIGH[index]
+
+    const bhigh = wasm.mul(mlow, mhigh, plow, phigh) >>> 0
+    const ahigh = wasm.get_mhigh() >>> 0
+    const blow = wasm.get_mlow() >>> 0
+    const alow = wasm.get_low() >>> 0
+
+    const { low, high } = precisionMasks1[bits]
+
+    if ((ahigh & low) === low && (bhigh & high) === high) {
+        const plow = POW5_64_LOW[index + 1]
+        const phigh = POW5_64_HIGH[index + 1]
+
+        const bhigh2 = wasm.mul(mlow, mhigh, plow, phigh) >>> 0
+        const ahigh2 = wasm.get_mhigh() >>> 0
+
+        let carry = (alow + ahigh2) > 0xFFFFFFFF ? 1 : 0
+        let newLowLow = (alow + ahigh2) >>> 0
+        let newLowHigh = (blow + bhigh2 + carry) >>> 0
+        let newHighLow = ahigh >>> 0
+        let newHighHigh = bhigh >>> 0
+
+        if (isGreaterThan(ahigh2, bhigh2, newLowLow, newLowHigh)) {
+            newHighLow = (newHighLow + 1) >>> 0
+
+            if (newHighLow < ahigh) {
+                newHighHigh++
+            }
+        }
+
+        output[0] = newLowLow, output[1] = newLowHigh, output[2] = newHighLow, output[3] = newHighHigh
+        return output
+    }
+
+    output[0] = alow, output[1] = blow, output[2] = ahigh, output[3] = bhigh
+    return output
+}
 
 function computeProduct(m: Uint32Array, e: number, bits: number, r: Uint32Array): void {
     const mlow = m[0] >>> 0
@@ -659,6 +813,12 @@ export function clz(value: Uint32Array): number {
     return 32 + Math.clz32(value[0])
 }
 
+export function clz1(low: number, high: number): number {
+    if (high !== 0)
+        return Math.clz32(high)
+    return 32 + Math.clz32(low)
+}
+
 export function shiftLeft(value: Uint32Array, bits: number): Uint32Array {
     const low = value[0]
     const high = value[1]
@@ -680,6 +840,30 @@ export function shiftLeft(value: Uint32Array, bits: number): Uint32Array {
     value[0] = 0
     value[1] = 0
     return value
+}
+
+export function shiftLeft1(low: number, high: number, bits: number, output: Uint32Array): Uint32Array {
+    if (bits === 0) {
+        output[0] = low
+        output[1] = high
+        return output
+    }
+
+    if (bits < 32) {
+        output[0] = low << bits
+        output[1] = (high << bits) | (low >>> (32 - bits))
+        return output
+    }
+
+    if (bits < 64) {
+        output[0] = 0
+        output[1] = low << (bits - 32)
+        return output
+    }
+
+    output[0] = 0
+    output[1] = 0
+    return output
 }
 
 function shiftLeft3(value: Uint32Array, bits: number): Uint32Array {
@@ -730,24 +914,28 @@ function shiftRight(value: Uint32Array, bits: number): Uint32Array {
     return value
 }
 
-function shiftRight2(low: number, high: number, bits: number, result: Uint32Array): Uint32Array {
-    if (bits === 0) return result
+function shiftRight1(low: number, high: number, bits: number, output: Uint32Array): Uint32Array {
+    if (bits === 0) {
+        output[0] = low
+        output[1] = high
+        return output
+    }
 
     if (bits < 32) {
-        result[0] = (low >>> bits) | (high << (32 - bits))
-        result[1] = high >>> bits
-        return result
+        output[0] = (low >>> bits) | (high << (32 - bits))
+        output[1] = high >>> bits
+        return output
     }
 
     if (bits < 64) {
-        result[0] = high >>> (bits - 32)
-        result[1] = 0
-        return result
+        output[0] = high >>> (bits - 32)
+        output[1] = 0
+        return output
     }
 
-    result[0] = 0
-    result[1] = 0
-    return result
+    output[0] = 0
+    output[1] = 0
+    return output
 }
 
 function isGreaterThan(al: number, ah: number, bl: number, bh: number) {
