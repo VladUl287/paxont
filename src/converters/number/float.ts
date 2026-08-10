@@ -4,6 +4,7 @@ import { ParseContext, PrimitiveMeta } from "../../metadata/types"
 import { isDigitU } from "../../utils/ascii"
 import { float64, FloatFormat } from "./floatFormats"
 import { genUnrolledFromCharCode } from "../../code_gen/string"
+import { wasmInstance } from "../../utils/wasm"
 
 type Store = {
     mantissa: number,
@@ -512,126 +513,6 @@ function toFloatCompute(low: number, high: number, e: number, f: FloatFormat): n
     return f64Product[0]
 }
 
-function toFloatMidpath(m: Uint32Array, e: number, f: FloatFormat): number | undefined {
-    const m32 = m
-    const low = m32[0]
-    const high = m32[1]
-
-    if ((low === 0 && high === 0) || e < f.minSafeExponent)
-        return 0
-
-    if (e > f.maxSafeExponent)
-        return Infinity
-
-    const lz = clz(m32)
-    const normalizedM = shiftLeft(m32, lz)
-
-    computeProduct(normalizedM, e, f.denormalMantissaBits + 3, product128)
-
-    const alow = product128[0]
-    const blow = product128[1]
-    const ahigh = product128[2]
-    const bhigh = product128[3]
-
-    const insideSafeExponent = e >= f.minExponentRoundToEven && e <= f.maxExponentRoundToEven
-    if (alow === 0xFFFFFFFF && blow === 0xFFFFFFFF && !insideSafeExponent)
-        return undefined
-
-    const upperBit = bhigh >>> 31
-    const shiftAmount = upperBit + 64 - f.denormalMantissaBits - 3
-    const mantissaU32 = shiftRight1(ahigh, bhigh, shiftAmount, m32)
-
-    function calculatePower(q: number): number {
-        return (((152170 + 65536) * q) >> 16) + 63
-    }
-
-    let exponent = calculatePower(e) + upperBit - lz + f.maxBinaryExponent
-
-    if (exponent <= 0) {
-        if (-exponent + 1 >= 64)
-            return undefined
-
-        shiftRight(mantissaU32, -exponent + 1)
-
-        const isOdd = (mantissaU32[0] & 1) !== 0
-        if (isOdd) {
-            let newLow = mantissaU32[0] + 1
-            let newHigh = mantissaU32[1]
-
-            if ((newLow >>> 0) < mantissaU32[0])
-                newHigh++
-
-            mantissaU32[0] = newLow
-            mantissaU32[1] = newHigh
-        }
-
-        shiftRight(mantissaU32, 1)
-
-        exponent = isLessThan(mantissaU32[0], mantissaU32[1], halfValue.low, halfValue.high) ? 0 : 1
-    }
-    else {
-        const lessOrEqualToOne = blow === 0 && ((alow >>> 0) <= 1)
-        if (lessOrEqualToOne && insideSafeExponent && (m32[0] & 3) === 1) {
-            const check = shiftLeft3(mantissaU32, shiftAmount)
-            if (check[0] === ahigh && check[1] === bhigh) {
-                mantissaU32[0] &= ~1
-            }
-        }
-
-        const isOdd = (mantissaU32[0] & 1) !== 0
-        if (isOdd) {
-            let newLow = mantissaU32[0] + 1
-            let newHigh = mantissaU32[1]
-
-            if ((newLow >>> 0) < mantissaU32[0])
-                newHigh++
-
-            mantissaU32[0] = newLow
-            mantissaU32[1] = newHigh
-        }
-        shiftRight(mantissaU32, 1)
-
-        if (isGreaterThanOrEqual(mantissaU32[0], mantissaU32[1], maxValue.low, maxValue.high)) {
-            exponent++
-
-            if (exponent >= f.infinityExponent)
-                return Infinity
-
-            return POW2[exponent + 1]
-        }
-
-        if (exponent >= f.infinityExponent)
-            return Infinity
-
-        mantissaU32[1] &= ~(1 << 20)
-    }
-
-    if (exponent <= 0)
-        return undefined
-
-    function combine53(high21: number, low32: number) {
-        high21 = high21 & 0x1FFFFF
-        low32 = low32 >>> 0
-        return (high21 * 0x100000000) + low32
-    }
-
-    const mantissa = Number(((BigInt(mantissaU32[1]) & 0xFFFFFn) << 32n) | BigInt(mantissaU32[0]))
-    // const mantissa = combine53(mantissaU32[1], mantissaU32[0])
-
-    if (exponent === f.infinityExponent && mantissa === 0)
-        return Infinity
-
-    if (exponent === f.infinityExponent && mantissa !== 0)
-        return NaN
-
-    const normalizedExponent = exponent - f.maxBinaryExponent
-    const normalizedMantissa = 1 + mantissa / Math.pow(2, f.denormalMantissaBits)
-    return normalizedMantissa * POW2[normalizedExponent + 1024]
-}
-
-const precisionMasks = new Array(64).fill(0).map((_, i) => splitTo64(0xFFFFFFFFFFFFFFFFn >> BigInt(i + 1)))
-const precisionMaskAll = splitTo64(0xFFFFFFFFFFFFFFFFn)
-
 const precisionMasks1 = new Array(65)
     .fill(0)
     .map((_, i) => splitTo64(0xFFFFFFFFFFFFFFFFn >> BigInt(i + 1)))
@@ -677,55 +558,6 @@ function computeProduct1(mlow: number, mhigh: number, e: number, bits: number, o
 
     output[0] = alow, output[1] = blow, output[2] = ahigh, output[3] = bhigh
     return output
-}
-
-function computeProduct(m: Uint32Array, e: number, bits: number, r: Uint32Array): void {
-    const mlow = m[0] >>> 0
-    const mhigh = m[1] >>> 0
-
-    const index = 2 * (e + 342)
-    const plow = POW5_64_LOW[index]
-    const phigh = POW5_64_HIGH[index]
-
-    const bhigh = wasm.mul(mlow, mhigh, plow >>> 0, phigh >>> 0) >>> 0
-    const ahigh = wasm.get_mhigh() >>> 0
-    const blow = wasm.get_mlow() >>> 0
-    const alow = wasm.get_low() >>> 0
-
-    const preciseMask = bits < 64 ? precisionMasks[bits] : precisionMaskAll
-
-    if ((ahigh & preciseMask.low) === preciseMask.low && (bhigh & preciseMask.high) === preciseMask.high) {
-        const plow = POW5_64_LOW[index + 1]
-        const phigh = POW5_64_HIGH[index + 1]
-
-        const bhigh2 = wasm.mul(mlow, mhigh, plow, phigh) >>> 0
-        const ahigh2 = wasm.get_mhigh() >>> 0
-
-        let carry = (alow + ahigh2) > 0xFFFFFFFF ? 1 : 0
-        let newLow = (alow + ahigh2) >>> 0
-        let newLowHigh = (blow + bhigh2 + carry) >>> 0
-
-        let newHighLow = ahigh
-        let newHighHigh = bhigh
-
-        if (isGreaterThan(ahigh2, bhigh2, newLow, newLowHigh)) {
-            newHighLow += 1
-
-            if ((newHighLow >>> 0) < ahigh)
-                newHighHigh++
-        }
-
-        r[0] = newLow
-        r[1] = newLowHigh
-        r[2] = newHighLow
-        r[3] = newHighHigh
-        return
-    }
-
-    r[0] = alow
-    r[1] = blow
-    r[2] = ahigh
-    r[3] = bhigh
 }
 
 const c = new Array(1024).fill(0)
@@ -819,30 +651,7 @@ export function clz1(low: number, high: number): number {
     return 32 + Math.clz32(low)
 }
 
-export function shiftLeft(value: Uint32Array, bits: number): Uint32Array {
-    const low = value[0]
-    const high = value[1]
-
-    if (bits === 0) return value
-
-    if (bits < 32) {
-        value[0] = low << bits
-        value[1] = (high << bits) | (low >>> (32 - bits))
-        return value
-    }
-
-    if (bits < 64) {
-        value[0] = 0
-        value[1] = low << (bits - 32)
-        return value
-    }
-
-    value[0] = 0
-    value[1] = 0
-    return value
-}
-
-export function shiftLeft1(low: number, high: number, bits: number, output: Uint32Array): Uint32Array {
+function shiftLeft1(low: number, high: number, bits: number, output: Uint32Array): Uint32Array {
     if (bits === 0) {
         output[0] = low
         output[1] = high
@@ -864,54 +673,6 @@ export function shiftLeft1(low: number, high: number, bits: number, output: Uint
     output[0] = 0
     output[1] = 0
     return output
-}
-
-function shiftLeft3(value: Uint32Array, bits: number): Uint32Array {
-    const low = value[0]
-    const high = value[1]
-
-    const result = new Uint32Array(2)
-
-    if (bits === 0) return result
-
-    if (bits < 32) {
-        result[0] = low << bits
-        result[1] = (high << bits) | (low >>> (32 - bits))
-        return result
-    }
-
-    if (bits < 64) {
-        result[0] = 0
-        result[1] = low << (bits - 32)
-        return result
-    }
-
-    result[0] = 0
-    result[1] = 0
-    return result
-}
-
-function shiftRight(value: Uint32Array, bits: number): Uint32Array {
-    const low = value[0]
-    const high = value[1]
-
-    if (bits === 0) return value
-
-    if (bits < 32) {
-        value[0] = (low >>> bits) | (high << (32 - bits))
-        value[1] = high >>> bits
-        return value
-    }
-
-    if (bits < 64) {
-        value[0] = high >>> (bits - 32)
-        value[1] = 0
-        return value
-    }
-
-    value[0] = 0
-    value[1] = 0
-    return value
 }
 
 function shiftRight1(low: number, high: number, bits: number, output: Uint32Array): Uint32Array {
@@ -963,128 +724,9 @@ export function splitTo64(value: bigint): { high: number, low: number } {
     }
 }
 
-export function splitTo32(value: number, result: Uint32Array): void {
-    result[0] = value >>> 0
-    result[1] = Math.floor(value / 0x100000000)
-}
-
-let wasm: any = null
-try {
-    wasm = new WebAssembly.Instance(
-        new WebAssembly.Module(
-            new Uint8Array([
-                // \0asm
-                0, 97, 115, 109,
-                // version 1
-                1, 0, 0, 0,
-
-                // section "type" (2 types)
-                1, 13, 2,
-                // type 0: () -> i32
-                96, 0, 1, 127,
-                // type 1: (i32, i32, i32, i32) -> i32
-                96, 4, 127, 127, 127, 127, 1, 127,
-
-                // section "function" (4 functions)
-                3, 5, 4,
-                // func 0: get_low, type 0
-                0,
-                // func 1: get_mlow, type 0
-                0,
-                // func 2: get_mhigh, type 0
-                0,
-                // func 3: mul, type 1
-                1,
-
-                // section "global" (3 mutable i32 globals)
-                6, 16, 3,
-                // global 0: low
-                127, 1, 65, 0, 11,
-                // global 1: mlow
-                127, 1, 65, 0, 11,
-                // global 2: mhigh
-                127, 1, 65, 0, 11,
-
-                // section "export" (4 exports)
-                7, 40, 4,
-                // "mul" -> func 3
-                3, 109, 117, 108, 0, 3,
-                // "get_low" -> func 0
-                7, 103, 101, 116, 95, 108, 111, 119, 0, 0,
-                // "get_mlow" -> func 1
-                8, 103, 101, 116, 95, 109, 108, 111, 119, 0, 1,
-                // "get_mhigh" -> func 2
-                9, 103, 101, 116, 95, 109, 104, 105, 103, 104, 0, 2,
-
-                // section "code" (4 bodies)
-                10, 99, 4,
-                // func 0: get_low (size 4)
-                4, 0, 35, 0, 11,
-                // func 1: get_mlow (size 4)
-                4, 0, 35, 1, 11,
-                // func 2: get_mhigh (size 4)
-                4, 0, 35, 2, 11,
-                // func 3: mul (size 81)
-                82,
-                // locals: 4 × i64
-                1, 4, 126,
-                // instructions
-                32, 0, 173,            // local.get 0; i64.extend_i32_u
-                32, 2, 173,            // local.get 2; i64.extend_i32_u
-                126,                   // i64.mul
-                34, 4,                 // local.tee 4 (mull)
-
-                66, 32,                // i64.const 32
-                136,                   // i64.shr_u
-                32, 1, 173,            // local.get 1; i64.extend_i32_u
-                32, 2, 173,            // local.get 2; i64.extend_i32_u
-                126,                   // i64.mul
-                124,                   // i64.add
-                34, 5,                 // local.tee 5 (t)
-                26,                    // drop ← was 167 (i32.wrap_i64)
-
-                32, 0, 173,            // local.get 0; i64.extend_i32_u
-                32, 3, 173,            // local.get 3; i64.extend_i32_u
-                126,                   // i64.mul
-                32, 5,                 // local.get 5
-                167,                   // i32.wrap_i64
-                173,                   // i64.extend_i32_u
-                124,                   // i64.add
-                34, 6,                 // local.tee 6 (tl)
-
-                32, 4,                 // local.get 4 (mull)
-                167,                   // i32.wrap_i64
-                36, 0,                 // global.set 0 (low)
-
-                32, 6,                 // local.get 6 (tl)
-                167,                   // i32.wrap_i64
-                36, 1,                 // global.set 1 (mlow)
-                26,
-
-                32, 1, 173,            // local.get 1; i64.extend_i32_u
-                32, 3, 173,            // local.get 3; i64.extend_i32_u
-                126,                   // i64.mul
-                32, 5,                 // local.get 5 (t)
-                66, 32,                // i64.const 32
-                136,                   // i64.shr_u
-                124,                   // i64.add
-                32, 6,                 // local.get 6 (tl)
-                66, 32,                // i64.const 32
-                136,                   // i64.shr_u
-                124,                   // i64.add
-                34, 7,                 // local.tee 7 (high64)
-                167,                   // i32.wrap_i64
-                36, 2,                 // global.set 2 (mhigh)
-                32, 7,                 // local.get 7
-                66, 32,                // i64.const 32
-                136,                   // i64.shr_u
-                167,                   // i32.wrap_i64
-                11,                    // end
-            ]),
-        ),
-        {},
-    ).exports
-} catch { }
+const wasm = wasmInstance<any>(new Uint8Array([
+    0, 97, 115, 109, 1, 0, 0, 0, 1, 13, 2, 96, 0, 1, 127, 96, 4, 127, 127, 127, 127, 1, 127, 3, 5, 4, 0, 0, 0, 1, 6, 16, 3, 127, 1, 65, 0, 11, 127, 1, 65, 0, 11, 127, 1, 65, 0, 11, 7, 40, 4, 7, 103, 101, 116, 95, 108, 111, 119, 0, 0, 8, 103, 101, 116, 95, 109, 108, 111, 119, 0, 1, 9, 103, 101, 116, 95, 109, 104, 105, 103, 104, 0, 2, 3, 109, 117, 108, 0, 3, 10, 101, 4, 4, 0, 35, 0, 11, 4, 0, 35, 1, 11, 4, 0, 35, 2, 11, 84, 1, 4, 126, 32, 0, 173, 32, 2, 173, 126, 33, 4, 32, 4, 66, 32, 136, 32, 1, 173, 32, 2, 173, 126, 124, 33, 5, 32, 0, 173, 32, 3, 173, 126, 32, 5, 167, 173, 124, 33, 6, 32, 4, 167, 36, 0, 32, 6, 167, 36, 1, 32, 1, 173, 32, 3, 173, 126, 32, 5, 66, 32, 136, 124, 32, 6, 66, 32, 136, 124, 33, 7, 32, 7, 167, 36, 2, 32, 7, 66, 32, 136, 167, 11
+]))
 
 const POW5_128 =
     [
