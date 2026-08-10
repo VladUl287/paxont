@@ -1,8 +1,9 @@
-import { f64Format, toFloat, tryParseFloat } from "../../../src/converters/number/float"
+import { toFloat, tryParseFloat } from "../../../src/converters/number/float"
 import { ParseState, JsonReader } from "../../../src/metadata/types"
 import { defaultOptions } from "../../../src/options"
 import { Stack } from "../../../src/utils/stack"
 import { isNeedsMoreData, ReadResultType } from "../../../src/utils/types"
+import { float64 } from "../../../src/converters/number/floatFormats"
 
 describe('tryParseFloat', () => {
   const toReader = (str: string): JsonReader => ({ bytes: new TextEncoder().encode(str), writable: false })
@@ -11,144 +12,144 @@ describe('tryParseFloat', () => {
   describe('Basic numeric parsing', () => {
     test('parses positive integer', () => {
       const bytes = toReader('123')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 3 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 3 })
     })
 
     test('parses negative integer', () => {
       const bytes = toReader('-456')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: -456, nextIndex: 4 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: -456, nextIndex: 4 })
     })
 
     test('parses zero', () => {
       const bytes = toReader('0')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0, nextIndex: 1 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0, nextIndex: 1 })
     })
 
     test('parses multiple zeros', () => {
       const bytes = toReader('000')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0, nextIndex: 3 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0, nextIndex: 3 })
     })
   })
 
   describe('Decimal numbers', () => {
     test('parses positive decimal', () => {
       const bytes = toReader('123.456')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123.456, nextIndex: 7 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123.456, nextIndex: 7 })
     })
 
     test('parses negative decimal', () => {
       const bytes = toReader('-123.456')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: -123.456, nextIndex: 8 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: -123.456, nextIndex: 8 })
     })
 
     test('parses decimal without leading zeros', () => {
       const bytes = toReader('.123')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0.123, nextIndex: 4 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0.123, nextIndex: 4 })
     })
 
     test('parses decimal without trailing zeros', () => {
       const bytes = toReader('123.')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 4 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 4 })
     })
 
     test('parses decimal with leading zeros', () => {
       const bytes = toReader('00123.456')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123.456, nextIndex: 9 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123.456, nextIndex: 9 })
     })
   })
 
   describe('Scientific notation', () => {
     test('parses scientific notation with e', () => {
       const bytes = toReader('1.23e4')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 12300, nextIndex: 6 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 12300, nextIndex: 6 })
     })
 
     test('parses scientific notation with E', () => {
       const bytes = toReader('1.23E4')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 12300, nextIndex: 6 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 12300, nextIndex: 6 })
     })
 
     test('parses scientific notation with negative exponent', () => {
       const bytes = toReader('1.23e-2')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0.0123, nextIndex: 7 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0.0123, nextIndex: 7 })
     })
 
     test('parses scientific notation with positive exponent sign', () => {
       const bytes = toReader('1.23e+2')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 7 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 7 })
     })
 
     test('parses scientific notation without decimal', () => {
       const bytes = toReader('123e4')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 1230000, nextIndex: 5 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 1230000, nextIndex: 5 })
     })
 
     test('parses scientific notation with negative base', () => {
       const bytes = toReader('-1.23e4')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: -12300, nextIndex: 7 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: -12300, nextIndex: 7 })
     })
   })
 
   describe('Start index parameter', () => {
     test('starts parsing from specified index', () => {
       const bytes = toReader('abc123')
-      expect(tryParseFloat(bytes, 3, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 6 })
+      expect(tryParseFloat(bytes, 3, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 6 })
     })
 
     test('handles whitespace before start index', () => {
       const bytes = toReader('  123')
-      expect(tryParseFloat(bytes, 2, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 5 })
+      expect(tryParseFloat(bytes, 2, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 5 })
     })
 
     test('parses number in middle of buffer', () => {
       const bytes = toReader('prefix 456 suffix')
-      expect(tryParseFloat(bytes, 7, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 456, nextIndex: 10 })
+      expect(tryParseFloat(bytes, 7, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 456, nextIndex: 10 })
     })
   })
 
   describe('Edge cases and boundaries', () => {
     test('parses maximum safe integer', () => {
       const bytes = toReader('9007199254740991')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 9007199254740991, nextIndex: 16 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 9007199254740991, nextIndex: 16 })
     })
 
     test('parses Number.MAX_VALUE', () => {
       const maxValue = Number.MAX_VALUE
       const bytes = toReader(maxValue.toString())
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: maxValue, nextIndex: 23 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: maxValue, nextIndex: 23 })
     })
 
     test('parses Number.MIN_VALUE', () => {
       const minValue = Number.MIN_VALUE
       const bytes = toReader(minValue.toString())
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: minValue, nextIndex: 6 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: minValue, nextIndex: 6 })
     })
 
     test('parses very small number', () => {
       const bytes = toReader('1e-308')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 1e-308, nextIndex: 6 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 1e-308, nextIndex: 6 })
     })
 
     test('parses very large number', () => {
       const bytes = toReader('1e308')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 1e308, nextIndex: 5 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 1e308, nextIndex: 5 })
     })
 
     test('whole max value number', () => {
       const bytes = toReader('179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 1.7976931348623157e+308, nextIndex: 309 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 1.7976931348623157e+308, nextIndex: 309 })
     })
   })
 
   describe('Format variations', () => {
     test('parses number with leading zeros and decimal', () => {
       const bytes = toReader('000.456')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0.456, nextIndex: 7 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0.456, nextIndex: 7 })
     })
 
     test('parses negative zero', () => {
       const bytes = toReader('-0')
-      const result = tryParseFloat(bytes, 0, f64Format)
+      const result = tryParseFloat(bytes, 0, float64)
       expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: -0, nextIndex: 2 })
     })
   })
@@ -156,13 +157,13 @@ describe('tryParseFloat', () => {
   describe('Precision tests', () => {
     test('maintains precision for double values', () => {
       const bytes = toReader('0.1')
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0.1, nextIndex: 3 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0.1, nextIndex: 3 })
     })
 
     test('parses epsilon', () => {
       const epsilon = 2.220446049250313e-16
       const bytes = toReader(epsilon.toString())
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: epsilon, nextIndex: 21 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: epsilon, nextIndex: 21 })
     })
   })
 
@@ -299,7 +300,7 @@ describe('tryParseFloat', () => {
     testNumbers.forEach(num => {
       test(`correctly parses roundtrip for ${toRange(num, 50)}`, () => {
         const reader = toReader(num)
-        const parsed = tryParseFloat(reader, 0, f64Format)
+        const parsed = tryParseFloat(reader, 0, float64)
         expect(parsed).toStrictEqual({ type: ReadResultType.COMPLETE, value: Number(num), nextIndex: reader.bytes.length })
       })
     })
@@ -308,19 +309,19 @@ describe('tryParseFloat', () => {
   describe('Common math constants', () => {
     test('Math.PI', () => {
       const bytes = toReader(Math.PI.toString())
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: Math.PI, nextIndex: 17 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: Math.PI, nextIndex: 17 })
     })
     test('Math.E', () => {
       const bytes = toReader(Math.E.toString())
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: Math.E, nextIndex: 17 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: Math.E, nextIndex: 17 })
     })
     test('Math.SQRT2', () => {
       const bytes = toReader(Math.SQRT2.toString())
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: Math.SQRT2, nextIndex: 18 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: Math.SQRT2, nextIndex: 18 })
     })
     test('Math.LN2', () => {
       const bytes = toReader(Math.LN2.toString())
-      expect(tryParseFloat(bytes, 0, f64Format)).toStrictEqual({ type: ReadResultType.COMPLETE, value: Math.LN2, nextIndex: 18 })
+      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: Math.LN2, nextIndex: 18 })
     })
   })
 

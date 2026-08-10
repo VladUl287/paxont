@@ -1,6 +1,6 @@
 import { ReadResult, ReadResultType } from "../../utils/types"
 import { MINUS } from "../../utils/ascii_symbols"
-import { f64Format, FloatFormat } from "./float"
+import { float64, FloatFormat } from "./floatFormats"
 
 const POS_POW10 = [1]
 const POW10 = [1n]
@@ -277,7 +277,7 @@ function toNumber(
         64,
         exponent,
         hasZeroTail,
-        f64Format
+        float64
     )
 }
 

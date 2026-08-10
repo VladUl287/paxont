@@ -3,8 +3,9 @@ import { utc } from "../utils/utc"
 import { COLON, DOT, DOUBLE_QUOTE, MINUS, PLUS, T_UPPER, Z } from "../utils/ascii_symbols"
 import { isComplete, ReadResult, ReadResultType } from "../utils/types"
 import { JSONParseError } from "../utils/error"
-import { f64Format, tryParseFloat } from "./number/float"
+import { tryParseFloat } from "./number/float"
 import { isDigitU } from "../utils/ascii"
+import { float64 } from "./number/floatFormats"
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
@@ -236,7 +237,7 @@ function fromTimestamp(reader: JsonReader, i: number): ReadResult<Date> {
     const maxValue = 8_640_000_000_000_000
     const minValue = -8_640_000_000_000_000
 
-    const result = tryParseFloat(reader, i, f64Format)
+    const result = tryParseFloat(reader, i, float64)
 
     if (isComplete(result)) {
         const value = result.value

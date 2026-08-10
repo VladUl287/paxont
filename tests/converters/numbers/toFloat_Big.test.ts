@@ -1,7 +1,8 @@
 import fs from 'fs'
 import { JsonReader } from '../../../src/metadata/types'
-import { f64Format, tryParseFloat } from '../../../src/converters/number/float'
+import { tryParseFloat } from '../../../src/converters/number/float'
 import { ReadResultType } from '../../../src/utils/types'
+import { float64 } from "../../../src/converters/number/floatFormats"
 
 describe('parseNumberF64-files', () => {
     const encoder = new TextEncoder()
@@ -23,7 +24,7 @@ describe('parseNumberF64-files', () => {
 
         numbers.forEach(num => {
             const reader = toReader(num)
-            const parsed = tryParseFloat(reader, 0, f64Format) as any
+            const parsed = tryParseFloat(reader, 0, float64) as any
 
             parsed.value = `${num} -> ${parsed.value}`
             expect(parsed).toStrictEqual({

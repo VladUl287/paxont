@@ -3,25 +3,7 @@ import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../util
 import { ParseContext, JsonReader, PrimitiveMeta } from "../../metadata/types"
 import { isDigitU } from "../../utils/ascii"
 import { JSONParseError } from "../../utils/error"
-
-export type FloatFormat = {
-    readonly normalMantissaBits: number
-    readonly denormalMantissaBits: number
-    readonly exponentBias: number
-    readonly maxBinaryExponent: number
-    readonly minBinaryExponent: number
-    readonly exponentBits: number
-    readonly normalMantissaMask: bigint
-    readonly denormalMantissaMask: bigint
-    readonly zeroBits: number
-    readonly overflowDecimalExponent: number,
-    readonly maxExponentFastPath: number,
-    readonly minSafeExponent: number,
-    readonly maxSafeExponent: number,
-    readonly minExponentRoundToEven: number,
-    readonly maxExponentRoundToEven: number,
-    readonly infinityExponent: number
-}
+import { float64, FloatFormat } from "./floatFormats"
 
 type Store = {
     mantissa: number,
@@ -36,31 +18,12 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export const f64Format: Readonly<FloatFormat> = Object.freeze({
-    normalMantissaBits: 53,
-    denormalMantissaBits: 52,
-    exponentBias: 1023,
-    maxBinaryExponent: 1023,
-    minBinaryExponent: -1022,
-    exponentBits: 11,
-    normalMantissaMask: (1n << 53n) - 1n,
-    denormalMantissaMask: (1n << 52n) - 1n,
-    zeroBits: 0,
-    overflowDecimalExponent: 324,
-    maxExponentFastPath: 22,
-    minSafeExponent: -342,
-    maxSafeExponent: 308,
-    minExponentRoundToEven: -27,
-    maxExponentRoundToEven: 55,
-    infinityExponent: 2047
-})
-
 export function toFloat(
     metadata: PrimitiveMeta<number>,
     context: ParseContext,
     index: number,
     depth: number): ReadResult<number> {
-    const result = tryParseFloat(context.reader, index, f64Format)
+    const result = tryParseFloat(context.reader, index, float64)
     if (isError(result)) return result
     if (isNeedsMoreData(result)) return result
 
