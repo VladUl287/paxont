@@ -12,8 +12,7 @@
   (func (export "get_mhigh") (result i32)
     (global.get $mhigh)
   )
-
-  (func $mul (param i32 i32 i32 i32) (result i32)
+  (func (export "mul") (param i32 i32 i32 i32) (result i32)
     (local $mull i64)
     (local $t i64)
     (local $tl i64)
@@ -54,8 +53,6 @@
 
     ;; global $mlow = (tl & 0xFFFFFFFF) as i32
     (global.set $mlow (i32.wrap_i64 (local.get $tl)))
-
-    (drop (i32.wrap_i64 (local.get $t)))
 
     ;; high64 = ((a_hi * b_hi) + (t >> 32) + (tl >> 32)) as u64
     (local.set $high64
