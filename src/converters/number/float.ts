@@ -1,9 +1,10 @@
-import { DOT, E, MINUS, PLUS, ZERO } from "../../utils/ascii_symbols"
+import { DOT, E, E_UPPER, MINUS, PLUS, ZERO } from "../../utils/ascii_symbols"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/types"
 import { ParseContext, JsonReader, PrimitiveMeta } from "../../metadata/types"
 import { isDigitU } from "../../utils/ascii"
 import { JSONParseError } from "../../utils/error"
 import { float64, FloatFormat } from "./floatFormats"
+import { genUnrolledFromCharCode } from "../../code_gen/string"
 
 type Store = {
     mantissa: number,
@@ -23,7 +24,7 @@ export function toFloat(
     context: ParseContext,
     index: number,
     depth: number): ReadResult<number> {
-    const result = tryParseFloat(context.reader, index, float64)
+    const result = tryParseFloat(context, index, float64)
     if (isError(result)) return result
     if (isNeedsMoreData(result)) return result
 
@@ -38,9 +39,45 @@ export function toFloat(
     return result
 }
 
-export function tryParseFloat(reader: JsonReader, index: number, format: FloatFormat): ReadResult<number> {
-    const b = reader.bytes
+const factories = new Array<(data: ArrayLike<number>, i: number) => string>(64)
+factories[0] = (_a, _i) => ""
+
+function getNumberEndIndex(b: Uint8Array, i: number): number {
+    const isNumberByte = (b: number) => isDigitU(b) || b === DOT || (b | 32) === E || b === PLUS || b === MINUS
+
+    if (b[i] === MINUS) { i++ }
+
     const len = b.length
+
+    while (i < len) {
+        const limit = len - 8
+        while (i < limit) {
+            const a1 = b[i], a2 = b[i + 1], a3 = b[i + 2], a4 = b[i + 3]
+            const a5 = b[i], a6 = b[i + 1], a7 = b[i + 2], a8 = b[i + 3]
+
+            const word1 = (a1 << 0 | a2 << 8 | a3 << 16 | a4 << 24) - 0x30303030
+            const word2 = (a5 << 0 | a6 << 8 | a7 << 16 | a8 << 24) - 0x30303030
+
+            const chunk = word1 | word2
+
+            const hasNonDigit = ((chunk + 0x76767676) | chunk) & 0x80808080
+            if (hasNonDigit !== 0) break
+
+            i += 8
+        }
+
+        const chunkLength = Math.min(i + 4, len)
+        while (i < chunkLength) {
+            if (!isNumberByte(b[i])) { return i - 1 }
+            i++
+        }
+    }
+
+    return i
+}
+
+export function tryParseFloat({ reader, options }: ParseContext, index: number, format: FloatFormat): ReadResult<number> {
+    const b = reader.bytes
 
     let i = index
     let start = i
@@ -93,25 +130,20 @@ export function tryParseFloat(reader: JsonReader, index: number, format: FloatFo
         }
     }
 
-    const isNumberByte = (b: number) =>
-        isDigitU(b) || b === DOT || (b | 32) === E || b === PLUS || b === MINUS
+    i = getNumberEndIndex(b, i)
 
-    while (i < len && isNumberByte(b[i])) i++
+    const length = i - start
 
-    const result = new TextDecoder().decode(b.subarray(start, i))
-    if (result === "") {
-        if (i >= b.length && reader.writable) {
-            return {
-                type: NEEDS_MORE_DATA,
-                nextIndex: index
-            }
-        }
+    if (length <= 64) {
+        const factory = (factories[length] ??= genUnrolledFromCharCode(length))
         return {
-            type: ERROR,
-            error: new JSONParseError('')
+            type: COMPLETE,
+            value: Number(factory(b, i)),
+            nextIndex: i
         }
     }
 
+    const result = options.decoder.decode(new Uint8Array(b.buffer, start, length))
     return {
         type: COMPLETE,
         value: Number(result),
