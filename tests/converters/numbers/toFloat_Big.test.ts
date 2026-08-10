@@ -1,12 +1,16 @@
 import fs from 'fs'
-import { JsonReader } from '../../../src/metadata/types'
+import { ParseContext } from '../../../src/metadata/types'
 import { tryParseFloat } from '../../../src/converters/number/float'
 import { ReadResultType } from '../../../src/utils/types'
 import { float64 } from "../../../src/converters/number/floatFormats"
+import { defaultOptions } from '../../../src/options'
+import { Stack } from '../../../src/utils/stack'
 
 describe('parseNumberF64-files', () => {
     const encoder = new TextEncoder()
-    const toReader = (str: string): JsonReader => ({ bytes: encoder.encode(str), writable: false })
+    const toContext = (str: string): ParseContext => {
+        return { options: defaultOptions, reader: ({ bytes: encoder.encode(str), writable: false }), stack: new Stack() }
+    }
 
     const files = fs.readdirSync('./tests/data')
         .filter(file => file.endsWith('.txt'))
@@ -23,17 +27,19 @@ describe('parseNumberF64-files', () => {
             })
 
         numbers.forEach(num => {
-            const reader = toReader(num)
-            const parsed = tryParseFloat(reader, 0, float64) as any
+            const ctx = toContext(num)
+            const parsed = tryParseFloat(ctx, 0, float64) as any
 
             parsed.value = `${num} -> ${parsed.value}`
             expect(parsed).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: `${num} -> ${Number(num)}`,
-                nextIndex: reader.bytes.length
+                nextIndex: ctx.reader.bytes.length
             })
         })
     })
+
+    // const files = ['ulfjack-ryu.txt']
 
     // files.forEach(file => {
     //     test(file, () => {
@@ -46,14 +52,14 @@ describe('parseNumberF64-files', () => {
     //         })
 
     //         numbers.forEach(num => {
-    //             const reader = toReader(num)
-    //             const parsed = tryParseFloat(reader, 0, f64Format) as any
+    //             const reader = toContext(num)
+    //             const parsed = tryParseFloat(reader, 0, float64) as any
 
     //             parsed.value = `${num} -> ${parsed.value}`
     //             expect(parsed).toStrictEqual({
     //                 type: ReadResultType.COMPLETE,
     //                 value: `${num} -> ${Number(num)}`,
-    //                 nextIndex: reader.bytes.length
+    //                 nextIndex: reader.reader.bytes.length
     //             })
     //         })
     //     })
