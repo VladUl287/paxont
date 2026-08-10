@@ -76,10 +76,9 @@ function getNumberEndIndex(b: Uint8Array, i: number): number {
     return i
 }
 
-export function tryParseFloat({ reader, options }: ParseContext, index: number, format: FloatFormat): ReadResult<number> {
+export function tryParseFloat({ reader, options }: ParseContext, i: number, format: FloatFormat): ReadResult<number> {
     const b = reader.bytes
 
-    let i = index
     let start = i
     const negative = b[i] === MINUS
     if (negative) i++
