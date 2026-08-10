@@ -26,15 +26,13 @@ export function toFloat(
     index: number,
     depth: number): ReadResult<number> {
     const result = tryParseFloat(context, index, float64)
-    if (isError(result)) return result
-    if (isNeedsMoreData(result)) return result
 
-    const reader = context.reader
-    const length = reader.bytes.length
-
-    if (reader.writable && result.nextIndex >= length) return {
+    const { bytes, writable } = context.reader
+    if (writable && isComplete(result) && result.nextIndex >= bytes.length) {
+        return {
         type: NEEDS_MORE_DATA,
         nextIndex: index
+        }
     }
 
     return result
