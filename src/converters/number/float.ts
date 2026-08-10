@@ -137,7 +137,7 @@ export function tryParseFloat({ reader, options }: ParseContext, i: number, form
         const factory = (factories[length] ??= genUnrolledFromCharCode(length))
         return {
             type: COMPLETE,
-            value: Number(factory(b, i)),
+            value: Number(factory(b, start)),
             nextIndex: i
         }
     }
