@@ -34,17 +34,16 @@ export type Obj = { [k: string]: BaseMeta<any, any> }
 export type AsObject<T extends Obj> = Expand<{ [E in keyof T]: MetaValue<T[E]> }>
 
 export interface ObjectMeta<T extends Obj> extends BaseMeta<AsObject<T>, ObjectMeta<T>> {
-    readonly fields: ObjectField<keyof T & string, T[keyof T]>[]
+    readonly fields: ObjectFieldMeta<keyof T & string, T[keyof T]>[]
     readonly build: (values: MetaValue<T[keyof T]>[]) => AsObject<T>
     readonly getFieldIndex: (bytes: Uint8Array, offset: number) => number
 }
 
-export type ObjectField<K extends string, M extends BaseMeta<any, M>> = {
+export type ObjectFieldMeta<K extends string, M extends BaseMeta<any, M>> = M & {
     readonly name: {
         value: K
         bytes: Uint8Array
     }
-    readonly value: M
 }
 
 export interface NullableMeta<M extends BaseMeta<any, M>> extends BaseMeta<MetaValue<M> | null, NullableMeta<M>> {

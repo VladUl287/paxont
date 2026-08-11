@@ -1,10 +1,9 @@
 import { toArray } from "../converters/array"
 import {
     ArrayMeta,
-    BaseMeta, MetaValue, MapMeta, NullableMeta, ObjectField,
+    BaseMeta, MetaValue, MapMeta, NullableMeta, ObjectFieldMeta,
     ObjectMeta, PrimitiveMeta, SetMeta,
-    TypeName,
-    Obj
+    TypeName
 } from "./types"
 import { BaseType, JSONT } from "./baseTypes"
 import { toDate } from "../converters/date"
@@ -269,16 +268,16 @@ export const set = <M extends BaseMeta<any, M>>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-type ObjectParam<M extends ObjectParam<M>[]> = ObjectField<string, any> | Modifier<ObjectMeta<AsObject<M>>>
+type ObjectParam<M extends ObjectParam<M>[]> = ObjectFieldMeta<string, any> | Modifier<ObjectMeta<AsObject<M>>>
 
 type Filter<T, U> = T extends U ? T : never;
 type FilterArray<T, A> = T extends (infer U)[] ? Filter<U, A>[] : never
 
-type FilterFields<M extends ObjectParam<M>[]> = FilterArray<M, ObjectField<string, any>>
+type FilterFields<M extends ObjectParam<M>[]> = FilterArray<M, ObjectFieldMeta<string, any>>
 type AsObject<M extends ObjectParam<M>[]> = Expand<{ [E in FilterFields<M>[number]as E['name']['value']]: E['value'] }>
 
 export const object = <M extends ObjectParam<M>[]>(...args: M): ObjectMeta<AsObject<M>> => {
-    const fields = args.filter((arg): arg is ObjectField<keyof AsObject<M> & string, any> => {
+    const fields = args.filter((arg): arg is ObjectFieldMeta<keyof AsObject<M> & string, any> => {
         return arg && typeof arg === 'object' && typeof arg['name'] === 'string' && isMetadata(arg.value)
     })
 
@@ -300,13 +299,13 @@ export const object = <M extends ObjectParam<M>[]>(...args: M): ObjectMeta<AsObj
 
 export const field = <K extends string, M extends BaseMeta<any, M>>(
     name: K, value: M, encoder: TextEncoder = new TextEncoder()
-): ObjectField<K, M> => {
+): ObjectFieldMeta<K, M> => {
     return {
         name: {
             value: name,
             bytes: encoder.encode(name)
         },
-        value: value
+        ...value
     }
 }
 

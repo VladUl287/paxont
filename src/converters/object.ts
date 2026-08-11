@@ -135,7 +135,7 @@ export function toObject<T extends Obj>(
 
         i = skipWhitespace(b, i)
 
-        const fieldMeta = field.value
+        const fieldMeta = field
         const result = fieldMeta.toValue(fieldMeta, context, i, depth)
 
         if (isError(result))
