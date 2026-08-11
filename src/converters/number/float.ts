@@ -189,11 +189,8 @@ function willOverflow2(n: number, m: number, d: number) {
 function tryParseInteger(b: Uint8Array, s: Store): boolean {
     let i = s.index
 
-    const st = i
-    const len = Math.min(b.length, st + MAX_SAFE_INT_DIGITS)
-
-    const STATE_LONG = 0x01
-    let state = 0 >>> 0
+    const start = i
+    const len = Math.min(b.length, start + MAX_SAFE_INT_DIGITS)
 
     let m = 0
     while (i < len - 4) {
@@ -214,17 +211,29 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
             m = m * 10 + (b[i++] & 0x0F)
 
             if (i < len && isDigitU(b[i])) {
-                const dc = i - st
-                const digit = (b[i++] & 0x0F)
+                m = m * 10 + (b[i++] & 0x0F)
 
+                if (i < len && isDigitU(b[i])) {
+                    const digit = (b[i] & 0x0F)
+
+                    let dc = i - start
                 if (dc === MAX_SAFE_INT_DIGITS - 1 && willOverflow2(m, 10, digit)) {
-                    state ^= STATE_LONG
+                        s.index = i
+                        s.mantissa = m
+                        s.digitsCount = dc
+                        return tryParseLong(b, s)
                 }
-                else {
-                    m = m * 10 + digit
 
-                    if (i < b.length && isDigitU(b[i]))
-                        state ^= STATE_LONG
+                    m = m * 10 + digit
+                    dc++
+                    i++
+
+                    if (i < b.length && isDigitU(b[i])) {
+                        s.index = i
+                        s.mantissa = m
+                        s.digitsCount = i - start
+                        return tryParseLong(b, s)
+                    }
                 }
             }
         }
@@ -232,9 +241,8 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
 
     s.index = i
     s.mantissa = m
-    s.digitsCount = i - st
-
-    return (state & STATE_LONG) ? tryParseLong(b, s) : true
+    s.digitsCount = i - start
+    return true
 }
 
 function tryParseLong(b: Uint8Array, s: Store): boolean {
