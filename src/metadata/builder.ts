@@ -3,8 +3,7 @@ import {
     ArrayMeta,
     BaseMeta, MetaValue, MapMeta, NullableMeta, ObjectField,
     ObjectMeta, PrimitiveMeta, SetMeta,
-    TypeName,
-    Obj
+    TypeName
 } from "./types"
 import { BaseType, JSONT } from "./baseTypes"
 import { toDate } from "../converters/date"
@@ -26,47 +25,103 @@ import { isMetadata } from "./utils"
 export type Modifier<M extends BaseMeta<any, M>> = (metadata: M) => M
 
 export const string = (...modifiers: Modifier<PrimitiveMeta<string>>[]) =>
-    primitive(JSONT.STRING, toString, (v) => `"${v}"`, ...modifiers)
+    primitive(JSONT.STRING, toString, (v) => {
+        if (typeof v !== 'string') { throw new Error() }
+        return `"${v}"`
+    }, ...modifiers)
 
 export const number = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.NUMBER, toFloat, (v) => v.toString(), ...modifiers)
+    primitive(JSONT.NUMBER, toFloat, (v) => {
+        if (typeof v !== 'number') { throw new Error() }
+        return v.toString()
+    }, ...modifiers)
 
 export const bigInt = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
-    primitive(JSONT.BIGINT, toBigInt, (v) => v.toString(), ...modifiers)
+    primitive(JSONT.BIGINT, toBigInt, (v) => {
+        if (typeof v !== 'bigint') { throw new Error() }
+        return v.toString()
+    }, ...modifiers)
 
 export const bool = (...modifiers: Modifier<PrimitiveMeta<boolean>>[]) =>
-    primitive(JSONT.BOOL, toBoolean, (v) => v.toString(), ...modifiers)
+    primitive(JSONT.BOOL, toBoolean, (v) => {
+        if (typeof v !== 'boolean') { throw new Error() }
+        return v.toString()
+    }, ...modifiers)
 
 export const date = (...modifiers: Modifier<PrimitiveMeta<Date>>[]) =>
-    primitive(JSONT.DATE, toDate, (v) => `"${v.toISOString()}"`, ...modifiers)
+    primitive(JSONT.DATE, toDate, (v) => {
+        if (!(v instanceof Date)) { throw new Error() }
+        return `"${v.toISOString()}"`
+    }, ...modifiers)
 
 export const u8 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.U8, toUint8, (v) => v.toString(), ...modifiers)
+    primitive(JSONT.U8, toUint8, (v) => {
+        if (typeof v !== 'number') { throw new Error() }
+        if (!Number.isInteger(v)) { throw new Error() }
+        if (v < 0 || v > 255) { throw new Error() }
+        return v.toString()
+    }, ...modifiers)
 
 export const u16 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.U16, toUint16, (v) => v.toString(), ...modifiers)
+    primitive(JSONT.U16, toUint16, (v) => {
+        if (typeof v !== 'number') { throw new Error() }
+        if (!Number.isInteger(v)) { throw new Error() }
+        if (v < 0 || v > 65535) { throw new Error() }
+        return v.toString()
+    }, ...modifiers)
 
 export const u32 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.U32, toUint32, (v) => v.toString(), ...modifiers)
+    primitive(JSONT.U32, toUint32, (v) => {
+        if (typeof v !== 'number') { throw new Error() }
+        if (!Number.isInteger(v)) { throw new Error() }
+        if (v < 0 || v > 4294967295) { throw new Error() }
+        return v.toString()
+    }, ...modifiers)
 
 export const i8 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.I8, toInt8, (v) => v.toString(), ...modifiers)
+    primitive(JSONT.I8, toInt8, (v) => {
+        if (typeof v !== 'number') { throw new Error() }
+        if (!Number.isInteger(v)) { throw new Error() }
+        if (v < -128 || v > 127) { throw new Error() }
+        return v.toString()
+    }, ...modifiers)
 
 export const i16 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.I16, toInt16, (v) => v.toString(), ...modifiers)
+    primitive(JSONT.I16, toInt16, (v) => {
+        if (typeof v !== 'number') { throw new Error() }
+        if (!Number.isInteger(v)) { throw new Error() }
+        if (v < -32768 || v > 32767) { throw new Error() }
+        return v.toString()
+    }, ...modifiers)
 
 export const i32 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.I32, toInt32, (v) => v.toString(), ...modifiers)
+    primitive(JSONT.I32, toInt32, (v) => {
+        if (typeof v !== 'number') { throw new Error() }
+        if (!Number.isInteger(v)) { throw new Error() }
+        if (v < -2147483648 || v > 2147483647) { throw new Error() }
+        return v.toString()
+    }, ...modifiers)
 
 export const u64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
-    primitive(JSONT.U64, toUint64, (v) => v.toString(), ...modifiers)
+    primitive(JSONT.U64, toUint64, (v) => {
+        if (typeof v !== 'bigint') { throw new Error() }
+        if (!Number.isInteger(v)) { throw new Error() }
+        if (v < 0 || v > 18446744073709551615n) { throw new Error() }
+        return v.toString()
+    }, ...modifiers)
 
 export const i64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
-    primitive(JSONT.I64, toInt64, (v) => v.toString(), ...modifiers)
+    primitive(JSONT.I64, toInt64, (v) => {
+        if (typeof v !== 'bigint') { throw new Error() }
+        if (!Number.isInteger(v)) { throw new Error() }
+        if (v < -9223372036854775808n || v > 9223372036854775807n) { throw new Error() }
+        return v.toString()
+    }, ...modifiers)
 
 function applyModifier<M extends BaseMeta<any, M>>(value: M, modify: Modifier<M>): M {
     return Object.assign({}, modify(value), { type: value.type })
 }
+
 const primitive = <T>(
     type: BaseType,
     toValue: PrimitiveMeta<T>['toValue'],
