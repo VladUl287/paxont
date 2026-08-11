@@ -5,7 +5,7 @@ import { isDigitU } from "../../utils/ascii"
 import { float64, FloatFormat } from "./floatFormats"
 import { genUnrolledFromCharCode } from "../../code_gen/string"
 import { wasmInstance } from "../../utils/wasm"
-import { isGreaterThan, isGreaterThanOrEqual, isLessThan, shiftLeft, shiftRight } from "../../utils/long_bitwise"
+import { clz, isGreaterThan, isGreaterThanOrEqual, isLessThan, shiftLeft, shiftRight } from "../../utils/long_bitwise"
 import { splitTo64 } from "../../utils/bigint"
 
 type Store = {
@@ -415,7 +415,7 @@ function toFloatCompute(low: number, high: number, e: number, f: FloatFormat): n
     if (e > f.maxSafeExponent)
         return Infinity
 
-    const lz = clz1(low, high);
+    const lz = clz(low, high);
     [low, high] = shiftLeft(low, high, lz, product128)
 
     const [alow, ahigh, blow, bhigh] = computeProduct1(low, high, e, f.denormalMantissaBits + 3, product128)
@@ -574,12 +574,6 @@ function computeProduct1(mlow: number, mhigh: number, e: number, bits: number, o
 
     output[0] = alow, output[1] = blow, output[2] = ahigh, output[3] = bhigh
     return output
-}
-
-export function clz1(low: number, high: number): number {
-    if (high !== 0)
-        return Math.clz32(high)
-    return 32 + Math.clz32(low)
 }
 
 const POW5_128 =

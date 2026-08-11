@@ -1,3 +1,9 @@
+export function clz(low: number, high: number): number {
+    if (high !== 0)
+        return Math.clz32(high)
+    return 32 + Math.clz32(low)
+}
+
 export function shiftLeft(low: number, high: number, bits: number, output: Uint32Array): Uint32Array {
     if (bits === 0) {
         output[0] = low
