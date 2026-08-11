@@ -308,3 +308,5 @@ export const field = <K extends string, M extends BaseMeta<any, M>>(
         ...value
     }
 }
+
+export const builder = <M extends ObjectMeta<any>>(build: M['build']) => (m: M): M => ({ ...m, build })
