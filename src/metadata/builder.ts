@@ -105,7 +105,6 @@ export const i32 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
 export const u64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
     primitive(JSONT.U64, toUint64, (v) => {
         if (typeof v !== 'bigint') { throw new Error() }
-        if (!Number.isInteger(v)) { throw new Error() }
         if (v < 0 || v > 18446744073709551615n) { throw new Error() }
         return v.toString()
     }, ...modifiers)
@@ -113,7 +112,6 @@ export const u64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
 export const i64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
     primitive(JSONT.I64, toInt64, (v) => {
         if (typeof v !== 'bigint') { throw new Error() }
-        if (!Number.isInteger(v)) { throw new Error() }
         if (v < -9223372036854775808n || v > 9223372036854775807n) { throw new Error() }
         return v.toString()
     }, ...modifiers)
