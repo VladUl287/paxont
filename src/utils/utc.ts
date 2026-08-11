@@ -25,7 +25,7 @@ export function precomputeUTC(options: { minYear: number, maxYear: number }) {
         return days * 86400000 + hours * 3600000 + minutes * 60000 + seconds * 1000 + ms
     }
 
-    return { utc }
+    return utc
 }
 
-export const { utc } = precomputeUTC({ minYear: 0, maxYear: 4096 })
+export const utc = precomputeUTC({ minYear: 0, maxYear: 4096 })
