@@ -56,7 +56,6 @@ export const date = (...modifiers: Modifier<PrimitiveMeta<Date>>[]) =>
 
 export const u8 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
     primitive(JSONT.U8, toUint8, (v) => {
-        if (typeof v !== 'number') { throw new Error() }
         if (!Number.isInteger(v)) { throw new Error() }
         if (v < 0 || v > 255) { throw new Error() }
         return v.toString()
@@ -64,7 +63,6 @@ export const u8 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
 
 export const u16 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
     primitive(JSONT.U16, toUint16, (v) => {
-        if (typeof v !== 'number') { throw new Error() }
         if (!Number.isInteger(v)) { throw new Error() }
         if (v < 0 || v > 65535) { throw new Error() }
         return v.toString()
@@ -72,7 +70,6 @@ export const u16 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
 
 export const u32 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
     primitive(JSONT.U32, toUint32, (v) => {
-        if (typeof v !== 'number') { throw new Error() }
         if (!Number.isInteger(v)) { throw new Error() }
         if (v < 0 || v > 4294967295) { throw new Error() }
         return v.toString()
@@ -80,7 +77,6 @@ export const u32 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
 
 export const i8 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
     primitive(JSONT.I8, toInt8, (v) => {
-        if (typeof v !== 'number') { throw new Error() }
         if (!Number.isInteger(v)) { throw new Error() }
         if (v < -128 || v > 127) { throw new Error() }
         return v.toString()
@@ -88,7 +84,6 @@ export const i8 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
 
 export const i16 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
     primitive(JSONT.I16, toInt16, (v) => {
-        if (typeof v !== 'number') { throw new Error() }
         if (!Number.isInteger(v)) { throw new Error() }
         if (v < -32768 || v > 32767) { throw new Error() }
         return v.toString()
@@ -96,7 +91,6 @@ export const i16 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
 
 export const i32 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
     primitive(JSONT.I32, toInt32, (v) => {
-        if (typeof v !== 'number') { throw new Error() }
         if (!Number.isInteger(v)) { throw new Error() }
         if (v < -2147483648 || v > 2147483647) { throw new Error() }
         return v.toString()
