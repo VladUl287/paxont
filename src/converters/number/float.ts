@@ -18,7 +18,6 @@ type Store = {
 }
 
 const COMPLETE = ReadResultType.COMPLETE
-const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toFloat(
