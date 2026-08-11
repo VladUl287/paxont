@@ -5,7 +5,8 @@ import { isDigitU } from "../../utils/ascii"
 import { float64, FloatFormat } from "./floatFormats"
 import { genUnrolledFromCharCode } from "../../code_gen/string"
 import { wasmInstance } from "../../utils/wasm"
-import { isGreaterThan, isGreaterThanOrEqual, isLessThan, shiftRight } from "../../utils/long_bitwise"
+import { isGreaterThan, isGreaterThanOrEqual, isLessThan, shiftLeft, shiftRight } from "../../utils/long_bitwise"
+import { splitTo64 } from "../../utils/bigint"
 
 type Store = {
     mantissa: number,
@@ -579,14 +580,6 @@ export function clz1(low: number, high: number): number {
     if (high !== 0)
         return Math.clz32(high)
     return 32 + Math.clz32(low)
-}
-
-
-export function splitTo64(value: bigint): { high: number, low: number } {
-    return {
-        low: Number(value & 0xFFFFFFFFn),
-        high: Number((value >> 32n) & 0xFFFFFFFFn)
-    }
 }
 
 const POW5_128 =
