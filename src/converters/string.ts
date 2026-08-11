@@ -6,7 +6,7 @@ import { BACKSLASH, DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
 import { JSONParseError } from "../utils/error"
 import { wasmInstance } from "../utils/wasm"
 
-const factories = new Array<(data: ArrayLike<number>, i: number) => string>(64)
+const factories = new Array<(data: ArrayLike<number>, i: number) => string>(32)
 factories[0] = (_a, _i) => ""
 const factories16 = new Array<(data: ArrayLike<number>, i: number) => string>(32)
 factories16[0] = (_a, _i) => ""
@@ -47,7 +47,7 @@ export const defaultParseOptions: ParserOptions = {
             const buffer = Buffer.from(bytes.buffer)
             return (start, end, ascii_only = false) => {
                 const length = end - start
-                if (ascii_only && length <= 64) {
+                if (ascii_only && length <= 32) {
                     const factory = (factories[length] ??= genUnrolledFromCharCode(length))
                     return factory(buffer, start)
                 }
@@ -58,7 +58,7 @@ export const defaultParseOptions: ParserOptions = {
             const unsafeDecoder8 = new TextDecoder('utf-8', { fatal: false })
             return (start, end, ascii_only = false) => {
                 const length = end - start
-                if (ascii_only && length <= 64) {
+                if (ascii_only && length <= 32) {
                     const factory = (factories[length] ??= genUnrolledFromCharCode(length))
                     return factory(bytes, start)
                 }
