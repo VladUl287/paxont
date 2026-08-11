@@ -275,6 +275,7 @@ type Filter<T, U> = T extends U ? T : never;
 type FilterArray<T, A> = T extends (infer U)[] ? Filter<U, A>[] : never
 
 type FilterFields<M extends ObjectParam<M>[]> = FilterArray<M, ObjectField<string, any>>
+
 type AsObject<M extends ObjectParam<M>[]> = Expand<{ [E in FilterFields<M>[number]as E['name']['value']]: E['value'] }>
 
 export const object = <M extends ObjectParam<M>[]>(...args: M): ObjectMeta<AsObject<M>> => {
