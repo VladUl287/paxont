@@ -1,4 +1,4 @@
-import { ParseContext, PrimitiveMeta } from "../metadata/types"
+import { JsonParsingContext, PrimitiveMeta } from "../metadata/types"
 import { utc } from "../utils/utc"
 import { COLON, DOT, DOUBLE_QUOTE, MINUS, PLUS, T_UPPER, Z } from "../utils/ascii_symbols"
 import { isComplete, ReadResult, ReadResultType } from "../utils/types"
@@ -13,7 +13,7 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toDate(
     metadata: PrimitiveMeta<Date>,
-    context: ParseContext,
+    context: JsonParsingContext,
     index: number,
     depth: number,
 ): ReadResult<Date> {
@@ -43,7 +43,7 @@ export function toDate(
 
 type ISOResult = Extract<ReadResult<Date>, { type: ReadResultType.COMPLETE }>;
 
-function fromString(context: ParseContext, i: number): ReadResult<Date> {
+function fromString(context: JsonParsingContext, i: number): ReadResult<Date> {
     const { reader, options } = context
     const b = reader.bytes
     const len = b.length
@@ -233,7 +233,7 @@ function tryParseISO8601(b: Uint8Array, i: number, r: ISOResult): boolean {
     return true
 }
 
-function fromTimestamp(ctx: ParseContext, i: number): ReadResult<Date> {
+function fromTimestamp(ctx: JsonParsingContext, i: number): ReadResult<Date> {
     const maxValue = 8_640_000_000_000_000
     const minValue = -8_640_000_000_000_000
 

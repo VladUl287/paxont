@@ -1,4 +1,4 @@
-import { JsonReader, ParseContext, PrimitiveMeta } from "../../metadata/types"
+import { JsonReader, JsonParsingContext, PrimitiveMeta } from "../../metadata/types"
 import { JSONParseError } from "../../utils/error"
 import { ReadResult, ReadResultType } from "../../utils/types"
 import { MINUS } from "../../utils/ascii_symbols"
@@ -10,42 +10,42 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export const toInt8 = (
     metadata: PrimitiveMeta<number>,
-    { reader }: ParseContext,
+    { reader }: JsonParsingContext,
     index: number,
     depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 3, -128, 127, true)
 
 export const toUint8 = (
     metadata: PrimitiveMeta<number>,
-    { reader }: ParseContext,
+    { reader }: JsonParsingContext,
     index: number,
     depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 3, 0, 255, false)
 
 export const toInt16 = (
     metadata: PrimitiveMeta<number>,
-    { reader }: ParseContext,
+    { reader }: JsonParsingContext,
     index: number,
     depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 5, -32768, 32767, true)
 
 export const toUint16 = (
     metadata: PrimitiveMeta<number>,
-    { reader }: ParseContext,
+    { reader }: JsonParsingContext,
     index: number,
     depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 5, 0, 65535, false)
 
 export const toInt32 = (
     metadata: PrimitiveMeta<number>,
-    { reader }: ParseContext,
+    { reader }: JsonParsingContext,
     index: number,
     depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 10, -2147483648, 2147483647, true)
 
 export const toUint32 = (
     metadata: PrimitiveMeta<number>,
-    { reader }: ParseContext,
+    { reader }: JsonParsingContext,
     index: number,
     depth: number
 ): ReadResult<number> => tryParseInt(reader, index, 10, 0, 4294967295, false)

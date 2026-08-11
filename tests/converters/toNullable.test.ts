@@ -1,5 +1,5 @@
 import { bool, nullable } from "../../src/metadata/builder"
-import { ParseContext, NullableMeta, PrimitiveMeta } from "../../src/metadata/types"
+import { JsonParsingContext, NullableMeta, PrimitiveMeta } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
@@ -14,7 +14,7 @@ describe('toNullable', () => {
     function expectNullable(meta: NullableMeta<PrimitiveMeta<boolean>>, str: string) {
         const bytes = toBytes(str)
 
-        const context: ParseContext = {
+        const context: JsonParsingContext = {
             reader: { bytes: bytes, writable: false },
             options: defaultOptions,
             stack: new Stack()
@@ -43,7 +43,7 @@ describe('toNullable', () => {
     function expectError(meta: NullableMeta<PrimitiveMeta<boolean>>, str: string) {
         const bytes = toBytes(str)
 
-        const context: ParseContext = {
+        const context: JsonParsingContext = {
             reader: { bytes: bytes, writable: false },
             options: defaultOptions,
             stack: new Stack()

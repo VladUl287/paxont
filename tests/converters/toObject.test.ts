@@ -1,5 +1,5 @@
 import { bool, field, number, object } from "../../src/metadata/builder"
-import { ObjectMeta, ParseContext } from "../../src/metadata/types"
+import { ObjectMeta, JsonParsingContext } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
@@ -18,7 +18,7 @@ describe('toNullable', () => {
         const bytes = toBytes(str)
         const obj = JSON.parse(str)
 
-        const context: ParseContext = {
+        const context: JsonParsingContext = {
             reader: { bytes: bytes, writable: false },
             options: defaultOptions,
             stack: new Stack()
@@ -47,7 +47,7 @@ describe('toNullable', () => {
     function expectError(meta: ObjectMeta<any>, str: string) {
         const bytes = toBytes(str)
 
-        const context: ParseContext = {
+        const context: JsonParsingContext = {
             reader: { bytes: bytes, writable: false },
             options: defaultOptions,
             stack: new Stack()

@@ -1,5 +1,5 @@
 import { number, set } from "../../src/metadata/builder"
-import { ParseContext, SetMeta } from "../../src/metadata/types"
+import { JsonParsingContext, SetMeta } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { Stack } from "../../src/utils/stack"
 import { isComplete, ReadResultType } from "../../src/utils/types"
@@ -15,7 +15,7 @@ describe('toSet', () => {
     function expectSet(meta: SetMeta<any>, str: string) {
         const bytes = toBytes(str)
 
-        const context: ParseContext = {
+        const context: JsonParsingContext = {
             reader: { bytes: bytes, writable: false },
             options: defaultOptions,
             stack: new Stack()

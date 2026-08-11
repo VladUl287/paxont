@@ -2,7 +2,7 @@ import { toObject } from "../../src/converters/object"
 import { metadata } from "../../src/metadata"
 import { JSONT } from "../../src/metadata/baseTypes"
 import { field, object, i16, i32, i64, i8, number, u16, u32, u64, u8, string } from "../../src/metadata/builder"
-import { BaseMeta, ObjectMeta, ParseContext, TypeName } from "../../src/metadata/types"
+import { BaseMeta, ObjectMeta, JsonParsingContext, TypeName } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { Stack } from "../../src/utils/stack"
 import { ReadResultType } from "../../src/utils/types"
@@ -67,7 +67,7 @@ describe('metadata', () => {
         expect(meta.getFieldIndex(toBytes("coordinates"), 0)).toBe(5)
 
         expect(meta.toValue).toBe(toObject)
-        const ctx: ParseContext = {
+        const ctx: JsonParsingContext = {
             reader: {
                 bytes: toBytes(JSON.stringify(object)),
                 writable: false
@@ -188,7 +188,7 @@ describe('metadata', () => {
 
         // expect(meta.toJson(meta, object, defaultOptions)).toBe(JSON.stringify(object))
 
-        const ctx: ParseContext = {
+        const ctx: JsonParsingContext = {
             reader: {
                 bytes: toBytes(meta.toJson(meta, obj, defaultOptions)),
                 writable: false

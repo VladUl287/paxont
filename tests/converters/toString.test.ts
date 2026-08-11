@@ -1,6 +1,6 @@
 import { createStringParser, defaultParseOptions } from "../../src/converters/string"
 import { string } from "../../src/metadata/builder"
-import { BaseMeta, JsonReader, ParseContext } from "../../src/metadata/types"
+import { BaseMeta, JsonReader, JsonParsingContext } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { Stack } from "../../src/utils/stack"
 import { ReadResultType } from "../../src/utils/types"
@@ -17,7 +17,7 @@ describe('tryParseString', () => {
             writable: false
         }
 
-        const ctx: ParseContext = {
+        const ctx: JsonParsingContext = {
             reader: reader,
             options: defaultOptions,
             stack: new Stack(),

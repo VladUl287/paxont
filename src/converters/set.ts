@@ -1,4 +1,4 @@
-import { BaseMeta, SetMeta, ParseContext } from "../metadata/types"
+import { BaseMeta, SetMeta, JsonParsingContext } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/ascii_symbols"
 import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
@@ -10,7 +10,7 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toSet<V, M extends BaseMeta<V>>(
     metadata: SetMeta<M>,
-    context: ParseContext,
+    context: JsonParsingContext,
     index: number,
     depth: number
 ): ReadResult<Set<V>> {

@@ -1,5 +1,5 @@
 import { genUnrolledFromCharCode, genUnrolledFromCharCode16 as genUnrolledFromCharCode16LE } from "../code_gen/string"
-import { ParseContext, PrimitiveMeta } from "../metadata/types"
+import { JsonParsingContext, PrimitiveMeta } from "../metadata/types"
 import { CURRENT_PLATFORM, isBun, isNode } from "../utils/platform"
 import { ReadResult, ReadResultType } from "../utils/types"
 import { BACKSLASH, DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
@@ -128,7 +128,7 @@ export function createStringParser(options: ParserOptions) {
                 const get_utf16_length = utf16Module.utf16_length
                 const utf8_to_utf16 = utf16Module.utf8_to_utf16
 
-                return (base: string, { reader, stack }: ParseContext, i: number): ReadResult<string> => {
+                return (base: string, { reader, stack }: JsonParsingContext, i: number): ReadResult<string> => {
                     const b = reader.bytes
                     const partial = Number(reader.writable)
 
@@ -269,7 +269,7 @@ export function createStringParser(options: ParserOptions) {
             const get_dq_index = utf8Module.dq_index
             const utf8_to_utf8 = utf8Module.utf8_to_utf8
 
-            return (base: string, { reader, stack }: ParseContext, i: number): ReadResult<string> => {
+            return (base: string, { reader, stack }: JsonParsingContext, i: number): ReadResult<string> => {
                 const b = reader.bytes
                 const partial = Number(reader.writable)
 
@@ -455,7 +455,7 @@ export function createStringParser(options: ParserOptions) {
             return 0
         }
 
-        function decode(base: string, { reader, stack, options }: ParseContext, i: number): ReadResult<string> {
+        function decode(base: string, { reader, stack, options }: JsonParsingContext, i: number): ReadResult<string> {
             const b = reader.bytes
             const utf8 = options.decoder
             const end_index = findEndOfString(b, i)
@@ -518,7 +518,7 @@ export function createStringParser(options: ParserOptions) {
 
     const decode = decoderFactory(options)
 
-    const toString = (m: PrimitiveMeta<string>, context: ParseContext, index: number, depth: number): ReadResult<string> => {
+    const toString = (m: PrimitiveMeta<string>, context: JsonParsingContext, index: number, depth: number): ReadResult<string> => {
         const reader = context.reader
         const stack = context.stack
 

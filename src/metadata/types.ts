@@ -11,19 +11,19 @@ export type JsonReader = {
     readonly writable: boolean
 }
 
-export type ParseContext = {
+export type JsonParsingContext = {
     readonly reader: JsonReader,
     readonly options: JsonOptions,
-    readonly stack: IStack<ParseState>
+    readonly stack: IStack<JsonParsingState>
 }
 
-export type ParseState = {
+export type JsonParsingState = {
     isContinued: boolean,
     [key: string]: any
 }
 
 export interface BaseMeta<T> {
-    readonly toValue: <M extends this>(metadata: M, context: ParseContext, index: number, depth: number) => ReadResult<T>
+    readonly toValue: <M extends this>(metadata: M, context: JsonParsingContext, index: number, depth: number) => ReadResult<T>
     readonly toJson: <M extends this>(metadata: M, value: T, options: JsonOptions) => string
     readonly type: TypeName
 }

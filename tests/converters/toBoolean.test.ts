@@ -1,6 +1,6 @@
 import { toBoolean } from "../../src/converters/boolean"
 import { bool } from "../../src/metadata/builder"
-import { ParseState, ParseContext } from "../../src/metadata/types"
+import { JsonParsingState, JsonParsingContext } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { A, E, F, L, R, S, T, U } from "../../src/utils/ascii_symbols"
 import { JSONParseError } from "../../src/utils/error"
@@ -13,7 +13,7 @@ describe('toBoolean', () => {
 
     const toBytes = (str: string): Uint8Array => encoder.encode(str)
 
-    const createContext = (bytes: number[], writable = false, stack = new Stack<ParseState>()): ParseContext => ({
+    const createContext = (bytes: number[], writable = false, stack = new Stack<JsonParsingState>()): JsonParsingContext => ({
         reader: {
             bytes: Uint8Array.from(bytes),
             writable: writable

@@ -1,6 +1,6 @@
 import { MemoizeFactory, memoize } from "./utils/memo"
 import { defaultOptions, JsonOptions, mergeOptions } from "./options"
-import { BaseMeta, ParseState } from "./metadata/types"
+import { BaseMeta, JsonParsingState } from "./metadata/types"
 import { ArrayPool, arrayPool } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
@@ -38,7 +38,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
 
     const meta = metadata()
 
-    const emptyStack: IStack<ParseState> = Object.freeze({
+    const emptyStack: IStack<JsonParsingState> = Object.freeze({
         isEmpty: true,
         pop: () => undefined,
         peek: () => undefined,
@@ -115,7 +115,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
             metadataMemo.getOrAdd(type, (t) => meta.from(t)) :
             type
 
-        const stack = new Stack<ParseState>()
+        const stack = new Stack<JsonParsingState>()
 
         const buffer = arrayPool.rent(65535)
 

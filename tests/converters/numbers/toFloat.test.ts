@@ -1,4 +1,4 @@
-import { ParseContext, PrimitiveMeta } from "../../../src/metadata/types"
+import { JsonParsingContext, PrimitiveMeta } from "../../../src/metadata/types"
 import { defaultOptions } from "../../../src/options"
 import { Stack } from "../../../src/utils/stack"
 import { ReadResultType } from "../../../src/utils/types"
@@ -6,7 +6,7 @@ import { deserializePartially } from "../utils"
 import { number } from "../../../src/metadata/builder"
 
 describe('tryParseFloat', () => {
-  const toContext = (str: string): ParseContext => {
+  const toContext = (str: string): JsonParsingContext => {
     return { options: defaultOptions, reader: ({ bytes: new TextEncoder().encode(str), writable: false }), stack: new Stack() }
   }
 

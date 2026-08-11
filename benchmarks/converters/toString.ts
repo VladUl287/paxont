@@ -1,5 +1,5 @@
 import { add, complete, cycle, suite } from 'benny'
-import { JsonReader, ParseState } from '../../src/metadata/types'
+import { JsonReader, JsonParsingState } from '../../src/metadata/types'
 import { defaultOptions } from '../../src/options'
 import { createStringParser, defaultParseOptions, toString } from '../../src/converters/string'
 import { Stack } from '../../src/utils/stack'
@@ -86,7 +86,7 @@ const cases = utf8TestStrings.reduce((acc, str) => {
     const ctx = {
         reader: data,
         options: defaultOptions,
-        stack: new Stack<ParseState>()
+        stack: new Stack<JsonParsingState>()
     }
 
     const factories = new Array<(data: ArrayLike<number>, i: number) => string>(32)

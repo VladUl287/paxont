@@ -1,4 +1,4 @@
-import { BaseMeta, ArrayMeta, ParseContext, MetaValue } from "../metadata/types"
+import { BaseMeta, ArrayMeta, JsonParsingContext, MetaValue } from "../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../utils/ascii_symbols"
 import { skipWhitespace } from "./utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../utils/types"
@@ -11,7 +11,7 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends BaseMeta<any>>(
     metadata: ArrayMeta<A, M>,
-    context: ParseContext,
+    context: JsonParsingContext,
     i: number,
     depth: number
 ): ReadResult<A> {

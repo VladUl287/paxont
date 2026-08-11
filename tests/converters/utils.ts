@@ -1,4 +1,4 @@
-import { BaseMeta, ParseContext, ParseState } from "../../src/metadata/types"
+import { BaseMeta, JsonParsingContext, JsonParsingState } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
@@ -12,7 +12,7 @@ export function toBytes(str: string): Uint8Array {
 export function expectError<M extends BaseMeta<any>>(meta: M, str: string) {
     const bytes = toBytes(str)
 
-    const context: ParseContext = {
+    const context: JsonParsingContext = {
         reader: { bytes: bytes, writable: false },
         options: defaultOptions,
         stack: new Stack()
@@ -35,13 +35,13 @@ export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: U
     let currentChunk
     let prevChunk: number[] = []
 
-    const stack = new Stack<ParseState>()
+    const stack = new Stack<JsonParsingState>()
 
     while ((currentChunk = chunks.pop()) !== undefined) {
         const ch = [...prevChunk, ...currentChunk]
         const bytes = new Uint8Array(ch)
 
-        const context: ParseContext = {
+        const context: JsonParsingContext = {
             reader: {
                 bytes: bytes,
                 writable: chunks.length !== 0

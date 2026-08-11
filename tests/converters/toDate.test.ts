@@ -1,6 +1,6 @@
 import { toDate } from "../../src/converters/date"
 import { date } from "../../src/metadata/builder"
-import { ParseContext, BaseMeta, JsonReader } from "../../src/metadata/types"
+import { JsonParsingContext, BaseMeta, JsonReader } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
@@ -13,7 +13,7 @@ describe('toDate', () => {
     function callToDate(bytes: Uint8Array, i: number) {
         const meta: any = {}
         const reader: JsonReader = { bytes: bytes, writable: false }
-        const ctx: ParseContext = { reader: reader, options: defaultOptions, stack: new Stack() }
+        const ctx: JsonParsingContext = { reader: reader, options: defaultOptions, stack: new Stack() }
         return toDate(meta, ctx, i, 0)
     }
 
@@ -31,7 +31,7 @@ describe('toDate', () => {
         const date = parseISO(str.substring(1, str.length - 1))
         const bytes = toBytes(str)
 
-        const context: ParseContext = {
+        const context: JsonParsingContext = {
             reader: { bytes: bytes, writable: false },
             options: defaultOptions,
             stack: new Stack()

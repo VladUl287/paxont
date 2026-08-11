@@ -1,6 +1,6 @@
 import { toMap } from "../../src/converters/map"
 import { bool, map } from "../../src/metadata/builder"
-import { ParseState, ParseContext, MapMeta } from "../../src/metadata/types"
+import { JsonParsingState, JsonParsingContext, MapMeta } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
@@ -20,7 +20,7 @@ describe('toMap', () => {
     function expectMap(meta: MapMeta<any>, str: string) {
         const bytes = toBytes(str)
 
-        const context: ParseContext = {
+        const context: JsonParsingContext = {
             reader: { bytes: bytes, writable: false },
             options: defaultOptions,
             stack: new Stack()
@@ -49,7 +49,7 @@ describe('toMap', () => {
     function expectError(meta: MapMeta<any>, str: string) {
         const bytes = toBytes(str)
 
-        const context: ParseContext = {
+        const context: JsonParsingContext = {
             reader: { bytes: bytes, writable: false },
             options: defaultOptions,
             stack: new Stack()

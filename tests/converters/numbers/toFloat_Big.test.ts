@@ -1,5 +1,5 @@
 import fs from 'fs'
-import { ParseContext } from '../../../src/metadata/types'
+import { JsonParsingContext } from '../../../src/metadata/types'
 import { tryParseFloat } from '../../../src/converters/number/float'
 import { ReadResultType } from '../../../src/utils/types'
 import { float64 } from "../../../src/converters/number/floatFormats"
@@ -8,7 +8,7 @@ import { Stack } from '../../../src/utils/stack'
 
 describe('parseNumberF64-files', () => {
     const encoder = new TextEncoder()
-    const toContext = (str: string): ParseContext => {
+    const toContext = (str: string): JsonParsingContext => {
         return { options: defaultOptions, reader: ({ bytes: encoder.encode(str), writable: false }), stack: new Stack() }
     }
 

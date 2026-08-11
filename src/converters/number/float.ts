@@ -1,6 +1,6 @@
 import { DOT, E, MINUS, PLUS, ZERO } from "../../utils/ascii_symbols"
 import { isComplete, ReadResult, ReadResultType } from "../../utils/types"
-import { ParseContext, PrimitiveMeta } from "../../metadata/types"
+import { JsonParsingContext, PrimitiveMeta } from "../../metadata/types"
 import { isDigitU } from "../../utils/ascii"
 import { float64, FloatFormat } from "./floatFormats"
 import { genUnrolledFromCharCode } from "../../code_gen/string"
@@ -22,7 +22,7 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toFloat(
     metadata: PrimitiveMeta<number>,
-    context: ParseContext,
+    context: JsonParsingContext,
     index: number,
     depth: number): ReadResult<number> {
     const result = tryParseFloat(context, index, float64)
@@ -75,7 +75,7 @@ function getNumberEndIndex(b: Uint8Array, i: number): number {
     return i
 }
 
-export function tryParseFloat({ reader, options }: ParseContext, i: number, format: FloatFormat): ReadResult<number> {
+export function tryParseFloat({ reader, options }: JsonParsingContext, i: number, format: FloatFormat): ReadResult<number> {
     const b = reader.bytes
 
     const start = i

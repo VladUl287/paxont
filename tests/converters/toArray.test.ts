@@ -1,6 +1,6 @@
 import { toArray } from "../../src/converters/array"
 import { array, i16Array, i32Array, i64Array, i8Array, number, u16Array, u32Array, u64Array, u8Array } from "../../src/metadata/builder"
-import { ArrayMeta, ParseState, ParseContext, PrimitiveMeta } from "../../src/metadata/types"
+import { ArrayMeta, JsonParsingState, JsonParsingContext, PrimitiveMeta } from "../../src/metadata/types"
 import { defaultOptions, defaultOptions as dfo } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"
@@ -16,7 +16,7 @@ describe('toArray', () => {
         return toArray(meta, {
             reader: { bytes: data, writable: false },
             options: defaultOptions,
-            stack: new Stack<ParseState>()
+            stack: new Stack<JsonParsingState>()
         }, index, depth)
     }
 
@@ -63,7 +63,7 @@ describe('toArray', () => {
             }
             const numericArray = array(number((m) => ({
                 ...m,
-                toValue: (m: PrimitiveMeta<number>, c: ParseContext, i: number, d: number): ReadResult<number> => error
+                toValue: (m: PrimitiveMeta<number>, c: JsonParsingContext, i: number, d: number): ReadResult<number> => error
             })))
             const result = deserialize(numericArray, bytes)
             expect(result).toEqual(error)
