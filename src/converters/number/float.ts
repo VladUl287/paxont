@@ -1,5 +1,5 @@
 import { DOT, E, MINUS, PLUS, ZERO } from "../../utils/ascii_symbols"
-import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/types"
+import { isComplete, ReadResult, ReadResultType } from "../../utils/types"
 import { ParseContext, PrimitiveMeta } from "../../metadata/types"
 import { isDigitU } from "../../utils/ascii"
 import { float64, FloatFormat } from "./floatFormats"
