@@ -78,7 +78,7 @@ function getNumberEndIndex(b: Uint8Array, i: number): number {
 export function tryParseFloat({ reader, options }: ParseContext, i: number, format: FloatFormat): ReadResult<number> {
     const b = reader.bytes
 
-    let start = i
+    const start = i
     const negative = b[i] === MINUS
     if (negative) i++
 
@@ -92,15 +92,7 @@ export function tryParseFloat({ reader, options }: ParseContext, i: number, form
     }
 
     if (tryFastParse(b, s)) {
-        let { index: i, mantissa: m, mLow, mHigh, digitsCount, exponent: e } = s
-
-        if (m === 0 && (mLow | mHigh) === 0 && digitsCount > 0) {
-            return {
-                type: COMPLETE,
-                value: negative ? -0 : 0,
-                nextIndex: i
-            }
-        }
+        let { index: i, mantissa: m, mLow, mHigh, exponent: e } = s
 
         const eabs = Math.abs(e)
         if (m > 0 && eabs <= format.maxExponentFastPath) {
@@ -111,6 +103,14 @@ export function tryParseFloat({ reader, options }: ParseContext, i: number, form
             return {
                 type: COMPLETE,
                 value: negative ? -m : m,
+                nextIndex: i
+            }
+        }
+
+        if (m === 0 && (mLow | mHigh) === 0) {
+            return {
+                type: COMPLETE,
+                value: negative ? -0 : 0,
                 nextIndex: i
             }
         }
