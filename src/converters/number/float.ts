@@ -368,16 +368,12 @@ function toFloatCompute(low: number, high: number, e: number, f: FloatFormat): n
 
         [low, high] = shiftRight(low, high, -exponent + 1, product128)
 
-        const isOdd = (low & 1) !== 0
-        if (isOdd) {
-            let newLow = low + 1
-            let newHigh = high
-
-            if ((newLow >>> 0) < low)
-                newHigh++
-
-            low = newLow
-            high = newHigh
+        if (low & 1) {
+            const oldLow = low
+            low = (low + 1) >>> 0
+            if (low < oldLow) {
+                high++
+            }
         }
 
         [low, high] = shiftRight(low, high, 1, product128)
@@ -394,16 +390,12 @@ function toFloatCompute(low: number, high: number, e: number, f: FloatFormat): n
             }
         }
 
-        const isOdd = (low & 1) !== 0
-        if (isOdd) {
-            let newLow = low + 1
-            let newHigh = high
-
-            if ((newLow >>> 0) < low)
-                newHigh++
-
-            low = newLow
-            high = newHigh
+        if (low & 1) {
+            const oldLow = low
+            low = (low + 1) >>> 0
+            if (low < oldLow) {
+                high++
+            }
         }
 
         [low, high] = shiftRight(low, high, 1, product128)
