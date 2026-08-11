@@ -1,4 +1,4 @@
-import { ParseContext, JsonReader, PrimitiveMeta } from "../metadata/types"
+import { ParseContext, PrimitiveMeta } from "../metadata/types"
 import { utc } from "../utils/utc"
 import { COLON, DOT, DOUBLE_QUOTE, MINUS, PLUS, T_UPPER, Z } from "../utils/ascii_symbols"
 import { isComplete, ReadResult, ReadResultType } from "../utils/types"
@@ -26,7 +26,7 @@ export function toDate(
             return fromString(context, index)
 
         if (isDigitU(b[index]))
-            return fromTimestamp(reader, index)
+            return fromTimestamp(context, index)
     }
     else if (reader.writable) {
         return {
@@ -233,11 +233,11 @@ function tryParseISO8601(b: Uint8Array, i: number, r: ISOResult): boolean {
     return true
 }
 
-function fromTimestamp(reader: JsonReader, i: number): ReadResult<Date> {
+function fromTimestamp(ctx: ParseContext, i: number): ReadResult<Date> {
     const maxValue = 8_640_000_000_000_000
     const minValue = -8_640_000_000_000_000
 
-    const result = tryParseFloat(reader, i, float64)
+    const result = tryParseFloat(ctx, i, float64)
 
     if (isComplete(result)) {
         const value = result.value
