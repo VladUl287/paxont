@@ -536,8 +536,8 @@ const wasm =
 function computeProduct1(mlow: number, mhigh: number, e: number, bits: number, output: Uint32Array): Uint32Array {
     const index = 2 * (e + 342)
 
-    const plow = POW5_64_LOW[index]
-    const phigh = POW5_64_HIGH[index]
+    const plow = POW5_128_LOW[index]
+    const phigh = POW5_128_HIGH[index]
 
     const bhigh = wasm.mul(mlow, mhigh, plow, phigh) >>> 0
     const ahigh = wasm.get_mhigh() >>> 0
@@ -547,8 +547,8 @@ function computeProduct1(mlow: number, mhigh: number, e: number, bits: number, o
     const { low, high } = precisionMasks1[bits]
 
     if ((ahigh & low) === low && (bhigh & high) === high) {
-        const plow = POW5_64_LOW[index + 1]
-        const phigh = POW5_64_HIGH[index + 1]
+        const plow = POW5_128_LOW[index + 1]
+        const phigh = POW5_128_HIGH[index + 1]
 
         const bhigh2 = wasm.mul(mlow, mhigh, plow, phigh) >>> 0
         const ahigh2 = wasm.get_mhigh() >>> 0
@@ -1244,5 +1244,9 @@ const POW5_128 =
         0x8e679c2f5e44ff8fn, 0x570f09eaa7ea7648n
     ]
 
-const POW5_64_LOW = POW5_128.map(value => splitTo64(value).low)
-const POW5_64_HIGH = POW5_128.map(value => splitTo64(value).high)
+const POW5_128_LOW = new Array<number>(POW5_128.length)
+const POW5_128_HIGH = new Array<number>(POW5_128.length)
+POW5_128.forEach((value, i) => {
+    POW5_128_LOW[i] = Number(value & 0xFFFFFFFFn)
+    POW5_128_HIGH[i] = Number((value >> 32n) & 0xFFFFFFFFn)
+})
