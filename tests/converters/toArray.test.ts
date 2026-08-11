@@ -1,6 +1,6 @@
 import { toArray } from "../../src/converters/array"
-import { array, i16Array, i32Array, i64Array, i8Array, number, string, u16Array, u32Array, u64Array, u8Array } from "../../src/metadata/builder"
-import { ArrayMeta, ParseState, ParseContext, PrimitiveMeta, BaseMeta } from "../../src/metadata/types"
+import { array, i16Array, i32Array, i64Array, i8Array, number, u16Array, u32Array, u64Array, u8Array } from "../../src/metadata/builder"
+import { ArrayMeta, ParseState, ParseContext, PrimitiveMeta } from "../../src/metadata/types"
 import { defaultOptions, defaultOptions as dfo } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { Stack } from "../../src/utils/stack"

@@ -22,7 +22,7 @@ import { toFloat } from "../converters/number/float"
 import { Expand } from "../utils/types"
 import { isMetadata } from "./utils"
 
-export type Modifier<M extends BaseMeta<any, M>> = (metadata: M) => M
+export type Modifier<M extends BaseMeta<any>> = (metadata: M) => M
 
 export const string = (...modifiers: Modifier<PrimitiveMeta<string>>[]) =>
     primitive(JSONT.STRING, toString, (v) => {
@@ -110,7 +110,7 @@ export const i64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
         return v.toString()
     }, ...modifiers)
 
-function applyModifier<M extends BaseMeta<any, M>>(value: M, modify: Modifier<M>): M {
+function applyModifier<M extends BaseMeta<any>>(value: M, modify: Modifier<M>): M {
     return Object.assign({}, modify(value), { type: value.type })
 }
 
@@ -128,7 +128,7 @@ const primitive = <T>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const nullable = <M extends BaseMeta<any, M>>(
+export const nullable = <M extends BaseMeta<any>>(
     value: M,
     ...modifiers: Modifier<NullableMeta<M>>[]
 ): NullableMeta<M> => {
@@ -181,7 +181,7 @@ const globalPools: Record<TypeName, ArrayPool<any>> = {
     'f64[]': arrayPool<Array<Float64Array>>(Array),
 }
 
-export const array = <M extends BaseMeta<any, M>>(
+export const array = <M extends BaseMeta<any>>(
     value: M,
     ...modifiers: Modifier<ArrayMeta<MetaValue<M>[], M>>[]
 ): ArrayMeta<MetaValue<M>[], M> => {
@@ -203,6 +203,7 @@ export const array = <M extends BaseMeta<any, M>>(
         value: value,
         pool: globalPools[value.type]
     }
+
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
@@ -278,7 +279,7 @@ const bigIntTypedArray = <T extends ArrayLikeWritable<bigint> & BigIntTypedArray
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const map = <M extends BaseMeta<any, M>>(
+export const map = <M extends BaseMeta<any>>(
     value: M,
     ...modifiers: Modifier<MapMeta<M>>[]
 ): MapMeta<M> => {
@@ -296,7 +297,7 @@ export const map = <M extends BaseMeta<any, M>>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
-export const set = <M extends BaseMeta<any, M>>(
+export const set = <M extends BaseMeta<any>>(
     value: M,
     ...modifiers: Modifier<SetMeta<M>>[]
 ): SetMeta<M> => {
@@ -346,7 +347,7 @@ export const object = <M extends ObjectParam<M>[]>(...args: M): ObjectMeta<AsObj
         .reduce(applyModifier, objectMeta)
 }
 
-export const field = <K extends string, M extends BaseMeta<any, M>>(
+export const field = <K extends string, M extends BaseMeta<any>>(
     name: K, value: M, encoder: TextEncoder = new TextEncoder()
 ): ObjectField<K, M> => {
     return {

@@ -9,7 +9,7 @@ export function toBytes(str: string): Uint8Array {
     return encoder.encode(str)
 }
 
-export function expectError<M extends BaseMeta<any, any>>(meta: M, str: string) {
+export function expectError<M extends BaseMeta<any>>(meta: M, str: string) {
     const bytes = toBytes(str)
 
     const context: ParseContext = {
@@ -29,7 +29,7 @@ export function expectError<M extends BaseMeta<any, any>>(meta: M, str: string) 
     }
 }
 
-export const deserializePartially = <M extends BaseMeta<any, any>>(meta: M, chunks: Uint8Array[]) => {
+export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: Uint8Array[]) => {
     let result: ReadResult<any>
 
     let currentChunk

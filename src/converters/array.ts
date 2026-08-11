@@ -9,7 +9,7 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends BaseMeta<any, M>>(
+export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends BaseMeta<any>>(
     metadata: ArrayMeta<A, M>,
     context: ParseContext,
     i: number,

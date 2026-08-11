@@ -10,13 +10,13 @@ import { toObject } from "../../src/converters/object"
 import { toSet } from "../../src/converters/set"
 import { toString } from "../../src/converters/string"
 import { JSONT } from "../../src/metadata/baseTypes"
-import { array, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array, u32Array, u64Array, i8Array, i16Array, i32Array, i64Array, f64Array, map, set, object, field } from "../../src/metadata/builder"
+import { array, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array, u32Array, u64Array, i8Array, i16Array, i32Array, i64Array, f64Array, map, set, object, field, usePool } from "../../src/metadata/builder"
 import { BaseMeta, TypeName } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { arrayPool } from "../../src/utils/array"
 
 describe('metadata builders', () => {
-    function expectBaseStructure<M extends BaseMeta<any, any>>(meta: M, type: TypeName) {
+    function expectBaseStructure<M extends BaseMeta<any>>(meta: M, type: TypeName) {
         expect(meta).toHaveProperty('type', type)
         expect(meta).toHaveProperty('toValue')
         expect(meta).toHaveProperty('toJson')
@@ -138,8 +138,8 @@ describe('metadata builders', () => {
     test('array', () => {
         const num = number()
         const pool = arrayPool<Array<number>>(Array)
-        const usePool = arrayPool(pool)
-        const meta = array(num, usePool)
+        const addPool = usePool(pool)
+        const meta = array(num, addPool)
 
         expectBaseStructure(meta, JSONT.ARRAY)
         expect(meta).toHaveProperty('value', num)

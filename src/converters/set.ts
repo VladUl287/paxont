@@ -8,7 +8,7 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toSet<V, M extends BaseMeta<V, any>>(
+export function toSet<V, M extends BaseMeta<V>>(
     metadata: SetMeta<M>,
     context: ParseContext,
     index: number,

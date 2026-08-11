@@ -22,24 +22,24 @@ export type ParseState = {
     [key: string]: any
 }
 
-export interface BaseMeta<T, M extends BaseMeta<T, M>> {
-    readonly toValue: (metadata: M, context: ParseContext, index: number, depth: number) => ReadResult<T>
-    readonly toJson: (metadata: M, value: T, options: JsonOptions) => string
+export interface BaseMeta<T> {
+    readonly toValue: <M extends this>(metadata: M, context: ParseContext, index: number, depth: number) => ReadResult<T>
+    readonly toJson: <M extends this>(metadata: M, value: T, options: JsonOptions) => string
     readonly type: TypeName
 }
 
-export interface PrimitiveMeta<T> extends BaseMeta<T, PrimitiveMeta<T>> { }
+export interface PrimitiveMeta<T> extends BaseMeta<T> { }
 
-export type Obj = { [k: string]: BaseMeta<any, any> }
+export type Obj = { [k: string]: BaseMeta<any> }
 export type AsObject<T extends Obj> = Expand<{ [E in keyof T]: MetaValue<T[E]> }>
 
-export interface ObjectMeta<T extends Obj> extends BaseMeta<AsObject<T>, ObjectMeta<T>> {
+export interface ObjectMeta<T extends Obj> extends BaseMeta<AsObject<T>> {
     readonly fields: ObjectField<keyof T & string, T[keyof T]>[]
     readonly build: (values: MetaValue<T[keyof T]>[]) => AsObject<T>
     readonly getFieldIndex: (bytes: Uint8Array, offset: number) => number
 }
 
-export type ObjectField<K extends string, M extends BaseMeta<any, M>> = {
+export type ObjectField<K extends string, M extends BaseMeta<any>> = {
     readonly name: {
         value: K
         bytes: Uint8Array
@@ -47,23 +47,23 @@ export type ObjectField<K extends string, M extends BaseMeta<any, M>> = {
     readonly value: M
 }
 
-export interface NullableMeta<M extends BaseMeta<any, M>> extends BaseMeta<MetaValue<M> | null, NullableMeta<M>> {
+export interface NullableMeta<M extends BaseMeta<any>> extends BaseMeta<MetaValue<M> | null> {
     readonly value: M
 }
 
-export interface ArrayMeta<A extends ArrayLike<MetaValue<M>>, M extends BaseMeta<any, M>> extends BaseMeta<A, ArrayMeta<A, M>> {
+export interface ArrayMeta<A extends ArrayLike<MetaValue<M>>, M extends BaseMeta<any>> extends BaseMeta<A> {
     readonly value: M
     readonly pool: ArrayPool<A>
 }
 
-export interface SetMeta<M extends BaseMeta<any, M>> extends BaseMeta<Set<MetaValue<M>>, SetMeta<M>> {
+export interface SetMeta<M extends BaseMeta<any>> extends BaseMeta<Set<MetaValue<M>>> {
     readonly value: M,
     readonly key?: (value: MetaValue<M>) => any
 }
 
-export interface MapMeta<M extends BaseMeta<any, M>> extends BaseMeta<Map<string, MetaValue<M>>, MapMeta<M>> {
+export interface MapMeta<M extends BaseMeta<any>> extends BaseMeta<Map<string, MetaValue<M>>> {
     readonly key: PrimitiveMeta<string>
     readonly value: M
 }
 
-export type MetaValue<M> = M extends BaseMeta<infer U, any> ? U : never
+export type MetaValue<M> = M extends BaseMeta<infer U> ? U : never

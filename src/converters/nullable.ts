@@ -7,7 +7,7 @@ const NULL = N | U << 8 | L << 16 | L << 24
 const COMPLETE = ReadResultType.COMPLETE
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toNullable<M extends BaseMeta<any, M>>(
+export function toNullable<M extends BaseMeta<any>>(
     { value }: NullableMeta<M>,
     context: ParseContext,
     index: number,

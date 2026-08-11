@@ -8,7 +8,7 @@ import { Metadata, metadata } from "./metadata"
 import { isError, isNeedsMoreData } from "./utils/types"
 import { IStack, Stack } from "./utils/stack"
 
-type MetaOrData<T> = T extends BaseMeta<infer V, any> ? V : T
+type MetaOrData<T> = T extends BaseMeta<infer V> ? V : T
 
 type JSONTOptions = {
     readonly metadataBuilder: Metadata
@@ -34,7 +34,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
     const { arrayPool, memoize } = value
 
     const optionsMemo = memoize<Partial<JsonOptions>, JsonOptions>()
-    const metadataMemo = memoize<any, BaseMeta<any, any>>()
+    const metadataMemo = memoize<any, BaseMeta<any>>()
 
     const meta = metadata()
 
@@ -151,7 +151,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
         }
     }
 
-    function serialize<T, M extends BaseMeta<T, any>>(value: T, metadata: M, options?: Partial<JsonOptions>): string {
+    function serialize<T, M extends BaseMeta<T>>(value: T, metadata: M, options?: Partial<JsonOptions>): string {
         const fullOptions = !!options ?
             optionsMemo.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
             defaultOptions

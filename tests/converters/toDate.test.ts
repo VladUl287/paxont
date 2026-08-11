@@ -27,7 +27,7 @@ describe('toDate', () => {
         return new Date(isoString)
     }
 
-    function expectDate<M extends BaseMeta<Date, any>>(meta: M, str: string) {
+    function expectDate<M extends BaseMeta<Date>>(meta: M, str: string) {
         const date = parseISO(str.substring(1, str.length - 1))
         const bytes = toBytes(str)
 

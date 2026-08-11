@@ -9,13 +9,13 @@ import { isPlainObject } from "../utils/object"
 import { isMetadata } from "./utils"
 
 type HasMeta<T> =
-    T extends BaseMeta<any, any> ? true :
+    T extends BaseMeta<any> ? true :
     T extends Function ? false :
     T extends object ? true extends { [K in keyof T]: HasMeta<T[K]> }[keyof T] ? true : false
     : false
 
 export type Unwrap<T> =
-    T extends BaseMeta<any, any> ? MetaValue<T> :
+    T extends BaseMeta<any> ? MetaValue<T> :
     T extends (infer U)[] ? Unwrap<U>[] :
     T extends Set<infer U> ? Set<Unwrap<U>> :
     T extends Map<string, infer V> ? Map<string, Unwrap<V>> :
@@ -23,17 +23,17 @@ export type Unwrap<T> =
     T
 
 export type Metadata = {
-    readonly add: <Input, M extends BaseMeta<any, any>>(type: JType<Input, M>) => void
+    readonly add: <Input, M extends BaseMeta<any>>(type: JType<Input, M>) => void
     readonly remove: (type: TypeName | JType<any, any>) => boolean
     readonly clear: () => void
-    readonly from: <T, R extends BaseMeta<any, any> = BaseMeta<Unwrap<T>, any>>(data: T) => R
+    readonly from: <T, R extends BaseMeta<any> = BaseMeta<Unwrap<T>>>(data: T) => R
 }
 
 export type MetadataOptions = {
     readonly withDefaults: (m: Metadata) => Metadata
 }
 
-export type JType<Input, Meta extends BaseMeta<any, Meta>> = {
+export type JType<Input, Meta extends BaseMeta<any>> = {
     readonly name: TypeName,
     readonly is: (input: any) => input is Input
     readonly from: (input: Input, metadata: Metadata) => Meta
@@ -45,7 +45,7 @@ const defaultOptions: MetadataOptions = Object.freeze({ withDefaults })
 export function metadata(options: MetadataOptions = defaultOptions): Metadata {
     const jTypes = new Array<JType<any, any>>()
 
-    const add = <Input, M extends BaseMeta<any, any>>(type: JType<Input, M>): void => {
+    const add = <Input, M extends BaseMeta<any>>(type: JType<Input, M>): void => {
         jTypes.push(type)
         jTypes.sort((a, b) => a.order - b.order)
     }
@@ -65,7 +65,7 @@ export function metadata(options: MetadataOptions = defaultOptions): Metadata {
 
     const clear = (): void => { jTypes.splice(0) }
 
-    const from = <T, R extends BaseMeta<any, any> = BaseMeta<Unwrap<T>, any>>(data: T): R => {
+    const from = <T, R extends BaseMeta<any> = BaseMeta<Unwrap<T>>>(data: T): R => {
         for (const type of jTypes) {
             if (type.is(data)) {
                 return type.from(data, instance)
@@ -113,9 +113,9 @@ export function withDefaults(m: Metadata): Metadata {
     }
 
     function withMetadata(m: Metadata): Metadata {
-        const combine = <M extends BaseMeta<any, any>>(m: M) => (o: M) => ({ ...o, ...m })
+        const combine = <M extends BaseMeta<any>>(m: M) => (o: M) => ({ ...o, ...m })
         const isMeta = (type: TypeName) => <T>(v: any): v is T => isMetadata(v) && v.type === type
-        const create = <M extends BaseMeta<any, any>>(type: TypeName, to: (m: M) => M, order = 50) =>
+        const create = <M extends BaseMeta<any>>(type: TypeName, to: (m: M) => M, order = 50) =>
             ({ name: type, is: isMeta(type), from: to, order })
 
         m.add(create<PrimitiveMeta<string>>(JSONT.STRING, (m) => string(combine(m))))

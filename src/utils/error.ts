@@ -3,7 +3,7 @@ import { BaseMeta } from "../metadata/types"
 export type ErrorContext = {
     index?: number;
     depth?: number;
-    metadata?: BaseMeta<any, any>
+    metadata?: BaseMeta<any>
     cause?: unknown
     [key: string]: unknown
 }
@@ -11,7 +11,7 @@ export type ErrorContext = {
 export class JSONParseError extends Error {
     public readonly index?: number
     public readonly depth?: number
-    public readonly metadata?: BaseMeta<unknown, any>
+    public readonly metadata?: BaseMeta<unknown>
     public readonly cause?: unknown
 
     constructor(message: string, context?: ErrorContext) {
