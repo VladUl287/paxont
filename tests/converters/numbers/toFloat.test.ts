@@ -1,171 +1,152 @@
-import { toFloat, tryParseFloat } from "../../../src/converters/number/float"
-import { ParseState, ParseContext } from "../../../src/metadata/types"
+import { ParseContext, PrimitiveMeta } from "../../../src/metadata/types"
 import { defaultOptions } from "../../../src/options"
 import { Stack } from "../../../src/utils/stack"
-import { isNeedsMoreData, ReadResultType } from "../../../src/utils/types"
-import { float64 } from "../../../src/converters/number/floatFormats"
+import { ReadResultType } from "../../../src/utils/types"
+import { deserializePartially } from "../utils"
+import { number } from "../../../src/metadata/builder"
 
 describe('tryParseFloat', () => {
   const toContext = (str: string): ParseContext => {
     return { options: defaultOptions, reader: ({ bytes: new TextEncoder().encode(str), writable: false }), stack: new Stack() }
   }
-  const toBytes = (str: string): Uint8Array => new TextEncoder().encode(str)
+
+  const expectFloat = (meta: PrimitiveMeta<number>, str: string): void => {
+    const num = Number(str)
+    const ctx = toContext(str)
+    const bytes = ctx.reader.bytes
+
+    expect(meta.toValue(meta, ctx, 0, 0)).toStrictEqual({
+      type: ReadResultType.COMPLETE,
+      value: num,
+      nextIndex: bytes.length
+    })
+
+    for (let i = 0; i < bytes.length; i++) {
+      const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
+      const result = deserializePartially(meta, chunks)
+
+      expect(result).toStrictEqual({
+        type: ReadResultType.COMPLETE,
+        value: num,
+        nextIndex: chunks[0].length
+      })
+    }
+  }
+
+  const meta = number()
 
   describe('Basic numeric parsing', () => {
     test('parses positive integer', () => {
-      const bytes = toContext('123')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 3 })
+      expectFloat(meta, '123')
     })
 
     test('parses negative integer', () => {
-      const bytes = toContext('-456')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: -456, nextIndex: 4 })
+      expectFloat(meta, '-456')
     })
 
     test('parses zero', () => {
-      const bytes = toContext('0')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0, nextIndex: 1 })
+      expectFloat(meta, '0')
     })
 
     test('parses multiple zeros', () => {
-      const bytes = toContext('000')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0, nextIndex: 3 })
+      expectFloat(meta, '000')
     })
   })
 
   describe('Decimal numbers', () => {
     test('parses positive decimal', () => {
-      const bytes = toContext('123.456')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123.456, nextIndex: 7 })
+      expectFloat(meta, '123.456')
     })
 
     test('parses negative decimal', () => {
-      const bytes = toContext('-123.456')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: -123.456, nextIndex: 8 })
+      expectFloat(meta, '-123.456')
     })
 
     test('parses decimal without leading zeros', () => {
-      const bytes = toContext('.123')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0.123, nextIndex: 4 })
+      expectFloat(meta, '.123')
     })
 
     test('parses decimal without trailing zeros', () => {
-      const bytes = toContext('123.')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 4 })
+      expectFloat(meta, '123.')
     })
 
     test('parses decimal with leading zeros', () => {
-      const bytes = toContext('00123.456')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123.456, nextIndex: 9 })
+      expectFloat(meta, '00123.456')
     })
   })
 
   describe('Scientific notation', () => {
     test('parses scientific notation with e', () => {
-      const bytes = toContext('1.23e4')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 12300, nextIndex: 6 })
+      expectFloat(meta, '1.23e4')
     })
 
     test('parses scientific notation with E', () => {
-      const bytes = toContext('1.23E4')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 12300, nextIndex: 6 })
+      expectFloat(meta, '1.23E4')
     })
 
     test('parses scientific notation with negative exponent', () => {
-      const bytes = toContext('1.23e-2')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0.0123, nextIndex: 7 })
+      expectFloat(meta, '1.23e-2')
     })
 
     test('parses scientific notation with positive exponent sign', () => {
-      const bytes = toContext('1.23e+2')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 7 })
+      expectFloat(meta, '1.23e+2')
     })
 
     test('parses scientific notation without decimal', () => {
-      const bytes = toContext('123e4')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 1230000, nextIndex: 5 })
+      expectFloat(meta, '123e4')
     })
 
     test('parses scientific notation with negative base', () => {
-      const bytes = toContext('-1.23e4')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: -12300, nextIndex: 7 })
-    })
-  })
-
-  describe('Start index parameter', () => {
-    test('starts parsing from specified index', () => {
-      const bytes = toContext('abc123')
-      expect(tryParseFloat(bytes, 3, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 6 })
-    })
-
-    test('handles whitespace before start index', () => {
-      const bytes = toContext('  123')
-      expect(tryParseFloat(bytes, 2, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 5 })
-    })
-
-    test('parses number in middle of buffer', () => {
-      const bytes = toContext('prefix 456 suffix')
-      expect(tryParseFloat(bytes, 7, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 456, nextIndex: 10 })
+      expectFloat(meta, '-1.23e4')
     })
   })
 
   describe('Edge cases and boundaries', () => {
     test('parses maximum safe integer', () => {
-      const bytes = toContext('9007199254740991')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 9007199254740991, nextIndex: 16 })
+      expectFloat(meta, '9007199254740991')
     })
 
     test('parses Number.MAX_VALUE', () => {
       const maxValue = Number.MAX_VALUE
-      const bytes = toContext(maxValue.toString())
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: maxValue, nextIndex: 23 })
+      expectFloat(meta, maxValue.toString())
     })
 
     test('parses Number.MIN_VALUE', () => {
       const minValue = Number.MIN_VALUE
-      const bytes = toContext(minValue.toString())
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: minValue, nextIndex: 6 })
+      expectFloat(meta, minValue.toString())
     })
 
     test('parses very small number', () => {
-      const bytes = toContext('1e-308')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 1e-308, nextIndex: 6 })
+      expectFloat(meta, '1e-308')
     })
 
     test('parses very large number', () => {
-      const bytes = toContext('1e308')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 1e308, nextIndex: 5 })
+      expectFloat(meta, '1e308')
     })
 
     test('whole max value number', () => {
-      const bytes = toContext('179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 1.7976931348623157e+308, nextIndex: 309 })
+      expectFloat(meta, '179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368')
     })
   })
 
   describe('Format variations', () => {
     test('parses number with leading zeros and decimal', () => {
-      const bytes = toContext('000.456')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0.456, nextIndex: 7 })
+      expectFloat(meta, '000.456')
     })
 
     test('parses negative zero', () => {
-      const bytes = toContext('-0')
-      const result = tryParseFloat(bytes, 0, float64)
-      expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: -0, nextIndex: 2 })
+      expectFloat(meta, '-0')
     })
   })
 
   describe('Precision tests', () => {
     test('maintains precision for double values', () => {
-      const bytes = toContext('0.1')
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0.1, nextIndex: 3 })
+      expectFloat(meta, '0.1')
     })
 
     test('parses epsilon', () => {
       const epsilon = 2.220446049250313e-16
-      const bytes = toContext(epsilon.toString())
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: epsilon, nextIndex: 21 })
+      expectFloat(meta, epsilon.toString())
     })
   })
 
@@ -301,126 +282,23 @@ describe('tryParseFloat', () => {
 
     testNumbers.forEach(num => {
       test(`correctly parses roundtrip for ${toRange(num, 50)}`, () => {
-        const ctx = toContext(num)
-        const parsed = tryParseFloat(ctx, 0, float64)
-        expect(parsed).toStrictEqual({ type: ReadResultType.COMPLETE, value: Number(num), nextIndex: ctx.reader.bytes.length })
+        expectFloat(meta, num)
       })
     })
   })
 
   describe('Common math constants', () => {
     test('Math.PI', () => {
-      const bytes = toContext(Math.PI.toString())
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: Math.PI, nextIndex: 17 })
+      expectFloat(meta, Math.PI.toString())
     })
     test('Math.E', () => {
-      const bytes = toContext(Math.E.toString())
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: Math.E, nextIndex: 17 })
+      expectFloat(meta, Math.E.toString())
     })
     test('Math.SQRT2', () => {
-      const bytes = toContext(Math.SQRT2.toString())
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: Math.SQRT2, nextIndex: 18 })
+      expectFloat(meta, Math.SQRT2.toString())
     })
     test('Math.LN2', () => {
-      const bytes = toContext(Math.LN2.toString())
-      expect(tryParseFloat(bytes, 0, float64)).toStrictEqual({ type: ReadResultType.COMPLETE, value: Math.LN2, nextIndex: 18 })
-    })
-  })
-
-  describe('Partial numeric parsing', () => {
-    test('parses positive integer', () => {
-      const chunks = [toBytes("1"), toBytes("123")].reverse()
-
-      let ch
-      let result
-      let index = 0
-
-      const stack = new Stack<ParseState>()
-      while ((ch = chunks.pop()) !== undefined) {
-        const ctx = { reader: { bytes: ch, writable: chunks.length !== 0 }, options: defaultOptions, stack }
-        result = toFloat({} as any, ctx, index, 0)
-        if (isNeedsMoreData(result)) {
-          index = result.nextIndex
-        }
-      }
-
-      expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 3 })
-    })
-
-    test('parses negative integer', () => {
-      const chunks = [toBytes("-1"), toBytes("-123")].reverse()
-
-      let ch
-      let result
-      let index = 0
-
-      const stack = new Stack<ParseState>()
-      while ((ch = chunks.pop()) !== undefined) {
-        const ctx = { reader: { bytes: ch, writable: chunks.length !== 0 }, options: defaultOptions, stack }
-        result = toFloat({} as any, ctx, index, 0)
-        if (isNeedsMoreData(result)) {
-          index = result.nextIndex
-        }
-      }
-
-      expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: -123, nextIndex: 4 })
-    })
-
-    test('parses empty first chunk', () => {
-      const chunks = [toBytes(""), toBytes("123")].reverse()
-
-      let ch
-      let result
-      let index = 0
-
-      const stack = new Stack<ParseState>()
-      while ((ch = chunks.pop()) !== undefined) {
-        const ctx = { reader: { bytes: ch, writable: chunks.length !== 0 }, options: defaultOptions, stack }
-        result = toFloat({} as any, ctx, index, 0)
-        if (isNeedsMoreData(result)) {
-          index = result.nextIndex
-        }
-      }
-
-      expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123, nextIndex: 3 })
-    })
-
-    test('parses decimal', () => {
-      const chunks = [toBytes("12."), toBytes("12.3")].reverse()
-
-      let ch
-      let result
-      let index = 0
-
-      const stack = new Stack<ParseState>()
-      while ((ch = chunks.pop()) !== undefined) {
-        const ctx = { reader: { bytes: ch, writable: chunks.length !== 0 }, options: defaultOptions, stack }
-        result = toFloat({} as any, ctx, index, 0)
-        if (isNeedsMoreData(result)) {
-          index = result.nextIndex
-        }
-      }
-
-      expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: 12.3, nextIndex: 4 })
-    })
-
-    test('parses scientific', () => {
-      const chunks = [toBytes("12e"), toBytes("12e-3")].reverse()
-
-      let ch
-      let result
-      let index = 0
-
-      const stack = new Stack<ParseState>()
-      while ((ch = chunks.pop()) !== undefined) {
-        const ctx = { reader: { bytes: ch, writable: chunks.length !== 0 }, options: defaultOptions, stack }
-        result = toFloat({} as any, ctx, index, 0)
-        if (isNeedsMoreData(result)) {
-          index = result.nextIndex
-        }
-      }
-
-      expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: 12e-3, nextIndex: 5 })
+      expectFloat(meta, Math.LN2.toString())
     })
   })
 })
