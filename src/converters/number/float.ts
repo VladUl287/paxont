@@ -347,7 +347,7 @@ function toFloatCompute(low: number, high: number, e: number, f: FloatFormat): n
     const lz = clz(low, high);
     [low, high] = shiftLeft(low, high, lz, product128)
 
-    const [alow, ahigh, blow, bhigh] = computeProduct1(low, high, e, f.denormalMantissaBits + 3, product128)
+    const [alow, ahigh, blow, bhigh] = computeProduct(low, high, e, f.denormalMantissaBits + 3, product128)
 
     const insideSafeExponent = e >= f.minExponentRoundToEven && e <= f.maxExponentRoundToEven
     if ((alow & ahigh) === 0xFFFFFFFF && !insideSafeExponent)
@@ -478,7 +478,7 @@ const wasm =
     wasmInstance<BigMulModule>(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 13, 2, 96, 0, 1, 127, 96, 4, 127, 127, 127, 127, 1, 127, 3, 5, 4, 0, 0, 0, 1, 6, 16, 3, 127, 1, 65, 0, 11, 127, 1, 65, 0, 11, 127, 1, 65, 0, 11, 7, 40, 4, 7, 103, 101, 116, 95, 108, 111, 119, 0, 0, 8, 103, 101, 116, 95, 109, 108, 111, 119, 0, 1, 9, 103, 101, 116, 95, 109, 104, 105, 103, 104, 0, 2, 3, 109, 117, 108, 0, 3, 10, 101, 4, 4, 0, 35, 0, 11, 4, 0, 35, 1, 11, 4, 0, 35, 2, 11, 84, 1, 4, 126, 32, 0, 173, 32, 2, 173, 126, 33, 4, 32, 4, 66, 32, 136, 32, 1, 173, 32, 2, 173, 126, 124, 33, 5, 32, 0, 173, 32, 3, 173, 126, 32, 5, 167, 173, 124, 33, 6, 32, 4, 167, 36, 0, 32, 6, 167, 36, 1, 32, 1, 173, 32, 3, 173, 126, 32, 5, 66, 32, 136, 124, 32, 6, 66, 32, 136, 124, 33, 7, 32, 7, 167, 36, 2, 32, 7, 66, 32, 136, 167, 11]))
     ?? fallbackModule
 
-function computeProduct1(mlow: number, mhigh: number, e: number, bits: number, output: Uint32Array): Uint32Array {
+function computeProduct(mlow: number, mhigh: number, e: number, bits: number, output: Uint32Array): Uint32Array {
     const index = 2 * (e + 342)
 
     const plow = POW5_128_LOW[index]
