@@ -27,9 +27,9 @@ export function toObject<T extends Obj>(
 
     const state = stack.pop()
 
-    let isContinued: boolean = state?.isContinued ?? false
-    let buffer: Array<any> = state?.buffer ?? new Array(fields.length)
-    let bufferIndex: number = state?.bufferIndex ?? 0
+    const isContinued: boolean = state?.isContinued ?? false
+    const buffer: Array<any> = state?.buffer ?? new Array(fields.length)
+    const bufferIndex: number = state?.bufferIndex ?? 0
     let fieldIndex: number | undefined = state?.fieldIndex
 
     const b = reader.bytes
