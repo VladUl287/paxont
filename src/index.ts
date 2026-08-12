@@ -12,7 +12,7 @@ type MetaOrData<T> = T extends BaseMeta<infer V> ? V : T
 
 type JSONTOptions = {
     readonly metadataBuilder: Metadata
-    readonly arrayPool: ArrayPool<Uint8Array<ArrayBuffer>>
+    readonly bufferPool: ArrayPool<Uint8Array<ArrayBuffer>>
     readonly jsonOptions: {
         readonly defaultOptions: JsonOptions
         readonly createOptions: typeof createOptions
@@ -22,13 +22,13 @@ type JSONTOptions = {
 
 const defaultJsontOptions: JSONTOptions = Object.freeze({
     metadataBuilder: metadata(),
-    arrayPool: arrayPool<Uint8Array<ArrayBuffer>>(Uint8Array),
+    bufferPool: arrayPool<Uint8Array<ArrayBuffer>>(Uint8Array),
     jsonOptions: { defaultOptions, createOptions },
     memoize: memoize,
 })
 
 export function jsont(value: JSONTOptions = defaultJsontOptions) {
-    const { arrayPool, memoize } = value
+    const { bufferPool, memoize } = value
 
     const optionsCache = memoize<Partial<JsonOptions>, JsonOptions>()
     const metadataCache = memoize<any, BaseMeta<any>>()
@@ -47,7 +47,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
         type: T,
         options?: Partial<JsonOptions>
     ): MetaOrData<T> {
-        const filledOptions = !!options ?
+        const opts = !!options ?
             optionsCache.getOrAdd(options, (key) => createOptions(key)) :
             defaultOptions
 
@@ -60,8 +60,8 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
         const isString = typeof value === 'string'
         if (isString) {
             const length = getMaxBytesCount(value.length)
-            bytes = arrayPool.rent(length)
-            filledOptions.encoder.encodeInto(value, bytes)
+            bytes = bufferPool.rent(length)
+            opts.encoder.encodeInto(value, bytes)
         }
         else if (value instanceof ArrayBuffer) {
             bytes = new Uint8Array(value)
@@ -70,33 +70,35 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
             bytes = value as Uint8Array<ArrayBuffer>
         }
         else {
-            throw new Error(`Invalid input type: expected string, ArrayBuffer, or Uint8Array, ` +
-                `but received ${value === null ? 'null' : typeof value}`)
+            throw new TypeError(
+                `Invalid input type: expected string, ArrayBuffer, or Uint8Array, but received ${typeof value}`)
         }
 
-        const result = metadata.toValue(metadata, {
-            options: filledOptions,
-            reader: {
-                bytes,
-                writable: false
-            },
-            stack: emptyStack,
-        }, 0, 0)
+        try {
+            const result = metadata.toValue(metadata, {
+                options: opts,
+                reader: {
+                    bytes,
+                    writable: false
+                },
+                stack: emptyStack,
+            }, 0, 0)
 
-        if (isString) {
-            arrayPool.release(bytes)
+            if (isError(result)) {
+                throw result.error
+            }
+
+            if (isNeedsMoreData(result)) {
+                throw new Error(`Incomplete JSON: sync parser expects full data. ` +
+                    `In sync mode, data cannot be streamed - custom parser must receive complete data at once`)
+            }
+
+            return result.value
         }
-
-        if (isError(result)) {
-            throw result.error
+        finally {
+            if (isString)
+                bufferPool.release(bytes)
         }
-
-        if (isNeedsMoreData(result)) {
-            throw new Error(`Incomplete JSON: sync parser expects full data. ` +
-                `In sync mode, data cannot be streamed - custom parser must receive complete data at once`)
-        }
-
-        return result.value
     }
 
     async function deserializeAsync<T>(
@@ -116,7 +118,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
 
         const reader = json.getReader({ mode: 'byob' })
 
-        const buffer = arrayPool.rent(655_350)
+        const buffer = bufferPool.rent(655_350)
         try {
             while (true) {
                 const { value, done } = await reader.read(buffer)
@@ -138,7 +140,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
                     buffer.copyWithin(0, result.nextIndex, buffer.length)
                     continue
                 }
-                
+
                 if (isError(result)) {
                     throw result.error
                 }
@@ -148,7 +150,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
 
             throw new Error()
         } finally {
-            arrayPool.release(buffer)
+            bufferPool.release(buffer)
         }
     }
 
