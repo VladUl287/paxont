@@ -251,7 +251,9 @@
           )
         )
 
-        (if (i32.lt_u (local.get $temp) (i32.const 224))
+        (local.set $temp (i32.sub (local.get $temp) (i32.const 194)))
+
+        (if (i32.lt_u (local.get $temp) (i32.const 30))
           (then
             (if (i32.ge_u (i32.add (local.get $i) (i32.const 1)) (local.get $len)) 
               (then
@@ -277,7 +279,7 @@
           )
         )
 
-        (if (i32.lt_u (local.get $temp) (i32.const 240))
+        (if (i32.lt_u (local.get $temp) (i32.const 46))
           (then
             (if (i32.ge_u (i32.add (local.get $i) (i32.const 2)) (local.get $len)) 
               (then
