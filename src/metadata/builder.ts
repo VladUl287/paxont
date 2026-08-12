@@ -317,6 +317,15 @@ export const set = <M extends BaseMeta<any>>(
     return modifiers.reduce(applyModifier, defaultMeta)
 }
 
+export const keySelector = <M extends SetMeta<any>>(
+    selector: (value: M extends SetMeta<infer U> ? MetaValue<U> : never) => any
+): Modifier<M> => {
+    return (meta: M): any => ({
+            ...meta,
+            key: selector
+    })
+}
+
 type ObjectParam<M extends ObjectParam<M>[]> = ObjectField<string, any> | Modifier<ObjectMeta<AsObject<M>>>
 
 type Filter<T, U> = T extends U ? T : never;
