@@ -20,16 +20,60 @@ import { ArrayLikeWritable, ArrayPool, BigIntTypedArray, FloatTypedArray, Intege
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../converters/number/int"
 import { toFloat } from "../converters/number/float"
 import { Expand } from "../utils/types"
-import { isMetadata } from "./utils"
+import { isMetadata, isMetadataContainer } from "./utils"
+import { bindPool } from "./modifiers"
 
 export type Modifier<M extends BaseMeta<any>> = (metadata: M) => M
 
 export type BuilderOptions = {
     encoder: TextEncoder,
-    resolvePool: <T extends ArrayLike<any>>(type: TypeName) => ArrayPool<T>
+    poolFor: <M extends BaseMeta<any>>(meta?: M) => ArrayPool<MetaValue<M>>
 }
 
-export function builder() {
+const globalPools: Record<TypeName, ArrayPool<any>> = {
+    number: arrayPool<Array<number>>(Array),
+    string: arrayPool<Array<string>>(Array),
+    object: arrayPool<Array<object>>(Array),
+    boolean: arrayPool<Array<boolean>>(Array),
+    date: arrayPool<Array<Date>>(Array),
+    bigint: arrayPool<Array<bigint>>(Array),
+    set: arrayPool<Array<Set<any>>>(Array),
+    map: arrayPool<Array<Map<string, any>>>(Array),
+    array: arrayPool<Array<object>>(Array),
+    nullable: arrayPool(Array),
+    i8: arrayPool(Int8Array),
+    i16: arrayPool(Int16Array),
+    i32: arrayPool(Int32Array),
+    i64: arrayPool(BigInt64Array),
+    u8: arrayPool(Uint8Array),
+    u16: arrayPool(Uint16Array),
+    u32: arrayPool(Uint32Array),
+    u64: arrayPool(BigUint64Array),
+    'i8[]': arrayPool<Array<Int8Array>>(Array),
+    'i16[]': arrayPool<Array<Int16Array>>(Array),
+    'i32[]': arrayPool<Array<Int32Array>>(Array),
+    'i64[]': arrayPool<Array<BigInt64Array>>(Array),
+    'u8[]': arrayPool<Array<Uint8Array>>(Array),
+    'u16[]': arrayPool<Array<Uint16Array>>(Array),
+    'u32[]': arrayPool<Array<Uint32Array>>(Array),
+    'u64[]': arrayPool<Array<BigUint64Array>>(Array),
+    'f64[]': arrayPool<Array<Float64Array>>(Array),
+}
+
+const defaultBuilderOptions: BuilderOptions = {
+    encoder: new TextEncoder(),
+    poolFor: <M extends BaseMeta<any>>(meta?: M): ArrayPool<MetaValue<M>> => {
+        if (meta) {
+            if (meta.type === NULLABLE && isMetadataContainer(meta)) {
+                return (globalPools[meta.value.type] ??= arrayPool(Array))
+            }
+            return (globalPools[meta.type] ??= arrayPool(Array))
+        }
+        return (globalPools['unknown'] ??= arrayPool(Array))
+    }
+}
+
+export function builder({ encoder, poolFor }: BuilderOptions = defaultBuilderOptions) {
     const string = (...modifiers: Modifier<PrimitiveMeta<string>>[]) =>
         primitive(STRING, toString, (v) => {
             if (typeof v !== 'string') { throw new Error() }
@@ -150,48 +194,11 @@ export function builder() {
         return modifiers.reduce(applyModifier, defaultMeta)
     }
 
-    const globalPools: Record<TypeName, ArrayPool<any>> = {
-        number: arrayPool<Array<number>>(Array),
-        string: arrayPool<Array<string>>(Array),
-        object: arrayPool<Array<object>>(Array),
-        boolean: arrayPool<Array<boolean>>(Array),
-        date: arrayPool<Array<Date>>(Array),
-        bigint: arrayPool<Array<bigint>>(Array),
-        set: arrayPool<Array<Set<any>>>(Array),
-        map: arrayPool<Array<Map<string, any>>>(Array),
-        array: arrayPool<Array<object>>(Array),
-        nullable: arrayPool(Array),
-        i8: arrayPool(Int8Array),
-        i16: arrayPool(Int16Array),
-        i32: arrayPool(Int32Array),
-        i64: arrayPool(BigInt64Array),
-        u8: arrayPool(Uint8Array),
-        u16: arrayPool(Uint16Array),
-        u32: arrayPool(Uint32Array),
-        u64: arrayPool(BigUint64Array),
-        'i8[]': arrayPool<Array<Int8Array>>(Array),
-        'i16[]': arrayPool<Array<Int16Array>>(Array),
-        'i32[]': arrayPool<Array<Int32Array>>(Array),
-        'i64[]': arrayPool<Array<BigInt64Array>>(Array),
-        'u8[]': arrayPool<Array<Uint8Array>>(Array),
-        'u16[]': arrayPool<Array<Uint16Array>>(Array),
-        'u32[]': arrayPool<Array<Uint32Array>>(Array),
-        'u64[]': arrayPool<Array<BigUint64Array>>(Array),
-        'f64[]': arrayPool<Array<Float64Array>>(Array),
-    }
-
     const array = <M extends BaseMeta<any>>(
         value: M,
         ...modifiers: Modifier<ArrayMeta<MetaValue<M>[], M>>[]
     ): ArrayMeta<MetaValue<M>[], M> => {
-        if (value.type === NULLABLE) {
-            globalPools[(value as any as NullableMeta<any>).value.type] ??= arrayPool(Array)
-        }
-        else {
-            globalPools[value.type] ??= arrayPool(Array)
-        }
-
-        let defaultMeta: ArrayMeta<MetaValue<M>[], M> = {
+        const defaultMeta: ArrayMeta<MetaValue<M>[], M> = {
             type: ARRAY,
             toValue: toArray,
             toJson: (meta, value, options) => {
@@ -202,9 +209,9 @@ export function builder() {
                 return `[${value.map(c => toJson(meta.value, c, options)).join(',')}]`
             },
             value: value,
-            pool: globalPools[value.type]
+            pool: poolFor()
         }
-
+        bindPool(poolFor(defaultMeta))
         return modifiers.reduce(applyModifier, defaultMeta)
     }
 
@@ -348,9 +355,7 @@ export function builder() {
             .reduce(applyModifier, objectMeta)
     }
 
-    const field = <K extends string, M extends BaseMeta<any>>(
-        name: K, value: M, encoder: TextEncoder = new TextEncoder()
-    ): ObjectField<K, M> => {
+    const field = <K extends string, M extends BaseMeta<any>>(name: K, value: M): ObjectField<K, M> => {
         return {
             name: {
                 value: name,
