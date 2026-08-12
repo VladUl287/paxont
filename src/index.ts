@@ -158,12 +158,16 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
         }
     }
 
-    function serialize<T, M extends BaseMeta<T>>(value: T, metadata: M, options?: Partial<JsonOptions>): string {
-        const fullOptions = !!options ?
+    function serialize<V, T>(value: V, type: T, options?: Partial<JsonOptions>): string {
+        const opts = !!options ?
             optionsCache.getOrAdd(options, (key) => createOptions(key)) :
             defaultOptions
 
-        return metadata.toJson(metadata, value, fullOptions)
+        const metadata = !isMetadata(type) ?
+            metadataCache.getOrAdd(type, (key) => meta.from(key)) :
+            type
+
+        return metadata.toJson(metadata, value, opts)
     }
 
     return {
