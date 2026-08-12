@@ -30,8 +30,8 @@ const defaultJsontOptions: JSONTOptions = Object.freeze({
 export function jsont(value: JSONTOptions = defaultJsontOptions) {
     const { arrayPool, memoize } = value
 
-    const optionsMemo = memoize<Partial<JsonOptions>, JsonOptions>()
-    const metadataMemo = memoize<any, BaseMeta<any>>()
+    const optionsCache = memoize<Partial<JsonOptions>, JsonOptions>()
+    const metadataCache = memoize<any, BaseMeta<any>>()
 
     const meta = metadata()
 
@@ -48,11 +48,11 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
         options?: Partial<JsonOptions>
     ): MetaOrData<T> {
         const filledOptions = !!options ?
-            optionsMemo.getOrAdd(options, (key) => createOptions(key)) :
+            optionsCache.getOrAdd(options, (key) => createOptions(key)) :
             defaultOptions
 
         const metadata = !isMetadata(type) ?
-            metadataMemo.getOrAdd(type, (t) => meta.from(t)) :
+            metadataCache.getOrAdd(type, (t) => meta.from(t)) :
             type
 
         let bytes: Uint8Array<ArrayBuffer>
@@ -104,29 +104,32 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
         type: T,
         options?: Partial<JsonOptions>
     ): Promise<MetaOrData<T>> {
-        const filledOptions = !!options ?
-            optionsMemo.getOrAdd(options, (key) => createOptions(key)) :
+        const opts = !!options ?
+            optionsCache.getOrAdd(options, (key) => createOptions(key)) :
             defaultOptions
 
         const metadata = !isMetadata(type) ?
-            metadataMemo.getOrAdd(type, (t) => meta.from(t)) :
+            metadataCache.getOrAdd(type, (key) => meta.from(key)) :
             type
 
         const stack = new Stack<JsonParsingState>()
 
-        const buffer = arrayPool.rent(65535)
-
         const reader = json.getReader({ mode: 'byob' })
+
+        const buffer = arrayPool.rent(655_350)
         try {
-            // TODO: use data from previous cycle
             while (true) {
-                const chunk = await reader.read(buffer, { min: buffer.length }) //{ min: 1 }
+                const { value, done } = await reader.read(buffer)
+
+                if (value === undefined) {
+                    break
+                }
 
                 const result = metadata.toValue(metadata, {
-                    options: filledOptions,
+                    options: opts,
                     reader: {
-                        bytes: buffer,
-                        writable: true
+                        bytes: value,
+                        writable: !done
                     },
                     stack
                 }, 0, 0)
@@ -135,6 +138,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
                     buffer.copyWithin(0, result.nextIndex, buffer.length)
                     continue
                 }
+                
                 if (isError(result)) {
                     throw result.error
                 }
@@ -150,7 +154,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
 
     function serialize<T, M extends BaseMeta<T>>(value: T, metadata: M, options?: Partial<JsonOptions>): string {
         const fullOptions = !!options ?
-            optionsMemo.getOrAdd(options, (key) => createOptions(key)) :
+            optionsCache.getOrAdd(options, (key) => createOptions(key)) :
             defaultOptions
 
         return metadata.toJson(metadata, value, fullOptions)
