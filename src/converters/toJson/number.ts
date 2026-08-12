@@ -5,7 +5,7 @@ type toJsonBigInt = PrimitiveMeta<bigint>['toJson']
 
 export const numberToJson: toJson = (meta, value, options) => {
     if (typeof value !== 'number') {
-        throw new Error()
+        throw new TypeError(`Expected number, got ${typeof value}`)
     }
     return value.toString()
 }
@@ -36,10 +36,10 @@ export const i32ToJson: toJson = (meta, value, options) => {
 
 export const i64ToJson: toJsonBigInt = (meta, value, options) => {
     if (typeof value !== 'bigint') {
-        throw new Error()
+        throw new TypeError(`Expected bigint, got ${typeof value}`)
     }
     if (value < -9223372036854775808n || value > 9223372036854775807n) {
-        throw new Error()
+        throw new RangeError(`Integer value must be between -9223372036854775808 and 9223372036854775807, got ${value}`)
     }
     return value.toString()
 }
@@ -61,17 +61,17 @@ export const u32ToJson: toJson = (meta, value, options) => {
 
 export const u64ToJson: toJsonBigInt = (meta, value, options) => {
     if (typeof value !== 'bigint') {
-        throw new Error()
+        throw new TypeError(`Expected bigint, got ${typeof value}`)
     }
     if (value < 0n || value > 18446744073709551615n) {
-        throw new Error()
+        throw new RangeError(`Integer value must be between 0 and 18446744073709551615, got ${value}`)
     }
     return value.toString()
 }
 
 export const bigIntToJson: toJsonBigInt = (meta, value, options) => {
     if (typeof value !== 'bigint') {
-        throw new Error()
+        throw new TypeError(`Expected bigint, got ${typeof value}`)
     }
     return value.toString()
 }

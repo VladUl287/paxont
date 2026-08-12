@@ -1,8 +1,8 @@
-import { ArrayMeta } from "../../metadata/types"
+import { ArrayMeta, BaseMeta } from "../../metadata/types"
 
-export const arrayToJson: ArrayMeta<any, any>['toJson'] = (meta, value, options) => {
+export const arrayToJson: ArrayMeta<ArrayLike<any>, BaseMeta<any>>['toJson'] = (meta, value, options) => {
     if (!Array.isArray(value) || !isTypedArray(value)) {
-        throw new Error()
+        throw new TypeError(`Expected Array, got ${typeof value}`)
     }
     const toJson = meta.value.toJson
     return `[${value.map(c => toJson(meta.value, c, options)).join(',')}]`
