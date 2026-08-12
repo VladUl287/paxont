@@ -58,6 +58,7 @@ const globalPools: Record<TypeName, ArrayPool<any>> = {
     'u32[]': arrayPool<Array<Uint32Array>>(Array),
     'u64[]': arrayPool<Array<BigUint64Array>>(Array),
     'f64[]': arrayPool<Array<Float64Array>>(Array),
+    'unknown': arrayPool(Array),
 }
 
 const defaultBuilderOptions: BuilderOptions = {
