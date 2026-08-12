@@ -22,6 +22,7 @@ import { toFloat } from "../converters/number/float"
 import { Expand } from "../utils/types"
 import { isMetadata, isMetadataContainer } from "./utils"
 import { bindPool } from "./modifiers"
+import { bigIntToJson, i16ToJson, i32ToJson, i64ToJson, i8ToJson, numberToJson, u16ToJson, u32ToJson, u64ToJson, u8ToJson } from "../converters/toJson/number"
 
 export type Modifier<M extends BaseMeta<any>> = (metadata: M) => M
 
@@ -75,6 +76,10 @@ const defaultBuilderOptions: BuilderOptions = {
 }
 
 export function builder({ encoder, poolFor }: BuilderOptions = defaultBuilderOptions) {
+    function applyModifier<M extends BaseMeta<any>>(value: M, modify: Modifier<M>): M {
+        return Object.assign({}, modify(value), { type: value.type })
+    }
+
     const string = (...modifiers: Modifier<PrimitiveMeta<string>>[]) =>
         primitive(STRING, toString, (v) => {
             if (typeof v !== 'string') { throw new Error() }
@@ -82,19 +87,37 @@ export function builder({ encoder, poolFor }: BuilderOptions = defaultBuilderOpt
         }, ...modifiers)
 
     const number = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-        primitive(NUMBER, toFloat, (v) => {
-            if (typeof v !== 'number') { throw new Error() }
-            return v.toString()
-        }, ...modifiers)
+        primitive(NUMBER, toFloat, numberToJson, ...modifiers)
 
     const bigInt = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
-        primitive(BIGINT, toBigInt, (v) => {
-            if (typeof v !== 'bigint') { throw new Error() }
-            return v.toString()
-        }, ...modifiers)
+        primitive(BIGINT, toBigInt, bigIntToJson, ...modifiers)
+
+    const u8 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
+        primitive(U8, toUint8, u8ToJson, ...modifiers)
+
+    const u16 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
+        primitive(U16, toUint16, u16ToJson, ...modifiers)
+
+    const u32 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
+        primitive(U32, toUint32, u32ToJson, ...modifiers)
+
+    const i8 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
+        primitive(I8, toInt8, i8ToJson, ...modifiers)
+
+    const i16 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
+        primitive(I16, toInt16, i16ToJson, ...modifiers)
+
+    const i32 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
+        primitive(I32, toInt32, i32ToJson, ...modifiers)
+
+    const u64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
+        primitive(U64, toUint64, u64ToJson, ...modifiers)
+
+    const i64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
+        primitive(I64, toInt64, i64ToJson, ...modifiers)
 
     const bool = (...modifiers: Modifier<PrimitiveMeta<boolean>>[]) =>
-        primitive(BOOL, toBoolean, (v) => {
+        primitive(BOOL, toBoolean, (m, v, o) => {
             if (typeof v !== 'boolean') { throw new Error() }
             return v.toString()
         }, ...modifiers)
@@ -105,78 +128,17 @@ export function builder({ encoder, poolFor }: BuilderOptions = defaultBuilderOpt
             return `"${v.toISOString()}"`
         }, ...modifiers)
 
-    const u8 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-        primitive(U8, toUint8, (v) => {
-            if (!Number.isInteger(v)) { throw new Error() }
-            if (v < 0 || v > 255) { throw new Error() }
-            return v.toString()
-        }, ...modifiers)
-
-    const u16 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-        primitive(U16, toUint16, (v) => {
-            if (!Number.isInteger(v)) { throw new Error() }
-            if (v < 0 || v > 65535) { throw new Error() }
-            return v.toString()
-        }, ...modifiers)
-
-    const u32 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-        primitive(U32, toUint32, (v) => {
-            if (!Number.isInteger(v)) { throw new Error() }
-            if (v < 0 || v > 4294967295) { throw new Error() }
-            return v.toString()
-        }, ...modifiers)
-
-    const i8 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-        primitive(I8, toInt8, (v) => {
-            if (!Number.isInteger(v)) { throw new Error() }
-            if (v < -128 || v > 127) { throw new Error() }
-            return v.toString()
-        }, ...modifiers)
-
-    const i16 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-        primitive(I16, toInt16, (v) => {
-            if (!Number.isInteger(v)) { throw new Error() }
-            if (v < -32768 || v > 32767) { throw new Error() }
-            return v.toString()
-        }, ...modifiers)
-
-    const i32 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-        primitive(I32, toInt32, (v) => {
-            if (!Number.isInteger(v)) { throw new Error() }
-            if (v < -2147483648 || v > 2147483647) { throw new Error() }
-            return v.toString()
-        }, ...modifiers)
-
-    const u64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
-        primitive(U64, toUint64, (v) => {
-            if (typeof v !== 'bigint') { throw new Error() }
-            if (v < 0 || v > 18446744073709551615n) { throw new Error() }
-            return v.toString()
-        }, ...modifiers)
-
-    const i64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
-        primitive(I64, toInt64, (v) => {
-            if (typeof v !== 'bigint') { throw new Error() }
-            if (v < -9223372036854775808n || v > 9223372036854775807n) { throw new Error() }
-            return v.toString()
-        }, ...modifiers)
-
-    function applyModifier<M extends BaseMeta<any>>(value: M, modify: Modifier<M>): M {
-        return Object.assign({}, modify(value), { type: value.type })
-    }
-
     const primitive = <T>(
         type: BaseType,
         toValue: PrimitiveMeta<T>['toValue'],
-        toJson: (value: T) => string,
+        toJson: PrimitiveMeta<T>['toJson'],
         ...modifiers: Modifier<PrimitiveMeta<T>>[]
     ): PrimitiveMeta<T> => {
-        const defaultMeta: PrimitiveMeta<T> = {
-            type: type,
-            toValue: toValue,
-            toJson: (m, v, _) => toJson(v)
-        }
-        return modifiers.reduce(applyModifier, defaultMeta)
+        return modifiers.reduce(applyModifier, <PrimitiveMeta<T>>{
+            type,
+            toValue,
+            toJson
+        })
     }
 
     const nullable = <M extends BaseMeta<any>>(
@@ -401,4 +363,4 @@ export const {
     map, set,
     object,
     field,
-} = builder()
+} = builder(defaultBuilderOptions)
