@@ -249,7 +249,7 @@ export function builder({ encoder, poolFor }: BuilderOptions = defaultBuilderOpt
 
     const object = <M extends ObjectParam<M>[]>(...args: M): ObjectMeta<AsObject<M>> => {
         const fields = args.filter((arg): arg is ObjectField<keyof AsObject<M> & string, any> => {
-            return arg && typeof arg === 'object' && isMetadata(arg.value) && typeof arg['name'] === 'string'
+            return arg && typeof arg === 'object' && isMetadata(arg.value) && typeof arg['name']['value'] === 'string' && arg['name']['bytes'] instanceof Uint8Array
         })
 
         const objectMeta: ObjectMeta<AsObject<M>> = {
