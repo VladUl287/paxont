@@ -9,7 +9,7 @@ import { deserializePartially } from "./utils"
 describe('tryParseString', () => {
     const encoder = new TextEncoder()
 
-    const expectToParse = <M extends BaseMeta<any, any>>(meta: M, str: string) => {
+    const expectToParse = <M extends BaseMeta<any>>(meta: M, str: string) => {
         const bytes = encoder.encode(str)
 
         const reader: JsonReader = {
