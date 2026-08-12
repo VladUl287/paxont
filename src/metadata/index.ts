@@ -1,7 +1,7 @@
-import { JSONT } from "./baseTypes"
+import { ARRAY, BIGINT, BOOL, DATE, F64_ARRAY, I16, I16_ARRAY, I32, I32_ARRAY, I64, I64_ARRAY, I8, I8_ARRAY, MAP, NULLABLE, NUMBER, OBJECT, SET, STRING, U16, U16_ARRAY, U32, U32_ARRAY, U64, U64_ARRAY, U8, U8_ARRAY } from "./baseTypes"
 import { ArrayMeta, BaseMeta, MapMeta, MetaValue, NullableMeta, ObjectMeta, PrimitiveMeta, SetMeta, TypeName } from "./types"
 import {
-    array, bigInt, bool, date, field, i16, i16Array, i32, i32Array, i64,
+    array, bigInt, bool, date, f64Array, field, i16, i16Array, i32, i32Array, i64,
     i64Array, i8, i8Array, map, nullable, number, object, set, string, u16,
     u16Array, u32, u32Array, u64, u64Array, u8, u8Array
 } from "./builder"
@@ -81,27 +81,28 @@ export function metadata(options: MetadataOptions = defaultOptions): Metadata {
 
 export function withDefaults(m: Metadata): Metadata {
     function withNative(m: Metadata): Metadata {
-        m.add({ name: JSONT.STRING, is: (v) => typeof v === 'string', from: () => string(), order: 50 })
-        m.add({ name: JSONT.NUMBER, is: (v) => typeof v === 'number', from: () => number(), order: 50 })
-        m.add({ name: JSONT.BIGINT, is: (v) => typeof v === 'bigint', from: () => bigInt(), order: 50 })
-        m.add({ name: JSONT.BOOL, is: (v) => typeof v === 'boolean', from: () => bool(), order: 50 })
-        m.add({ name: JSONT.DATE, is: (v) => v instanceof Date, from: () => date(), order: 50 })
+        m.add({ name: STRING, is: (v) => typeof v === 'string', from: () => string(), order: 50 })
+        m.add({ name: NUMBER, is: (v) => typeof v === 'number', from: () => number(), order: 50 })
+        m.add({ name: BIGINT, is: (v) => typeof v === 'bigint', from: () => bigInt(), order: 50 })
+        m.add({ name: BOOL, is: (v) => typeof v === 'boolean', from: () => bool(), order: 50 })
+        m.add({ name: DATE, is: (v) => v instanceof Date, from: () => date(), order: 50 })
 
-        m.add({ name: JSONT.I8_ARRAY, is: (v) => v instanceof Int8Array, from: () => i8Array(), order: 50 })
-        m.add({ name: JSONT.I16_ARRAY, is: (v) => v instanceof Int16Array, from: () => i16Array(), order: 50 })
-        m.add({ name: JSONT.I32_ARRAY, is: (v) => v instanceof Int32Array, from: () => i32Array(), order: 50 })
-        m.add({ name: JSONT.I64_ARRAY, is: (v) => v instanceof BigInt64Array, from: () => i64Array(), order: 50 })
-        m.add({ name: JSONT.U8_ARRAY, is: (v) => v instanceof Uint8Array, from: () => u8Array(), order: 50 })
-        m.add({ name: JSONT.U16_ARRAY, is: (v) => v instanceof Uint16Array, from: () => u16Array(), order: 50 })
-        m.add({ name: JSONT.U32_ARRAY, is: (v) => v instanceof Uint32Array, from: () => u32Array(), order: 50 })
-        m.add({ name: JSONT.U64_ARRAY, is: (v) => v instanceof BigUint64Array, from: () => u64Array(), order: 50 })
+        m.add({ name: I8_ARRAY, is: (v) => v instanceof Int8Array, from: () => i8Array(), order: 50 })
+        m.add({ name: I16_ARRAY, is: (v) => v instanceof Int16Array, from: () => i16Array(), order: 50 })
+        m.add({ name: I32_ARRAY, is: (v) => v instanceof Int32Array, from: () => i32Array(), order: 50 })
+        m.add({ name: I64_ARRAY, is: (v) => v instanceof BigInt64Array, from: () => i64Array(), order: 50 })
+        m.add({ name: U8_ARRAY, is: (v) => v instanceof Uint8Array, from: () => u8Array(), order: 50 })
+        m.add({ name: U16_ARRAY, is: (v) => v instanceof Uint16Array, from: () => u16Array(), order: 50 })
+        m.add({ name: U32_ARRAY, is: (v) => v instanceof Uint32Array, from: () => u32Array(), order: 50 })
+        m.add({ name: U64_ARRAY, is: (v) => v instanceof BigUint64Array, from: () => u64Array(), order: 50 })
+        m.add({ name: F64_ARRAY, is: (v) => v instanceof Float64Array, from: () => f64Array(), order: 50 })
 
-        m.add({ name: JSONT.ARRAY, is: (v) => Array.isArray(v), from: (a, m) => array(m.from(a[0])), order: 50 })
-        m.add({ name: JSONT.SET, is: (v) => v instanceof Set, from: (s, m) => set(m.from([...s.values()][0])), order: 50 })
-        m.add({ name: JSONT.MAP, is: (v) => v instanceof Map, from: (ma, m) => map(m.from([...ma.values()][0])), order: 50 })
+        m.add({ name: ARRAY, is: (v) => Array.isArray(v), from: (a, m) => array(m.from(a[0])), order: 50 })
+        m.add({ name: SET, is: (v) => v instanceof Set, from: (s, m) => set(m.from([...s.values()][0])), order: 50 })
+        m.add({ name: MAP, is: (v) => v instanceof Map, from: (ma, m) => map(m.from([...ma.values()][0])), order: 50 })
 
         m.add({
-            name: JSONT.OBJECT,
+            name: OBJECT,
             is: (v): v is {} => isPlainObject(v) && !isMetadata(v),
             from: (o, m) => {
                 const fields = Object.entries(o).map(([key, value]) => field(key, m.from(value)))
@@ -118,37 +119,37 @@ export function withDefaults(m: Metadata): Metadata {
         const create = <M extends BaseMeta<any>>(type: TypeName, to: (m: M) => M, order = 50) =>
             ({ name: type, is: isMeta(type), from: to, order })
 
-        m.add(create<PrimitiveMeta<string>>(JSONT.STRING, (m) => string(combine(m))))
-        m.add(create<PrimitiveMeta<number>>(JSONT.NUMBER, (m) => number(combine(m))))
-        m.add(create<PrimitiveMeta<bigint>>(JSONT.BIGINT, (m) => bigInt(combine(m))))
-        m.add(create<PrimitiveMeta<boolean>>(JSONT.BOOL, (m) => bool(combine(m))))
-        m.add(create<PrimitiveMeta<Date>>(JSONT.DATE, (m) => date(combine(m))))
+        m.add(create<PrimitiveMeta<string>>(STRING, (m) => string(combine(m))))
+        m.add(create<PrimitiveMeta<number>>(NUMBER, (m) => number(combine(m))))
+        m.add(create<PrimitiveMeta<bigint>>(BIGINT, (m) => bigInt(combine(m))))
+        m.add(create<PrimitiveMeta<boolean>>(BOOL, (m) => bool(combine(m))))
+        m.add(create<PrimitiveMeta<Date>>(DATE, (m) => date(combine(m))))
 
-        m.add(create<PrimitiveMeta<number>>(JSONT.I8, (m) => i8(combine(m))))
-        m.add(create<PrimitiveMeta<number>>(JSONT.I16, (m) => i16(combine(m))))
-        m.add(create<PrimitiveMeta<number>>(JSONT.I32, (m) => i32(combine(m))))
-        m.add(create<PrimitiveMeta<bigint>>(JSONT.I64, (m) => i64(combine(m))))
-        m.add(create<PrimitiveMeta<number>>(JSONT.U8, (m) => u8(combine(m))))
-        m.add(create<PrimitiveMeta<number>>(JSONT.U16, (m) => u16(combine(m))))
-        m.add(create<PrimitiveMeta<number>>(JSONT.U32, (m) => u32(combine(m))))
-        m.add(create<PrimitiveMeta<bigint>>(JSONT.U64, (m) => u64(combine(m))))
+        m.add(create<PrimitiveMeta<number>>(I8, (m) => i8(combine(m))))
+        m.add(create<PrimitiveMeta<number>>(I16, (m) => i16(combine(m))))
+        m.add(create<PrimitiveMeta<number>>(I32, (m) => i32(combine(m))))
+        m.add(create<PrimitiveMeta<bigint>>(I64, (m) => i64(combine(m))))
+        m.add(create<PrimitiveMeta<number>>(U8, (m) => u8(combine(m))))
+        m.add(create<PrimitiveMeta<number>>(U16, (m) => u16(combine(m))))
+        m.add(create<PrimitiveMeta<number>>(U32, (m) => u32(combine(m))))
+        m.add(create<PrimitiveMeta<bigint>>(U64, (m) => u64(combine(m))))
 
-        m.add(create<NullableMeta<any>>(JSONT.NULLABLE, (m) => nullable({ ...m.value }, combine(m))))
+        m.add(create<NullableMeta<any>>(NULLABLE, (m) => nullable({ ...m.value }, combine(m))))
 
-        m.add(create<ArrayMeta<any[], any>>(JSONT.ARRAY, (m) => array({ ...m.value }, combine(m))))
-        m.add(create<ArrayMeta<Int8Array, PrimitiveMeta<number>>>(JSONT.I8_ARRAY, (m) => i8Array(combine(m))))
-        m.add(create<ArrayMeta<Int16Array, PrimitiveMeta<number>>>(JSONT.I8_ARRAY, (m) => i16Array(combine(m))))
-        m.add(create<ArrayMeta<Int32Array, PrimitiveMeta<number>>>(JSONT.I8_ARRAY, (m) => i32Array(combine(m))))
-        m.add(create<ArrayMeta<BigInt64Array, PrimitiveMeta<bigint>>>(JSONT.I8_ARRAY, (m) => i64Array(combine(m))))
-        m.add(create<ArrayMeta<Uint8Array, PrimitiveMeta<number>>>(JSONT.I8_ARRAY, (m) => u8Array(combine(m))))
-        m.add(create<ArrayMeta<Uint16Array, PrimitiveMeta<number>>>(JSONT.I8_ARRAY, (m) => u16Array(combine(m))))
-        m.add(create<ArrayMeta<Uint32Array, PrimitiveMeta<number>>>(JSONT.I8_ARRAY, (m) => u32Array(combine(m))))
-        m.add(create<ArrayMeta<BigUint64Array, PrimitiveMeta<bigint>>>(JSONT.I8_ARRAY, (m) => u64Array(combine(m))))
+        m.add(create<ArrayMeta<any[], any>>(ARRAY, (m) => array({ ...m.value }, combine(m))))
+        m.add(create<ArrayMeta<Int8Array, PrimitiveMeta<number>>>(I8_ARRAY, (m) => i8Array(combine(m))))
+        m.add(create<ArrayMeta<Int16Array, PrimitiveMeta<number>>>(I8_ARRAY, (m) => i16Array(combine(m))))
+        m.add(create<ArrayMeta<Int32Array, PrimitiveMeta<number>>>(I8_ARRAY, (m) => i32Array(combine(m))))
+        m.add(create<ArrayMeta<BigInt64Array, PrimitiveMeta<bigint>>>(I8_ARRAY, (m) => i64Array(combine(m))))
+        m.add(create<ArrayMeta<Uint8Array, PrimitiveMeta<number>>>(I8_ARRAY, (m) => u8Array(combine(m))))
+        m.add(create<ArrayMeta<Uint16Array, PrimitiveMeta<number>>>(I8_ARRAY, (m) => u16Array(combine(m))))
+        m.add(create<ArrayMeta<Uint32Array, PrimitiveMeta<number>>>(I8_ARRAY, (m) => u32Array(combine(m))))
+        m.add(create<ArrayMeta<BigUint64Array, PrimitiveMeta<bigint>>>(I8_ARRAY, (m) => u64Array(combine(m))))
 
-        m.add(create<SetMeta<any>>(JSONT.SET, (m) => set(m.value, combine(m))))
-        m.add(create<MapMeta<any>>(JSONT.MAP, (m) => map(m.value, combine(m))))
+        m.add(create<SetMeta<any>>(SET, (m) => set(m.value, combine(m))))
+        m.add(create<MapMeta<any>>(MAP, (m) => map(m.value, combine(m))))
 
-        m.add(create<ObjectMeta<{}>>(JSONT.OBJECT, (m) => ({ ...object(...m.fields), ...m })))
+        m.add(create<ObjectMeta<{}>>(OBJECT, (m) => ({ ...object(...m.fields), ...m })))
         return m
     }
 

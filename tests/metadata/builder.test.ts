@@ -9,7 +9,7 @@ import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../../src
 import { toObject } from "../../src/converters/object"
 import { toSet } from "../../src/converters/set"
 import { toString } from "../../src/converters/string"
-import { JSONT } from "../../src/metadata/baseTypes"
+import { ARRAY, BIGINT, BOOL, DATE, F64_ARRAY, I16, I16_ARRAY, I32, I32_ARRAY, I64, I64_ARRAY, I8, I8_ARRAY, MAP, NULLABLE, NUMBER, OBJECT, SET, STRING, U16, U16_ARRAY, U32, U32_ARRAY, U64, U64_ARRAY, U8, U8_ARRAY, } from "../../src/metadata/baseTypes"
 import { array, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array, u32Array, u64Array, i8Array, i16Array, i32Array, i64Array, f64Array, map, set, object, field, usePool } from "../../src/metadata/builder"
 import { BaseMeta, TypeName } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
@@ -30,7 +30,7 @@ describe('metadata builders', () => {
     test('primitive number', () => {
         const meta = number()
 
-        expectBaseStructure(meta, JSONT.NUMBER)
+        expectBaseStructure(meta, NUMBER)
         expect(meta.toValue).toBe(toFloat)
         expect(meta.toJson(meta, 1, defaultOptions)).toBe('1')
     })
@@ -38,7 +38,7 @@ describe('metadata builders', () => {
     test('primitive string', () => {
         const meta = string()
 
-        expectBaseStructure(meta, JSONT.STRING)
+        expectBaseStructure(meta, STRING)
         expect(meta.toValue).toBe(toString)
         expect(meta.toJson(meta, 'test', defaultOptions)).toBe('"test"')
     })
@@ -46,7 +46,7 @@ describe('metadata builders', () => {
     test('primitive boolean', () => {
         const meta = bool()
 
-        expectBaseStructure(meta, JSONT.BOOL)
+        expectBaseStructure(meta, BOOL)
         expect(meta.toValue).toBe(toBoolean)
         expect(meta.toJson(meta, true, defaultOptions)).toBe('true')
     })
@@ -54,7 +54,7 @@ describe('metadata builders', () => {
     test('primitive bigInt', () => {
         const meta = bigInt()
 
-        expectBaseStructure(meta, JSONT.BIGINT)
+        expectBaseStructure(meta, BIGINT)
         expect(meta.toValue).toBe(toBigInt)
         expect(meta.toJson(meta, 1n, defaultOptions)).toBe('1')
     })
@@ -62,7 +62,7 @@ describe('metadata builders', () => {
     test('primitive date', () => {
         const meta = date()
 
-        expectBaseStructure(meta, JSONT.DATE)
+        expectBaseStructure(meta, DATE)
         const d = new Date()
         expect(meta.toValue).toBe(toDate)
         expect(meta.toJson(meta, d, defaultOptions)).toBe(`"${d.toISOString()}"`)
@@ -71,7 +71,7 @@ describe('metadata builders', () => {
     test('uint8', () => {
         const meta = u8()
 
-        expectBaseStructure(meta, JSONT.U8)
+        expectBaseStructure(meta, U8)
         expect(meta.toValue).toBe(toUint8)
         expect(meta.toJson(meta, 123, defaultOptions)).toBe('123')
     })
@@ -79,7 +79,7 @@ describe('metadata builders', () => {
     test('uint16', () => {
         const meta = u16()
 
-        expectBaseStructure(meta, JSONT.U16)
+        expectBaseStructure(meta, U16)
         expect(meta.toValue).toBe(toUint16)
         expect(meta.toJson(meta, 123456, defaultOptions)).toBe('123456')
     })
@@ -87,7 +87,7 @@ describe('metadata builders', () => {
     test('uint32', () => {
         const meta = u32()
 
-        expectBaseStructure(meta, JSONT.U32)
+        expectBaseStructure(meta, U32)
         expect(meta.toValue).toBe(toUint32)
         expect(meta.toJson(meta, 123456789, defaultOptions)).toBe('123456789')
     })
@@ -95,7 +95,7 @@ describe('metadata builders', () => {
     test('int8', () => {
         const meta = i8()
 
-        expectBaseStructure(meta, JSONT.I8)
+        expectBaseStructure(meta, I8)
         expect(meta.toValue).toBe(toInt8)
         expect(meta.toJson(meta, 123, defaultOptions)).toBe('123')
     })
@@ -103,7 +103,7 @@ describe('metadata builders', () => {
     test('int16', () => {
         const meta = i16()
 
-        expectBaseStructure(meta, JSONT.I16)
+        expectBaseStructure(meta, I16)
         expect(meta.toValue).toBe(toInt16)
         expect(meta.toJson(meta, 123456, defaultOptions)).toBe('123456')
     })
@@ -111,7 +111,7 @@ describe('metadata builders', () => {
     test('int32', () => {
         const meta = i32()
 
-        expectBaseStructure(meta, JSONT.I32)
+        expectBaseStructure(meta, I32)
         expect(meta.toValue).toBe(toInt32)
         expect(meta.toJson(meta, 123456789, defaultOptions)).toBe('123456789')
     })
@@ -119,7 +119,7 @@ describe('metadata builders', () => {
     test('int64', () => {
         const meta = i64()
 
-        expectBaseStructure(meta, JSONT.I64)
+        expectBaseStructure(meta, I64)
         expect(meta.toValue).toBe(toInt64)
         expect(meta.toJson(meta, 1234567891234567n, defaultOptions)).toBe('1234567891234567')
     })
@@ -128,7 +128,7 @@ describe('metadata builders', () => {
         const num = number()
         const meta = nullable(num)
 
-        expectBaseStructure(meta, JSONT.NULLABLE)
+        expectBaseStructure(meta, NULLABLE)
         expect(meta).toHaveProperty('value', num)
         expect(meta.toValue).toBe(toNullable)
         expect(meta.toJson(meta, null, defaultOptions)).toBe('null')
@@ -141,7 +141,7 @@ describe('metadata builders', () => {
         const addPool = usePool(pool)
         const meta = array(num, addPool)
 
-        expectBaseStructure(meta, JSONT.ARRAY)
+        expectBaseStructure(meta, ARRAY)
         expect(meta).toHaveProperty('value', num)
         expect(meta).toHaveProperty('pool', pool)
         expect(meta.toValue).toBe(toArray)
@@ -151,10 +151,10 @@ describe('metadata builders', () => {
     test('u8array', () => {
         const meta = u8Array()
 
-        expectBaseStructure(meta, JSONT.U8_ARRAY)
+        expectBaseStructure(meta, U8_ARRAY)
         expect(meta).toHaveProperty('value')
         expect(meta.value).toMatchObject({
-            type: JSONT.U8,
+            type: U8,
             toJson: expect.any(Function),
             toValue: toUint8
         })
@@ -166,10 +166,10 @@ describe('metadata builders', () => {
     test('u16array', () => {
         const meta = u16Array()
 
-        expectBaseStructure(meta, JSONT.U16_ARRAY)
+        expectBaseStructure(meta, U16_ARRAY)
         expect(meta).toHaveProperty('value')
         expect(meta.value).toMatchObject({
-            type: JSONT.U16,
+            type: U16,
             toJson: expect.any(Function),
             toValue: toUint16
         })
@@ -181,10 +181,10 @@ describe('metadata builders', () => {
     test('u32array', () => {
         const meta = u32Array()
 
-        expectBaseStructure(meta, JSONT.U32_ARRAY)
+        expectBaseStructure(meta, U32_ARRAY)
         expect(meta).toHaveProperty('value')
         expect(meta.value).toMatchObject({
-            type: JSONT.U32,
+            type: U32,
             toJson: expect.any(Function),
             toValue: toUint32
         })
@@ -196,10 +196,10 @@ describe('metadata builders', () => {
     test('u64array', () => {
         const meta = u64Array()
 
-        expectBaseStructure(meta, JSONT.U64_ARRAY)
+        expectBaseStructure(meta, U64_ARRAY)
         expect(meta).toHaveProperty('value')
         expect(meta.value).toMatchObject({
-            type: JSONT.U64,
+            type: U64,
             toJson: expect.any(Function),
             toValue: toUint64
         })
@@ -211,10 +211,10 @@ describe('metadata builders', () => {
     test('i8array', () => {
         const meta = i8Array()
 
-        expectBaseStructure(meta, JSONT.I8_ARRAY)
+        expectBaseStructure(meta, I8_ARRAY)
         expect(meta).toHaveProperty('value')
         expect(meta.value).toMatchObject({
-            type: JSONT.I8,
+            type: I8,
             toJson: expect.any(Function),
             toValue: toInt8
         })
@@ -226,10 +226,10 @@ describe('metadata builders', () => {
     test('i16array', () => {
         const meta = i16Array()
 
-        expectBaseStructure(meta, JSONT.I16_ARRAY)
+        expectBaseStructure(meta, I16_ARRAY)
         expect(meta).toHaveProperty('value')
         expect(meta.value).toMatchObject({
-            type: JSONT.I16,
+            type: I16,
             toJson: expect.any(Function),
             toValue: toInt16
         })
@@ -241,10 +241,10 @@ describe('metadata builders', () => {
     test('i32array', () => {
         const meta = i32Array()
 
-        expectBaseStructure(meta, JSONT.I32_ARRAY)
+        expectBaseStructure(meta, I32_ARRAY)
         expect(meta).toHaveProperty('value')
         expect(meta.value).toMatchObject({
-            type: JSONT.I32,
+            type: I32,
             toJson: expect.any(Function),
             toValue: toInt32
         })
@@ -256,10 +256,10 @@ describe('metadata builders', () => {
     test('i64array', () => {
         const meta = i64Array()
 
-        expectBaseStructure(meta, JSONT.I64_ARRAY)
+        expectBaseStructure(meta, I64_ARRAY)
         expect(meta).toHaveProperty('value')
         expect(meta.value).toMatchObject({
-            type: JSONT.I64,
+            type: I64,
             toJson: expect.any(Function),
             toValue: toInt64
         })
@@ -271,10 +271,10 @@ describe('metadata builders', () => {
     test('f64array', () => {
         const meta = f64Array()
 
-        expectBaseStructure(meta, JSONT.F64_ARRAY)
+        expectBaseStructure(meta, F64_ARRAY)
         expect(meta).toHaveProperty('value')
         expect(meta.value).toMatchObject({
-            type: JSONT.NUMBER,
+            type: NUMBER,
             toJson: expect.any(Function),
             toValue: toFloat
         })
@@ -286,10 +286,10 @@ describe('metadata builders', () => {
     test('map', () => {
         const meta = map(number())
 
-        expectBaseStructure(meta, JSONT.MAP)
+        expectBaseStructure(meta, MAP)
         expect(meta).toHaveProperty('value')
         expect(meta.value).toMatchObject({
-            type: JSONT.NUMBER,
+            type: NUMBER,
             toJson: expect.any(Function),
             toValue: toFloat
         })
@@ -300,10 +300,10 @@ describe('metadata builders', () => {
     test('set', () => {
         const meta = set(number())
 
-        expectBaseStructure(meta, JSONT.SET)
+        expectBaseStructure(meta, SET)
         expect(meta).toHaveProperty('value')
         expect(meta.value).toMatchObject({
-            type: JSONT.NUMBER,
+            type: NUMBER,
             toJson: expect.any(Function),
             toValue: toFloat
         })
@@ -314,7 +314,7 @@ describe('metadata builders', () => {
     test('field', () => {
         const meta = field('id', number())
 
-        expectBaseStructure(meta.value, JSONT.NUMBER)
+        expectBaseStructure(meta.value, NUMBER)
         expect(meta).toHaveProperty('name', {
             value: 'id',
             bytes: new TextEncoder().encode('id'),
@@ -325,7 +325,7 @@ describe('metadata builders', () => {
         const fields = [field('id', number()), field('name', string())]
         const meta = object(...fields)
 
-        expectBaseStructure(meta, JSONT.OBJECT)
+        expectBaseStructure(meta, OBJECT)
         expect(meta).toHaveProperty('fields')
         expect(meta.fields).toStrictEqual(fields)
         expect(meta.toValue).toBe(toObject)

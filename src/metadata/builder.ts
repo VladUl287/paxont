@@ -5,7 +5,7 @@ import {
     ObjectMeta, PrimitiveMeta, SetMeta,
     TypeName
 } from "./types"
-import { BaseType, JSONT } from "./baseTypes"
+import { ARRAY, BaseType, BIGINT, BOOL, DATE, F64_ARRAY, I16, I16_ARRAY, I32, I32_ARRAY, I64, I64_ARRAY, I8, I8_ARRAY, MAP, NULLABLE, NUMBER, OBJECT, SET, STRING, U16, U16_ARRAY, U32, U32_ARRAY, U64, U64_ARRAY, U8, U8_ARRAY, } from "./baseTypes"
 import { toDate } from "../converters/date"
 import { toMap } from "../converters/map"
 import { toSet } from "../converters/set"
@@ -25,86 +25,86 @@ import { isMetadata } from "./utils"
 export type Modifier<M extends BaseMeta<any>> = (metadata: M) => M
 
 export const string = (...modifiers: Modifier<PrimitiveMeta<string>>[]) =>
-    primitive(JSONT.STRING, toString, (v) => {
+    primitive(STRING, toString, (v) => {
         if (typeof v !== 'string') { throw new Error() }
         return `"${v}"`
     }, ...modifiers)
 
 export const number = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.NUMBER, toFloat, (v) => {
+    primitive(NUMBER, toFloat, (v) => {
         if (typeof v !== 'number') { throw new Error() }
         return v.toString()
     }, ...modifiers)
 
 export const bigInt = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
-    primitive(JSONT.BIGINT, toBigInt, (v) => {
+    primitive(BIGINT, toBigInt, (v) => {
         if (typeof v !== 'bigint') { throw new Error() }
         return v.toString()
     }, ...modifiers)
 
 export const bool = (...modifiers: Modifier<PrimitiveMeta<boolean>>[]) =>
-    primitive(JSONT.BOOL, toBoolean, (v) => {
+    primitive(BOOL, toBoolean, (v) => {
         if (typeof v !== 'boolean') { throw new Error() }
         return v.toString()
     }, ...modifiers)
 
 export const date = (...modifiers: Modifier<PrimitiveMeta<Date>>[]) =>
-    primitive(JSONT.DATE, toDate, (v) => {
+    primitive(DATE, toDate, (v) => {
         if (!(v instanceof Date)) { throw new Error() }
         return `"${v.toISOString()}"`
     }, ...modifiers)
 
 export const u8 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.U8, toUint8, (v) => {
+    primitive(U8, toUint8, (v) => {
         if (!Number.isInteger(v)) { throw new Error() }
         if (v < 0 || v > 255) { throw new Error() }
         return v.toString()
     }, ...modifiers)
 
 export const u16 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.U16, toUint16, (v) => {
+    primitive(U16, toUint16, (v) => {
         if (!Number.isInteger(v)) { throw new Error() }
         if (v < 0 || v > 65535) { throw new Error() }
         return v.toString()
     }, ...modifiers)
 
 export const u32 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.U32, toUint32, (v) => {
+    primitive(U32, toUint32, (v) => {
         if (!Number.isInteger(v)) { throw new Error() }
         if (v < 0 || v > 4294967295) { throw new Error() }
         return v.toString()
     }, ...modifiers)
 
 export const i8 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.I8, toInt8, (v) => {
+    primitive(I8, toInt8, (v) => {
         if (!Number.isInteger(v)) { throw new Error() }
         if (v < -128 || v > 127) { throw new Error() }
         return v.toString()
     }, ...modifiers)
 
 export const i16 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.I16, toInt16, (v) => {
+    primitive(I16, toInt16, (v) => {
         if (!Number.isInteger(v)) { throw new Error() }
         if (v < -32768 || v > 32767) { throw new Error() }
         return v.toString()
     }, ...modifiers)
 
 export const i32 = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
-    primitive(JSONT.I32, toInt32, (v) => {
+    primitive(I32, toInt32, (v) => {
         if (!Number.isInteger(v)) { throw new Error() }
         if (v < -2147483648 || v > 2147483647) { throw new Error() }
         return v.toString()
     }, ...modifiers)
 
 export const u64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
-    primitive(JSONT.U64, toUint64, (v) => {
+    primitive(U64, toUint64, (v) => {
         if (typeof v !== 'bigint') { throw new Error() }
         if (v < 0 || v > 18446744073709551615n) { throw new Error() }
         return v.toString()
     }, ...modifiers)
 
 export const i64 = (...modifiers: Modifier<PrimitiveMeta<bigint>>[]) =>
-    primitive(JSONT.I64, toInt64, (v) => {
+    primitive(I64, toInt64, (v) => {
         if (typeof v !== 'bigint') { throw new Error() }
         if (v < -9223372036854775808n || v > 9223372036854775807n) { throw new Error() }
         return v.toString()
@@ -133,7 +133,7 @@ export const nullable = <M extends BaseMeta<any>>(
     ...modifiers: Modifier<NullableMeta<M>>[]
 ): NullableMeta<M> => {
     const defaultMeta: NullableMeta<M> = {
-        type: JSONT.NULLABLE,
+        type: NULLABLE,
         toJson: (meta, value, options) => {
             if (value === null) return 'null'
             return meta.value.toJson(meta.value, value, options)
@@ -193,7 +193,7 @@ export const array = <M extends BaseMeta<any>>(
     }
 
     let defaultMeta: ArrayMeta<MetaValue<M>[], M> = {
-        type: JSONT.ARRAY,
+        type: ARRAY,
         toValue: toArray,
         toJson: (meta, value, options) => {
             if (!Array.isArray(value)) {
@@ -210,24 +210,24 @@ export const array = <M extends BaseMeta<any>>(
 }
 
 export const u8Array = (...modifiers: Modifier<ArrayMeta<Uint8Array, PrimitiveMeta<number>>>[]) =>
-    typedArray<Uint8Array>(JSONT.U8_ARRAY, u8(), ...modifiers)
+    typedArray<Uint8Array>(U8_ARRAY, u8(), ...modifiers)
 export const u16Array = (...modifiers: Modifier<ArrayMeta<Uint16Array, PrimitiveMeta<number>>>[]) =>
-    typedArray<Uint16Array>(JSONT.U16_ARRAY, u16(), ...modifiers)
+    typedArray<Uint16Array>(U16_ARRAY, u16(), ...modifiers)
 export const u32Array = (...modifiers: Modifier<ArrayMeta<Uint32Array, PrimitiveMeta<number>>>[]) =>
-    typedArray<Uint32Array>(JSONT.U32_ARRAY, u32(), ...modifiers)
+    typedArray<Uint32Array>(U32_ARRAY, u32(), ...modifiers)
 export const i8Array = (...modifiers: Modifier<ArrayMeta<Int8Array, PrimitiveMeta<number>>>[]) =>
-    typedArray<Int8Array>(JSONT.I8_ARRAY, i8(), ...modifiers)
+    typedArray<Int8Array>(I8_ARRAY, i8(), ...modifiers)
 export const i16Array = (...modifiers: Modifier<ArrayMeta<Int16Array, PrimitiveMeta<number>>>[]) =>
-    typedArray<Int16Array>(JSONT.I16_ARRAY, i16(), ...modifiers)
+    typedArray<Int16Array>(I16_ARRAY, i16(), ...modifiers)
 export const i32Array = (...modifiers: Modifier<ArrayMeta<Int32Array, PrimitiveMeta<number>>>[]) =>
-    typedArray<Int32Array>(JSONT.I32_ARRAY, i32(), ...modifiers)
+    typedArray<Int32Array>(I32_ARRAY, i32(), ...modifiers)
 export const f64Array = (...modifiers: Modifier<ArrayMeta<Float64Array, PrimitiveMeta<number>>>[]) =>
-    typedArray<Float64Array>(JSONT.F64_ARRAY, number(), ...modifiers)
+    typedArray<Float64Array>(F64_ARRAY, number(), ...modifiers)
 
 export const u64Array = (...modifiers: Modifier<ArrayMeta<BigUint64Array, PrimitiveMeta<bigint>>>[]) =>
-    bigIntTypedArray<BigUint64Array>(JSONT.U64_ARRAY, u64(), ...modifiers)
+    bigIntTypedArray<BigUint64Array>(U64_ARRAY, u64(), ...modifiers)
 export const i64Array = (...modifiers: Modifier<ArrayMeta<BigInt64Array, PrimitiveMeta<bigint>>>[]) =>
-    bigIntTypedArray<BigInt64Array>(JSONT.I64_ARRAY, i64(), ...modifiers)
+    bigIntTypedArray<BigInt64Array>(I64_ARRAY, i64(), ...modifiers)
 
 const typedArray = <T extends ArrayLikeWritable<number> & (IntegerTypedArray | FloatTypedArray)>(
     type: BaseType,
@@ -286,7 +286,7 @@ export const map = <M extends BaseMeta<any>>(
     ...modifiers: Modifier<MapMeta<M>>[]
 ): MapMeta<M> => {
     const defaultMeta: MapMeta<M> = {
-        type: JSONT.MAP,
+        type: MAP,
         key: string(),
         value: value,
         toValue: toMap,
@@ -304,7 +304,7 @@ export const set = <M extends BaseMeta<any>>(
     ...modifiers: Modifier<SetMeta<M>>[]
 ): SetMeta<M> => {
     const defaultMeta: SetMeta<M> = {
-        type: JSONT.SET,
+        type: SET,
         value: value,
         toValue: toSet,
         toJson: (meta, set, options) => {
@@ -343,7 +343,7 @@ export const object = <M extends ObjectParam<M>[]>(...args: M): ObjectMeta<AsObj
     })
 
     const objectMeta: ObjectMeta<AsObject<M>> = {
-        type: JSONT.OBJECT,
+        type: OBJECT,
         fields: fields,
         toValue: toObject,
         build: genObjectFactory<ObjectMeta<AsObject<M>>>(fields),

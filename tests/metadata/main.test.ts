@@ -1,6 +1,6 @@
 import { toObject } from "../../src/converters/object"
 import { metadata } from "../../src/metadata"
-import { JSONT } from "../../src/metadata/baseTypes"
+import { OBJECT } from "../../src/metadata/baseTypes"
 import { field, object, i16, i32, i64, i8, number, u16, u32, u64, u8, string } from "../../src/metadata/builder"
 import { BaseMeta, ObjectMeta, JsonParsingContext, TypeName } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
@@ -40,7 +40,7 @@ describe('metadata', () => {
 
         const meta = metaBuilder.from(object) as ObjectMeta<any>
 
-        expectBaseStructure(meta, JSONT.OBJECT)
+        expectBaseStructure(meta, OBJECT)
 
         expect(meta).toHaveProperty('fields')
 
@@ -130,7 +130,7 @@ describe('metadata', () => {
 
         const meta = metaBuilder.from(typeObject)
 
-        expectBaseStructure(meta, JSONT.OBJECT)
+        expectBaseStructure(meta, OBJECT)
 
         expect(meta).toHaveProperty('fields')
         expect(meta).toHaveProperty('build')
