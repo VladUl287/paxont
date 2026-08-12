@@ -119,9 +119,12 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
         const reader = json.getReader({ mode: 'byob' })
 
         const buffer = bufferPool.rent(655_350)
+
+        let startIndex = 0
         try {
             while (true) {
-                const { value, done } = await reader.read(buffer)
+                const buff = startIndex > 0 ? new Uint8Array(buffer.buffer, startIndex) : buffer
+                const { value, done } = await reader.read(buff)
 
                 if (value === undefined) {
                     break
@@ -138,6 +141,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
 
                 if (isNeedsMoreData(result)) {
                     buffer.copyWithin(0, result.nextIndex, buffer.length)
+                    startIndex = result.nextIndex
                     continue
                 }
 
