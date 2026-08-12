@@ -196,9 +196,11 @@ export const array = <M extends BaseMeta<any>>(
         type: JSONT.ARRAY,
         toValue: toArray,
         toJson: (meta, value, options) => {
-            const metaValue = meta.value
-            const toJson = metaValue.toJson
-            return `[${value.map(c => toJson(metaValue, c, options)).join(',')}]`
+            if (!Array.isArray(value)) {
+                throw new Error()
+            }
+            const toJson = meta.value.toJson
+            return `[${value.map(c => toJson(meta.value, c, options)).join(',')}]`
         },
         value: value,
         pool: globalPools[value.type]
@@ -321,8 +323,8 @@ export const keySelector = <M extends SetMeta<any>>(
     selector: (value: M extends SetMeta<infer U> ? MetaValue<U> : never) => any
 ): Modifier<M> => {
     return (meta: M): any => ({
-            ...meta,
-            key: selector
+        ...meta,
+        key: selector
     })
 }
 
