@@ -1,12 +1,17 @@
-export function wasmInstance<T>(bytes: Uint8Array<ArrayBuffer>, memory?: WebAssembly.Memory): T | undefined {
+export type WasmOptions = {
+    readonly memory?: WebAssembly.Memory,
+    readonly onError?: (error: unknown) => void
+}
+
+export function wasmInstance<T>(bytes: Uint8Array<ArrayBuffer>, options?: WasmOptions): T | undefined {
     try {
-        if (memory) {
-            return new WebAssembly.Instance(new WebAssembly.Module(bytes), { env: { memory: memory } }).exports as T
+        if (options?.memory && options.memory instanceof WebAssembly.Memory) {
+            return new WebAssembly.Instance(new WebAssembly.Module(bytes), { env: { memory: options.memory } }).exports as T
         }
         return new WebAssembly.Instance(new WebAssembly.Module(bytes)).exports as T
     }
     catch (error) {
-        console.error(error)
+        options?.onError?.(error)
         return undefined
     }
 }
