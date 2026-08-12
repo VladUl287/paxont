@@ -66,75 +66,67 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
         }
     }
 
-    try {
-        const item = metadata.value
-        const toValue = item.toValue
+    const item = metadata.value
+    const toValue = item.toValue
 
-        let j = bufferIndex
-        while (true) {
-            i = skipWhitespace(b, i)
+    let j = bufferIndex
+    while (true) {
+        i = skipWhitespace(b, i)
 
-            if (isContinued) {
-                if (b[i] === COMMA) {
-                    i++
-                }
-                else if (b[i] === SQUARE_CLOSE) {
-                    break
-                }
-            }
-
-            const result = toValue(item, context, i, depth)
-
-            if (isError(result)) {
-                release(buffer)
-                return result
-            }
-
-            if (isNeedsMoreData(result)) {
-                stack.push({ isContinued: true, buffer, bufferIndex: j })
-                return result
-            }
-
-            buffer[j] = result.value
-            i = result.nextIndex
-            j++
-
-            i = skipWhitespace(b, i)
-
+        if (isContinued) {
             if (b[i] === COMMA) {
                 i++
             }
             else if (b[i] === SQUARE_CLOSE) {
                 break
             }
-            else {
-                if (i >= b.length && reader.writable) {
-                    stack.push({ isContinued: true, buffer, bufferIndex: j })
-                    return {
-                        type: NEEDS_MORE_DATA,
-                        nextIndex: i
-                    }
-                }
-                release(buffer)
+        }
+
+        const result = toValue(item, context, i, depth)
+
+        if (isError(result)) {
+            release(buffer)
+            return result
+        }
+
+        if (isNeedsMoreData(result)) {
+            stack.push({ isContinued: true, buffer, bufferIndex: j })
+            return result
+        }
+
+        buffer[j] = result.value
+        i = result.nextIndex
+        j++
+
+        i = skipWhitespace(b, i)
+
+        if (b[i] === COMMA) {
+            i++
+        }
+        else if (b[i] === SQUARE_CLOSE) {
+            break
+        }
+        else {
+            if (i >= b.length && reader.writable) {
+                stack.push({ isContinued: true, buffer, bufferIndex: j })
                 return {
-                    type: ERROR,
-                    error: new JSONParseError(`Expected ']' or ',' but found '${String.fromCharCode(b[i])}'`, { depth, index: i, metadata })
+                    type: NEEDS_MORE_DATA,
+                    nextIndex: i
                 }
             }
-        }
-
-        release(buffer)
-
-        return {
-            type: COMPLETE,
-            value: buffer.slice(0, j),
-            nextIndex: ++i
+            release(buffer)
+            return {
+                type: ERROR,
+                error: new JSONParseError(`Expected ']' or ',' but found '${String.fromCharCode(b[i])}'`, { depth, index: i, metadata })
+            }
         }
     }
-    catch (error) {
-        return {
-            type: ERROR,
-            error: new JSONParseError('Unknown error', { depth, index: i, metadata, cause: error })
-        }
+
+    release(buffer)
+
+    return {
+        type: COMPLETE,
+        value: buffer.slice(0, j),
+        nextIndex: ++i
     }
 }
