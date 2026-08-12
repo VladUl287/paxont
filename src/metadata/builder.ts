@@ -20,15 +20,20 @@ import { ArrayLikeWritable, ArrayPool, BigIntTypedArray, FloatTypedArray, Intege
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../converters/number/int"
 import { toFloat } from "../converters/number/float"
 import { Expand } from "../utils/types"
-import { isMetadata, isMetadataContainer } from "./utils"
-import { bindPool } from "./modifiers"
+import { isMetadata } from "./utils"
 import { bigIntToJson, i16ToJson, i32ToJson, i64ToJson, i8ToJson, numberToJson, u16ToJson, u32ToJson, u64ToJson, u8ToJson } from "../converters/toJson/number"
+import { stringToJson } from "../converters/toJson/string"
+import { boolToJson } from "../converters/toJson/bool"
+import { dateToJson } from "../converters/toJson/date"
+import { arrayToJson } from "../converters/toJson/array"
+import { metaToJson } from "../converters/toJson/map"
+import { setToJson } from "../converters/toJson/set"
 
 export type Modifier<M extends BaseMeta<any>> = (metadata: M) => M
 
 export type BuilderOptions = {
     encoder: TextEncoder,
-    poolFor: <M extends BaseMeta<any>>(meta?: M) => ArrayPool<MetaValue<M>>
+    poolFor: <T extends ArrayLike<any>>(type: TypeName) => ArrayPool<T>
 }
 
 const globalPools: Record<TypeName, ArrayPool<any>> = {
@@ -64,15 +69,8 @@ const globalPools: Record<TypeName, ArrayPool<any>> = {
 
 const defaultBuilderOptions: BuilderOptions = {
     encoder: new TextEncoder(),
-    poolFor: <M extends BaseMeta<any>>(meta?: M): ArrayPool<MetaValue<M>> => {
-        if (meta) {
-            if (meta.type === NULLABLE && isMetadataContainer(meta)) {
-                return (globalPools[meta.value.type] ??= arrayPool(Array))
-            }
-            return (globalPools[meta.type] ??= arrayPool(Array))
-        }
-        return (globalPools['unknown'] ??= arrayPool(Array))
-    }
+    poolFor: <T extends ArrayLike<any>>(type?: TypeName): ArrayPool<T> =>
+        (globalPools[type ?? 'unknown'] ??= arrayPool(Array))
 }
 
 export function builder({ encoder, poolFor }: BuilderOptions = defaultBuilderOptions) {
@@ -81,10 +79,7 @@ export function builder({ encoder, poolFor }: BuilderOptions = defaultBuilderOpt
     }
 
     const string = (...modifiers: Modifier<PrimitiveMeta<string>>[]) =>
-        primitive(STRING, toString, (v) => {
-            if (typeof v !== 'string') { throw new Error() }
-            return `"${v}"`
-        }, ...modifiers)
+        primitive(STRING, toString, stringToJson, ...modifiers)
 
     const number = (...modifiers: Modifier<PrimitiveMeta<number>>[]) =>
         primitive(NUMBER, toFloat, numberToJson, ...modifiers)
@@ -117,16 +112,10 @@ export function builder({ encoder, poolFor }: BuilderOptions = defaultBuilderOpt
         primitive(I64, toInt64, i64ToJson, ...modifiers)
 
     const bool = (...modifiers: Modifier<PrimitiveMeta<boolean>>[]) =>
-        primitive(BOOL, toBoolean, (m, v, o) => {
-            if (typeof v !== 'boolean') { throw new Error() }
-            return v.toString()
-        }, ...modifiers)
+        primitive(BOOL, toBoolean, boolToJson, ...modifiers)
 
     const date = (...modifiers: Modifier<PrimitiveMeta<Date>>[]) =>
-        primitive(DATE, toDate, (v) => {
-            if (!(v instanceof Date)) { throw new Error() }
-            return `"${v.toISOString()}"`
-        }, ...modifiers)
+        primitive(DATE, toDate, dateToJson, ...modifiers)
 
     const primitive = <T>(
         type: BaseType,
@@ -145,7 +134,7 @@ export function builder({ encoder, poolFor }: BuilderOptions = defaultBuilderOpt
         value: M,
         ...modifiers: Modifier<NullableMeta<M>>[]
     ): NullableMeta<M> => {
-        const defaultMeta: NullableMeta<M> = {
+        return modifiers.reduce(applyModifier, <NullableMeta<M>>{
             type: NULLABLE,
             toJson: (meta, value, options) => {
                 if (value === null) return 'null'
@@ -153,75 +142,61 @@ export function builder({ encoder, poolFor }: BuilderOptions = defaultBuilderOpt
             },
             toValue: toNullable,
             value: value
-        }
-        return modifiers.reduce(applyModifier, defaultMeta)
+        })
     }
 
     const array = <M extends BaseMeta<any>>(
         value: M,
         ...modifiers: Modifier<ArrayMeta<MetaValue<M>[], M>>[]
     ): ArrayMeta<MetaValue<M>[], M> => {
-        const defaultMeta: ArrayMeta<MetaValue<M>[], M> = {
+        return modifiers.reduce(applyModifier, <ArrayMeta<MetaValue<M>[], M>>{
             type: ARRAY,
             toValue: toArray,
-            toJson: (meta, value, options) => {
-                if (!Array.isArray(value)) {
-                    throw new Error()
-                }
-                const toJson = meta.value.toJson
-                return `[${value.map(c => toJson(meta.value, c, options)).join(',')}]`
-            },
+            toJson: arrayToJson,
             value: value,
-            pool: poolFor()
-        }
-        bindPool(poolFor(defaultMeta))
-        return modifiers.reduce(applyModifier, defaultMeta)
+            pool: poolFor(value.type)
+        })
     }
 
     const u8Array = (...modifiers: Modifier<ArrayMeta<Uint8Array, PrimitiveMeta<number>>>[]) =>
         typedArray<Uint8Array>(U8_ARRAY, u8(), ...modifiers)
+
     const u16Array = (...modifiers: Modifier<ArrayMeta<Uint16Array, PrimitiveMeta<number>>>[]) =>
         typedArray<Uint16Array>(U16_ARRAY, u16(), ...modifiers)
+
     const u32Array = (...modifiers: Modifier<ArrayMeta<Uint32Array, PrimitiveMeta<number>>>[]) =>
         typedArray<Uint32Array>(U32_ARRAY, u32(), ...modifiers)
-    const i8Array = (...modifiers: Modifier<ArrayMeta<Int8Array, PrimitiveMeta<number>>>[]) =>
-        typedArray<Int8Array>(I8_ARRAY, i8(), ...modifiers)
-    const i16Array = (...modifiers: Modifier<ArrayMeta<Int16Array, PrimitiveMeta<number>>>[]) =>
-        typedArray<Int16Array>(I16_ARRAY, i16(), ...modifiers)
-    const i32Array = (...modifiers: Modifier<ArrayMeta<Int32Array, PrimitiveMeta<number>>>[]) =>
-        typedArray<Int32Array>(I32_ARRAY, i32(), ...modifiers)
-    const f64Array = (...modifiers: Modifier<ArrayMeta<Float64Array, PrimitiveMeta<number>>>[]) =>
-        typedArray<Float64Array>(F64_ARRAY, number(), ...modifiers)
 
     const u64Array = (...modifiers: Modifier<ArrayMeta<BigUint64Array, PrimitiveMeta<bigint>>>[]) =>
         bigIntTypedArray<BigUint64Array>(U64_ARRAY, u64(), ...modifiers)
+
+    const i8Array = (...modifiers: Modifier<ArrayMeta<Int8Array, PrimitiveMeta<number>>>[]) =>
+        typedArray<Int8Array>(I8_ARRAY, i8(), ...modifiers)
+
+    const i16Array = (...modifiers: Modifier<ArrayMeta<Int16Array, PrimitiveMeta<number>>>[]) =>
+        typedArray<Int16Array>(I16_ARRAY, i16(), ...modifiers)
+
+    const i32Array = (...modifiers: Modifier<ArrayMeta<Int32Array, PrimitiveMeta<number>>>[]) =>
+        typedArray<Int32Array>(I32_ARRAY, i32(), ...modifiers)
+
     const i64Array = (...modifiers: Modifier<ArrayMeta<BigInt64Array, PrimitiveMeta<bigint>>>[]) =>
         bigIntTypedArray<BigInt64Array>(I64_ARRAY, i64(), ...modifiers)
+
+    const f64Array = (...modifiers: Modifier<ArrayMeta<Float64Array, PrimitiveMeta<number>>>[]) =>
+        typedArray<Float64Array>(F64_ARRAY, number(), ...modifiers)
 
     const typedArray = <T extends ArrayLikeWritable<number> & (IntegerTypedArray | FloatTypedArray)>(
         type: BaseType,
         value: PrimitiveMeta<number>,
         ...modifiers: Modifier<ArrayMeta<T, PrimitiveMeta<number>>>[]
     ): ArrayMeta<T, PrimitiveMeta<number>> => {
-        const defaultMeta: ArrayMeta<T, PrimitiveMeta<number>> = {
+        return modifiers.reduce(applyModifier, <ArrayMeta<T, PrimitiveMeta<number>>>{
             type: type,
             toValue: toArray,
-            toJson: (meta, value, options) => {
-                const valueMeta = meta.value
-                const values = [...value]
-                const result = values
-                    .map(
-                        function (this: typeof valueMeta, number: number) {
-                            return valueMeta.toJson(valueMeta, number, options)
-                        },
-                        valueMeta)
-                    .join(',')
-                return `[${result}]`
-            },
+            toJson: arrayToJson,
             value: value,
-            pool: globalPools[value.type]
-        }
-        return modifiers.reduce(applyModifier, defaultMeta)
+            pool: poolFor(value.type)
+        })
     }
 
     const bigIntTypedArray = <T extends ArrayLikeWritable<bigint> & BigIntTypedArray>(
@@ -229,63 +204,38 @@ export function builder({ encoder, poolFor }: BuilderOptions = defaultBuilderOpt
         value: PrimitiveMeta<bigint>,
         ...modifiers: Modifier<ArrayMeta<T, PrimitiveMeta<bigint>>>[]
     ): ArrayMeta<T, PrimitiveMeta<bigint>> => {
-        const defaultMeta: ArrayMeta<T, PrimitiveMeta<bigint>> = {
+        return modifiers.reduce(applyModifier, <ArrayMeta<T, PrimitiveMeta<bigint>>>{
             type: type,
             toValue: toArray,
-            toJson: (meta, value, options) => {
-                const valueMeta = meta.value
-                const values = [...value]
-                const result = values
-                    .map(
-                        function (this: typeof valueMeta, number: bigint) {
-                            return valueMeta.toJson(valueMeta, number, options)
-                        },
-                        valueMeta)
-                    .join(',')
-                return `[${result}]`
-            },
+            toJson: arrayToJson,
             value: value,
-            pool: globalPools[value.type]
-        }
-        return modifiers.reduce(applyModifier, defaultMeta)
+            pool: poolFor(value.type)
+        })
     }
 
     const map = <M extends BaseMeta<any>>(
         value: M,
         ...modifiers: Modifier<MapMeta<M>>[]
     ): MapMeta<M> => {
-        const defaultMeta: MapMeta<M> = {
+        return modifiers.reduce(applyModifier, <MapMeta<M>>{
             type: MAP,
             key: string(),
             value: value,
             toValue: toMap,
-            toJson: (m, v, o) => {
-                const meta = m.value
-                const toJson = meta.toJson
-                return `{${[...v.entries()].map(c => `"${c[0]}":${toJson(meta, c[1], o)}`).join(',')}}`
-            }
-        }
-        return modifiers.reduce(applyModifier, defaultMeta)
+            toJson: metaToJson
+        })
     }
 
     const set = <M extends BaseMeta<any>>(
         value: M,
         ...modifiers: Modifier<SetMeta<M>>[]
     ): SetMeta<M> => {
-        const defaultMeta: SetMeta<M> = {
+        return modifiers.reduce(applyModifier, <SetMeta<M>>{
             type: SET,
             value: value,
             toValue: toSet,
-            toJson: (meta, set, options) => {
-                const valueMeta = meta.value
-                const toJson = valueMeta.toJson
-                const values = Array.from(set)
-                    .map(value => toJson(valueMeta, value, options))
-                    .join(',')
-                return `[${values}]`
-            }
-        }
-        return modifiers.reduce(applyModifier, defaultMeta)
+            toJson: setToJson
+        })
     }
 
     type ObjectParam<M extends ObjectParam<M>[]> = ObjectField<string, any> | Modifier<ObjectMeta<AsObject<M>>>
@@ -299,7 +249,7 @@ export function builder({ encoder, poolFor }: BuilderOptions = defaultBuilderOpt
 
     const object = <M extends ObjectParam<M>[]>(...args: M): ObjectMeta<AsObject<M>> => {
         const fields = args.filter((arg): arg is ObjectField<keyof AsObject<M> & string, any> => {
-            return arg && typeof arg === 'object' && typeof arg['name'] === 'string' && isMetadata(arg.value)
+            return arg && typeof arg === 'object' && isMetadata(arg.value) && typeof arg['name'] === 'string'
         })
 
         const objectMeta: ObjectMeta<AsObject<M>> = {
