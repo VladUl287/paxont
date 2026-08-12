@@ -1,5 +1,5 @@
 import { MemoizeFactory, memoize } from "./utils/memo"
-import { defaultOptions, JsonOptions, mergeOptions } from "./options"
+import { defaultOptions, JsonOptions, createOptions } from "./options"
 import { BaseMeta, JsonParsingState } from "./metadata/types"
 import { ArrayPool, arrayPool } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
@@ -15,7 +15,7 @@ type JSONTOptions = {
     readonly arrayPool: ArrayPool<Uint8Array<ArrayBuffer>>
     readonly jsonOptions: {
         readonly defaultOptions: JsonOptions
-        readonly mergeOptions: typeof mergeOptions
+        readonly createOptions: typeof createOptions
     }
     readonly memoize: MemoizeFactory
 }
@@ -23,10 +23,7 @@ type JSONTOptions = {
 const defaultJsontOptions: JSONTOptions = Object.freeze({
     metadataBuilder: metadata(),
     arrayPool: arrayPool<Uint8Array<ArrayBuffer>>(Uint8Array),
-    jsonOptions: {
-        defaultOptions: defaultOptions,
-        mergeOptions: mergeOptions
-    },
+    jsonOptions: { defaultOptions, createOptions },
     memoize: memoize,
 })
 
@@ -51,7 +48,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
         options?: Partial<JsonOptions>
     ): MetaOrData<T> {
         const filledOptions = !!options ?
-            optionsMemo.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
+            optionsMemo.getOrAdd(options, (key) => createOptions(key)) :
             defaultOptions
 
         const metadata = !isMetadata(type) ?
@@ -108,7 +105,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
         options?: Partial<JsonOptions>
     ): Promise<MetaOrData<T>> {
         const filledOptions = !!options ?
-            optionsMemo.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
+            optionsMemo.getOrAdd(options, (key) => createOptions(key)) :
             defaultOptions
 
         const metadata = !isMetadata(type) ?
@@ -153,7 +150,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
 
     function serialize<T, M extends BaseMeta<T>>(value: T, metadata: M, options?: Partial<JsonOptions>): string {
         const fullOptions = !!options ?
-            optionsMemo.getOrAdd(options, (key) => mergeOptions(defaultOptions, key)) :
+            optionsMemo.getOrAdd(options, (key) => createOptions(key)) :
             defaultOptions
 
         return metadata.toJson(metadata, value, fullOptions)

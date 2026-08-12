@@ -12,11 +12,11 @@ export const defaultOptions: JsonOptions = Object.freeze({
     maxDepth: 64
 })
 
-export function mergeOptions(base: JsonOptions, add: Partial<JsonOptions>): JsonOptions {
+export function createOptions(seed: Partial<JsonOptions>): JsonOptions {
     return {
-        ...base,
+        ...defaultOptions,
         ...Object.fromEntries(
-            Object.entries(add ?? {}).filter(([_, value]) => value !== null && value !== undefined)
+            Object.entries(seed ?? {}).filter(([_, value]) => value !== null && value !== undefined)
         )
     }
 }
