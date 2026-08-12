@@ -32,8 +32,8 @@ import { setToJson } from "../converters/toJson/set"
 export type Modifier<M extends BaseMeta<any>> = (metadata: M) => M
 
 export type BuilderOptions = {
-    encoder: TextEncoder,
-    poolFor: <T extends ArrayLike<any>>(type: TypeName) => ArrayPool<T>
+    readonly encoder: TextEncoder,
+    readonly poolFor: <T extends ArrayLike<any>>(type: TypeName) => ArrayPool<T>
 }
 
 const globalPools: Record<TypeName, ArrayPool<any>> = {
@@ -67,11 +67,11 @@ const globalPools: Record<TypeName, ArrayPool<any>> = {
     'unknown': arrayPool(Array),
 }
 
-const defaultBuilderOptions: BuilderOptions = {
+export const defaultBuilderOptions: BuilderOptions = Object.freeze({
     encoder: new TextEncoder(),
     poolFor: <T extends ArrayLike<any>>(type?: TypeName): ArrayPool<T> =>
         (globalPools[type ?? 'unknown'] ??= arrayPool(Array))
-}
+})
 
 export function builder({ encoder, poolFor }: BuilderOptions = defaultBuilderOptions) {
     function applyModifier<M extends BaseMeta<any>>(value: M, modify: Modifier<M>): M {
