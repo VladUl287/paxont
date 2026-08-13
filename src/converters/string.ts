@@ -2,7 +2,7 @@ import { genUnrolledFromCharCode, genUnrolledFromCharCode16 as genUnrolledFromCh
 import { JsonParsingContext, PrimitiveMeta } from "../metadata/types"
 import { CURRENT_PLATFORM, isBun, isNode } from "../utils/platform"
 import { ReadResult, ReadResultType } from "../utils/types"
-import { BACKSLASH, DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
+import { BACKSLASH, DOUBLE_QUOTE, DOUBLE_QUOTE as DQ, E } from "../utils/ascii_symbols"
 import { JSONParseError } from "../utils/error"
 import { wasmInstance } from "../utils/wasm"
 
@@ -118,7 +118,7 @@ export function createStringParser(options: ParserOptions) {
 
     const decoderFactory = (opt: ParserOptions) => {
         const decodeFromString = (base: string, { reader, stack }: JsonParsingContext, i: number): ReadResult<string> => {
-            const { bytes, bytesLength: length, writable, raw, sparseIndex } = reader
+            const { bytes: b, bytesLength: length, writable, raw, sparseIndex } = reader
 
             if (!raw) {
                 return {
@@ -144,70 +144,45 @@ export function createStringParser(options: ParserOptions) {
             let charIndex = sparseIndex?.charIndex ?? 0
             let byteIndex = sparseIndex?.byteIndex ?? 0
 
-            while (byteIndex < i) {
-                let byte = bytes[byteIndex]
-
-                if (byte < 128) {
-                    charIndex++
-                    byteIndex++
-                    continue
-                }
-
-                byte = (byte - 194) >>> 0
-
-                if (byte < 30) {
-                    charIndex++
-                    byteIndex += 2
-                    continue
-                }
-
-                if (byte < 46) {
-                    charIndex++
-                    byteIndex += 3
-                    continue
-                }
-
-                if (byte < 50) {
-                    charIndex++
-                    byteIndex += 4
-                    continue
-                }
+            while (byteIndex <= i - 4) {
+                const word = b[byteIndex] | b[byteIndex + 1] << 8 | b[byteIndex + 2] << 16 | b[byteIndex + 3] << 24
+                const contCount = ((word & 0x80808080) * 0x01010101) >>> 24
+                charIndex += 4 - contCount
+                byteIndex += 4
             }
+
+            while (byteIndex < i) {
+                const byte = b[byteIndex]
+                if ((byte & 0xC0) !== 0x80) {
+                    charIndex++
+                }
+                byteIndex++
+            }
+
+            const startIndex = charIndex
 
             if (byteIndex !== i) {
                 throw new Error()
             }
 
-            const startIndex = charIndex
+            while (byteIndex <= b.length - 4) {
+                const word = (b[byteIndex] | b[byteIndex + 1] << 8 | b[byteIndex + 2] << 16 | b[byteIndex + 3] << 24) ^ 0x22222222
 
-            while (raw[charIndex] !== '"') {
-                let byte = bytes[byteIndex]
+                const hasDoubleQuote = ((((word - 0x01010101)) ^ word) & 0x80808080) !== 0
 
-                if (byte < 128) {
+                if (hasDoubleQuote) break
+
+                const contCount = ((word & 0x80808080) * 0x01010101) >>> 24
+                charIndex += 4 - contCount
+                byteIndex += 4
+            }
+
+            while (b[byteIndex] !== DOUBLE_QUOTE) {
+                const byte = b[byteIndex]
+                if ((byte & 0xC0) !== 0x80) {
                     charIndex++
-                    byteIndex++
-                    continue
                 }
-
-                byte = (byte - 194) >>> 0
-
-                if (byte < 30) {
-                    charIndex++
-                    byteIndex += 2
-                    continue
-                }
-
-                if (byte < 46) {
-                    charIndex++
-                    byteIndex += 3
-                    continue
-                }
-
-                if (byte < 50) {
-                    charIndex++
-                    byteIndex += 4
-                    continue
-                }
+                byteIndex++
             }
 
             reader.sparseIndex = { charIndex, byteIndex }
@@ -247,10 +222,6 @@ export function createStringParser(options: ParserOptions) {
 
                     if (ensureMemory(memory, max_length, setView)) {
                         memoryView.set(new Uint8Array(b.buffer, i, length))
-
-                        if (i === 1176) {
-                            console.log('es')
-                        }
 
                         const end_index = utf8_to_utf16(0, length, length + 1, partial)
                         if (end_index < 0) {
