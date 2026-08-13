@@ -134,9 +134,21 @@ export function createStringParser(options: ParserOptions) {
 
             if (ascii_only) {
                 let j = i
+
+                while (j <= b.length - 4) {
+                    const word = (b[j] | b[j + 1] << 8 | b[j + 2] << 16 | b[j + 3] << 24) ^ 0x22222222
+
+                    if (((word - 0x01010101) & (~word) & 0x80808080) !== 0) {
+                        break
+                    }
+
+                    j += 4
+                }
+
                 while (raw[j] !== '"') {
                     j++
                 }
+
                 return {
                     type: COMPLETE,
                     value: raw.substring(i, j),
