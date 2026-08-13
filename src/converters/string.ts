@@ -147,11 +147,15 @@ export function createStringParser(options: ParserOptions) {
             let charIndex = sparseIndex?.charIndex ?? 0
             let byteIndex = sparseIndex?.byteIndex ?? 0
 
-            while (byteIndex <= i - 4) {
-                const word = b[byteIndex] | b[byteIndex + 1] << 8 | b[byteIndex + 2] << 16 | b[byteIndex + 3] << 24
-                const contCount = ((word & 0x80808080) * 0x01010101) >>> 24
-                charIndex += 4 - contCount
-                byteIndex += 4
+            while (byteIndex <= i - 8) {
+                const word1 = b[byteIndex] | b[byteIndex + 1] << 8 | b[byteIndex + 2] << 16 | b[byteIndex + 3] << 24
+                const word2 = b[byteIndex + 4] | b[byteIndex + 5] << 8 | b[byteIndex + 6] << 16 | b[byteIndex + 7] << 24
+
+                const contCount1 = ((word1 & 0x80808080) * 0x01010101) >>> 24
+                const contCount2 = ((word2 & 0x80808080) * 0x01010101) >>> 24
+
+                charIndex += 8 - contCount1 + contCount2
+                byteIndex += 8
             }
 
             while (byteIndex < i) {
@@ -169,11 +173,12 @@ export function createStringParser(options: ParserOptions) {
             }
 
             while (byteIndex <= b.length - 4) {
-                const word = (b[byteIndex] | b[byteIndex + 1] << 8 | b[byteIndex + 2] << 16 | b[byteIndex + 3] << 24) ^ 0x22222222
+                const word = b[byteIndex] | b[byteIndex + 1] << 8 | b[byteIndex + 2] << 16 | b[byteIndex + 3] << 24
 
-                const hasDoubleQuote = ((((word - 0x01010101)) ^ word) & 0x80808080) !== 0
-
-                if (hasDoubleQuote) break
+                const xor = word ^ 0x22222222
+                if ((((xor - 0x01010101) ^ xor) & 0x80808080) !== 0) {
+                    break
+                }
 
                 const contCount = ((word & 0x80808080) * 0x01010101) >>> 24
                 charIndex += 4 - contCount
