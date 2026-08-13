@@ -176,7 +176,7 @@ export function createStringParser(options: ParserOptions) {
                 const word = b[byteIndex] | b[byteIndex + 1] << 8 | b[byteIndex + 2] << 16 | b[byteIndex + 3] << 24
 
                 const xor = word ^ 0x22222222
-                if ((((xor - 0x01010101) ^ xor) & 0x80808080) !== 0) {
+                if (((xor - 0x01010101) & (~xor) & 0x80808080) !== 0) {
                     break
                 }
 
