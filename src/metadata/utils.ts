@@ -9,3 +9,7 @@ export function isMetadata(value: unknown): value is BaseMeta<any> {
         typeof potential.toJson === 'function' &&
         typeof potential.type === 'string'
 }
+
+export function isMetadataContainer(value: unknown): value is BaseMeta<any> {
+    return isMetadata(value) && 'value' in value && isMetadata(value.value)
+}
