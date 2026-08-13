@@ -107,6 +107,9 @@ export function createStringParser(options: ParserOptions) {
     let utf16 = newUtf16(memoryView)
     let utf8 = newUtf8(memoryView)
 
+    let setted: Uint8Array | undefined = undefined
+    let settedStart: number = 0
+
     function setView(m: WebAssembly.Memory) {
         memoryView = new Uint8Array(m.buffer)
         utf16 = newUtf16(memoryView)
@@ -132,21 +135,27 @@ export function createStringParser(options: ParserOptions) {
                     const b = reader.bytes
                     const partial = Number(reader.writable)
 
-                    let end = b.length
-                    let length = end - i
-                    const max_length = length * 3
+                    const max_length = (b.length - i) * 3
 
                     if (ensureMemory(memory, max_length, setView)) {
-                        memoryView.set(new Uint8Array(b.buffer, i, length))
+                        let start = 0
+                        if (b !== setted) {
+                            memoryView.set(new Uint8Array(b.buffer, i, b.length - i))
+                            settedStart = i
+                            setted = b
+                        }
+                        else {
+                            start = i - settedStart
+                        }
 
-                        const end_index = utf8_to_utf16(0, length, length + 1, partial)
+                        const end_index = utf8_to_utf16(start, b.length - settedStart, b.length - settedStart + 1, partial)
                         if (end_index < 0) {
                             return {
                                 type: ERROR,
                                 error: new JSONParseError('Invalid data')
                             }
                         }
-                        i += end_index
+                        i = end_index + settedStart
 
                         const dq_index = get_dq_index()
                         const ascii_only = get_ascii_only() === 1
@@ -171,21 +180,23 @@ export function createStringParser(options: ParserOptions) {
                         }
 
                         if (ascii_only) {
+                            const result = base.length === 0 ?
+                                utf8(start, end_index, ascii_only) :
+                                base.concat(utf8(start, end_index, ascii_only))
                             return {
                                 type: COMPLETE,
-                                value: base.length === 0 ?
-                                    utf8(0, end_index, ascii_only) :
-                                    base.concat(utf8(0, end_index, ascii_only)),
+                                value: result,
                                 nextIndex: i + 1
                             }
                         }
 
                         const utf16_end = get_utf16_length()
+                        const result = base.length === 0 ?
+                            utf16(b.length - settedStart + 1, utf16_end) :
+                            base.concat(utf16(b.length - settedStart + 1, utf16_end))
                         return {
                             type: COMPLETE,
-                            value: base.length === 0 ?
-                                utf16(length + 1, utf16_end) :
-                                base.concat(utf16(length + 1, utf16_end)),
+                            value: result,
                             nextIndex: i + 1
                         }
                     }
