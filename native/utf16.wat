@@ -419,7 +419,7 @@
             ;; double quotes
             (if (i8x16.bitmask (i8x16.eq (local.get $temp_v128) (local.get $quote_vec)))
               (then 
-                (if (i32.ge_u
+                (if (i32.ge_s
                     (local.tee $temp 
                       (call $find_unescaped_quote 
                         (local.get $i) 
