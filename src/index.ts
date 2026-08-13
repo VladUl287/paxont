@@ -56,12 +56,14 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
             type
 
         let bytes: Uint8Array<ArrayBuffer>
+        let bytesLength: number = 0
 
         const isString = typeof value === 'string'
         if (isString) {
             const length = getMaxBytesCount(value.length)
             bytes = bufferPool.rent(length)
-            opts.encoder.encodeInto(value, bytes)
+            const { written } = opts.encoder.encodeInto(value, bytes)
+            bytesLength = written
         }
         else if (value instanceof ArrayBuffer) {
             bytes = new Uint8Array(value)
@@ -78,7 +80,9 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
             const result = metadata.toValue(metadata, {
                 options: opts,
                 reader: {
+                    raw: isString ? value : undefined,
                     bytes,
+                    bytesLength: bytesLength || bytes.length,
                     writable: false
                 },
                 stack: emptyStack,
