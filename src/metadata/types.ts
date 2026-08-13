@@ -7,14 +7,17 @@ import { BaseType } from "./baseTypes"
 export type TypeName = BaseType | (string & {})
 
 export type JsonReader = {
-    readonly raw?: string,
     readonly bytes: Uint8Array
     readonly bytesLength: number,
     readonly writable: boolean,
-    sparseIndex?: {
+    
+    readonly raw?: string,
+    readonly sparseIndex?: {
         charIndex: number,
         byteIndex: number
     }
+
+    readonly onRelease: (callback: () => void) => void
 }
 
 export type JsonParsingContext = {

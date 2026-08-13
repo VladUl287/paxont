@@ -83,7 +83,12 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
                     raw: isString ? value : undefined,
                     bytes,
                     bytesLength: bytesLength || bytes.length,
-                    writable: false
+                    writable: false,
+                    sparseIndex: {
+                        charIndex: 0,
+                        byteIndex: 0
+                    },
+                    onRelease: () => { }
                 },
                 stack: emptyStack,
             }, 0, 0)

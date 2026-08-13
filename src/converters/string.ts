@@ -130,7 +130,7 @@ export function createStringParser(options: ParserOptions) {
                 }
             }
 
-            const ascii_only = raw.length === length
+            const ascii_only = raw.length === length //check if we aligned with previous parsing
 
             if (ascii_only) {
                 let j = i
@@ -199,7 +199,10 @@ export function createStringParser(options: ParserOptions) {
                 byteIndex++
             }
 
-            reader.sparseIndex = { charIndex, byteIndex }
+            if (reader.sparseIndex) {
+                reader.sparseIndex.charIndex = charIndex
+                reader.sparseIndex.byteIndex = byteIndex
+            }
 
             const result = raw.substring(startIndex, charIndex)
             return {
