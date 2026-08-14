@@ -15,6 +15,12 @@ export type utf16Module = {
     readonly utf8_to_utf16: (start: number, length: number, target: number, partial: number) => number
 }
 
+export type utf8ScanModule = {
+    readonly memory: WebAssembly.Memory
+    readonly chars_count: () => number
+    readonly utf8_scan: (start: number, length: number, exact: number) => number
+}
+
 export type StringParseOptions = {
     readonly wasmInstance: typeof wasmInstance
     readonly maxMemoryPages: number
