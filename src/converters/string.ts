@@ -5,6 +5,7 @@ import { ReadResult, ReadResultType } from "../utils/types"
 import { BACKSLASH, DOUBLE_QUOTE, DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
 import { JSONParseError } from "../utils/error"
 import { wasmInstance } from "../utils/wasm"
+import { ParserOptions, UTF16Module, UTF8Module } from "./types/string"
 
 const fromCharCodeUnrolledAscii = new Array<(data: ArrayLike<number>, i: number) => string>(32)
 export const decodeUnrolledAscii = (b: Uint8Array, start: number, length: number): string => {
@@ -67,30 +68,6 @@ export const defaultParseOptions: ParserOptions = {
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
-
-type UTF8Module = {
-    readonly memory: WebAssembly.Memory
-    readonly ascii_only: () => number
-    readonly dq_index: () => number
-    readonly utf8_to_utf8: (start: number, length: number, partial: number) => number
-}
-
-type UTF16Module = {
-    readonly memory: WebAssembly.Memory
-    readonly ascii_only: () => number
-    readonly dq_index: () => number
-    readonly utf16_length: () => number
-    readonly utf8_to_utf16: (start: number, length: number, target: number, partial: number) => number
-}
-
-type ParserOptions = {
-    readonly wasmInstance: typeof wasmInstance
-    readonly maxMemoryPages: number
-    readonly defaultMemoryPages: number
-    readonly useUtf16: boolean,
-    readonly newUtf16: (bytes: Uint8Array) => (start: number, end: number, ascii_only?: boolean) => string,
-    readonly newUtf8: (bytes: Uint8Array) => (start: number, end: number, ascii_only?: boolean) => string
-}
 
 export function createStringParser(options: ParserOptions) {
     const { defaultMemoryPages: initialWasmMemoryPages, maxMemoryPages: maxWasmMemoryPages, newUtf8, newUtf16, wasmInstance } = options
