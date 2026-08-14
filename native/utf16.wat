@@ -18,6 +18,7 @@
   (func (export "utf8_to_utf16") (param $i i32) (param $len i32) (param $utf16_ptr i32) (param $partial i32) (result i32)
     (local $mask i32)
     (local $temp i32)
+    (local $start_byte i32)
     (local $temp_v128 v128)
     (local $quote_vec v128)
     (local $byte_mask i32)
@@ -251,9 +252,9 @@
           )
         )
 
-        (local.set $temp (i32.sub (local.get $temp) (i32.const 194)))
+        (local.set $start_byte (i32.sub (local.get $temp) (i32.const 194)))
 
-        (if (i32.lt_u (local.get $temp) (i32.const 30))
+        (if (i32.lt_u (local.get $start_byte) (i32.const 30))
           (then
             (if (i32.ge_u (i32.add (local.get $i) (i32.const 1)) (local.get $len)) 
               (then
@@ -279,7 +280,7 @@
           )
         )
 
-        (if (i32.lt_u (local.get $temp) (i32.const 46))
+        (if (i32.lt_u (local.get $start_byte) (i32.const 46))
           (then
             (if (i32.ge_u (i32.add (local.get $i) (i32.const 2)) (local.get $len)) 
               (then
