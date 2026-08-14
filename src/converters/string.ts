@@ -251,22 +251,19 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
 
                 return (base: string, context: JsonParsingContext, i: number): ReadResult<string> => {
                     const { reader, stack } = context
+                    const { raw, bytes: b, bytesLength, writable } = reader
 
-                    if (reader.raw) {
+                    if (raw !== undefined) {
                         return decodeString(context, i)
                     }
 
-                    const b = reader.bytes
-                    const bLength = reader.bytesLength
-                    const partial = Number(reader.writable)
-
-                    const max_length = (bLength - i) * 3
-
+                    const partial = Number(writable)
+                    const max_length = (bytesLength - i) * 3
                     if (ensureMemory(memory, max_length, setView)) {
                         let start = 0
 
-                        if (b !== cacheView) {
-                            memoryView.set(new Uint8Array(b.buffer, i, bLength - i))
+                        if (cacheView !== b) {
+                            memoryView.set(new Uint8Array(b.buffer, i, bytesLength - i))
                             cacheViewStart = i
                             cacheView = b
                             reader.onRelease(clearCache)
@@ -275,7 +272,7 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                             start = i - cacheViewStart
                         }
 
-                        const end_index = utf8_to_utf16(start, bLength - cacheViewStart, bLength - cacheViewStart + 1, partial)
+                        const end_index = utf8_to_utf16(start, bytesLength - cacheViewStart, bytesLength - cacheViewStart + 1, partial)
                         if (end_index < 0) {
                             return {
                                 type: ERROR,
@@ -293,7 +290,7 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                                     isContinued: true,
                                     base: base.concat(ascii_only ?
                                         utf8(0, end_index, ascii_only) :
-                                        utf16(bLength - cacheViewStart + 1, get_utf16_length()))
+                                        utf16(bytesLength - cacheViewStart + 1, get_utf16_length()))
                                 })
                                 return {
                                     type: NEEDS_MORE_DATA,
@@ -320,8 +317,8 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                         return {
                             type: COMPLETE,
                             value: base.length === 0 ?
-                                utf16(bLength - cacheViewStart + 1, utf16_end) :
-                                base.concat(utf16(bLength - cacheViewStart + 1, utf16_end)),
+                                utf16(bytesLength - cacheViewStart + 1, utf16_end) :
+                                base.concat(utf16(bytesLength - cacheViewStart + 1, utf16_end)),
                             nextIndex: i + 1
                         }
                     }
@@ -330,7 +327,7 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
 
                     while (true) {
                         const memory = Math.floor(MAX_MEMORY_BYTES / 3)
-                        const length = Math.min(memory, bLength - i)
+                        const length = Math.min(memory, bytesLength - i)
                         const lastChunk = length < memory
                         const chunkPartial = lastChunk ? partial : 1
 
@@ -405,18 +402,29 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
             const get_dq_index = utf8Module.dq_index
             const utf8_to_utf8 = utf8Module.utf8_to_utf8
 
-            return (base: string, { reader, stack }: JsonParsingContext, i: number): ReadResult<string> => {
-                const b = reader.bytes
-                const bLength = reader.bytesLength
-                const partial = Number(reader.writable)
+            return (base: string, ctx: JsonParsingContext, i: number): ReadResult<string> => {
+                const { reader, stack } = ctx
+                const { bytes: b, bytesLength, writable, raw } = reader
 
-                let end = bLength
-                let length = end - i
+                if (raw !== undefined) {
+                    return decodeString(ctx, i)
+                }
 
-                if (ensureMemory(memory, length, setView)) {
-                    memoryView.set(new Uint8Array(b.buffer, i, length))
+                const partial = Number(writable)
+                if (ensureMemory(memory, bytesLength, setView)) {
+                    let start = 0
 
-                    const end_index = utf8_to_utf8(0, length, partial)
+                    if (cacheView !== b) {
+                        memoryView.set(new Uint8Array(b.buffer, i, bytesLength - i))
+                        cacheViewStart = i
+                        cacheView = b
+                        reader.onRelease(clearCache)
+                    }
+                    else {
+                        start = i - cacheViewStart
+                    }
+
+                    const end_index = utf8_to_utf8(start, bytesLength, partial)
                     if (end_index < 0) {
                         return {
                             type: ERROR,
@@ -460,7 +468,7 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
 
                 while (true) {
                     const memory = Math.floor(MAX_MEMORY_BYTES / 3)
-                    const length = Math.min(memory, bLength - i)
+                    const length = Math.min(memory, bytesLength - i)
                     const lastChunk = length < memory
                     const chunkPartial = lastChunk ? partial : 1
 
@@ -641,21 +649,16 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
 
     const decode = decoderFactory(options)
 
-    const toString = (m: PrimitiveMeta<string>, context: JsonParsingContext, index: number, depth: number): ReadResult<string> => {
-        const reader = context.reader
-        const stack = context.stack
+    const toString = (m: PrimitiveMeta<string>, context: JsonParsingContext, i: number, depth: number): ReadResult<string> => {
+        const { reader: { bytes: b, bytesLength, writable }, stack } = context
 
         const state = stack.pop()
-
-        let isContinued: boolean = state?.isContinued ?? false
-        let base: string = state?.base ?? ''
-
-        const b = reader.bytes
-        let i = index
+        const isContinued: boolean = state?.isContinued ?? false
+        const base: string = state?.base ?? ''
 
         if (!isContinued) {
             if (b[i] !== DQ) {
-                if (i >= b.length && reader.writable) {
+                if (i >= bytesLength && writable) {
                     return {
                         type: NEEDS_MORE_DATA,
                         nextIndex: i
