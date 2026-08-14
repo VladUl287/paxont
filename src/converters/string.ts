@@ -279,14 +279,16 @@ export function createStringParser(options: ParserOptions) {
                     }
 
                     const b = reader.bytes
+                    const bLength = reader.bytesLength
                     const partial = Number(reader.writable)
 
-                    const max_length = (b.length - i) * 3
+                    const max_length = (bLength - i) * 3
 
                     if (ensureMemory(memory, max_length, setView)) {
                         let start = 0
+
                         if (b !== setted) {
-                            memoryView.set(new Uint8Array(b.buffer, i, b.length - i))
+                            memoryView.set(new Uint8Array(b.buffer, i, bLength - i))
                             settedStart = i
                             setted = b
                         }
@@ -294,7 +296,7 @@ export function createStringParser(options: ParserOptions) {
                             start = i - settedStart
                         }
 
-                        const end_index = utf8_to_utf16(start, b.length - settedStart, b.length - settedStart + 1, partial)
+                        const end_index = utf8_to_utf16(start, bLength - settedStart, bLength - settedStart + 1, partial)
                         if (end_index < 0) {
                             return {
                                 type: ERROR,
@@ -338,8 +340,8 @@ export function createStringParser(options: ParserOptions) {
 
                         const utf16_end = get_utf16_length()
                         const result = base.length === 0 ?
-                            utf16(b.length - settedStart + 1, utf16_end) :
-                            base.concat(utf16(b.length - settedStart + 1, utf16_end))
+                            utf16(bLength - settedStart + 1, utf16_end) :
+                            base.concat(utf16(bLength - settedStart + 1, utf16_end))
                         return {
                             type: COMPLETE,
                             value: result,
