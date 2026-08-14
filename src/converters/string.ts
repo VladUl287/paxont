@@ -24,7 +24,7 @@ export const defaultParseOptions: ParserOptions = {
             return (start, end) => {
                 const length = end - start
                 if (length <= 64) {
-                    const factory = (factories[length / 2] ??= genUnrolledFromCharCode16LE(length))
+                    const factory = (factories16[length / 2] ??= genUnrolledFromCharCode16LE(length))
                     return factory(buffer, start)
                 }
                 return buffer.toString('utf16le', start, end)
@@ -35,7 +35,7 @@ export const defaultParseOptions: ParserOptions = {
             return (start, end) => {
                 const length = end - start
                 if (length <= 64) {
-                    const factory = (factories[length / 2] ??= genUnrolledFromCharCode16LE(length))
+                    const factory = (factories16[length / 2] ??= genUnrolledFromCharCode16LE(length))
                     return factory(bytes, start)
                 }
                 return unsafeDecoder16.decode(new Uint8Array(bytes.buffer, start, end - start))
