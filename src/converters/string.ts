@@ -171,18 +171,12 @@ export function createStringParser(options: ParserOptions) {
             }
 
             while (byteIndex < i) {
-                const byte = b[byteIndex]
-                if ((byte & 0xC0) !== 0x80) {
+                if ((b[byteIndex++] & 192) !== 128) {
                     charIndex++
                 }
-                byteIndex++
             }
 
             const startIndex = charIndex
-
-            if (byteIndex !== i) {
-                throw new Error()
-            }
 
             while (byteIndex <= b.length - 4) {
                 const word = (b[byteIndex] | b[byteIndex + 1] << 8 | b[byteIndex + 2] << 16 | b[byteIndex + 3] << 24)
@@ -198,11 +192,9 @@ export function createStringParser(options: ParserOptions) {
             }
 
             while (b[byteIndex] !== DOUBLE_QUOTE) {
-                const byte = b[byteIndex]
-                if ((byte & 192) !== 128) {
+                if ((b[byteIndex++] & 192) !== 128) {
                     charIndex++
                 }
-                byteIndex++
             }
 
             if (reader.sparseIndex) {
