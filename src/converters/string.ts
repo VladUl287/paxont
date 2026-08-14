@@ -160,6 +160,7 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
             ]), { memory })
 
             const utf8_scan = utf8ScanModule?.utf8_scan
+            const utf8_scan_exact = utf8ScanModule?.utf8_scan_exact
             const chars_count = utf8ScanModule?.chars_count
 
             return ({ reader }: JsonParsingContext, i: number): ReadResult<string> => {
@@ -168,7 +169,7 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                 if (raw === undefined) {
                     return {
                         type: ERROR,
-                        error: new JSONParseError("")
+                        error: new JSONParseError("string not presented")
                     }
                 }
 
@@ -188,24 +189,40 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                 }
 
                 if (utf8ScanModule !== undefined && ensureMemory(memory, bytesLength, setView)) {
+                    let start = 0
+                    let end = i
+
                     if (cacheView !== b) {
-                        memoryView.set(new Uint8Array(b.buffer, 0, reader.bytesLength))
-                        cacheViewStart = 0
+                        memoryView.set(new Uint8Array(b.buffer, bI, bytesLength))
+                        cacheViewStart = bI
                         cacheView = b
+                        end = i - bI
                         reader.onRelease(clearCache)
                     }
+                    else {
+                        start = bI - cacheViewStart
+                        end = i - cacheViewStart
+                    }
 
-                    const last = utf8_scan!(bI, i, 1)
+                    bI += utf8_scan_exact!(start, end)
                     cI += chars_count!()
 
                     const charStartIndex = cI
 
-                    bI = utf8_scan!(last, reader.bytesLength, 0)
+                    const end_index = utf8_scan!(end, bytesLength)
+                    if (end_index === -1) {
+                        return {
+                            type: ERROR,
+                            error: new JSONParseError("end of string not found")
+                        }
+                    }
+
+                    bI += end_index
                     cI += chars_count!()
 
-                    if (reader.sparseIndex) {
-                        reader.sparseIndex.charIndex = cI
-                        reader.sparseIndex.byteIndex = bI
+                    if (sparseIndex) {
+                        sparseIndex.charIndex = cI + 1
+                        sparseIndex.byteIndex = bI + 1
                     }
 
                     return {
