@@ -551,21 +551,21 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
             while (i >= 0 && isContinuationByte(b[i])) { i-- }
             if (i < 0) return 0
 
-            const byte = b[i]
+            let byte = b[i]
             if (byte < 128) { return i }
 
-            const startByte = (b[i] - 194) >>> 0
-            if (startByte < 30) {
+            byte = (b[i] - 194) >>> 0
+            if (byte < 30) {
                 if (i + 1 <= len) { return i + 1 }
                 return i - 1
             }
 
-            if (startByte < 46) {
+            if (byte < 46) {
                 if (i + 2 <= len) { return i + 2 }
                 return i - 1
             }
 
-            if (startByte < 50) {
+            if (byte < 50) {
                 if (i + 3 <= len) { return i + 3 }
                 return i - 1
             }
@@ -574,14 +574,18 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
         }
 
         function decodeBytes(base: string, ctx: JsonParsingContext, i: number): ReadResult<string> {
-            const { reader: { bytes: b, bytesLength, writable }, stack, options } = ctx
+            const { reader: { bytes: b, bytesLength, raw, writable }, stack, options } = ctx
+
+            if (raw) {
+                return decodeString(ctx, i)
+            }
 
             const utf8 = options.decoder
             const end_index = findEnd(b, bytesLength, i)
 
             if (end_index < 0) {
                 if (writable) {
-                    const end_index = findLastChar(b, bytesLength - 1) + 1
+                    const end_index = findLastChar(b, bytesLength)
                     stack.push({
                         isContinued: true,
                         base: base.length === 0 ?
