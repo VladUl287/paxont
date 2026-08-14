@@ -120,6 +120,25 @@ export function createStringParser(options: ParserOptions) {
     const MAX_MEMORY = PAGE_SIZE_BYTES * maxWasmMemoryPages
 
     const decoderFactory = (opt: ParserOptions) => {
+        const rawModule = wasmInstance<{
+            readonly memory: WebAssembly.Memory
+            readonly dq_index: () => number
+            readonly chars_count: () => number
+            readonly utf8_scan: (start: number, length: number, exact: number, partial: number) => number
+        }>(new Uint8Array([
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 19, 3, 96, 0, 1, 127, 96, 4, 127, 127, 127, 127, 1, 127, 96, 2, 127, 127, 1, 127, 2, 17, 1, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 1, 1, 128, 1, 3, 5, 4, 0, 0, 1, 2, 6, 11, 2, 127, 1, 65, 0, 11, 127, 1, 65, 127, 11, 7, 47, 4, 6, 109, 101, 109, 111, 114, 121, 2, 0, 11, 99, 104, 97, 114, 115, 95, 99, 111, 117, 110, 116, 0, 0, 8, 100, 113, 95, 105, 110, 100, 101, 120, 0, 1, 9, 117, 116, 102, 56, 95, 115, 99, 97, 110, 0, 2, 10, 208, 2, 4, 4, 0, 35, 0, 11, 4, 0, 35, 1, 11, 215, 1, 2, 4, 123, 2, 127, 65, 127, 36, 1, 65, 34, 253, 15, 33, 7, 65, 128, 1, 253, 15, 33, 4, 65, 192, 1, 253, 15, 33, 5, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 6, 32, 2, 69, 4, 64, 32, 6, 32, 7, 253, 35, 253, 100, 4, 64, 32, 0, 32, 0, 65, 16, 106, 16, 3, 34, 9, 65, 0, 78, 4, 64, 32, 8, 36, 0, 32, 9, 15, 11, 11, 11, 32, 6, 32, 5, 253, 78, 33, 6, 32, 6, 32, 4, 253, 35, 33, 6, 32, 8, 65, 16, 32, 6, 253, 100, 105, 107, 106, 33, 8, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 9, 32, 2, 69, 4, 64, 32, 9, 65, 34, 70, 32, 0, 32, 0, 16, 3, 34, 9, 65, 0, 78, 113, 4, 64, 12, 3, 11, 11, 32, 8, 32, 9, 65, 192, 1, 113, 65, 128, 1, 71, 106, 33, 8, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 32, 8, 36, 0, 32, 0, 15, 11, 107, 1, 4, 127, 32, 0, 33, 2, 2, 64, 3, 64, 32, 0, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 3, 32, 3, 65, 34, 70, 4, 64, 32, 0, 33, 4, 65, 0, 33, 5, 2, 64, 3, 64, 32, 4, 65, 1, 107, 33, 4, 32, 4, 32, 2, 72, 13, 1, 32, 4, 45, 0, 0, 65, 220, 0, 71, 13, 1, 32, 5, 69, 33, 5, 12, 0, 11, 11, 32, 5, 69, 4, 64, 32, 0, 36, 1, 32, 0, 15, 11, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11
+        ]), { memory })
+
+        const utf8_scan = rawModule!.utf8_scan
+        const chars_count = rawModule!.chars_count
+
+        let setted: Uint8Array | undefined
+
+        const memview = new Uint8Array(memory.buffer)
+
+        const isAscii = new Uint8Array(256);
+        for (let i = 0; i < 128; i++) isAscii[i] = 1;
+
         const decodeFromString = (base: string, { reader, stack }: JsonParsingContext, i: number): ReadResult<string> => {
             const { bytes: b, bytesLength: length, writable, raw, sparseIndex } = reader
 
@@ -153,6 +172,39 @@ export function createStringParser(options: ParserOptions) {
                     type: COMPLETE,
                     value: raw.substring(i, j),
                     nextIndex: j + 1
+                }
+            }
+
+            if (rawModule) {
+                let charIndex = sparseIndex?.charIndex ?? 0
+                let byteIndex = sparseIndex?.byteIndex ?? 0
+
+                if (setted !== b) {
+                    memoryView.set(new Uint8Array(b.buffer, 0, reader.bytesLength))
+                    setted = b
+                    reader.onRelease(() => {
+                        setted = undefined
+                    })
+                }
+
+                const last = utf8_scan(byteIndex, i, 1, 0)
+                charIndex += chars_count()
+
+                const startIndex = charIndex
+
+                byteIndex = utf8_scan(last, reader.bytesLength, 0, 0)
+                charIndex += chars_count()
+
+                if (reader.sparseIndex) {
+                    reader.sparseIndex.charIndex = charIndex
+                    reader.sparseIndex.byteIndex = byteIndex
+                }
+
+                const result = raw.substring(startIndex, charIndex)
+                return {
+                    type: COMPLETE,
+                    value: result,
+                    nextIndex: byteIndex + 1
                 }
             }
 
