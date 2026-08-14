@@ -313,7 +313,7 @@ export function createStringParser(options: ParserOptions) {
                                     isContinued: true,
                                     base: base.concat(ascii_only ?
                                         utf8(0, end_index, ascii_only) :
-                                        utf16(length + 1, get_utf16_length()))
+                                        utf16(bLength - settedStart + 1, get_utf16_length()))
                                 })
                                 return {
                                     type: NEEDS_MORE_DATA,
@@ -327,23 +327,21 @@ export function createStringParser(options: ParserOptions) {
                         }
 
                         if (ascii_only) {
-                            const result = base.length === 0 ?
-                                utf8(start, end_index, ascii_only) :
-                                base.concat(utf8(start, end_index, ascii_only))
                             return {
                                 type: COMPLETE,
-                                value: result,
+                                value: base.length === 0 ?
+                                    utf8(start, end_index, ascii_only) :
+                                    base.concat(utf8(start, end_index, ascii_only)),
                                 nextIndex: i + 1
                             }
                         }
 
                         const utf16_end = get_utf16_length()
-                        const result = base.length === 0 ?
-                            utf16(bLength - settedStart + 1, utf16_end) :
-                            base.concat(utf16(bLength - settedStart + 1, utf16_end))
                         return {
                             type: COMPLETE,
-                            value: result,
+                            value: base.length === 0 ?
+                                utf16(bLength - settedStart + 1, utf16_end) :
+                                base.concat(utf16(bLength - settedStart + 1, utf16_end)),
                             nextIndex: i + 1
                         }
                     }
@@ -352,7 +350,7 @@ export function createStringParser(options: ParserOptions) {
 
                     while (true) {
                         const memory = Math.floor(MAX_MEMORY / 3)
-                        const length = Math.min(memory, b.length - i)
+                        const length = Math.min(memory, bLength - i)
                         const lastChunk = length < memory
                         const chunkPartial = lastChunk ? partial : 1
 
@@ -429,9 +427,10 @@ export function createStringParser(options: ParserOptions) {
 
             return (base: string, { reader, stack }: JsonParsingContext, i: number): ReadResult<string> => {
                 const b = reader.bytes
+                const bLength = reader.bytesLength
                 const partial = Number(reader.writable)
 
-                let end = b.length
+                let end = bLength
                 let length = end - i
 
                 if (ensureMemory(memory, length, setView)) {
@@ -481,7 +480,7 @@ export function createStringParser(options: ParserOptions) {
 
                 while (true) {
                     const memory = Math.floor(MAX_MEMORY / 3)
-                    const length = Math.min(memory, b.length - i)
+                    const length = Math.min(memory, bLength - i)
                     const lastChunk = length < memory
                     const chunkPartial = lastChunk ? partial : 1
 
