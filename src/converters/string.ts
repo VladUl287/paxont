@@ -97,7 +97,7 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
     }
 
     const decoderFactory = (opt: StringParseOptions) => {
-        function stringDecoderFactory(memory: WebAssembly.Memory) {
+        function sparseDecoderFactory(memory: WebAssembly.Memory) {
             const decodeSparse = (reader: JsonReader, i: number): ReadResult<string> => {
                 const { bytes: b, bytesLength, raw, sparseIndex } = reader
 
@@ -218,7 +218,7 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
             }
         }
 
-        const decodeString = stringDecoderFactory(memory)
+        const decodeString = sparseDecoderFactory(memory)
 
         if (opt.useUtf16) {
             const utf16Module = wasmInstance<utf16Module>(new Uint8Array([
