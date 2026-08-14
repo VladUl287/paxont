@@ -116,7 +116,7 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                     const a2 = b[bI + 4] | b[bI + 5] << 8 | b[bI + 6] << 16 | b[bI + 7] << 24
                     const count1 = ((a1 & 0x80808080) * 0x01010101) >>> 24
                     const count2 = ((a2 & 0x80808080) * 0x01010101) >>> 24
-                    cI += 8 - count1 + count2
+                    cI += 8 - count1 - count2
                     bI += 8
                 }
 
@@ -138,13 +138,14 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                     bI += 4
                 }
 
-                while (bI <= bytesLength && b[bI] !== DOUBLE_QUOTE) {
+                while (bI <= bytesLength) {
+                    if (b[bI] === DOUBLE_QUOTE && !isEscaped(b, i - 1)) { break }
                     if ((b[bI++] & 192) !== 128) { cI++ }
                 }
 
-                if (reader.sparseIndex) {
-                    reader.sparseIndex.charIndex = cI
-                    reader.sparseIndex.byteIndex = bI
+                if (sparseIndex) {
+                    sparseIndex.charIndex = cI
+                    sparseIndex.byteIndex = bI
                 }
 
                 return {
