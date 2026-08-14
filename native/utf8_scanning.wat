@@ -6,7 +6,7 @@
   (func (export "chars_count") (result i32)
     (global.get $chars_count))
 
-  (func (export "utf8_scan") (param $i i32) (param $end i32) (param $exact i32) (result i32)
+  (func (export "utf8_scan") (param $i i32) (param $end i32) (result i32)
     (local $mask v128)
     (local $mask1 v128)
     (local $cmp v128)
@@ -24,18 +24,15 @@
 
         (local.set $cmp (v128.load (local.get $i)))
 
-        (if (i32.eqz (local.get $exact))
+        (if (i8x16.bitmask (i8x16.eq (local.get $cmp) (local.get $quote_vec)))
           (then
-            (if (i8x16.bitmask (i8x16.eq (local.get $cmp) (local.get $quote_vec)))
+            (if (i32.ge_s
+              (local.tee $temp (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (i32.const 16))))
+              (i32.const 0))
               (then
-                (if (i32.ge_s
-                  (local.tee $temp (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (i32.const 16))))
-                  (i32.const 0))
-                  (then
-                    (global.set $chars_count (local.get $chars_count))
-                    (return (local.get $temp)))
-                )
-              ))
+                (global.set $chars_count (local.get $chars_count))
+                (return (local.get $temp)))
+            )
           ))
 
         (local.set $cmp (v128.and (local.get $cmp) (local.get $mask1)))
@@ -53,27 +50,57 @@
 
         (local.set $temp (i32.load8_u (local.get $i)))
 
-        (if (i32.eqz (local.get $exact))
-          (then
-            (if (i32.and 
-              (i32.eq (local.get $temp) (i32.const 34))
-              (i32.ge_s 
-                (local.tee $temp (call $find_unescaped_quote (local.get $i) (local.get $i))) 
-                (i32.const 0)))
-              (then (br $scan_block)))
-          ))
+        (if (i32.and 
+          (i32.eq (local.get $temp) (i32.const 34))
+          (i32.ge_s 
+            (local.tee $temp (call $find_unescaped_quote (local.get $i) (local.get $i))) 
+            (i32.const 0)))
+          (then (br $scan_block)))
 
-          (local.set $chars_count (i32.add (local.get $chars_count) (i32.ne (i32.and (local.get $temp) (i32.const 192)) (i32.const 128))))
-          (local.set $i (i32.add (local.get $i) (i32.const 1)))
-          (br $scan_loop)
+        (local.set $chars_count (i32.add (local.get $chars_count) (i32.ne (i32.and (local.get $temp) (i32.const 192)) (i32.const 128))))
+        (local.set $i (i32.add (local.get $i) (i32.const 1)))
+        (br $scan_loop)
+      ))
+    
+    (return (i32.const -1))
+  )
+
+  (func (export "utf8_scan_exact") (param $i i32) (param $end i32) (result i32)
+    (local $mask v128)
+    (local $mask1 v128)
+    (local $cmp v128)
+    (local $chars_count i32)
+    (local $temp i32)
+
+    (local.set $mask (i8x16.splat (i32.const 128)))
+    (local.set $mask1 (i8x16.splat (i32.const 192)))
+    
+    (block $scan_block
+      (loop $scan_loop
+        (br_if $scan_block (i32.gt_u (i32.add (local.get $i) (i32.const 16)) (local.get $end)))
+
+        (local.set $cmp (v128.load (local.get $i)))
+        (local.set $cmp (v128.and (local.get $cmp) (local.get $mask1)))
+        (local.set $cmp (i8x16.eq (local.get $cmp) (local.get $mask)))
+
+        (local.set $chars_count 
+          (i32.add (local.get $chars_count) (i32.sub (i32.const 16) (i32.popcnt (i8x16.bitmask (local.get $cmp))))))
+        (local.set $i (i32.add (local.get $i) (i32.const 16)))
+        (br $scan_loop)
+      ))
+
+    (block $scan_block
+      (loop $scan_loop
+        (br_if $scan_block (i32.gt_u (i32.add (local.get $i) (i32.const 1)) (local.get $end)))
+
+        (local.set $temp (i32.load8_u (local.get $i)))
+        (local.set $chars_count (i32.add (local.get $chars_count) (i32.ne (i32.and (local.get $temp) (i32.const 192)) (i32.const 128))))
+        (local.set $i (i32.add (local.get $i) (i32.const 1)))
+        (br $scan_loop)
       ))
     
     (global.set $chars_count (local.get $chars_count))
-
-    (if (local.get $exact)
-      (then (return (local.get $i))))
-
-    (return (i32.const -1))
+    (return (local.get $i))
   )
 
   (func $find_unescaped_quote (param $i i32) (param $len i32) (result i32)
