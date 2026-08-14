@@ -291,6 +291,10 @@ export function createStringParser(options: ParserOptions) {
                             memoryView.set(new Uint8Array(b.buffer, i, bLength - i))
                             settedStart = i
                             setted = b
+                            reader.onRelease(() => {
+                                setted = undefined
+                                settedStart = 0
+                            })
                         }
                         else {
                             start = i - settedStart
