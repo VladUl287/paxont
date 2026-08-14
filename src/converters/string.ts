@@ -1,68 +1,65 @@
-import { genUnrolledFromCharCode, genUnrolledFromCharCode16 as genUnrolledFromCharCode16LE } from "../code_gen/string"
+import { genUnrolledFromCharCodeAscii, genUnrolledFromCharCode16LE } from "../code_gen/string"
 import { JsonParsingContext, PrimitiveMeta } from "../metadata/types"
-import { CURRENT_PLATFORM, isBun, isNode } from "../utils/platform"
+import { IS_BUN, IS_NODE } from "../utils/platform"
 import { ReadResult, ReadResultType } from "../utils/types"
-import { BACKSLASH, DOUBLE_QUOTE, DOUBLE_QUOTE as DQ, E } from "../utils/ascii_symbols"
+import { BACKSLASH, DOUBLE_QUOTE, DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
 import { JSONParseError } from "../utils/error"
 import { wasmInstance } from "../utils/wasm"
 
-const factories = new Array<(data: ArrayLike<number>, i: number) => string>(32)
-factories[0] = (_a, _i) => ""
-const factories16 = new Array<(data: ArrayLike<number>, i: number) => string>(32)
-factories16[0] = (_a, _i) => ""
+const fromCharCodeUnrolledAscii = new Array<(data: ArrayLike<number>, i: number) => string>(32)
+export const decodeUnrolledAscii = (b: Uint8Array, start: number, length: number): string => {
+    const factory = (fromCharCodeUnrolledAscii[length] ??= genUnrolledFromCharCodeAscii(length))
+    return factory(b, start)
+}
+
+const fromCharCodeUnrolled16LE = new Array<(data: ArrayLike<number>, i: number) => string>(32)
+export const decodeUnrolled16LE = (b: Uint8Array, start: number, length: number): string => {
+    const factory = (fromCharCodeUnrolled16LE[length / 2] ??= genUnrolledFromCharCode16LE(length))
+    return factory(b, start)
+}
 
 export const defaultParseOptions: ParserOptions = {
-    initialWasmMemoryPages: 1, //~64KiB
-    maxWasmMemoryPages: 128, //~8MiB,
-    useUtf16: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM),
-
+    defaultMemoryPages: 1, //~64KiB
+    maxMemoryPages: 128, //~8MiB,
     wasmInstance,
 
-    newUtf16: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM) ?
+    useUtf16: IS_NODE || IS_BUN,
+    newUtf16: IS_NODE || IS_BUN ?
         (bytes: Uint8Array) => {
             const buffer = Buffer.from(bytes.buffer)
             return (start, end) => {
                 const length = end - start
-                if (length <= 64) {
-                    const factory = (factories16[length / 2] ??= genUnrolledFromCharCode16LE(length))
-                    return factory(buffer, start)
-                }
-                return buffer.toString('utf16le', start, end)
+                return length <= 64 ?
+                    decodeUnrolled16LE(buffer, start, length) :
+                    buffer.toString('utf-16le', start, end)
             }
         } :
         (bytes: Uint8Array) => {
             const unsafeDecoder16 = new TextDecoder('utf-16le', { fatal: false })
             return (start, end) => {
                 const length = end - start
-                if (length <= 64) {
-                    const factory = (factories16[length / 2] ??= genUnrolledFromCharCode16LE(length))
-                    return factory(bytes, start)
-                }
-                return unsafeDecoder16.decode(new Uint8Array(bytes.buffer, start, end - start))
+                return length <= 64 ?
+                    decodeUnrolled16LE(bytes, start, length) :
+                    unsafeDecoder16.decode(new Uint8Array(bytes.buffer, start, end - start))
             }
         },
-
-    newUtf8: isNode(CURRENT_PLATFORM) || isBun(CURRENT_PLATFORM) ?
+    newUtf8: IS_NODE || IS_BUN ?
         (bytes: Uint8Array) => {
             const buffer = Buffer.from(bytes.buffer)
             return (start, end, ascii_only = false) => {
                 const length = end - start
-                if (ascii_only && length <= 32) {
-                    const factory = (factories[length] ??= genUnrolledFromCharCode(length))
-                    return factory(buffer, start)
-                }
-                return buffer.toString('utf8', start, end)
+                return ascii_only && length <= 32 ?
+                    decodeUnrolledAscii(bytes, start, end) :
+                    buffer.toString('utf8', start, end)
             }
         } :
         (bytes: Uint8Array) => {
             const unsafeDecoder8 = new TextDecoder('utf-8', { fatal: false })
             return (start, end, ascii_only = false) => {
                 const length = end - start
-                if (ascii_only && length <= 32) {
-                    const factory = (factories[length] ??= genUnrolledFromCharCode(length))
-                    return factory(bytes, start)
-                }
-                return unsafeDecoder8.decode(new Uint8Array(bytes.buffer, start, end - start))
+                return ascii_only && length <= 32 ?
+                    decodeUnrolledAscii(bytes, start, length) :
+                    unsafeDecoder8.decode(new Uint8Array(bytes.buffer, start, length))
             }
         }
 }
@@ -88,15 +85,15 @@ type UTF16Module = {
 
 type ParserOptions = {
     readonly wasmInstance: typeof wasmInstance
-    readonly maxWasmMemoryPages: number
-    readonly initialWasmMemoryPages: number
+    readonly maxMemoryPages: number
+    readonly defaultMemoryPages: number
     readonly useUtf16: boolean,
     readonly newUtf16: (bytes: Uint8Array) => (start: number, end: number, ascii_only?: boolean) => string,
     readonly newUtf8: (bytes: Uint8Array) => (start: number, end: number, ascii_only?: boolean) => string
 }
 
 export function createStringParser(options: ParserOptions) {
-    const { initialWasmMemoryPages, maxWasmMemoryPages, newUtf8, newUtf16, wasmInstance } = options
+    const { defaultMemoryPages: initialWasmMemoryPages, maxMemoryPages: maxWasmMemoryPages, newUtf8, newUtf16, wasmInstance } = options
 
     const memory = new WebAssembly.Memory({
         initial: initialWasmMemoryPages,

@@ -3,7 +3,7 @@ import { isComplete, ReadResult, ReadResultType } from "../../utils/types"
 import { JsonParsingContext, PrimitiveMeta } from "../../metadata/types"
 import { isDigitU } from "../../utils/ascii"
 import { float64, FloatFormat } from "./floatFormats"
-import { genUnrolledFromCharCode } from "../../code_gen/string"
+import { genUnrolledFromCharCodeAscii } from "../../code_gen/string"
 import { wasmInstance } from "../../utils/wasm"
 import { clz, isGreaterThan, isGreaterThanOrEqual, isLessThan, shiftLeft, shiftRight } from "../../utils/long_bitwise"
 import { splitTo64 } from "../../utils/bigint"
@@ -135,7 +135,7 @@ export function tryParseFloat({ reader, options }: JsonParsingContext, i: number
     const length = i - start
 
     if (length <= 64) {
-        const factory = (factories[length] ??= genUnrolledFromCharCode(length))
+        const factory = (factories[length] ??= genUnrolledFromCharCodeAscii(length))
         return {
             type: COMPLETE,
             value: Number(factory(b, start)),
