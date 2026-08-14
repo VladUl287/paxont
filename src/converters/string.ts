@@ -7,6 +7,10 @@ import { JSONParseError } from "../utils/error"
 import { wasmInstance } from "../utils/wasm"
 import { StringParseOptions, utf16Module, utf8Module, utf8ScanModule } from "./types/string"
 
+const ERROR = ReadResultType.ERROR
+const COMPLETE = ReadResultType.COMPLETE
+const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
+
 const fromCharCodeUnrolledAscii = new Array<(data: ArrayLike<number>, i: number) => string>(32)
 export const decodeUnrolledAscii = (b: Uint8Array, start: number, length: number): string => {
     const factory = (fromCharCodeUnrolledAscii[length] ??= genUnrolledFromCharCodeAscii(length))
@@ -64,10 +68,6 @@ export const defaultStringParserOptions: StringParseOptions = Object.freeze({
             }
         }
 })
-
-const ERROR = ReadResultType.ERROR
-const COMPLETE = ReadResultType.COMPLETE
-const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function stringParser(options: StringParseOptions = defaultStringParserOptions) {
     const { defaultMemoryPages, maxMemoryPages, newUtf8, newUtf16, wasmInstance } = options
