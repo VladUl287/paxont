@@ -140,7 +140,7 @@ export function createStringParser(options: ParserOptions) {
         for (let i = 0; i < 128; i++) isAscii[i] = 1;
 
         const decodeFromString = (base: string, { reader, stack }: JsonParsingContext, i: number): ReadResult<string> => {
-            const { bytes: b, bytesLength: length, writable, raw, sparseIndex } = reader
+            const { bytes: b, bytesLength, writable, raw, sparseIndex } = reader
 
             if (!raw) {
                 return {
@@ -149,7 +149,11 @@ export function createStringParser(options: ParserOptions) {
                 }
             }
 
-            const ascii_only = raw.length === length //check if we aligned with previous parsing
+            let charIndex = sparseIndex?.charIndex ?? 0
+            let byteIndex = sparseIndex?.byteIndex ?? 0
+
+            const differenece = byteIndex - charIndex
+            const ascii_only = raw.length === bytesLength || (bytesLength - raw.length === differenece)
 
             if (ascii_only) {
                 let j = i
@@ -164,21 +168,18 @@ export function createStringParser(options: ParserOptions) {
                     j += 4
                 }
 
-                while (b[j] !== DOUBLE_QUOTE) {
+                while (j < b.length && b[j] !== DOUBLE_QUOTE) {
                     j++
                 }
 
                 return {
                     type: COMPLETE,
-                    value: raw.substring(i, j),
+                    value: raw.substring(i - differenece, j - differenece),
                     nextIndex: j + 1
                 }
             }
 
             if (rawModule) {
-                let charIndex = sparseIndex?.charIndex ?? 0
-                let byteIndex = sparseIndex?.byteIndex ?? 0
-
                 if (setted !== b) {
                     memoryView.set(new Uint8Array(b.buffer, 0, reader.bytesLength))
                     setted = b
@@ -207,9 +208,6 @@ export function createStringParser(options: ParserOptions) {
                     nextIndex: byteIndex + 1
                 }
             }
-
-            let charIndex = sparseIndex?.charIndex ?? 0
-            let byteIndex = sparseIndex?.byteIndex ?? 0
 
             while (byteIndex <= i - 8) {
                 const word1 = b[byteIndex] | b[byteIndex + 1] << 8 | b[byteIndex + 2] << 16 | b[byteIndex + 3] << 24
