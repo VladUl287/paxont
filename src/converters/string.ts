@@ -184,28 +184,22 @@ export function createStringParser(options: ParserOptions) {
                 throw new Error()
             }
 
-            while (byteIndex <= b.length - 8) {
-                const word1 = b[byteIndex] | b[byteIndex + 1] << 8 | b[byteIndex + 2] << 16 | b[byteIndex + 3] << 24
-                const word2 = b[byteIndex + 4] | b[byteIndex + 5] << 8 | b[byteIndex + 6] << 16 | b[byteIndex + 7] << 24
+            while (byteIndex <= b.length - 4) {
+                const word = (b[byteIndex] | b[byteIndex + 1] << 8 | b[byteIndex + 2] << 16 | b[byteIndex + 3] << 24)
 
-                const xor = word1 ^ 0x22222222
-                const xor1 = word2 ^ 0x22222222
-
-                const has1 = ((xor - 0x01010101) & (~xor) & 0x80808080)
-                const has2 = ((xor1 - 0x01010101) & (~xor1) & 0x80808080)
-                if ((has1 | has2) !== 0) {
+                const xor = word ^ 0x22222222
+                if (((xor - 0x01010101) & (~xor) & 0x80808080) !== 0) {
                     break
                 }
 
-                const contCount1 = ((word1 & 0x80808080) * 0x01010101) >>> 24
-                const contCount2 = ((word2 & 0x80808080) * 0x01010101) >>> 24
-                charIndex += 8 - contCount1 - contCount2
-                byteIndex += 8
+                const contCount = ((word & 0x80808080) * 0x01010101) >>> 24
+                charIndex += 4 - contCount
+                byteIndex += 4
             }
 
             while (b[byteIndex] !== DOUBLE_QUOTE) {
                 const byte = b[byteIndex]
-                if ((byte & 0xC0) !== 0x80) {
+                if ((byte & 192) !== 128) {
                     charIndex++
                 }
                 byteIndex++
