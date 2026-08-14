@@ -145,7 +145,7 @@ export function createStringParser(options: ParserOptions) {
                     j += 4
                 }
 
-                while (raw[j] !== '"') {
+                while (b[j] !== DOUBLE_QUOTE) {
                     j++
                 }
 
