@@ -98,10 +98,10 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
 
     const decoderFactory = (opt: StringParseOptions) => {
         function stringDecoderFactory(memory: WebAssembly.Memory) {
-            const decode = (reader: JsonReader, i: number): ReadResult<string> => {
+            const decodeSparse = (reader: JsonReader, i: number): ReadResult<string> => {
                 const { bytes: b, bytesLength, raw, sparseIndex } = reader
 
-                if (!raw) {
+                if (raw === undefined) {
                     return {
                         type: ERROR,
                         error: new JSONParseError("")
@@ -161,81 +161,64 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
             const utf8_scan = utf8ScanModule?.utf8_scan
             const chars_count = utf8ScanModule?.chars_count
 
-            return (context: JsonParsingContext, i: number): ReadResult<string> => {
-                const { reader } = context
-                const { bytes, bytesLength, raw, sparseIndex } = reader
+            return ({ reader }: JsonParsingContext, i: number): ReadResult<string> => {
+                const { bytes: b, bytesLength, raw, sparseIndex } = reader
 
-                if (!raw) {
+                if (raw === undefined) {
                     return {
                         type: ERROR,
                         error: new JSONParseError("")
                     }
                 }
 
-                let charIndex = sparseIndex?.charIndex ?? 0
-                let byteIndex = sparseIndex?.byteIndex ?? 0
+                let cI = sparseIndex?.charIndex ?? 0
+                let bI = sparseIndex?.byteIndex ?? 0
 
-                const differenece = byteIndex - charIndex
-                const ascii_only = raw.length === bytesLength || (bytesLength - raw.length === differenece)
+                const diff = bI - cI
+                const ascii_only = raw.length === bytesLength || (bytesLength - raw.length === diff)
 
                 if (ascii_only) {
-                    let j = i
-
-                    while (j <= bytes.length - 4) {
-                        const word = (bytes[j] | bytes[j + 1] << 8 | bytes[j + 2] << 16 | bytes[j + 3] << 24) ^ 0x22222222
-
-                        if (((word - 0x01010101) & (~word) & 0x80808080) !== 0) {
-                            break
-                        }
-
-                        j += 4
-                    }
-
-                    while (j < bytes.length && bytes[j] !== DOUBLE_QUOTE) {
-                        j++
-                    }
-
+                    const j = findEnd(b, bytesLength, i)
                     return {
                         type: COMPLETE,
-                        value: raw.substring(i - differenece, j - differenece),
+                        value: raw.substring(i - diff, j - diff),
                         nextIndex: j + 1
                     }
                 }
 
-                if (utf8ScanModule !== undefined && ensureMemory(memory, reader.bytesLength, setView)) {
-                    if (cacheView !== bytes) {
-                        memoryView.set(new Uint8Array(bytes.buffer, 0, reader.bytesLength))
+                if (utf8ScanModule !== undefined && ensureMemory(memory, bytesLength, setView)) {
+                    if (cacheView !== b) {
+                        memoryView.set(new Uint8Array(b.buffer, 0, reader.bytesLength))
                         cacheViewStart = 0
-                        cacheView = bytes
+                        cacheView = b
                         reader.onRelease(clearCache)
                     }
 
-                    const last = utf8_scan!(byteIndex, i, 1)
-                    charIndex += chars_count!()
+                    const last = utf8_scan!(bI, i, 1)
+                    cI += chars_count!()
 
-                    const startIndex = charIndex
+                    const charStartIndex = cI
 
-                    byteIndex = utf8_scan!(last, reader.bytesLength, 0)
-                    charIndex += chars_count!()
+                    bI = utf8_scan!(last, reader.bytesLength, 0)
+                    cI += chars_count!()
 
                     if (reader.sparseIndex) {
-                        reader.sparseIndex.charIndex = charIndex
-                        reader.sparseIndex.byteIndex = byteIndex
+                        reader.sparseIndex.charIndex = cI
+                        reader.sparseIndex.byteIndex = bI
                     }
 
-                    const result = raw.substring(startIndex, charIndex)
                     return {
                         type: COMPLETE,
-                        value: result,
-                        nextIndex: byteIndex + 1
+                        value: raw.substring(charStartIndex, cI),
+                        nextIndex: bI + 1
                     }
                 }
 
-                return decode(reader, i)
+                return decodeSparse(reader, i)
             }
         }
 
-        const decodeFromString = stringDecoderFactory(memory)
+        const decodeString = stringDecoderFactory(memory)
 
         if (opt.useUtf16) {
             const utf16Module = wasmInstance<utf16Module>(new Uint8Array([
@@ -252,7 +235,7 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                     const { reader, stack } = context
 
                     if (reader.raw) {
-                        return decodeFromString(context, i)
+                        return decodeString(context, i)
                     }
 
                     const b = reader.bytes
@@ -509,37 +492,38 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
             }
         }
 
-        function findEndOfString(b: Uint8Array, len: number, i: number): number {
-            function isEscaped(b: Uint8Array, i: number): boolean {
-                let escaped = false
-                while (b[i] === BACKSLASH) {
-                    escaped = !escaped
-                    i--
-                }
-                return escaped
+        function isEscaped(b: Uint8Array, i: number): boolean {
+            let escaped = false
+            while (b[i] === BACKSLASH) {
+                escaped = !escaped
+                i--
             }
+            return escaped
+        }
 
-            while (i < b.length - 4) {
-                const word = (b[i] | b[i + 1] << 8 | b[i + 2] << 16 | b[i + 3] << 24) ^ 0x22222222
+        function findEnd(b: Uint8Array, len: number, i: number): number {
+            while (i <= len - 4) {
+                const a1 = (b[i] | b[i + 1] << 8 | b[i + 2] << 16 | b[i + 3] << 24) ^ 0x22222222
 
-                if (((word - 0x01010101) & (~word) & 0x80808080) !== 0) {
+                if (((a1 - 0x01010101) & (~a1) & 0x80808080) !== 0)
                     break
-                }
 
                 i += 4
             }
 
             while (i < len) {
-                if (b[i] === DQ && !isEscaped(b, i - 1)) {
+                if (b[i] === DQ) {
+                    if (isEscaped(b, i - 1)) {
+                        return findEnd(b, len, i)
+                    }
                     return i
                 }
                 i++
             }
-
             return -1
         }
 
-        function getLastCharIndex(b: Uint8Array, i: number): number {
+        function findLastChar(b: Uint8Array, i: number): number {
             function isContinuationByte(b: number) {
                 return ((b - 128) >>> 0) < 64
             }
@@ -571,23 +555,24 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
             return 0
         }
 
-        function decode(base: string, { reader, stack, options }: JsonParsingContext, i: number): ReadResult<string> {
-            const b = reader.bytes
+        function decodeBytes(base: string, ctx: JsonParsingContext, i: number): ReadResult<string> {
+            const { reader: { bytes: b, bytesLength, writable }, stack, options } = ctx
+
             const utf8 = options.decoder
-            const end_index = findEndOfString(b, reader.bytesLength, i)
+            const end_index = findEnd(b, bytesLength, i)
 
             if (end_index < 0) {
-                if (reader.writable) {
-                    const lastCharIndex = getLastCharIndex(b, b.length - 1) + 1
+                if (writable) {
+                    const end_index = findLastChar(b, bytesLength - 1) + 1
                     stack.push({
                         isContinued: true,
                         base: base.length === 0 ?
-                            utf8.decode(new Uint8Array(b.buffer, i, lastCharIndex - i)) :
-                            base.concat(utf8.decode(new Uint8Array(b.buffer, i, lastCharIndex - i)))
+                            utf8.decode(new Uint8Array(b.buffer, i, end_index - i)) :
+                            base.concat(utf8.decode(new Uint8Array(b.buffer, i, end_index - i)))
                     })
                     return {
                         type: NEEDS_MORE_DATA,
-                        nextIndex: lastCharIndex
+                        nextIndex: end_index
                     }
                 }
                 return {
@@ -605,7 +590,7 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
             }
         }
 
-        return decode
+        return decodeBytes
     }
 
     const ensureMemory = (memory: WebAssembly.Memory, reqLength: number, onGrow: (memory: WebAssembly.Memory) => void): boolean => {
