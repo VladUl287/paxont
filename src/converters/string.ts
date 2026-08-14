@@ -139,8 +139,8 @@ export function createStringParser(options: ParserOptions) {
         const isAscii = new Uint8Array(256);
         for (let i = 0; i < 128; i++) isAscii[i] = 1;
 
-        const decodeFromString = (base: string, { reader, stack }: JsonParsingContext, i: number): ReadResult<string> => {
-            const { bytes: b, bytesLength, writable, raw, sparseIndex } = reader
+        const decodeFromString = ({ reader }: JsonParsingContext, i: number): ReadResult<string> => {
+            const { bytes: b, bytesLength, raw, sparseIndex } = reader
 
             if (!raw) {
                 return {
@@ -179,7 +179,7 @@ export function createStringParser(options: ParserOptions) {
                 }
             }
 
-            if (rawModule) {
+            if (rawModule && ensureMemory(memory, reader.bytesLength, setView)) {
                 if (setted !== b) {
                     memoryView.set(new Uint8Array(b.buffer, 0, reader.bytesLength))
                     setted = b
@@ -275,7 +275,7 @@ export function createStringParser(options: ParserOptions) {
                     const { reader, stack } = context
 
                     if (reader.raw) {
-                        return decodeFromString(base, context, i)
+                        return decodeFromString(context, i)
                     }
 
                     const b = reader.bytes
