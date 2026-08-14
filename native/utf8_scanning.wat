@@ -1,17 +1,12 @@
 (module
   (import "env" "memory" (memory 1 128))
-  (export "memory" (memory 0))
 
   (global $chars_count (mut i32) (i32.const 0))
-  (global $dq_index (mut i32) (i32.const -1))
 
   (func (export "chars_count") (result i32)
     (global.get $chars_count))
 
-  (func (export "dq_index") (result i32)
-    (global.get $dq_index))
-
-  (func (export "utf8_scan") (param $i i32) (param $len i32) (param $exact i32) (param $partial i32) (result i32)
+  (func (export "utf8_scan") (param $i i32) (param $end i32) (param $exact i32) (result i32)
     (local $mask v128)
     (local $mask1 v128)
     (local $cmp v128)
@@ -19,15 +14,13 @@
     (local $chars_count i32)
     (local $temp i32)
 
-    (global.set $dq_index (i32.const -1))
-
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
     (local.set $mask (i8x16.splat (i32.const 128)))
     (local.set $mask1 (i8x16.splat (i32.const 192)))
     
     (block $scan_block
       (loop $scan_loop
-        (br_if $scan_block (i32.gt_u (i32.add (local.get $i) (i32.const 16)) (local.get $len)))
+        (br_if $scan_block (i32.gt_u (i32.add (local.get $i) (i32.const 16)) (local.get $end)))
 
         (local.set $cmp (v128.load (local.get $i)))
 
@@ -56,7 +49,7 @@
 
     (block $scan_block
       (loop $scan_loop
-        (br_if $scan_block (i32.gt_u (i32.add (local.get $i) (i32.const 1)) (local.get $len)))
+        (br_if $scan_block (i32.gt_u (i32.add (local.get $i) (i32.const 1)) (local.get $end)))
 
         (local.set $temp (i32.load8_u (local.get $i)))
 
@@ -76,7 +69,11 @@
       ))
     
     (global.set $chars_count (local.get $chars_count))
-    (return (local.get $i))
+
+    (if (local.get $exact)
+      (then (return (local.get $i))))
+
+    (return (i32.const -1))
   )
 
   (func $find_unescaped_quote (param $i i32) (param $len i32) (result i32)
@@ -124,9 +121,7 @@
 
             ;; if not escaped, the prefix ends here
             (if (i32.eqz (local.get $is_escaped))
-              (then 
-                (global.set $dq_index (local.get $i))
-                (return (local.get $i)))
+              (then (return (local.get $i)))
             )
           )
         )
