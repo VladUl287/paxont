@@ -18,7 +18,7 @@ export type utf16Module = {
 export type utf8ScanModule = {
     readonly memory: WebAssembly.Memory
     readonly chars_count: () => number
-    readonly utf8_scan: (start: number, length: number, exact: number) => number
+    readonly utf8_scan: (start: number, end: number, exact: number) => number
 }
 
 export type StringParseOptions = {
