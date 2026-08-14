@@ -77,21 +77,24 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
         maximum: maxMemoryPages
     })
 
+    const PAGE_SIZE_BYTES = Math.ceil(memory.buffer.byteLength / defaultMemoryPages)
+    const MAX_MEMORY_BYTES = PAGE_SIZE_BYTES * maxMemoryPages
+
     let memoryView = new Uint8Array(memory.buffer)
     let utf16 = newUtf16(memoryView)
     let utf8 = newUtf8(memoryView)
-
-    let setted: Uint8Array | undefined = undefined
-    let settedStart: number = 0
-
-    function setView(m: WebAssembly.Memory) {
+    function setView(m: WebAssembly.Memory): void {
         memoryView = new Uint8Array(m.buffer)
         utf16 = newUtf16(memoryView)
         utf8 = newUtf8(memoryView)
     }
 
-    const PAGE_SIZE_BYTES = Math.ceil(memory.buffer.byteLength / defaultMemoryPages)
-    const MAX_MEMORY = PAGE_SIZE_BYTES * maxMemoryPages
+    let cacheView: Uint8Array | undefined = undefined
+    let cacheViewStart: number = 0
+    function clearCache(): void {
+        cacheView = undefined
+        cacheViewStart = 0
+    }
 
     const decoderFactory = (opt: StringParseOptions) => {
         const rawModule = wasmInstance<{
@@ -106,7 +109,7 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
         const utf8_scan = rawModule?.utf8_scan!
         const chars_count = rawModule?.chars_count!
 
-        let setted: Uint8Array | undefined
+        let settedd: Uint8Array | undefined
 
         const decodeFromString = ({ reader }: JsonParsingContext, i: number): ReadResult<string> => {
             const { bytes: b, bytesLength, raw, sparseIndex } = reader
@@ -149,11 +152,11 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
             }
 
             if (rawModule && ensureMemory(memory, reader.bytesLength, setView)) {
-                if (setted !== b) {
+                if (settedd !== b) {
                     memoryView.set(new Uint8Array(b.buffer, 0, reader.bytesLength))
-                    setted = b
+                    settedd = b
                     reader.onRelease(() => {
-                        setted = undefined
+                        settedd = undefined
                     })
                 }
 
@@ -256,27 +259,24 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                     if (ensureMemory(memory, max_length, setView)) {
                         let start = 0
 
-                        if (b !== setted) {
+                        if (b !== cacheView) {
                             memoryView.set(new Uint8Array(b.buffer, i, bLength - i))
-                            settedStart = i
-                            setted = b
-                            reader.onRelease(() => {
-                                setted = undefined
-                                settedStart = 0
-                            })
+                            cacheViewStart = i
+                            cacheView = b
+                            reader.onRelease(clearCache)
                         }
                         else {
-                            start = i - settedStart
+                            start = i - cacheViewStart
                         }
 
-                        const end_index = utf8_to_utf16(start, bLength - settedStart, bLength - settedStart + 1, partial)
+                        const end_index = utf8_to_utf16(start, bLength - cacheViewStart, bLength - cacheViewStart + 1, partial)
                         if (end_index < 0) {
                             return {
                                 type: ERROR,
                                 error: new JSONParseError('Invalid data')
                             }
                         }
-                        i = end_index + settedStart
+                        i = end_index + cacheViewStart
 
                         const dq_index = get_dq_index()
                         const ascii_only = get_ascii_only() === 1
@@ -287,7 +287,7 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                                     isContinued: true,
                                     base: base.concat(ascii_only ?
                                         utf8(0, end_index, ascii_only) :
-                                        utf16(bLength - settedStart + 1, get_utf16_length()))
+                                        utf16(bLength - cacheViewStart + 1, get_utf16_length()))
                                 })
                                 return {
                                     type: NEEDS_MORE_DATA,
@@ -314,16 +314,16 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                         return {
                             type: COMPLETE,
                             value: base.length === 0 ?
-                                utf16(bLength - settedStart + 1, utf16_end) :
-                                base.concat(utf16(bLength - settedStart + 1, utf16_end)),
+                                utf16(bLength - cacheViewStart + 1, utf16_end) :
+                                base.concat(utf16(bLength - cacheViewStart + 1, utf16_end)),
                             nextIndex: i + 1
                         }
                     }
 
-                    ensureMemory(memory, MAX_MEMORY, setView)
+                    ensureMemory(memory, MAX_MEMORY_BYTES, setView)
 
                     while (true) {
-                        const memory = Math.floor(MAX_MEMORY / 3)
+                        const memory = Math.floor(MAX_MEMORY_BYTES / 3)
                         const length = Math.min(memory, bLength - i)
                         const lastChunk = length < memory
                         const chunkPartial = lastChunk ? partial : 1
@@ -450,10 +450,10 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                     }
                 }
 
-                ensureMemory(memory, MAX_MEMORY, setView)
+                ensureMemory(memory, MAX_MEMORY_BYTES, setView)
 
                 while (true) {
-                    const memory = Math.floor(MAX_MEMORY / 3)
+                    const memory = Math.floor(MAX_MEMORY_BYTES / 3)
                     const length = Math.min(memory, bLength - i)
                     const lastChunk = length < memory
                     const chunkPartial = lastChunk ? partial : 1
@@ -607,7 +607,7 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
         try {
             const currentLength = memory.buffer.byteLength
 
-            if (reqLength > MAX_MEMORY) {
+            if (reqLength > MAX_MEMORY_BYTES) {
                 return false
             }
 
