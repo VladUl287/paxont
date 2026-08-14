@@ -1,5 +1,5 @@
 import { genUnrolledFromCharCodeAscii, genUnrolledFromCharCode16LE } from "../code_gen/string"
-import { JsonParsingContext, PrimitiveMeta } from "../metadata/types"
+import { JsonParsingContext, JsonReader, PrimitiveMeta } from "../metadata/types"
 import { IS_BUN, IS_NODE } from "../utils/platform"
 import { ReadResult, ReadResultType } from "../utils/types"
 import { BACKSLASH, DOUBLE_QUOTE, DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
@@ -98,8 +98,8 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
 
     const decoderFactory = (opt: StringParseOptions) => {
         function stringDecoderFactory(memory: WebAssembly.Memory) {
-            const decode = ({ reader }: JsonParsingContext, i: number): ReadResult<string> => {
-                const { bytes, bytesLength, raw, sparseIndex } = reader
+            const decode = (reader: JsonReader, i: number): ReadResult<string> => {
+                const { bytes: b, bytesLength, raw, sparseIndex } = reader
 
                 if (!raw) {
                     return {
@@ -108,57 +108,49 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                     }
                 }
 
-                let charIndex = sparseIndex?.charIndex ?? 0
-                let byteIndex = sparseIndex?.byteIndex ?? 0
+                let cI = sparseIndex?.charIndex ?? 0
+                let bI = sparseIndex?.byteIndex ?? 0
 
-                while (byteIndex <= i - 8) {
-                    const word1 = bytes[byteIndex] | bytes[byteIndex + 1] << 8 | bytes[byteIndex + 2] << 16 | bytes[byteIndex + 3] << 24
-                    const word2 = bytes[byteIndex + 4] | bytes[byteIndex + 5] << 8 | bytes[byteIndex + 6] << 16 | bytes[byteIndex + 7] << 24
-
-                    const contCount1 = ((word1 & 0x80808080) * 0x01010101) >>> 24
-                    const contCount2 = ((word2 & 0x80808080) * 0x01010101) >>> 24
-
-                    charIndex += 8 - contCount1 + contCount2
-                    byteIndex += 8
+                while (bI <= i - 8) {
+                    const a1 = b[bI] | b[bI + 1] << 8 | b[bI + 2] << 16 | b[bI + 3] << 24
+                    const a2 = b[bI + 4] | b[bI + 5] << 8 | b[bI + 6] << 16 | b[bI + 7] << 24
+                    const count1 = ((a1 & 0x80808080) * 0x01010101) >>> 24
+                    const count2 = ((a2 & 0x80808080) * 0x01010101) >>> 24
+                    cI += 8 - count1 + count2
+                    bI += 8
                 }
 
-                while (byteIndex < i) {
-                    if ((bytes[byteIndex++] & 192) !== 128) {
-                        charIndex++
-                    }
+                while (bI < i) {
+                    if ((b[bI++] & 192) !== 128) { cI++ }
                 }
 
-                const startIndex = charIndex
+                const charIndexStart = cI
 
-                while (byteIndex <= bytesLength - 4) {
-                    const word = (bytes[byteIndex] | bytes[byteIndex + 1] << 8 | bytes[byteIndex + 2] << 16 | bytes[byteIndex + 3] << 24)
+                while (bI <= bytesLength - 4) {
+                    const a1 = (b[bI] | b[bI + 1] << 8 | b[bI + 2] << 16 | b[bI + 3] << 24)
 
-                    const xor = word ^ 0x22222222
-                    if (((xor - 0x01010101) & (~xor) & 0x80808080) !== 0) {
+                    const masked = a1 ^ 0x22222222
+                    if (((masked - 0x01010101) & (~masked) & 0x80808080) !== 0)
                         break
-                    }
 
-                    const contCount = ((word & 0x80808080) * 0x01010101) >>> 24
-                    charIndex += 4 - contCount
-                    byteIndex += 4
+                    const count = ((a1 & 0x80808080) * 0x01010101) >>> 24
+                    cI += 4 - count
+                    bI += 4
                 }
 
-                while (bytes[byteIndex] !== DOUBLE_QUOTE) {
-                    if ((bytes[byteIndex++] & 192) !== 128) {
-                        charIndex++
-                    }
+                while (bI <= bytesLength && b[bI] !== DOUBLE_QUOTE) {
+                    if ((b[bI++] & 192) !== 128) { cI++ }
                 }
 
                 if (reader.sparseIndex) {
-                    reader.sparseIndex.charIndex = charIndex
-                    reader.sparseIndex.byteIndex = byteIndex
+                    reader.sparseIndex.charIndex = cI
+                    reader.sparseIndex.byteIndex = bI
                 }
 
-                const result = raw.substring(startIndex, charIndex)
                 return {
                     type: COMPLETE,
-                    value: result,
-                    nextIndex: byteIndex + 1
+                    value: raw.substring(charIndexStart, cI),
+                    nextIndex: bI + 1
                 }
             }
 
@@ -166,83 +158,8 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                 0, 97, 115, 109, 1, 0, 0, 0, 1, 19, 3, 96, 0, 1, 127, 96, 4, 127, 127, 127, 127, 1, 127, 96, 2, 127, 127, 1, 127, 2, 17, 1, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 1, 1, 128, 1, 3, 5, 4, 0, 0, 1, 2, 6, 11, 2, 127, 1, 65, 0, 11, 127, 1, 65, 127, 11, 7, 47, 4, 6, 109, 101, 109, 111, 114, 121, 2, 0, 11, 99, 104, 97, 114, 115, 95, 99, 111, 117, 110, 116, 0, 0, 8, 100, 113, 95, 105, 110, 100, 101, 120, 0, 1, 9, 117, 116, 102, 56, 95, 115, 99, 97, 110, 0, 2, 10, 208, 2, 4, 4, 0, 35, 0, 11, 4, 0, 35, 1, 11, 215, 1, 2, 4, 123, 2, 127, 65, 127, 36, 1, 65, 34, 253, 15, 33, 7, 65, 128, 1, 253, 15, 33, 4, 65, 192, 1, 253, 15, 33, 5, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 6, 32, 2, 69, 4, 64, 32, 6, 32, 7, 253, 35, 253, 100, 4, 64, 32, 0, 32, 0, 65, 16, 106, 16, 3, 34, 9, 65, 0, 78, 4, 64, 32, 8, 36, 0, 32, 9, 15, 11, 11, 11, 32, 6, 32, 5, 253, 78, 33, 6, 32, 6, 32, 4, 253, 35, 33, 6, 32, 8, 65, 16, 32, 6, 253, 100, 105, 107, 106, 33, 8, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 9, 32, 2, 69, 4, 64, 32, 9, 65, 34, 70, 32, 0, 32, 0, 16, 3, 34, 9, 65, 0, 78, 113, 4, 64, 12, 3, 11, 11, 32, 8, 32, 9, 65, 192, 1, 113, 65, 128, 1, 71, 106, 33, 8, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 32, 8, 36, 0, 32, 0, 15, 11, 107, 1, 4, 127, 32, 0, 33, 2, 2, 64, 3, 64, 32, 0, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 3, 32, 3, 65, 34, 70, 4, 64, 32, 0, 33, 4, 65, 0, 33, 5, 2, 64, 3, 64, 32, 4, 65, 1, 107, 33, 4, 32, 4, 32, 2, 72, 13, 1, 32, 4, 45, 0, 0, 65, 220, 0, 71, 13, 1, 32, 5, 69, 33, 5, 12, 0, 11, 11, 32, 5, 69, 4, 64, 32, 0, 36, 1, 32, 0, 15, 11, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11
             ]), { memory })
 
-            if (utf8ScanModule) {
-                const utf8_scan = utf8ScanModule.utf8_scan
-                const chars_count = utf8ScanModule.chars_count
-
-                return (context: JsonParsingContext, i: number): ReadResult<string> => {
-                    const { reader } = context
-                    const { bytes, bytesLength, raw, sparseIndex } = reader
-
-                    if (!raw) {
-                        return {
-                            type: ERROR,
-                            error: new JSONParseError("")
-                        }
-                    }
-
-                    let charIndex = sparseIndex?.charIndex ?? 0
-                    let byteIndex = sparseIndex?.byteIndex ?? 0
-
-                    const differenece = byteIndex - charIndex
-                    const ascii_only = raw.length === bytesLength || (bytesLength - raw.length === differenece)
-
-                    if (ascii_only) {
-                        let j = i
-
-                        while (j <= bytes.length - 4) {
-                            const word = (bytes[j] | bytes[j + 1] << 8 | bytes[j + 2] << 16 | bytes[j + 3] << 24) ^ 0x22222222
-
-                            if (((word - 0x01010101) & (~word) & 0x80808080) !== 0) {
-                                break
-                            }
-
-                            j += 4
-                        }
-
-                        while (j < bytes.length && bytes[j] !== DOUBLE_QUOTE) {
-                            j++
-                        }
-
-                        return {
-                            type: COMPLETE,
-                            value: raw.substring(i - differenece, j - differenece),
-                            nextIndex: j + 1
-                        }
-                    }
-
-                    if (ensureMemory(memory, reader.bytesLength, setView)) {
-                        if (cacheView !== bytes) {
-                            memoryView.set(new Uint8Array(bytes.buffer, 0, reader.bytesLength))
-                            cacheViewStart = 0
-                            cacheView = bytes
-                            reader.onRelease(clearCache)
-                        }
-
-                        const last = utf8_scan(byteIndex, i, 1)
-                        charIndex += chars_count()
-
-                        const startIndex = charIndex
-
-                        byteIndex = utf8_scan(last, reader.bytesLength, 0)
-                        charIndex += chars_count()
-
-                        if (reader.sparseIndex) {
-                            reader.sparseIndex.charIndex = charIndex
-                            reader.sparseIndex.byteIndex = byteIndex
-                        }
-
-                        const result = raw.substring(startIndex, charIndex)
-                        return {
-                            type: COMPLETE,
-                            value: result,
-                            nextIndex: byteIndex + 1
-                        }
-                    }
-
-                    return decode(context, i)
-                }
-            }
+            const utf8_scan = utf8ScanModule?.utf8_scan
+            const chars_count = utf8ScanModule?.chars_count
 
             return (context: JsonParsingContext, i: number): ReadResult<string> => {
                 const { reader } = context
@@ -285,8 +202,36 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                     }
                 }
 
+                if (utf8ScanModule !== undefined && ensureMemory(memory, reader.bytesLength, setView)) {
+                    if (cacheView !== bytes) {
+                        memoryView.set(new Uint8Array(bytes.buffer, 0, reader.bytesLength))
+                        cacheViewStart = 0
+                        cacheView = bytes
+                        reader.onRelease(clearCache)
+                    }
 
-                return decode(context, i)
+                    const last = utf8_scan!(byteIndex, i, 1)
+                    charIndex += chars_count!()
+
+                    const startIndex = charIndex
+
+                    byteIndex = utf8_scan!(last, reader.bytesLength, 0)
+                    charIndex += chars_count!()
+
+                    if (reader.sparseIndex) {
+                        reader.sparseIndex.charIndex = charIndex
+                        reader.sparseIndex.byteIndex = byteIndex
+                    }
+
+                    const result = raw.substring(startIndex, charIndex)
+                    return {
+                        type: COMPLETE,
+                        value: result,
+                        nextIndex: byteIndex + 1
+                    }
+                }
+
+                return decode(reader, i)
             }
         }
 
