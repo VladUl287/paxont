@@ -19,7 +19,7 @@ export const decodeUnrolled16LE = (b: Uint8Array, start: number, length: number)
     return factory(b, start)
 }
 
-export const defaultParseOptions: StringParseOptions = {
+export const defaultStringParserOptions: StringParseOptions = Object.freeze({
     defaultMemoryPages: 1, //~64KiB
     maxMemoryPages: 128, //~8MiB,
     wasmInstance,
@@ -63,18 +63,18 @@ export const defaultParseOptions: StringParseOptions = {
                     unsafeDecoder8.decode(new Uint8Array(bytes.buffer, start, length))
             }
         }
-}
+})
 
-const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
+const COMPLETE = ReadResultType.COMPLETE
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function stringParser(options: StringParseOptions) {
-    const { defaultMemoryPages: initialWasmMemoryPages, maxMemoryPages: maxWasmMemoryPages, newUtf8, newUtf16, wasmInstance } = options
+export function stringParser(options: StringParseOptions = defaultStringParserOptions) {
+    const { defaultMemoryPages, maxMemoryPages, newUtf8, newUtf16, wasmInstance } = options
 
     const memory = new WebAssembly.Memory({
-        initial: initialWasmMemoryPages,
-        maximum: maxWasmMemoryPages
+        initial: defaultMemoryPages,
+        maximum: maxMemoryPages
     })
 
     let memoryView = new Uint8Array(memory.buffer)
@@ -90,8 +90,8 @@ export function stringParser(options: StringParseOptions) {
         utf8 = newUtf8(memoryView)
     }
 
-    const PAGE_SIZE_BYTES = Math.ceil(memory.buffer.byteLength / initialWasmMemoryPages)
-    const MAX_MEMORY = PAGE_SIZE_BYTES * maxWasmMemoryPages
+    const PAGE_SIZE_BYTES = Math.ceil(memory.buffer.byteLength / defaultMemoryPages)
+    const MAX_MEMORY = PAGE_SIZE_BYTES * maxMemoryPages
 
     const decoderFactory = (opt: StringParseOptions) => {
         const rawModule = wasmInstance<{
@@ -665,4 +665,4 @@ export function stringParser(options: StringParseOptions) {
     }
 }
 
-export const { toString } = stringParser(defaultParseOptions)
+export const { toString } = stringParser(defaultStringParserOptions)
