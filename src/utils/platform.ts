@@ -18,6 +18,7 @@ export const isUnknown = (platform: Platform): platform is Platform.UNKNOWN => p
 export const CURRENT_PLATFORM = detectPlatform()
 
 export const IS_NODE = CURRENT_PLATFORM === NODE
+export const IS_BUN = CURRENT_PLATFORM === BUN
 export const IS_BROWSER = CURRENT_PLATFORM === BROWSER
 export const IS_UNKNOWN = CURRENT_PLATFORM === UNKNOWN
 
