@@ -54,7 +54,7 @@ export const defaultStringParserOptions: StringParseOptions = Object.freeze({
             return (start, end, ascii_only = false) => {
                 const length = end - start
                 return ascii_only && length <= 32 ?
-                    decodeUnrolledAscii(bytes, start, end) :
+                    decodeUnrolledAscii(bytes, start, length) :
                     buffer.toString('utf8', start, end)
             }
         } :
