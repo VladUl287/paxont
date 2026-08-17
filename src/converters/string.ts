@@ -180,7 +180,29 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                 const ascii_only = raw.length === bytesLength || (bytesLength - raw.length === diff)
 
                 if (ascii_only) {
-                    const j = findEnd(b, bytesLength, i)
+                    let j = i
+                    while (j < raw.length) {
+                        let index = raw.indexOf('"', j)
+                        if (index === -1) {
+                            return {
+                                type: ERROR,
+                                error: new Error()
+                            }
+                        }
+
+                        j = index + 1
+
+                        let escaped = raw[--index] === '\\'
+                        if (escaped) {
+                            index--
+                            while (index >= 0 && raw[index--] === '\\') {
+                                escaped = !escaped
+                            }
+                        }
+
+                        if (escaped) { continue }
+                        break
+                    }
                     return {
                         type: COMPLETE,
                         value: raw.substring(i - diff, j - diff),
