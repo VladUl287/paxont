@@ -11,7 +11,7 @@ import { IStack, Stack } from "./utils/stack"
 type MetaOrData<T> = T extends BaseMeta<infer V> ? V : T
 
 type JSONTOptions = {
-    readonly metadataBuilder: Metadata
+    readonly metadata: Metadata
     readonly bufferPool: ArrayPool<Uint8Array<ArrayBuffer>>
     readonly jsonOptions: {
         readonly defaultOptions: JsonOptions
@@ -21,19 +21,17 @@ type JSONTOptions = {
 }
 
 const defaultJsontOptions: JSONTOptions = Object.freeze({
-    metadataBuilder: metadata(),
+    metadata: metadata(),
     bufferPool: arrayPool<Uint8Array<ArrayBuffer>>(Uint8Array, 0),
     jsonOptions: { defaultOptions, createOptions },
     memoize: memoize,
 })
 
 export function jsont(value: JSONTOptions = defaultJsontOptions) {
-    const { bufferPool, memoize } = value
+    const { metadata: meta, memoize: memo, bufferPool } = value
 
-    const optionsCache = memoize<Partial<JsonOptions>, JsonOptions>()
-    const metadataCache = memoize<any, BaseMeta<any>>()
-
-    const meta = metadata()
+    const optionsCache = memo<Partial<JsonOptions>, JsonOptions>()
+    const metadataCache = memo<any, BaseMeta<any>>()
 
     const emptyStack: IStack<JsonParsingState> = Object.freeze({
         isEmpty: true,
@@ -134,7 +132,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
         const reader = json.getReader({ mode: 'byob' })
 
         const buffer = bufferPool.rent(655_360)
-        
+
         let start = 0
         try {
             while (true) {
