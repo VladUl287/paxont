@@ -33,7 +33,7 @@ export type Modifier<M extends BaseMeta<any>> = (metadata: M) => M
 
 export type BuilderOptions = {
     readonly encoder: TextEncoder,
-    readonly poolFor: <T extends ArrayLike<any>>(type: TypeName) => ArrayPool<T>
+    readonly resolvePool: <T extends ArrayLike<any>>(type: TypeName) => ArrayPool<T>
 }
 
 const globalPools: Record<TypeName, ArrayPool<any>> = {
@@ -66,12 +66,15 @@ const globalPools: Record<TypeName, ArrayPool<any>> = {
     'f64[]': arrayPool<Array<Float64Array>>(Array, new Float64Array()),
 }
 
+const resolvePool = <T extends ArrayLike<any>>(type: TypeName): ArrayPool<T> =>
+    (globalPools[type] ??= arrayPool(Array, undefined))
+
 export const defaultBuilderOptions: BuilderOptions = Object.freeze({
     encoder: new TextEncoder(),
-    poolFor: <T extends ArrayLike<any>>(type: TypeName): ArrayPool<T> => (globalPools[type] ??= arrayPool(Array, undefined))
+    resolvePool: resolvePool
 })
 
-export function builder({ encoder, poolFor }: BuilderOptions = defaultBuilderOptions) {
+export function builder({ encoder, resolvePool: poolFor }: BuilderOptions = defaultBuilderOptions) {
     function applyModifier<M extends BaseMeta<any>>(value: M, modify: Modifier<M>): M {
         return Object.assign({}, modify(value), { type: value.type })
     }
