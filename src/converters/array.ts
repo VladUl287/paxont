@@ -41,13 +41,14 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
         }
     }
 
-    const { rent, release, clear } = metadata.pool
 
     const state = stack.pop()
 
     let isContinued: boolean = state?.isContinued ?? false
-    let buffer: A = state?.buffer ?? rent(b.length - i)
     let bufferIndex: number = state?.bufferIndex ?? 0
+
+    const { rent, release, clear } = metadata.pool
+    const buffer: A = state?.buffer ?? rent(b.length - i)
 
     if (!isContinued) {
         if (b[i] !== SQUARE_OPEN) {
