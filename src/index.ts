@@ -1,37 +1,29 @@
-import { MemoizeFactory, memoize } from "./utils/memo"
+import { memoize } from "./utils/memo"
 import { defaultOptions, JsonOptions, createOptions } from "./options"
 import { BaseMeta, JsonParsingState } from "./metadata/types"
-import { ArrayPool, arrayPool } from "./utils/array"
+import { arrayPool } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
-import { Metadata, metadata } from "./metadata"
+import { metadata } from "./metadata"
 import { isError, isNeedsMoreData } from "./utils/types"
 import { IStack, Stack } from "./utils/stack"
+import { JsontOptions, MetaOrData } from "./types"
 
-type MetaOrData<T> = T extends BaseMeta<infer V> ? V : T
-
-type JSONTOptions = {
-    readonly metadata: Metadata
-    readonly bufferPool: ArrayPool<Uint8Array<ArrayBuffer>>
-    readonly jsonOptions: {
-        readonly defaultOptions: JsonOptions
-        readonly createOptions: typeof createOptions
-    }
-    readonly memoize: MemoizeFactory
-}
-
-const defaultJsontOptions: JSONTOptions = Object.freeze({
+const defaultJsontOptions: JsontOptions = Object.freeze({
     metadata: metadata(),
     bufferPool: arrayPool<Uint8Array<ArrayBuffer>>(Uint8Array, 0),
     jsonOptions: { defaultOptions, createOptions },
     memoize: memoize,
 })
 
-export function jsont(value: JSONTOptions = defaultJsontOptions) {
-    const { metadata: meta, memoize: memo, bufferPool } = value
+export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
+    const { metadata: meta, memoize: memo, bufferPool } = <JsontOptions>{
+        ...defaultJsontOptions,
+        ...options
+    }
 
-    const optionsCache = memo<Partial<JsonOptions>, JsonOptions>()
-    const metadataCache = memo<any, BaseMeta<any>>()
+    const optionsMemo = memo<Partial<JsonOptions>, JsonOptions>()
+    const metaMemo = memo<any, BaseMeta<any>>()
 
     const emptyStack: IStack<JsonParsingState> = Object.freeze({
         isEmpty: true,
@@ -41,17 +33,12 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
     })
 
     function deserialize<T>(
-        value: ArrayBuffer | Uint8Array | string,
+        value: ArrayBuffer | Uint8Array<ArrayBuffer> | string,
         type: T,
         options?: Partial<JsonOptions>
     ): MetaOrData<T> {
-        const opts = !!options ?
-            optionsCache.getOrAdd(options, (key) => createOptions(key)) :
-            defaultOptions
-
-        const metadata = !isMetadata(type) ?
-            metadataCache.getOrAdd(type, (t) => meta.from(t)) :
-            type
+        const opts = options === undefined ? defaultOptions : optionsMemo.getOrAdd(options, (o) => createOptions(o))
+        const metadata = isMetadata(type) ? type : metaMemo.getOrAdd(type, (t) => meta.from(t))
 
         let bytes: Uint8Array<ArrayBuffer>
         let bytesLength: number = 0
@@ -109,8 +96,7 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
             return result.value
         }
         finally {
-            if (isString)
-                bufferPool.release(bytes)
+            if (isString) { bufferPool.release(bytes) }
         }
     }
 
@@ -120,11 +106,11 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
         options?: Partial<JsonOptions>
     ): Promise<MetaOrData<T>> {
         const opts = !!options ?
-            optionsCache.getOrAdd(options, (key) => createOptions(key)) :
+            optionsMemo.getOrAdd(options, (key) => createOptions(key)) :
             defaultOptions
 
         const metadata = !isMetadata(type) ?
-            metadataCache.getOrAdd(type, (key) => meta.from(key)) :
+            metaMemo.getOrAdd(type, (key) => meta.from(key)) :
             type
 
         const stack = new Stack<JsonParsingState>()
@@ -181,11 +167,11 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
 
     function serialize<V, T>(value: V, type: T, options?: Partial<JsonOptions>): string {
         const opts = !!options ?
-            optionsCache.getOrAdd(options, (key) => createOptions(key)) :
+            optionsMemo.getOrAdd(options, (key) => createOptions(key)) :
             defaultOptions
 
         const metadata = !isMetadata(type) ?
-            metadataCache.getOrAdd(type, (key) => meta.from(key)) :
+            metaMemo.getOrAdd(type, (key) => meta.from(key)) :
             type
 
         return metadata.toJson(metadata, value, opts)
