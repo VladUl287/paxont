@@ -1,6 +1,6 @@
 import { skipWhitespace } from "../utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/types"
-import { JsonParsingContext, ObjectMeta } from "../../metadata/types"
+import { AsObject, JsonParsingContext, Obj, ObjectMeta } from "../../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../../utils/ascii_symbols"
 import { JSONParseError } from "../../utils/error"
 
@@ -8,12 +8,12 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toObject<M extends ObjectMeta<any>>(
-    m: M,
+export function toObject<T extends Obj>(
+    m: ObjectMeta<T>,
     ctx: JsonParsingContext,
     i: number,
     d: number,
-): ReadResult<ReturnType<M['build']>> {
+): ReadResult<AsObject<T>> {
     const { reader, options, stack } = ctx
 
     if (d > options.maxDepth) {
@@ -194,7 +194,7 @@ export function toObject<M extends ObjectMeta<any>>(
 
     return {
         type: COMPLETE,
-        value: m.build(buffer) as ReturnType<M['build']>,
+        value: m.build(buffer),
         nextIndex: ++i
     }
 }
