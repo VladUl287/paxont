@@ -1,6 +1,6 @@
 import { skipWhitespace } from "../utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/types"
-import { JsonParsingContext, AsObject, ObjectMeta, Obj } from "../../metadata/types"
+import { JsonParsingContext, ObjectMeta } from "../../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../../utils/ascii_symbols"
 import { JSONParseError } from "../../utils/error"
 
@@ -8,20 +8,21 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toObject<T extends Obj>(
-    m: ObjectMeta<T>,
-    context: JsonParsingContext,
-    index: number,
-    depth: number,
-): ReadResult<AsObject<T>> {
-    const { reader, options, stack } = context
+export function toObject<M extends ObjectMeta<any>>(
+    m: M,
+    ctx: JsonParsingContext,
+    i: number,
+    d: number,
+): ReadResult<ReturnType<M['build']>> {
+    const { reader, options, stack } = ctx
 
-    if (depth > options.maxDepth)
+    if (d > options.maxDepth) {
         return {
             type: ERROR,
-            error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${index}`)
+            error: new JSONParseError(`Maximum depth exceeded`, { metadata: m, index: i, depth: d })
         }
-    depth++
+    }
+    d++
 
     const fields = m.fields
 
@@ -35,7 +36,6 @@ export function toObject<T extends Obj>(
     const b = reader.bytes
     const len = b.length
 
-    let i = index
     if (i >= len) {
         if (reader.writable)
             return {
@@ -136,7 +136,7 @@ export function toObject<T extends Obj>(
         i = skipWhitespace(b, i)
 
         const fieldMeta = field.value
-        const result = fieldMeta.toValue(fieldMeta, context, i, depth)
+        const result = fieldMeta.toValue(fieldMeta, ctx, i, d)
 
         if (isError(result))
             return result
@@ -184,7 +184,7 @@ export function toObject<T extends Obj>(
             isContinued: true,
             buffer,
             bufferIndex: j,
-            fieldIndex: index
+            fieldIndex: i
         })
         return {
             type: NEEDS_MORE_DATA,
@@ -194,7 +194,7 @@ export function toObject<T extends Obj>(
 
     return {
         type: COMPLETE,
-        value: m.build(buffer),
+        value: m.build(buffer) as ReturnType<M['build']>,
         nextIndex: ++i
     }
 }
