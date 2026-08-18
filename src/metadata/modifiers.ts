@@ -11,7 +11,7 @@ export const keySelector = <M extends SetMeta<any>>(
     })
 }
 
-export const bindPool = <M extends ArrayMeta<any, any>>(
+export const pool = <M extends ArrayMeta<any, any>>(
     pool: ArrayPool<M extends ArrayMeta<infer U, any> ? U : never>
 ): Modifier<M> => {
     return (meta: M): M => ({
