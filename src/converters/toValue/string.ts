@@ -542,9 +542,8 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
 
         function isEscaped(b: Uint8Array, i: number): boolean {
             let escaped = false
-            while (b[i] === BACKSLASH) {
+            while (b[i--] === BACKSLASH) {
                 escaped = !escaped
-                i--
             }
             return escaped
         }
@@ -561,10 +560,9 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
 
             while (i < len) {
                 if (b[i] === DQ) {
-                    if (isEscaped(b, i - 1)) {
-                        return findEnd(b, len, i)
-                    }
-                    return i
+                    return isEscaped(b, i) ?
+                        findEnd(b, len, i + 1) :
+                        i
                 }
                 i++
             }
