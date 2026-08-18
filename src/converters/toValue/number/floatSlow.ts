@@ -1,5 +1,5 @@
-import { ReadResult, ReadResultType } from "../../utils/types"
-import { MINUS } from "../../utils/ascii_symbols"
+import { ReadResult, ReadResultType } from "../../../utils/types"
+import { MINUS } from "../../../utils/ascii_symbols"
 import { float64, FloatFormat } from "./floatFormats"
 
 const POS_POW10 = [1]

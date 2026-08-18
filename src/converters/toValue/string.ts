@@ -1,11 +1,11 @@
-import { genUnrolledFromCharCodeAscii, genUnrolledFromCharCode16LE } from "../code_gen/string"
-import { JsonParsingContext, JsonReader, PrimitiveMeta } from "../metadata/types"
-import { IS_BUN, IS_NODE } from "../utils/platform"
-import { ReadResult, ReadResultType } from "../utils/types"
-import { BACKSLASH, DOUBLE_QUOTE, DOUBLE_QUOTE as DQ } from "../utils/ascii_symbols"
-import { JSONParseError } from "../utils/error"
-import { wasmInstance } from "../utils/wasm"
-import { StringParseOptions, utf16Module, utf8Module, utf8ScanModule } from "./types/string"
+import { genUnrolledFromCharCodeAscii, genUnrolledFromCharCode16LE } from "../../code_gen/string"
+import { JsonParsingContext, JsonReader, PrimitiveMeta } from "../../metadata/types"
+import { IS_BUN, IS_NODE } from "../../utils/platform"
+import { ReadResult, ReadResultType } from "../../utils/types"
+import { BACKSLASH, DOUBLE_QUOTE, DOUBLE_QUOTE as DQ } from "../../utils/ascii_symbols"
+import { JSONParseError } from "../../utils/error"
+import { wasmInstance } from "../../utils/wasm"
+import { StringParseOptions, utf16Module, utf8Module, utf8ScanModule } from "../types/string"
 
 const ERROR = ReadResultType.ERROR
 const COMPLETE = ReadResultType.COMPLETE

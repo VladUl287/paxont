@@ -1,12 +1,12 @@
-import { DOT, E, MINUS, PLUS, ZERO } from "../../utils/ascii_symbols"
-import { isComplete, ReadResult, ReadResultType } from "../../utils/types"
-import { JsonParsingContext, PrimitiveMeta } from "../../metadata/types"
-import { isDigitU } from "../../utils/ascii"
+import { DOT, E, MINUS, PLUS, ZERO } from "../../../utils/ascii_symbols"
+import { isComplete, ReadResult, ReadResultType } from "../../../utils/types"
+import { JsonParsingContext, PrimitiveMeta } from "../../../metadata/types"
+import { isDigitU } from "../../../utils/ascii"
 import { float64, FloatFormat } from "./floatFormats"
-import { genUnrolledFromCharCodeAscii } from "../../code_gen/string"
-import { wasmInstance } from "../../utils/wasm"
-import { clz, isGreaterThan, isGreaterThanOrEqual, isLessThan, shiftLeft, shiftRight } from "../../utils/long_bitwise"
-import { splitTo64 } from "../../utils/bigint"
+import { genUnrolledFromCharCodeAscii } from "../../../code_gen/string"
+import { wasmInstance } from "../../../utils/wasm"
+import { clz, isGreaterThan, isGreaterThanOrEqual, isLessThan, shiftLeft, shiftRight } from "../../../utils/long_bitwise"
+import { splitTo64 } from "../../../utils/bigint"
 
 type Store = {
     mantissa: number,
