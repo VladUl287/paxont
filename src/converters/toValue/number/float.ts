@@ -6,7 +6,7 @@ import { float64, FloatFormat } from "./floatFormats"
 import { genUnrolledFromCharCodeAscii } from "../../../code_gen/string"
 import { wasmInstance } from "../../../utils/wasm"
 import { clz, isGreaterThan, isGreaterThanOrEqual, isLessThan, shiftLeft, shiftRight } from "../../../utils/long_bitwise"
-import { splitTo64 } from "../../../utils/bigint"
+import { toInt64 } from "../../../utils/bigint"
 
 type Store = {
     mantissa: number,
@@ -331,8 +331,8 @@ function tryParseExponent(b: Uint8Array, s: Store): boolean {
     return true
 }
 
-const maxValue = splitTo64(9007199254740992n)
-const halfValue = splitTo64(4503599627370496n)
+const maxValue = toInt64(9007199254740992n)
+const halfValue = toInt64(4503599627370496n)
 
 const product128 = new Uint32Array(4)
 const f64Product = new Float64Array(product128.buffer)
@@ -436,8 +436,8 @@ function toFloatCompute(low: number, high: number, e: number, f: FloatFormat): n
 
 const precisionMasks1 = new Array(65)
     .fill(0)
-    .map((_, i) => splitTo64(0xFFFFFFFFFFFFFFFFn >> BigInt(i + 1)))
-precisionMasks1[64] = splitTo64(0xFFFFFFFFFFFFFFFFn)
+    .map((_, i) => toInt64(0xFFFFFFFFFFFFFFFFn >> BigInt(i + 1)))
+precisionMasks1[64] = toInt64(0xFFFFFFFFFFFFFFFFn)
 
 type BigMulModule = {
     mul: (low: number, mlow: number, mhigh: number, high: number) => number
