@@ -41,7 +41,7 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
         }
     }
 
-    const { rent, release } = metadata.pool
+    const { rent, release, clear } = metadata.pool
 
     const state = stack.pop()
 
@@ -122,11 +122,13 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
         }
     }
 
+    const result = buffer.slice(0, j);
+    clear(buffer, 0, j)
     release(buffer)
 
     return {
         type: COMPLETE,
-        value: buffer.slice(0, j),
+        value: result,
         nextIndex: ++i
     }
 }

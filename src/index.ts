@@ -22,7 +22,7 @@ type JSONTOptions = {
 
 const defaultJsontOptions: JSONTOptions = Object.freeze({
     metadataBuilder: metadata(),
-    bufferPool: arrayPool<Uint8Array<ArrayBuffer>>(Uint8Array),
+    bufferPool: arrayPool<Uint8Array<ArrayBuffer>>(Uint8Array, 0),
     jsonOptions: { defaultOptions, createOptions },
     memoize: memoize,
 })

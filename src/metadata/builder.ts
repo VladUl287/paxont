@@ -37,40 +37,38 @@ export type BuilderOptions = {
 }
 
 const globalPools: Record<TypeName, ArrayPool<any>> = {
-    number: arrayPool<Array<number>>(Array),
-    string: arrayPool<Array<string>>(Array),
-    object: arrayPool<Array<object>>(Array),
-    boolean: arrayPool<Array<boolean>>(Array),
-    date: arrayPool<Array<Date>>(Array),
-    bigint: arrayPool<Array<bigint>>(Array),
-    set: arrayPool<Array<Set<any>>>(Array),
-    map: arrayPool<Array<Map<string, any>>>(Array),
-    array: arrayPool<Array<object>>(Array),
-    nullable: arrayPool(Array),
-    i8: arrayPool(Int8Array),
-    i16: arrayPool(Int16Array),
-    i32: arrayPool(Int32Array),
-    i64: arrayPool(BigInt64Array),
-    u8: arrayPool(Uint8Array),
-    u16: arrayPool(Uint16Array),
-    u32: arrayPool(Uint32Array),
-    u64: arrayPool(BigUint64Array),
-    'i8[]': arrayPool<Array<Int8Array>>(Array),
-    'i16[]': arrayPool<Array<Int16Array>>(Array),
-    'i32[]': arrayPool<Array<Int32Array>>(Array),
-    'i64[]': arrayPool<Array<BigInt64Array>>(Array),
-    'u8[]': arrayPool<Array<Uint8Array>>(Array),
-    'u16[]': arrayPool<Array<Uint16Array>>(Array),
-    'u32[]': arrayPool<Array<Uint32Array>>(Array),
-    'u64[]': arrayPool<Array<BigUint64Array>>(Array),
-    'f64[]': arrayPool<Array<Float64Array>>(Array),
-    'unknown': arrayPool(Array),
+    number: arrayPool<Array<number>>(Array, 0),
+    string: arrayPool<Array<string>>(Array, ''),
+    object: arrayPool<Array<object>>(Array, {}),
+    boolean: arrayPool<Array<boolean>>(Array, false),
+    date: arrayPool<Array<Date>>(Array, Date.prototype),
+    bigint: arrayPool<Array<bigint>>(Array, 0n),
+    set: arrayPool<Array<Set<any>>>(Array, new Set()),
+    map: arrayPool<Array<Map<string, any>>>(Array, new Map()),
+    array: arrayPool<Array<object>>(Array, {}),
+    nullable: arrayPool(Array, null),
+    i8: arrayPool(Int8Array, 0),
+    i16: arrayPool(Int16Array, 0),
+    i32: arrayPool(Int32Array, 0),
+    i64: arrayPool(BigInt64Array, 0n),
+    u8: arrayPool(Uint8Array, 0),
+    u16: arrayPool(Uint16Array, 0),
+    u32: arrayPool(Uint32Array, 0),
+    u64: arrayPool(BigUint64Array, 0n),
+    'i8[]': arrayPool<Array<Int8Array>>(Array, new Int8Array()),
+    'i16[]': arrayPool<Array<Int16Array>>(Array, new Int16Array()),
+    'i32[]': arrayPool<Array<Int32Array>>(Array, new Int32Array()),
+    'i64[]': arrayPool<Array<BigInt64Array>>(Array, new BigInt64Array()),
+    'u8[]': arrayPool<Array<Uint8Array>>(Array, new Uint8Array()),
+    'u16[]': arrayPool<Array<Uint16Array>>(Array, new Uint16Array()),
+    'u32[]': arrayPool<Array<Uint32Array>>(Array, new Uint32Array()),
+    'u64[]': arrayPool<Array<BigUint64Array>>(Array, new BigUint64Array()),
+    'f64[]': arrayPool<Array<Float64Array>>(Array, new Float64Array()),
 }
 
 export const defaultBuilderOptions: BuilderOptions = Object.freeze({
     encoder: new TextEncoder(),
-    poolFor: <T extends ArrayLike<any>>(type?: TypeName): ArrayPool<T> =>
-        (globalPools[type ?? 'unknown'] ??= arrayPool(Array))
+    poolFor: <T extends ArrayLike<any>>(type: TypeName): ArrayPool<T> => (globalPools[type] ??= arrayPool(Array, undefined))
 })
 
 export function builder({ encoder, poolFor }: BuilderOptions = defaultBuilderOptions) {
