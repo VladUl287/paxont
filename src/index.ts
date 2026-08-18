@@ -77,6 +77,8 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
         }
 
         try {
+            let funcs: Array<() => void> | undefined
+
             const result = metadata.toValue(metadata, {
                 options: opts,
                 reader: {
@@ -88,10 +90,14 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
                         charIndex: 0,
                         byteIndex: 0
                     },
-                    onRelease: () => { }
+                    onRelease: (func) => {
+                        (funcs ??= new Array(1)).push(func)
+                    }
                 },
-                stack: emptyStack,
+                stack: emptyStack
             }, 0, 0)
+
+            funcs?.forEach((fn) => fn())
 
             if (isError(result)) {
                 throw result.error
@@ -127,35 +133,43 @@ export function jsont(value: JSONTOptions = defaultJsontOptions) {
 
         const reader = json.getReader({ mode: 'byob' })
 
-        const buffer = bufferPool.rent(655_350)
-
-        let startIndex = 0
+        const buffer = bufferPool.rent(655_360)
+        
+        let start = 0
         try {
             while (true) {
-                const buff = startIndex > 0 ? new Uint8Array(buffer.buffer, startIndex) : buffer
+                const buff = start > 0 ? new Uint8Array(buffer.buffer, start) : buffer
                 const { value, done } = await reader.read(buff)
 
                 if (value === undefined) {
                     break
                 }
 
+                let funcs: Array<() => void> | undefined
+
                 const result = metadata.toValue(metadata, {
                     options: opts,
                     reader: {
                         bytes: value,
-                        writable: !done
+                        bytesLength: value.length,
+                        writable: !done,
+                        onRelease: (func) => {
+                            (funcs ??= new Array(1)).push(func)
+                        }
                     },
                     stack
                 }, 0, 0)
 
-                if (isNeedsMoreData(result)) {
-                    buffer.copyWithin(0, result.nextIndex, buffer.length)
-                    startIndex = result.nextIndex
-                    continue
-                }
+                funcs?.forEach((fn) => fn())
 
                 if (isError(result)) {
                     throw result.error
+                }
+
+                if (isNeedsMoreData(result)) {
+                    buffer.copyWithin(0, result.nextIndex, buffer.length)
+                    start = result.nextIndex
+                    continue
                 }
 
                 return result.value
