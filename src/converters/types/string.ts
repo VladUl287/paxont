@@ -1,4 +1,6 @@
-import { wasmInstance } from "../../utils/wasm"
+import type { newUtf16LE } from "../../utils/utf16"
+import type { newUtf8 } from "../../utils/utf8"
+import type { wasmInstance } from "../../utils/wasm"
 
 export type utf8Module = {
     readonly memory: WebAssembly.Memory
@@ -27,6 +29,6 @@ export type StringParseOptions = {
     readonly maxMemoryPages: number
     readonly defaultMemoryPages: number
     readonly useUtf16: boolean,
-    readonly newUtf16: (bytes: Uint8Array) => (start: number, end: number, ascii_only?: boolean) => string,
-    readonly newUtf8: (bytes: Uint8Array) => (start: number, end: number, ascii_only?: boolean) => string
+    readonly newUtf16: typeof newUtf16LE,
+    readonly newUtf8: typeof newUtf8
 }

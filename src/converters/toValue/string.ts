@@ -1,4 +1,3 @@
-import { genUnrolledFromCharCodeAscii, genUnrolledFromCharCode16LE } from "../../code_gen/string"
 import { JsonParsingContext, JsonReader, PrimitiveMeta } from "../../metadata/types"
 import { IS_BUN, IS_NODE } from "../../utils/platform"
 import { ReadResult, ReadResultType } from "../../utils/types"
@@ -6,70 +5,24 @@ import { BACKSLASH, DOUBLE_QUOTE, DOUBLE_QUOTE as DQ } from "../../utils/ascii_s
 import { JSONParseError } from "../../utils/error"
 import { wasmInstance } from "../../utils/wasm"
 import { StringParseOptions, utf16Module, utf8Module, utf8ScanModule } from "../types/string"
+import { newUtf16LE, newUtf16LEBuffer } from "../../utils/utf16"
+import { newUtf8, newUtf8Buffer } from "../../utils/utf8"
 
 const ERROR = ReadResultType.ERROR
 const COMPLETE = ReadResultType.COMPLETE
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-const fromCharCodeUnrolledAscii = new Array<(data: ArrayLike<number>, i: number) => string>(32)
-export const decodeUnrolledAscii = (b: Uint8Array, start: number, length: number): string => {
-    const factory = (fromCharCodeUnrolledAscii[length] ??= genUnrolledFromCharCodeAscii(length))
-    return factory(b, start)
-}
-
-const fromCharCodeUnrolled16LE = new Array<(data: ArrayLike<number>, i: number) => string>(32)
-export const decodeUnrolled16LE = (b: Uint8Array, start: number, length: number): string => {
-    const factory = (fromCharCodeUnrolled16LE[length / 2] ??= genUnrolledFromCharCode16LE(length))
-    return factory(b, start)
-}
-
-export const defaultStringParserOptions: StringParseOptions = Object.freeze({
+const defaultOptions: StringParseOptions = Object.freeze({
     defaultMemoryPages: 1, //~64KiB
     maxMemoryPages: 128, //~8MiB,
     wasmInstance,
-
     useUtf16: IS_NODE || IS_BUN,
-    newUtf16: IS_NODE || IS_BUN ?
-        (bytes: Uint8Array) => {
-            const buffer = Buffer.from(bytes.buffer)
-            return (start, end) => {
-                const length = end - start
-                return length <= 64 ?
-                    decodeUnrolled16LE(buffer, start, length) :
-                    buffer.toString('utf-16le', start, end)
-            }
-        } :
-        (bytes: Uint8Array) => {
-            const unsafeDecoder16 = new TextDecoder('utf-16le', { fatal: false })
-            return (start, end) => {
-                const length = end - start
-                return length <= 64 ?
-                    decodeUnrolled16LE(bytes, start, length) :
-                    unsafeDecoder16.decode(new Uint8Array(bytes.buffer, start, end - start))
-            }
-        },
-    newUtf8: IS_NODE || IS_BUN ?
-        (bytes: Uint8Array) => {
-            const buffer = Buffer.from(bytes.buffer)
-            return (start, end, ascii_only = false) => {
-                const length = end - start
-                return ascii_only && length <= 32 ?
-                    decodeUnrolledAscii(bytes, start, length) :
-                    buffer.toString('utf8', start, end)
-            }
-        } :
-        (bytes: Uint8Array) => {
-            const unsafeDecoder8 = new TextDecoder('utf-8', { fatal: false })
-            return (start, end, ascii_only = false) => {
-                const length = end - start
-                return ascii_only && length <= 32 ?
-                    decodeUnrolledAscii(bytes, start, length) :
-                    unsafeDecoder8.decode(new Uint8Array(bytes.buffer, start, length))
-            }
-        }
+    newUtf16: IS_NODE || IS_BUN ? newUtf16LEBuffer : newUtf16LE,
+    newUtf8: IS_NODE || IS_BUN ? newUtf8Buffer : newUtf8
 })
 
-export function stringParser(options: StringParseOptions = defaultStringParserOptions) {
+export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) {
+    const options: StringParseOptions = { ...defaultOptions, ...opt }
     const { defaultMemoryPages, maxMemoryPages, newUtf8, newUtf16, wasmInstance } = options
 
     const memory = new WebAssembly.Memory({
@@ -396,8 +349,8 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
                             return {
                                 type: COMPLETE,
                                 value: base.length === 0 ?
-                                    utf8(0, end_index, ascii_only) :
-                                    base.concat(utf8(0, end_index)),
+                                    utf8(0, end_index, true) :
+                                    base.concat(utf8(0, end_index, true)),
                                 nextIndex: i + 1
                             }
                         }
@@ -700,4 +653,4 @@ export function stringParser(options: StringParseOptions = defaultStringParserOp
     }
 }
 
-export const { toString } = stringParser(defaultStringParserOptions)
+export const { toString } = stringParser(defaultOptions)
