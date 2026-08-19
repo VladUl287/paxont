@@ -1,8 +1,9 @@
 import { BaseMeta, JsonParsingContext, JsonParsingState } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
+import { JsonReader } from "../../src/utils/reader"
+import { isNeedsMoreData, ReadResult, ReadResultType } from "../../src/utils/result"
 import { Stack } from "../../src/utils/stack"
-import { isNeedsMoreData, ReadResult, ReadResultType } from "../../src/utils/types"
 
 const encoder = new TextEncoder()
 export function toBytes(str: string): Uint8Array {
@@ -13,7 +14,7 @@ export function expectError<M extends BaseMeta<any>>(meta: M, str: string) {
     const bytes = toBytes(str)
 
     const context: JsonParsingContext = {
-        reader: { bytes: bytes, writable: false },
+        reader: new JsonReader(bytes, bytes.length, false),
         options: defaultOptions,
         stack: new Stack()
     }
@@ -42,10 +43,7 @@ export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: U
         const bytes = new Uint8Array(ch)
 
         const context: JsonParsingContext = {
-            reader: {
-                bytes: bytes,
-                writable: chunks.length !== 0
-            },
+            reader: new JsonReader(bytes, bytes.length, chunks.length !== 0),
             options: defaultOptions,
             stack: stack
         }
