@@ -31,48 +31,45 @@ import { setToJson } from "../converters/toJson/set"
 export type Modifier<M extends BaseMeta<any>> = (metadata: M) => M
 
 export type BuilderOptions = {
-    readonly resolvePool: <T extends ArrayLike<any>>(type: TypeName) => ArrayPool<T>
+    readonly globalPools: Record<TypeName, ArrayPool<any>>,
+    readonly arrayPoolFactory: typeof arrayPool
 }
-
-const globalPools: Record<TypeName, ArrayPool<any>> = {
-    number: arrayPool<Array<number>>(Array, 0),
-    string: arrayPool<Array<string>>(Array, ''),
-    object: arrayPool<Array<object>>(Array, {}),
-    boolean: arrayPool<Array<boolean>>(Array, false),
-    date: arrayPool<Array<Date>>(Array, Date.prototype),
-    bigint: arrayPool<Array<bigint>>(Array, 0n),
-    set: arrayPool<Array<Set<any>>>(Array, new Set()),
-    map: arrayPool<Array<Map<string, any>>>(Array, new Map()),
-    array: arrayPool<Array<object>>(Array, {}),
-    nullable: arrayPool(Array, null),
-    i8: arrayPool(Int8Array, 0),
-    i16: arrayPool(Int16Array, 0),
-    i32: arrayPool(Int32Array, 0),
-    i64: arrayPool(BigInt64Array, 0n),
-    u8: arrayPool(Uint8Array, 0),
-    u16: arrayPool(Uint16Array, 0),
-    u32: arrayPool(Uint32Array, 0),
-    u64: arrayPool(BigUint64Array, 0n),
-    'i8[]': arrayPool<Array<Int8Array>>(Array, new Int8Array()),
-    'i16[]': arrayPool<Array<Int16Array>>(Array, new Int16Array()),
-    'i32[]': arrayPool<Array<Int32Array>>(Array, new Int32Array()),
-    'i64[]': arrayPool<Array<BigInt64Array>>(Array, new BigInt64Array()),
-    'u8[]': arrayPool<Array<Uint8Array>>(Array, new Uint8Array()),
-    'u16[]': arrayPool<Array<Uint16Array>>(Array, new Uint16Array()),
-    'u32[]': arrayPool<Array<Uint32Array>>(Array, new Uint32Array()),
-    'u64[]': arrayPool<Array<BigUint64Array>>(Array, new BigUint64Array()),
-    'f64[]': arrayPool<Array<Float64Array>>(Array, new Float64Array()),
-}
-
-const resolvePool = <T extends ArrayLike<any>>(type: TypeName): ArrayPool<T> =>
-    (globalPools[type] ??= arrayPool(Array, undefined))
 
 const defaultBuilderOptions: BuilderOptions = {
-    resolvePool: resolvePool
+    globalPools: {
+        number: arrayPool<Array<number>>(Array, 0),
+        string: arrayPool<Array<string>>(Array, ''),
+        object: arrayPool<Array<object>>(Array, {}),
+        boolean: arrayPool<Array<boolean>>(Array, false),
+        date: arrayPool<Array<Date>>(Array, Date.prototype),
+        bigint: arrayPool<Array<bigint>>(Array, 0n),
+        set: arrayPool<Array<Set<any>>>(Array, new Set()),
+        map: arrayPool<Array<Map<string, any>>>(Array, new Map()),
+        array: arrayPool<Array<object>>(Array, {}),
+        nullable: arrayPool(Array, null),
+        i8: arrayPool(Int8Array, 0),
+        i16: arrayPool(Int16Array, 0),
+        i32: arrayPool(Int32Array, 0),
+        i64: arrayPool(BigInt64Array, 0n),
+        u8: arrayPool(Uint8Array, 0),
+        u16: arrayPool(Uint16Array, 0),
+        u32: arrayPool(Uint32Array, 0),
+        u64: arrayPool(BigUint64Array, 0n),
+        'i8[]': arrayPool<Array<Int8Array>>(Array, new Int8Array()),
+        'i16[]': arrayPool<Array<Int16Array>>(Array, new Int16Array()),
+        'i32[]': arrayPool<Array<Int32Array>>(Array, new Int32Array()),
+        'i64[]': arrayPool<Array<BigInt64Array>>(Array, new BigInt64Array()),
+        'u8[]': arrayPool<Array<Uint8Array>>(Array, new Uint8Array()),
+        'u16[]': arrayPool<Array<Uint16Array>>(Array, new Uint16Array()),
+        'u32[]': arrayPool<Array<Uint32Array>>(Array, new Uint32Array()),
+        'u64[]': arrayPool<Array<BigUint64Array>>(Array, new BigUint64Array()),
+        'f64[]': arrayPool<Array<Float64Array>>(Array, new Float64Array()),
+    },
+    arrayPoolFactory: arrayPool
 }
 
 export function builder(options: BuilderOptions = defaultBuilderOptions) {
-    const { resolvePool } = {
+    const { globalPools, arrayPoolFactory } = {
         ...defaultBuilderOptions,
         ...options
     }
@@ -157,38 +154,39 @@ export function builder(options: BuilderOptions = defaultBuilderOptions) {
             toValue: toArray,
             toJson: arrayToJson,
             value: value,
-            pool: resolvePool(value.type)
+            pool: (globalPools[value.type] ??= arrayPoolFactory(Array, undefined))
         })
     }
 
     const u8Array = (...modifiers: Modifier<ArrayMeta<Uint8Array, PrimitiveMeta<number>>>[]) =>
-        typedArray<Uint8Array>(U8_ARRAY, u8(), ...modifiers)
+        typedArray<Uint8Array>(Uint8Array, U8_ARRAY, u8(), ...modifiers)
 
     const u16Array = (...modifiers: Modifier<ArrayMeta<Uint16Array, PrimitiveMeta<number>>>[]) =>
-        typedArray<Uint16Array>(U16_ARRAY, u16(), ...modifiers)
+        typedArray<Uint16Array>(Uint16Array, U16_ARRAY, u16(), ...modifiers)
 
     const u32Array = (...modifiers: Modifier<ArrayMeta<Uint32Array, PrimitiveMeta<number>>>[]) =>
-        typedArray<Uint32Array>(U32_ARRAY, u32(), ...modifiers)
+        typedArray<Uint32Array>(Uint32Array, U32_ARRAY, u32(), ...modifiers)
 
     const u64Array = (...modifiers: Modifier<ArrayMeta<BigUint64Array, PrimitiveMeta<bigint>>>[]) =>
-        bigIntTypedArray<BigUint64Array>(U64_ARRAY, u64(), ...modifiers)
+        bigIntTypedArray<BigUint64Array>(BigUint64Array, U64_ARRAY, u64(), ...modifiers)
 
     const i8Array = (...modifiers: Modifier<ArrayMeta<Int8Array, PrimitiveMeta<number>>>[]) =>
-        typedArray<Int8Array>(I8_ARRAY, i8(), ...modifiers)
+        typedArray<Int8Array>(Int8Array, I8_ARRAY, i8(), ...modifiers)
 
     const i16Array = (...modifiers: Modifier<ArrayMeta<Int16Array, PrimitiveMeta<number>>>[]) =>
-        typedArray<Int16Array>(I16_ARRAY, i16(), ...modifiers)
+        typedArray<Int16Array>(Int16Array, I16_ARRAY, i16(), ...modifiers)
 
     const i32Array = (...modifiers: Modifier<ArrayMeta<Int32Array, PrimitiveMeta<number>>>[]) =>
-        typedArray<Int32Array>(I32_ARRAY, i32(), ...modifiers)
+        typedArray<Int32Array>(Int32Array, I32_ARRAY, i32(), ...modifiers)
 
     const i64Array = (...modifiers: Modifier<ArrayMeta<BigInt64Array, PrimitiveMeta<bigint>>>[]) =>
-        bigIntTypedArray<BigInt64Array>(I64_ARRAY, i64(), ...modifiers)
+        bigIntTypedArray<BigInt64Array>(BigInt64Array, I64_ARRAY, i64(), ...modifiers)
 
     const f64Array = (...modifiers: Modifier<ArrayMeta<Float64Array, PrimitiveMeta<number>>>[]) =>
-        typedArray<Float64Array>(F64_ARRAY, number(), ...modifiers)
+        typedArray<Float64Array>(Float64Array, F64_ARRAY, number(), ...modifiers)
 
     const typedArray = <T extends ArrayLikeWritable<number> & (IntegerTypedArray | FloatTypedArray)>(
+        ctor: new (length: number) => T,
         type: BaseType,
         value: PrimitiveMeta<number>,
         ...modifiers: Modifier<ArrayMeta<T, PrimitiveMeta<number>>>[]
@@ -198,11 +196,12 @@ export function builder(options: BuilderOptions = defaultBuilderOptions) {
             toValue: toArray,
             toJson: arrayToJson,
             value: value,
-            pool: resolvePool(value.type)
+            pool: (globalPools[value.type] ??= arrayPoolFactory<ArrayLikeWritable<number>>(ctor, 0))
         })
     }
 
     const bigIntTypedArray = <T extends ArrayLikeWritable<bigint> & BigIntTypedArray>(
+        ctor: new (length: number) => T,
         type: BaseType,
         value: PrimitiveMeta<bigint>,
         ...modifiers: Modifier<ArrayMeta<T, PrimitiveMeta<bigint>>>[]
@@ -212,7 +211,7 @@ export function builder(options: BuilderOptions = defaultBuilderOptions) {
             toValue: toArray,
             toJson: arrayToJson,
             value: value,
-            pool: resolvePool(value.type)
+            pool: (globalPools[value.type] ??= arrayPoolFactory<ArrayLikeWritable<bigint>>(ctor, 0n))
         })
     }
 
