@@ -67,12 +67,8 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
             throw new TypeError(`Invalid input type: expected string, ArrayBuffer, or Uint8Array, but received ${typeof value}`)
         }
 
-        const reader = new JsonReader(bytes, bytesLength, false)
+        const reader = new JsonReader(bytes, bytesLength, false, isString ? value : undefined)
         try {
-            if (isString) {
-                reader.setStringSource(value, { charIndex: 0, byteIndex: 0 })
-            }
-
             const result = metadataType.toValue(metadataType, { options: fullOptions, reader, stack }, 0, 0)
 
             if (isError(result)) {
