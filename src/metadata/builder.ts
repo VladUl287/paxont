@@ -31,7 +31,6 @@ import { setToJson } from "../converters/toJson/set"
 export type Modifier<M extends BaseMeta<any>> = (metadata: M) => M
 
 export type BuilderOptions = {
-    readonly encoder: TextEncoder,
     readonly resolvePool: <T extends ArrayLike<any>>(type: TypeName) => ArrayPool<T>
 }
 
@@ -68,12 +67,16 @@ const globalPools: Record<TypeName, ArrayPool<any>> = {
 const resolvePool = <T extends ArrayLike<any>>(type: TypeName): ArrayPool<T> =>
     (globalPools[type] ??= arrayPool(Array, undefined))
 
-export const defaultBuilderOptions: BuilderOptions = Object.freeze({
-    encoder: new TextEncoder(),
+const defaultBuilderOptions: BuilderOptions = {
     resolvePool: resolvePool
-})
+}
 
-export function builder({ encoder, resolvePool: poolFor }: BuilderOptions = defaultBuilderOptions) {
+export function builder(options: BuilderOptions = defaultBuilderOptions) {
+    const { resolvePool } = {
+        ...defaultBuilderOptions,
+        ...options
+    }
+
     function applyModifier<M extends BaseMeta<any>>(value: M, modify: Modifier<M>): M {
         return Object.assign({}, modify(value), { type: value.type })
     }
@@ -154,7 +157,7 @@ export function builder({ encoder, resolvePool: poolFor }: BuilderOptions = defa
             toValue: toArray,
             toJson: arrayToJson,
             value: value,
-            pool: poolFor(value.type)
+            pool: resolvePool(value.type)
         })
     }
 
@@ -195,7 +198,7 @@ export function builder({ encoder, resolvePool: poolFor }: BuilderOptions = defa
             toValue: toArray,
             toJson: arrayToJson,
             value: value,
-            pool: poolFor(value.type)
+            pool: resolvePool(value.type)
         })
     }
 
@@ -209,7 +212,7 @@ export function builder({ encoder, resolvePool: poolFor }: BuilderOptions = defa
             toValue: toArray,
             toJson: arrayToJson,
             value: value,
-            pool: poolFor(value.type)
+            pool: resolvePool(value.type)
         })
     }
 
@@ -249,22 +252,6 @@ export function builder({ encoder, resolvePool: poolFor }: BuilderOptions = defa
         unknown
 
     type AsObjectMetaValue<M extends Modifier<ObjectMeta<any>>[]> = Expand<CombineModifiers<M>>
-
-    function field<K extends string, M extends BaseMeta<any>>(
-        name: K,
-        value: M
-    ): Modifier<ObjectMeta<{ [P in K]: M }>> {
-        return (m) => {
-            m.fields.push({
-                name: {
-                    value: name,
-                    bytes: encoder.encode(name)
-                },
-                value: value
-            })
-            return m
-        }
-    }
 
     const defaultBuilder = (values: any[]): any => ({})
     const defaultFieldIndex = (bytes: Uint8Array<ArrayBufferLike>, offset: number) => -1
@@ -320,8 +307,7 @@ export function builder({ encoder, resolvePool: poolFor }: BuilderOptions = defa
         u8Array, u16Array, u32Array, u64Array,
         f64Array,
         map, set,
-        object,
-        field,
+        object
     }
 }
 
@@ -339,6 +325,5 @@ export const {
     u8Array, u16Array, u32Array, u64Array,
     f64Array,
     map, set,
-    object,
-    field,
+    object
 } = builder(defaultBuilderOptions)

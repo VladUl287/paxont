@@ -1,6 +1,6 @@
 import { ArrayPool } from "../utils/array"
 import { Modifier } from "./builder"
-import { ArrayMeta, MetaValue, ObjectMeta, SetMeta } from "./types"
+import { ArrayMeta, BaseMeta, MetaValue, ObjectMeta, SetMeta } from "./types"
 
 export const keySelector = <M extends SetMeta<any>>(
     selector: (value: M extends SetMeta<infer U> ? MetaValue<U> : never) => any
@@ -16,4 +16,21 @@ export const pool = <M extends ArrayMeta<any, any>>(
 
 export const builder = <M extends ObjectMeta<{}>>(build: M['build']) => {
     return (m: M): M => ({ ...m, build })
+}
+
+export const field = <K extends string, M extends BaseMeta<any>>(
+    name: K,
+    value: M,
+    encoder = new TextEncoder()
+): Modifier<ObjectMeta<{ [P in K]: M }>> => {
+    return (m) => {
+        m.fields.push({
+            name: {
+                value: name,
+                bytes: encoder.encode(name)
+            },
+            value: value
+        })
+        return m
+    }
 }
