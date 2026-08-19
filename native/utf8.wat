@@ -217,14 +217,14 @@
             ;; double quotes
             (if (i8x16.bitmask (i8x16.eq (local.get $temp_v128) (local.get $quote_vec)))
               (then 
-                (if (i32.ge_u
-                  (local.tee $temp
-                    (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (local.get $byte_count))))
+                (if (i32.ge_s
+                  (local.tee $temp (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (local.get $byte_count))))
                   (i32.const 0))
                   (then (return (local.get $temp)))
                 )))
     
-            (if (i32.eqz (local.get $byte_count)) (then (return (local.get $i))))
+            (if (i32.eqz (local.get $byte_count)) 
+              (then (return (local.get $i))))
 
             (local.set $i (i32.add (local.get $i) (local.get $byte_count)))
             
@@ -239,7 +239,7 @@
 
             (if (i32.eq (i32.and (local.get $byte) (i32.const 0x80808080)) (i32.const 0)) 
               (then 
-                (if (i32.gt_s 
+                (if (i32.ge_s 
                     (local.tee $temp (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (i32.const 4))))
                     (i32.const 0))
                   (then (return (local.get $temp))))
@@ -261,7 +261,7 @@
 
             (if (i32.and 
                 (i32.eq (local.get $byte) (i32.const 34))
-                (i32.gt_s 
+                (i32.ge_s 
                   (local.tee $temp (call $find_unescaped_quote (local.get $i) (local.get $i))) 
                   (i32.const 0)))
               (then (return (local.get $temp))))
@@ -284,8 +284,7 @@
 
     (block $scan_done
       (loop $scan_loop
-        (br_if $scan_done
-          (i32.gt_u (local.get $i) (local.get $len)))
+        (br_if $scan_done (i32.gt_u (local.get $i) (local.get $len)))
 
         (local.set $byte (i32.load8_u (local.get $i)))
 
@@ -328,10 +327,8 @@
 
         (local.set $i (i32.add (local.get $i) (i32.const 1)))
         (br $scan_loop)
-      )
-    )
-
-    i32.const -1
+      ))
+    (return (i32.const -1))
   )
  
   (func $rotate_r (param $value i32) (param $offset i32) (result i32)
