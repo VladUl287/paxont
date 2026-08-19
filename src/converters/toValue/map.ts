@@ -25,8 +25,8 @@ export function toMap<T, M extends BaseMeta<T>>(
 
     const state = stack.pop()
 
-    let isContinued: boolean = state?.isContinued ?? false
-    let value: Map<string, T> = state?.value ?? new Map<string, T>()
+    const isContinued: boolean = state?.isContinued ?? false
+    const value: Map<string, T> = state?.value ?? new Map<string, T>()
     let keyValue: string | undefined = state?.keyValue ?? undefined
     let colonIndex: number | undefined = state?.colonIndex ?? undefined
 
