@@ -30,7 +30,7 @@ export function isError<T>(
     return result.type === ERROR
 }
 
-export type Expand<T> = T extends object ? { [K in keyof T]: T[K] } : never
+export type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never
 
 export function nameof<T>(key: Extract<keyof T, string>): Extract<keyof T, string> {
     return key
