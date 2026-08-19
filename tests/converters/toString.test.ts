@@ -1,9 +1,10 @@
-import { createStringParser, defaultParseOptions } from "../../src/converters/string"
+import { stringParser } from "../../src/converters/toValue/string"
 import { string } from "../../src/metadata/builder"
-import { BaseMeta, JsonReader, JsonParsingContext } from "../../src/metadata/types"
+import { BaseMeta, JsonParsingContext } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
+import { JsonReader } from "../../src/utils/reader"
+import { ReadResultType } from "../../src/utils/result"
 import { Stack } from "../../src/utils/stack"
-import { ReadResultType } from "../../src/utils/types"
 import { deserializePartially } from "./utils"
 
 describe('tryParseString', () => {
@@ -12,10 +13,7 @@ describe('tryParseString', () => {
     const expectToParse = <M extends BaseMeta<any>>(meta: M, str: string) => {
         const bytes = encoder.encode(str)
 
-        const reader: JsonReader = {
-            bytes: bytes,
-            writable: false
-        }
+        const reader = new JsonReader(bytes, bytes.length, false)
 
         const ctx: JsonParsingContext = {
             reader: reader,
@@ -55,8 +53,7 @@ describe('tryParseString', () => {
     const jsonStrings = jsonTestStrings()
 
     test('utf16 string parser', () => {
-        const { toString } = createStringParser({
-            ...defaultParseOptions,
+        const { toString } = stringParser({
             useUtf16: true
         })
         jsonStrings
@@ -66,8 +63,7 @@ describe('tryParseString', () => {
     })
 
     test('utf8 string parser', () => {
-        const { toString } = createStringParser({
-            ...defaultParseOptions,
+        const { toString } = stringParser({
             useUtf16: false
         })
         jsonStrings
@@ -77,9 +73,8 @@ describe('tryParseString', () => {
     })
 
     test('utf16 restrict memory string parser', () => {
-        const { toString } = createStringParser({
-            ...defaultParseOptions,
-            maxWasmMemoryPages: 1,
+        const { toString } = stringParser({
+            maxMemoryPages: 1,
             useUtf16: true
         })
         jsonStrings
@@ -92,9 +87,8 @@ describe('tryParseString', () => {
     })
 
     test('utf8 restrict memory string parser', () => {
-        const { toString } = createStringParser({
-            ...defaultParseOptions,
-            maxWasmMemoryPages: 1,
+        const { toString } = stringParser({
+            maxMemoryPages: 1,
             useUtf16: false
         })
         jsonStrings
@@ -107,8 +101,7 @@ describe('tryParseString', () => {
     })
 
     test('wasmless string parser', () => {
-        const { toString } = createStringParser({
-            ...defaultParseOptions,
+        const { toString } = stringParser({
             wasmInstance: (b, m) => undefined
         })
         jsonStrings
