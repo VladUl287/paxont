@@ -400,7 +400,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         start = i - cacheViewStart
                     }
 
-                    const end_index = utf8_to_utf8(start, bytesLength, partial)
+                    const end_index = utf8_to_utf8(start, bytesLength - cacheViewStart, partial)
                     if (end_index < 0) {
                         return {
                             type: ERROR,
