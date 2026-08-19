@@ -242,12 +242,16 @@ export function builder({ encoder, resolvePool: poolFor }: BuilderOptions = defa
     type CombineModifiers<Mod extends Modifier<any>[]> =
         Mod extends [infer First, ...infer Rest] ?
         (First extends Modifier<any> ?
-            (ReturnType<First> extends ObjectMeta<infer U> ? U : never) & (Rest extends Modifier<any>[] ? CombineModifiers<Rest> : {}) :
+            (ReturnType<First> extends ObjectMeta<infer U> ?
+                U & (Rest extends Modifier<any>[] ? CombineModifiers<Rest> : {}) :
+                never) :
             never
         ) :
         unknown
 
-    function _field<K extends string, M extends BaseMeta<any>>(
+    type AsObjectMetaValue<M extends Modifier<ObjectMeta<any>>[]> = Expand<CombineModifiers<M>>
+
+    function field<K extends string, M extends BaseMeta<any>>(
         name: K,
         value: M
     ): Modifier<ObjectMeta<{ [P in K]: M }>> {
@@ -263,123 +267,45 @@ export function builder({ encoder, resolvePool: poolFor }: BuilderOptions = defa
         }
     }
 
-    function _object<A extends Modifier<ObjectMeta<any>>[]>(...modifiers: A): ObjectMeta<Expand<CombineModifiers<A>>> {
-        return modifiers as any
+    const defaultBuilder = (values: any[]): any => ({})
+    const defaultFieldIndex = (bytes: Uint8Array<ArrayBufferLike>, offset: number) => -1
+    const defaultToJson = (metadata: ObjectMeta<any>, value: any, options: any) => ''
+
+    const replaceDefaultToJsonModifier: Modifier<ObjectMeta<any>> = (meta) => {
+        return meta.toJson === defaultToJson ?
+            { ...meta, toJson: genObjectToJsonFactory(meta.fields) } :
+            meta
     }
 
-    const obj1 = _object(
-        _field('id', number()),
-        _field('name', string()),
-        _field('country', _object(
-            _field('name', string())
-        ))
-    )
+    const replaceDefaultFieldIndexModifier: Modifier<ObjectMeta<any>> = (meta) => {
+        return meta.getFieldIndex === defaultFieldIndex ?
+            { ...meta, getFieldIndex: generateTrie(meta.fields.map(f => f.name.bytes)) } :
+            meta
+    }
 
-    // obj1.toValue()
+    const replaceDefaultBuilderModifier: Modifier<ObjectMeta<any>> = (meta) => {
+        return meta.build === defaultBuilder ?
+            { ...meta, build: genObjectFactory(meta.fields) } :
+            meta
+    }
 
-    // const f = _field('id', number())
-    // const f1 = _field('name', string())
-    // const f2 = _field('country', object(field('name', string())))
-
-    // type Test1 = Expand<CombineModifiers<[typeof f, typeof f1, typeof f2]>>
-
-    // const fiel = _field('key', number())
-    // fiel()
-
-    // type CombineModifiers<M extends Modifier<any>[]> = { [K in keyof M]: MetaValue<ReturnType<M[K]>> }
-
-    // type CombineModifiers<M extends Modifier<any>[]> = {
-    //     [K in keyof M]: MetaValue<ReturnType<M[K]>>
-    // }
-
-    // type CombineModifiers<Mod extends Modifier<any>[]> =
-    //     Mod extends [infer First, ...infer Rest] ?
-    //     (First extends Modifier<any> ? 
-    //         MetaValue<ReturnType<First>> & (Rest extends Modifier<any>[] ? CombineModifiers<Rest> : {}) : 
-    //         never
-    //     ) :
-    //     unknown
-
-    // type CombineModifiers<M extends BaseMeta<any>, Mod extends Modifier<M>[]> =
-    //     Mod extends [infer First, ...infer Rest] ?
-    //     (First extends Modifier<M> ? 
-    //         MetaValue<ReturnType<First>> & (Rest extends Modifier<M>[] ? CombineModifiers<M, Rest> : {}) : 
-    //         never
-    //     ) :
-    //     unknown
-
-    // type CombineModifiers<Meta extends BaseMeta<any>, Mods extends Modifier<Meta>[]> = {
-    //     [K in keyof Mods]: MetaValue<ReturnType<Mods[K]>>
-    // }
-
-    // type CombineModifiers<M extends Modifier<any>[]> = {
-    //     [K in keyof M]: M[K] extends Modifier<infer U> ? U : never
-    // }[number]
-
-    // type CombineModifiers<M extends Modifier<any>[]> =
-    //     M extends [infer First, ...infer Rest]
-    //     // ? ReturnType<First & Modifier<any>> & CombineModifiers<Rest & Modifier<any>[]>
-    //     // ? ReturnType<First extends Modifier<infer U>>
-    //     // ? (First extends Modifier<infer U> ? U : never) & CombineModifiers<Rest & Modifier<any>[]>
-    //     ? (First extends Modifier<infer U> ? U : never) & (Rest extends Modifier<any>[] ? CombineModifiers<Rest> : {})
-    //     : unknown
-
-    // type CombineModifiers<M extends Modifier<any>[]> = ReturnType<M[0]>
-
-    type Test = CombineModifiers<[
-        ((t: ObjectMeta<{ id: PrimitiveMeta<number> }>) => ObjectMeta<{ id: PrimitiveMeta<number> }>),
-        ((t: ObjectMeta<{ id: PrimitiveMeta<number> }>) => ObjectMeta<{ name: PrimitiveMeta<string> }>)
-    ]>
-
-    type Test1 = Expand<CombineModifiers<[
-        ((t: ObjectMeta<{ id: PrimitiveMeta<number> }>) => ObjectMeta<{ id: PrimitiveMeta<number> }>),
-        ((t: ObjectMeta<{ id: PrimitiveMeta<number> }>) => ObjectMeta<{ name: PrimitiveMeta<string> }>)
-    ]>>
-
-    type ObjectParam<M extends ObjectParam<M>[]> = ObjectField<string, any> | Modifier<ObjectMeta<AsObject<M>>>
-
-    type Filter<T, U> = T extends U ? T : never;
-    type FilterArray<T, A> = T extends (infer U)[] ? Filter<U, A>[] : never
-
-    type FilterFields<M extends ObjectParam<M>[]> = FilterArray<M, ObjectField<string, any>>
-
-    type AsObject<M extends ObjectParam<M>[]> = Expand<{ [E in FilterFields<M>[number]as E['name']['value']]: E['value'] }>
-
-    const object = <M extends ObjectParam<M>[]>(...args: M): ObjectMeta<AsObject<M>> => {
-        const fields = args.filter((arg): arg is ObjectField<keyof AsObject<M> & string, any> => {
-            return arg && typeof arg === 'object' && isMetadata(arg.value) && typeof arg['name']['value'] === 'string' && arg['name']['bytes'] instanceof Uint8Array
-        })
-
-        const objectMeta: ObjectMeta<AsObject<M>> = {
+    function object<M extends Modifier<ObjectMeta<any>>[]>(...modifiers: M): ObjectMeta<AsObjectMetaValue<M>> {
+        const defaultObjectMeta: ObjectMeta<AsObjectMetaValue<M>> = {
             type: OBJECT,
-            fields: fields,
             toValue: toObject,
-            build: genObjectFactory<ObjectMeta<AsObject<M>>>(fields),
-            getFieldIndex: generateTrie(fields.map(f => f.name.bytes)),
-            toJson: genObjectToJsonFactory<ObjectMeta<AsObject<M>>>(fields)
+            fields: [],
+            toJson: defaultToJson,
+            build: defaultBuilder,
+            getFieldIndex: defaultFieldIndex
         }
 
-        return args
-            .filter((arg): arg is Modifier<ObjectMeta<AsObject<M>>> => {
-                return arg && typeof arg === 'function'
-            })
-            .reduce(applyModifier, objectMeta)
+        return [
+            ...modifiers,
+            replaceDefaultToJsonModifier,
+            replaceDefaultFieldIndexModifier,
+            replaceDefaultBuilderModifier
+        ].reduce(applyModifier, defaultObjectMeta)
     }
-
-    const field = <K extends string, M extends BaseMeta<any>>(name: K, value: M): ObjectField<K, M> => {
-        return {
-            name: {
-                value: name,
-                bytes: encoder.encode(name)
-            },
-            value: value
-        }
-    }
-
-    const obj = object(
-        field('id', number()),
-        field('name', number()),
-    )
 
     return {
         string,
