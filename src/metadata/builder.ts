@@ -19,8 +19,7 @@ import { toString } from "../converters/toValue/string"
 import { ArrayLikeWritable, ArrayPool, BigIntTypedArray, FloatTypedArray, IntegerTypedArray, arrayPool } from "../utils/array"
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../converters/toValue/number/int"
 import { toFloat } from "../converters/toValue/number/float"
-import { Expand } from "../utils/types"
-import { isMetadata } from "./utils"
+import { Expand, IsAny } from "../utils/types"
 import { bigIntToJson, i16ToJson, i32ToJson, i64ToJson, i8ToJson, numberToJson, u16ToJson, u32ToJson, u64ToJson, u8ToJson } from "../converters/toJson/number"
 import { stringToJson } from "../converters/toJson/string"
 import { boolToJson } from "../converters/toJson/bool"
@@ -243,7 +242,7 @@ export function builder({ encoder, resolvePool: poolFor }: BuilderOptions = defa
         Mod extends [infer First, ...infer Rest] ?
         (First extends Modifier<any> ?
             (ReturnType<First> extends ObjectMeta<infer U> ?
-                U & (Rest extends Modifier<any>[] ? CombineModifiers<Rest> : {}) :
+                (IsAny<U> extends true ? {} : U) & (Rest extends Modifier<any>[] ? CombineModifiers<Rest> : {}) :
                 never) :
             never
         ) :
@@ -305,12 +304,6 @@ export function builder({ encoder, resolvePool: poolFor }: BuilderOptions = defa
             replaceDefaultFieldIndexModifier,
             replaceDefaultBuilderModifier
         ].reduce(applyModifier, defaultObjectMeta)
-    }
-
-    const builder = <M extends ObjectMeta<{}>>(build: M['build']) => {
-        return (m: M): M => {
-            return { ...m, build }
-        }
     }
 
     return {
