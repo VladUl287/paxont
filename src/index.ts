@@ -1,6 +1,6 @@
 import { memoize } from "./utils/memo"
 import { defaultOptions, JsonOptions } from "./options"
-import { BaseMeta, JsonParsingState, JsonReaderValue } from "./metadata/types"
+import { BaseMeta, JsonParsingState, JsonReader } from "./metadata/types"
 import { arrayPool } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
@@ -66,7 +66,7 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
             throw new TypeError(`Invalid input type: expected string, ArrayBuffer, or Uint8Array, but received ${typeof value}`)
         }
 
-        const reader = new JsonReaderValue(bytes, bytesLength, false)
+        const reader = new JsonReader(bytes, bytesLength, false)
         try {
             if (isString) {
                 reader.setStringSource(value, { charIndex: 0, byteIndex: 0 })
@@ -120,7 +120,7 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
                     break
                 }
 
-                const jsonReader = new JsonReaderValue(value, value.length, !done)
+                const jsonReader = new JsonReader(value, value.length, !done)
 
                 const result = metadataType.toValue(metadataType, { options: fullOptions, reader: jsonReader, stack }, 0, 0)
 
