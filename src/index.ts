@@ -3,7 +3,7 @@ import { defaultOptions, JsonOptions } from "./options"
 import { BaseMeta, JsonParsingState } from "./metadata/types"
 import { arrayPool } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
-import { isMetadata } from "./metadata/utils"
+import { isMeta } from "./metadata/utils"
 import { metadata } from "./metadata"
 import { isError, isNeedsMoreData } from "./utils/types"
 import { IStack, Stack } from "./utils/stack"
@@ -41,7 +41,7 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
         const fullOptions = options === undefined ?
             defaultSerializeOptions :
             optionsMemo.getOrAdd(options, (o) => ({ ...defaultSerializeOptions, ...o }))
-        const metadataType = isMetadata(type) ?
+        const metadataType = isMeta(type) ?
             type :
             metadataMemo.getOrAdd(type, (t) => metadata.from(t))
 
@@ -99,7 +99,7 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
             defaultSerializeOptions :
             optionsMemo.getOrAdd(options, (o) => ({ ...defaultSerializeOptions, ...o }))
 
-        const metadataType = isMetadata(type) ?
+        const metadataType = isMeta(type) ?
             type :
             metadataMemo.getOrAdd(type, (key) => metadata.from(key))
 
@@ -145,7 +145,7 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
             defaultSerializeOptions :
             optionsMemo.getOrAdd(options, (o) => ({ ...defaultSerializeOptions, ...o }))
 
-        const metadataType = isMetadata(type) ?
+        const metadataType = isMeta(type) ?
             type :
             metadataMemo.getOrAdd(type, (key) => metadata.from(key))
 
