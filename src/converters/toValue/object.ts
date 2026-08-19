@@ -1,5 +1,5 @@
 import { skipWhitespace } from "../utils"
-import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/types"
+import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/result"
 import { AsObject, BaseMeta, JsonParsingContext, ObjectMeta } from "../../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../../utils/ascii_symbols"
 import { JSONParseError } from "../../utils/error"

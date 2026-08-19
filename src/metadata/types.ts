@@ -2,8 +2,9 @@ import { JsonOptions } from "../options"
 import { ArrayPool } from "../utils/array"
 import { JsonReader } from "../utils/reader"
 import { IStack } from "../utils/stack"
-import { Expand, ReadResult } from "../utils/types"
+import { ReadResult } from "../utils/result"
 import { BaseType } from "./baseTypes"
+import { Expand } from "../utils/types"
 
 export type TypeName = BaseType | (string & {})
 

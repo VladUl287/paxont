@@ -1,7 +1,7 @@
 import { BaseMeta, ArrayMeta, JsonParsingContext, MetaValue } from "../../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../../utils/ascii_symbols"
 import { skipWhitespace } from "../utils"
-import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/types"
+import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/result"
 import { ArrayLikeWritable } from "../../utils/array"
 import { JSONParseError } from "../../utils/error"
 

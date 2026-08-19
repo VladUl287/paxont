@@ -1,4 +1,4 @@
-import { ReadResult, ReadResultType } from "../../../utils/types"
+import { ReadResult, ReadResultType } from "../../../utils/result"
 import { MINUS } from "../../../utils/ascii_symbols"
 import { float64, FloatFormat } from "./floatFormats"
 

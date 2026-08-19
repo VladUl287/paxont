@@ -1,6 +1,6 @@
 import { JsonParsingContext, PrimitiveMeta } from "../../../metadata/types"
 import { JSONParseError } from "../../../utils/error"
-import { ReadResult, ReadResultType } from "../../../utils/types"
+import { ReadResult, ReadResultType } from "../../../utils/result"
 import { MINUS } from "../../../utils/ascii_symbols"
 import { isDigitU } from "../../../utils/ascii"
 import { JsonReader } from "../../../utils/reader"

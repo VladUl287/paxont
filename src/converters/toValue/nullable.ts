@@ -1,5 +1,5 @@
 import { BaseMeta, JsonParsingContext, NullableMeta, MetaValue } from "../../metadata/types"
-import { ReadResult, ReadResultType } from "../../utils/types"
+import { ReadResult, ReadResultType } from "../../utils/result"
 import { L, N, U } from "../../utils/ascii_symbols"
 
 const NULL = N | U << 8 | L << 16 | L << 24

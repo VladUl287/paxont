@@ -1,7 +1,7 @@
 import { BaseMeta, JsonParsingContext, MapMeta } from "../../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN } from "../../utils/ascii_symbols"
 import { skipWhitespace } from "../utils"
-import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/types"
+import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/result"
 import { JSONParseError } from "../../utils/error"
 
 const COMPLETE = ReadResultType.COMPLETE
