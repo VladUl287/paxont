@@ -123,7 +123,7 @@ export function generateTrie(values: Uint8Array[]): (bytes: Uint8Array, offset: 
             for (const [key, values] of map) {
                 switchCode += `case ${key}:{${build(values, d + 1)}}`
             }
-            return switchCode + `default: return ${defaultIndex};}`
+            return switchCode + `default:return ${defaultIndex};}`
         }
     }
 
