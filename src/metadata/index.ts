@@ -5,12 +5,13 @@ import {
 } from "./baseTypes"
 import { ArrayMeta, BaseMeta, MapMeta, MetaValue, NullableMeta, ObjectMeta, PrimitiveMeta, SetMeta, TypeName } from "./types"
 import {
-    array, bigInt, bool, date, f64Array, field, i16Array, i32Array,
+    array, bigInt, bool, date, f64Array, i16Array, i32Array,
     i64Array, i8Array, map, number, object, set, string,
     u16Array, u32Array, u64Array, u8Array
 } from "./builder"
 import { isPlainObject } from "../utils/object"
 import { isMetadata, isMetadataContainer } from "./utils"
+import { field } from "./modifiers"
 
 type HasMeta<T> =
     T extends BaseMeta<any> ? true :
