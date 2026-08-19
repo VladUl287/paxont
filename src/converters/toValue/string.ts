@@ -1,4 +1,4 @@
-import { JsonParsingContext, JsonReader, PrimitiveMeta } from "../../metadata/types"
+import { JsonParsingContext, PrimitiveMeta } from "../../metadata/types"
 import { IS_BUN, IS_NODE } from "../../utils/platform"
 import { ReadResult, ReadResultType } from "../../utils/types"
 import { BACKSLASH, DOUBLE_QUOTE, DOUBLE_QUOTE as DQ } from "../../utils/ascii_symbols"
@@ -7,6 +7,7 @@ import { wasmInstance } from "../../utils/wasm"
 import { StringParseOptions, utf16Module, utf8Module, utf8ScanModule } from "../types/string"
 import { newUtf16LE, newUtf16LEBuffer } from "../../utils/utf16"
 import { newUtf8, newUtf8Buffer } from "../../utils/utf8"
+import { JsonReader } from "../../utils/reader"
 
 const ERROR = ReadResultType.ERROR
 const COMPLETE = ReadResultType.COMPLETE

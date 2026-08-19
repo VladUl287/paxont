@@ -1,8 +1,9 @@
-import { JsonReader, JsonParsingContext, PrimitiveMeta } from "../../../metadata/types"
+import { JsonParsingContext, PrimitiveMeta } from "../../../metadata/types"
 import { MINUS } from "../../../utils/ascii_symbols"
 import { ReadResult, ReadResultType } from "../../../utils/types"
 import { JSONParseError } from "../../../utils/error"
 import { isDigitU } from "../../../utils/ascii"
+import { JsonReader } from "../../../utils/reader"
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
@@ -25,65 +26,53 @@ export const toUint64 = (
 export function toBigInt(
     metadata: PrimitiveMeta<bigint>,
     context: JsonParsingContext,
-    index: number,
+    i: number,
     depth: number): ReadResult<bigint> {
-    const reader = context.reader
+    const { reader, options } = context
     const b = reader.bytes
     const len = b.length
 
-    let i = index
-    let start = i
+    const start = i
     // if (state.isContinued)
     //     i = state.lastIndex ?? i
 
-    try {
-        while (i < len - 4) {
-            const a1 = b[i], a2 = b[i + 1], a3 = b[i + 2], a4 = b[i + 3]
+    while (i < len - 4) {
+        const a1 = b[i], a2 = b[i + 1], a3 = b[i + 2], a4 = b[i + 3]
 
-            const word = (a1 << 0 | a2 << 8 | a3 << 16 | a4 << 24) - 0x30303030
-            const hasNonDigit = ((word + 0x76767676) | word) & 0x80808080
+        const word = (a1 << 0 | a2 << 8 | a3 << 16 | a4 << 24) - 0x30303030
+        const hasNonDigit = ((word + 0x76767676) | word) & 0x80808080
 
-            if (hasNonDigit !== 0) break
+        if (hasNonDigit !== 0) break
 
-            i += 4
-        }
+        i += 4
+    }
 
-        while (i < len && isDigitU(b[i])) i++
+    while (i < len && isDigitU(b[i])) i++
 
-        // if (i === len && ctx.writable) {
-        //     state.isContinued = true
-        //     state.lastIndex = i
+    // if (i === len && ctx.writable) {
+    //     state.isContinued = true
+    //     state.lastIndex = i
 
-        //     return {
-        //         type: NEEDS_MORE_DATA,
-        //         nextIndex: start
-        //     }
-        // }
+    //     return {
+    //         type: NEEDS_MORE_DATA,
+    //         nextIndex: start
+    //     }
+    // }
 
-        const length = i - start
-        if (length <= 0) {
-            return {
-                type: ERROR,
-                error: new JSONParseError(
-                    `Expected at least one digit at index ${i}, but found '${String.fromCharCode(b[i])}' while parsing bigint`)
-            }
-        }
-
-        const decoder = context.options.decoder
-        const view = new Uint8Array(b.buffer, start, i - start)
+    const length = i - start
+    if (length <= 0) {
         return {
-            type: COMPLETE,
-            value: BigInt(decoder.decode(view)),
-            nextIndex: i
+            type: ERROR,
+            error: new JSONParseError(`Expected at least one digit but found '${String.fromCharCode(b[i])}'`, { metadata, index: i, depth })
         }
     }
-    catch (error) {
-        return {
-            type: ReadResultType.ERROR,
-            error: new JSONParseError(
-                `Unexpected error while parsing bigint at index ${i}: ${error instanceof Error ? error.message : String(error)}`,
-                { cause: error })
-        }
+
+    const decoder = options.decoder
+    const view = new Uint8Array(b.buffer, start, i - start)
+    return {
+        type: COMPLETE,
+        value: BigInt(decoder.decode(view)),
+        nextIndex: i
     }
 }
 

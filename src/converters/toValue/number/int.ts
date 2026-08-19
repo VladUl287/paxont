@@ -1,8 +1,9 @@
-import { JsonReader, JsonParsingContext, PrimitiveMeta } from "../../../metadata/types"
+import { JsonParsingContext, PrimitiveMeta } from "../../../metadata/types"
 import { JSONParseError } from "../../../utils/error"
 import { ReadResult, ReadResultType } from "../../../utils/types"
 import { MINUS } from "../../../utils/ascii_symbols"
 import { isDigitU } from "../../../utils/ascii"
+import { JsonReader } from "../../../utils/reader"
 
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
@@ -72,17 +73,19 @@ export function tryParseInt(
     while (i < length && isDigitU(b[i]))
         m = m * 10 + (b[i++] & 0x0F)
 
-    if (i < len && isDigitU(b[i]))
+    if (i < len && isDigitU(b[i])) {
         return {
             type: ERROR,
             error: new JSONParseError(``)
         }
+    }
 
-    if (i >= len && reader.writable)
+    if (i >= len && reader.writable) {
         return {
             type: NEEDS_MORE_DATA,
             nextIndex: start
         }
+    }
 
     if (negative) m = -m
 
