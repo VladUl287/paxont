@@ -1,6 +1,6 @@
 import { skipWhitespace } from "../utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/types"
-import { AsObject, JsonParsingContext, Obj, ObjectMeta } from "../../metadata/types"
+import { AsObject, BaseMeta, JsonParsingContext, ObjectMeta } from "../../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../../utils/ascii_symbols"
 import { JSONParseError } from "../../utils/error"
 
@@ -8,7 +8,7 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toObject<T extends Obj>(
+export function toObject<T extends Record<string, BaseMeta<any>>>(
     m: ObjectMeta<T>,
     ctx: JsonParsingContext,
     i: number,
