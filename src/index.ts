@@ -1,6 +1,6 @@
 import { memoize } from "./utils/memo"
 import { defaultOptions, JsonOptions } from "./options"
-import { BaseMeta, JsonParsingState, JsonReader } from "./metadata/types"
+import { BaseMeta, JsonParsingState } from "./metadata/types"
 import { arrayPool } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMetadata } from "./metadata/utils"
@@ -8,6 +8,7 @@ import { metadata } from "./metadata"
 import { isError, isNeedsMoreData } from "./utils/types"
 import { IStack, Stack } from "./utils/stack"
 import { JsontOptions, MetaOrData } from "./types"
+import { JsonReader } from "./utils/reader"
 
 const defaultJsontOptions: JsontOptions = Object.freeze({
     metadata: metadata(),
