@@ -3,7 +3,7 @@ import {
     I64, I64_ARRAY, I8, I8_ARRAY, MAP, NULLABLE, NUMBER, OBJECT, SET, STRING,
     U16, U16_ARRAY, U32, U32_ARRAY, U64, U64_ARRAY, U8, U8_ARRAY
 } from "./baseTypes"
-import { ArrayMeta, BaseMeta, MapMeta, MetaValue, NullableMeta, ObjectMeta, PrimitiveMeta, SetMeta, TypeName } from "./types"
+import { BaseMeta, MetaValue, TypeName } from "./types"
 import {
     array, bigInt, bool, date, f64Array, i16Array, i32Array,
     i64Array, i8Array, map, number, object, set, string,
@@ -11,7 +11,6 @@ import {
 } from "./builder"
 import { isPlainObject } from "../utils/object"
 import { isMapMeta, isMeta, isMetaContainer, isObjectMeta } from "./utils"
-import { field } from "./modifiers"
 
 type HasMeta<T> =
     T extends BaseMeta<any> ? true :
@@ -117,8 +116,11 @@ export function withDefaults(m: Metadata): Metadata {
                 name: OBJECT,
                 is: (v) => isPlainObject(v) && !isMeta(v),
                 from: (o, m) => {
-                    const fields = Object.entries(o).map(([key, value]) => field(key, m.from(value)))
-                    return object(...fields)
+                    const structure = Object.entries(o).reduce((acc, [key, value]) => {
+                        acc[key] = m.from(value)
+                        return acc
+                    }, <Record<string, BaseMeta<any>>>{})
+                    return object(structure)
                 },
                 order: 50
             })

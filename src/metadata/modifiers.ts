@@ -5,7 +5,11 @@ import { ArrayMeta, BaseMeta, MetaValue, ObjectMeta, SetMeta } from "./types"
 type ObjectModifiersOptions = { encoder: TextEncoder }
 
 export const modifiers = () => {
+    const toJson = <M extends BaseMeta<any>>(converter: M['toJson']) =>
+        (m: M) => ({ ...m, toJson: converter })
+
     return {
+        toJson,
         setModifiers: () => {
             const keySelector = <M extends SetMeta<any>>(selector: (value: MetaValue<M['value']>) => any): Modifier<M> =>
                 (meta: M): M => ({ ...meta, key: selector })
@@ -43,10 +47,7 @@ export const modifiers = () => {
     }
 }
 
-export const { objectModifiers, setModifiers, arrayModifiers } = modifiers()
-
+export const { toJson, objectModifiers, setModifiers, arrayModifiers } = modifiers()
 export const { keySelector } = setModifiers()
-
 export const { pool } = arrayModifiers()
-
-export const { field, builder } = objectModifiers()
+export const { builder } = objectModifiers()

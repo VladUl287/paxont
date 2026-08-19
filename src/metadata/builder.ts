@@ -31,11 +31,13 @@ import { setToJson } from "../converters/toJson/set"
 export type Modifier<M extends BaseMeta<any>> = (metadata: M) => M
 
 export type BuilderOptions = {
-    readonly globalPools: Record<TypeName, ArrayPool<any>>,
+    readonly encoder: TextEncoder
+    readonly globalPools: Record<TypeName, ArrayPool<any>>
     readonly arrayPoolFactory: typeof arrayPool
 }
 
 const defaultBuilderOptions: BuilderOptions = {
+    encoder: new TextEncoder(),
     globalPools: {
         number: arrayPool<Array<number>>(Array, 0),
         string: arrayPool<Array<string>>(Array, ''),
@@ -69,7 +71,7 @@ const defaultBuilderOptions: BuilderOptions = {
 }
 
 export function builder(options: Partial<BuilderOptions> = defaultBuilderOptions) {
-    const { globalPools, arrayPoolFactory } = {
+    const { encoder, globalPools, arrayPoolFactory } = {
         ...defaultBuilderOptions,
         ...options
     }
@@ -240,56 +242,29 @@ export function builder(options: Partial<BuilderOptions> = defaultBuilderOptions
         })
     }
 
-    type CombineModifiers<Mod extends Modifier<any>[]> =
-        Mod extends [infer First, ...infer Rest] ?
-        (First extends Modifier<any> ?
-            (ReturnType<First> extends ObjectMeta<infer U> ?
-                (IsAny<U> extends true ? {} : U) & (Rest extends Modifier<any>[] ? CombineModifiers<Rest> : {}) :
-                never) :
-            never
-        ) :
-        unknown
+    const object = <M extends Record<string, BaseMeta<any>>>(
+        structure: M,
+        ...modifiers: Modifier<ObjectMeta<M>>[]
+    ): ObjectMeta<M> => {
+        const fields: ObjectField<keyof M & string, M[keyof M]>[] = Object.entries(structure)
+            .map(([key, value]) => ({
+                name: {
+                    value: key,
+                    bytes: encoder.encode(key)
+                },
+                value: value as M[keyof M]
+            }))
 
-    type AsObjectMetaValue<M extends Modifier<ObjectMeta<any>>[]> = Expand<CombineModifiers<M>>
-
-    const defaultBuilder = (_values: any[]): any => ({})
-    const defaultFieldIndex = (_bytes: Uint8Array<ArrayBufferLike>, _offset: number) => -1
-    const defaultToJson = (_metadata: ObjectMeta<any>, _value: any, _options: any) => ''
-
-    const replaceDefaultToJsonModifier: Modifier<ObjectMeta<any>> = (meta) => {
-        return meta.toJson === defaultToJson ?
-            { ...meta, toJson: genObjectToJsonFactory(meta.fields) } :
-            meta
-    }
-
-    const replaceDefaultFieldIndexModifier: Modifier<ObjectMeta<any>> = (meta) => {
-        return meta.getFieldIndex === defaultFieldIndex ?
-            { ...meta, getFieldIndex: generateTrie(meta.fields.map(f => f.name.bytes)) } :
-            meta
-    }
-
-    const replaceDefaultBuilderModifier: Modifier<ObjectMeta<any>> = (meta) => {
-        return meta.build === defaultBuilder ?
-            { ...meta, build: genObjectFactory(meta.fields) } :
-            meta
-    }
-
-    const object = <M extends Modifier<ObjectMeta<any>>[]>(...modifiers: M): ObjectMeta<AsObjectMetaValue<M>> => {
-        const defaultObjectMeta: ObjectMeta<AsObjectMetaValue<M>> = {
+        const defaultObjectMeta: ObjectMeta<M> = {
             type: OBJECT,
             toValue: toObject,
-            fields: [],
-            toJson: defaultToJson,
-            build: defaultBuilder,
-            getFieldIndex: defaultFieldIndex
+            fields: fields,
+            toJson: genObjectToJsonFactory(fields),
+            build: genObjectFactory<ObjectMeta<M>>(fields),
+            getFieldIndex: generateTrie(fields.map(c => c.name.bytes))
         }
 
-        return [
-            ...modifiers,
-            replaceDefaultToJsonModifier,
-            replaceDefaultFieldIndexModifier,
-            replaceDefaultBuilderModifier
-        ].reduce(applyModifier, defaultObjectMeta)
+        return modifiers.reduce(applyModifier, defaultObjectMeta)
     }
 
     return {
@@ -325,4 +300,4 @@ export const {
     f64Array,
     map, set,
     object
-} = builder(defaultBuilderOptions)
+} = builder()
