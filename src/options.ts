@@ -11,12 +11,3 @@ export const defaultOptions: JsonOptions = Object.freeze({
     }),
     maxDepth: 64
 })
-
-export function createOptions(seed: Partial<JsonOptions>): JsonOptions {
-    return {
-        ...defaultOptions,
-        ...Object.fromEntries(
-            Object.entries(seed ?? {}).filter(([_, value]) => value !== null && value !== undefined)
-        )
-    }
-}
