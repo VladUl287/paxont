@@ -5,8 +5,8 @@ import { BACKSLASH, DOUBLE_QUOTE, DOUBLE_QUOTE as DQ } from "../../utils/ascii_s
 import { JSONParseError } from "../../utils/error"
 import { wasmInstance } from "../../utils/wasm"
 import { StringParseOptions, utf16Module, utf8Module, utf8ScanModule } from "../types/string"
-import { newUtf16LE, newUtf16LEBuffer } from "../../utils/utf16"
-import { newUtf8, newUtf8Buffer } from "../../utils/utf8"
+import { utf16LeDecoder, utf16LeDecoderForBuffer } from "../../utils/utf16"
+import { utf8Decoder, utf8DecoderForBuffer } from "../../utils/utf8"
 import { JsonReader } from "../../utils/reader"
 
 const ERROR = ReadResultType.ERROR
@@ -18,13 +18,13 @@ const defaultOptions: StringParseOptions = Object.freeze({
     maxMemoryPages: 128, //~8MB,
     wasmInstance,
     useUtf16: IS_NODE || IS_BUN,
-    newUtf16: IS_NODE || IS_BUN ? newUtf16LEBuffer : newUtf16LE,
-    newUtf8: IS_NODE || IS_BUN ? newUtf8Buffer : newUtf8
+    utf16LeDecoder: IS_NODE || IS_BUN ? utf16LeDecoderForBuffer : utf16LeDecoder,
+    utf8Decoder: IS_NODE || IS_BUN ? utf8DecoderForBuffer : utf8Decoder
 })
 
 export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) {
     const options: StringParseOptions = { ...defaultOptions, ...opt }
-    const { defaultMemoryPages, maxMemoryPages, newUtf8, newUtf16, wasmInstance } = options
+    const { defaultMemoryPages, maxMemoryPages, utf8Decoder: newUtf8, utf16LeDecoder: newUtf16, wasmInstance } = options
 
     const memory = new WebAssembly.Memory({
         initial: defaultMemoryPages,

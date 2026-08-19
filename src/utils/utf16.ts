@@ -6,7 +6,7 @@ const decodeUnrolled16LE = (b: Uint8Array, start: number, length: number): strin
     return factory(b, start)
 }
 
-export function newUtf16LEBuffer(bytes: Uint8Array): (start: number, end: number) => string {
+export function utf16LeDecoderForBuffer(bytes: Uint8Array): (start: number, end: number) => string {
     const buffer = Buffer.from(bytes.buffer)
     return (start, end) => {
         const length = end - start
@@ -16,7 +16,7 @@ export function newUtf16LEBuffer(bytes: Uint8Array): (start: number, end: number
     }
 }
 
-export function newUtf16LE(bytes: Uint8Array, fatal = false): (start: number, end: number) => string {
+export function utf16LeDecoder(bytes: Uint8Array, fatal = false): (start: number, end: number) => string {
     const unsafeDecoder16 = new TextDecoder('utf-16le', { fatal })
     return (start, end) => {
         const length = end - start

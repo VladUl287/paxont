@@ -1,5 +1,5 @@
-import type { newUtf16LE } from "../../utils/utf16"
-import type { newUtf8 } from "../../utils/utf8"
+import type { utf16LeDecoder } from "../../utils/utf16"
+import type { utf8Decoder } from "../../utils/utf8"
 import type { wasmInstance } from "../../utils/wasm"
 
 export type utf8Module = {
@@ -29,6 +29,6 @@ export type StringParseOptions = {
     readonly maxMemoryPages: number
     readonly defaultMemoryPages: number
     readonly useUtf16: boolean,
-    readonly newUtf16: typeof newUtf16LE,
-    readonly newUtf8: typeof newUtf8
+    readonly utf16LeDecoder: typeof utf16LeDecoder,
+    readonly utf8Decoder: typeof utf8Decoder
 }

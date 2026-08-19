@@ -11,7 +11,7 @@ const decodeUnrolledAscii = (b: Uint8Array, start: number, length: number): stri
     return factory(b, start)
 }
 
-export function newUtf8Buffer(bytes: Uint8Array): (start: number, end: number, ascii_only: boolean) => string {
+export function utf8DecoderForBuffer(bytes: Uint8Array): (start: number, end: number, ascii_only: boolean) => string {
     const buffer = Buffer.from(bytes.buffer)
     return (start, end, ascii_only = false) => {
         const length = end - start
@@ -21,7 +21,7 @@ export function newUtf8Buffer(bytes: Uint8Array): (start: number, end: number, a
     }
 }
 
-export function newUtf8(bytes: Uint8Array): (start: number, end: number, ascii_only: boolean) => string {
+export function utf8Decoder(bytes: Uint8Array): (start: number, end: number, ascii_only: boolean) => string {
     const unsafeDecoder8 = new TextDecoder('utf-8', { fatal: false })
     return (start, end, ascii_only = false) => {
         const length = end - start
