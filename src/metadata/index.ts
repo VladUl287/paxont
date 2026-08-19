@@ -28,8 +28,8 @@ export type Unwrap<T> =
     T
 
 export type Metadata = {
-    readonly add: <Input, M extends BaseMeta<any>>(type: JType<Input, M>) => void
-    readonly remove: (type: TypeName | JType<any, any>) => boolean
+    readonly add: <M extends BaseMeta<any>>(type: JType<M>) => void
+    readonly remove: (type: TypeName | JType<any>) => boolean
     readonly clear: () => void
     readonly from: <T, R extends BaseMeta<any> = BaseMeta<Unwrap<T>>>(data: T) => R
 }
@@ -38,29 +38,34 @@ export type MetadataOptions = {
     readonly withDefaults: (m: Metadata) => Metadata
 }
 
-export type JType<Input, Meta extends BaseMeta<any>> = {
+export type JType<M extends BaseMeta<any>> = {
     readonly name: TypeName,
-    readonly is: (input: any) => input is Input
-    readonly from: (input: Input, metadata: Metadata) => Meta
+    readonly is: (input: any) => boolean
+    readonly from: (input: any, metadata: Metadata) => M
     readonly order: number
 }
 
-const defaultOptions: MetadataOptions = Object.freeze({ withDefaults })
+const defaultOptions: MetadataOptions = { withDefaults }
 
-export function metadata(options: MetadataOptions = defaultOptions): Metadata {
-    const jTypes = new Array<JType<any, any>>()
+export function metadata(options: Partial<MetadataOptions> = defaultOptions): Metadata {
+    const { withDefaults } = {
+        ...defaultOptions,
+        ...options
+    }
 
-    const add = <Input, M extends BaseMeta<any>>(type: JType<Input, M>): void => {
+    const jTypes = new Array<JType<any>>()
+
+    const add = <M extends BaseMeta<any>>(type: JType<M>): void => {
         jTypes.push(type)
         jTypes.sort((a, b) => a.order - b.order)
     }
 
-    const remove = (type: TypeName | JType<any, any>): boolean => {
-        const inputType = typeof type === 'string' ? type : type.name
+    const remove = (type: TypeName | JType<any>): boolean => {
+        const isStringType = typeof type === 'string' ? type : type.name
 
         let count = 0
         jTypes.sort((a, _) => {
-            const result = a.name === inputType ? 1 : 0
+            const result = a.name === isStringType ? 1 : 0
             count += result
             return result
         })
@@ -80,8 +85,7 @@ export function metadata(options: MetadataOptions = defaultOptions): Metadata {
     }
 
     const instance = { add, remove, clear, from }
-
-    return options.withDefaults(instance)
+    return withDefaults(instance)
 }
 
 export function withDefaults(m: Metadata): Metadata {
@@ -119,9 +123,9 @@ export function withDefaults(m: Metadata): Metadata {
     }
 
     function withMetadata(m: Metadata): Metadata {
-        const isType = <M extends BaseMeta<any> = BaseMeta<any>>(type: TypeName): JType<M, M>['is'] =>
-            (v: any): v is M => isMetadata(v) && v.type === type
-        const createFor = <M extends BaseMeta<any> = BaseMeta<any>>(type: TypeName, is: (v: any) => v is M = isType(type)): JType<M, M> =>
+        const isType = <M extends BaseMeta<any> = BaseMeta<any>>(type: TypeName): JType<M>['is'] =>
+            (v: any): boolean => isMetadata(v) && v.type === type
+        const createFor = <M extends BaseMeta<any> = BaseMeta<any>>(type: TypeName, is: (v: any) => boolean = isType(type)): JType<M> =>
             ({ name: type, is, from: (m) => m, order: 50 })
 
         m.add(createFor(STRING))
