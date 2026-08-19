@@ -54,7 +54,7 @@ export function metadata(options: Partial<MetadataOptions> = defaultOptions): Me
         ...options
     }
 
-    const jTypes = new Array<JType<any>>()
+    let jTypes = new Array<JType<any>>()
 
     const add = <M extends BaseMeta<any>>(type: JType<M>): void => {
         jTypes.push(type)
@@ -67,19 +67,17 @@ export function metadata(options: Partial<MetadataOptions> = defaultOptions): Me
     }
 
     const remove = (type: TypeName | JType<any>): boolean => {
-        const isStringType = typeof type === 'string' ? type : type.name
+        const predicate: (value: JType<any>) => boolean = typeof type === 'string' ?
+            t => t.name !== type :
+            t => t !== type
 
-        let count = 0
-        jTypes.sort((a, _) => {
-            const result = a.name === isStringType ? 1 : 0
-            count += result
-            return result
-        })
-        jTypes.splice(jTypes.length - count, count)
-        return count > 0
+        const filtered = jTypes.filter(predicate)
+        const found = filtered.length !== jTypes.length
+        jTypes = filtered
+        return found
     }
 
-    const clear = (): void => { jTypes.splice(0) }
+    const clear = (): void => { jTypes = [] }
 
     const from = <T, R extends BaseMeta<any> = BaseMeta<Unwrap<T>>>(data: T): R => {
         for (const type of jTypes) {
@@ -135,7 +133,7 @@ export function withDefaults(m: Metadata): Metadata {
 
         meta.addMany(
             create(STRING), create(NUMBER), create(BIGINT), create(BOOL),
-            create(DATE), create(I8), create(I16), create(I32), 
+            create(DATE), create(I8), create(I16), create(I32),
             create(I64), create(U8), create(U16), create(U32), create(U64),
             create(NULLABLE, (v): v is NullableMeta<any> => isMetadataContainer(v) && v.type === NULLABLE),
             create(ARRAY, (v): v is ArrayMeta<any[], any> => isMetadataContainer(v) && v.type === ARRAY),
