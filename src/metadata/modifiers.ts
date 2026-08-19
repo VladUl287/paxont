@@ -1,6 +1,8 @@
 import { ArrayPool } from "../utils/array"
 import { Modifier } from "./builder"
-import { ArrayMeta, BaseMeta, MetaValue, ObjectMeta, SetMeta, TypeName } from "./types"
+import { ArrayMeta, BaseMeta, MetaValue, ObjectMeta, SetMeta } from "./types"
+
+type ObjectModifiersOptions = { encoder: TextEncoder }
 
 export const modifiers = () => {
     return {
@@ -16,14 +18,13 @@ export const modifiers = () => {
 
             return { pool }
         },
-        objectModifiers: () => {
+        objectModifiers: ({ encoder }: ObjectModifiersOptions = { encoder: new TextEncoder() }) => {
             const builder = <M extends ObjectMeta<{}>>(build: M['build']) =>
                 (m: M): M => ({ ...m, build })
 
             const field = <K extends string, M extends BaseMeta<any>>(
                 name: K,
-                value: M,
-                encoder = new TextEncoder()
+                value: M
             ): Modifier<ObjectMeta<{ [P in K]: M }>> => {
                 return (m) => {
                     m.fields.push({
@@ -43,3 +44,9 @@ export const modifiers = () => {
 }
 
 export const { objectModifiers, setModifiers, arrayModifiers } = modifiers()
+
+export const { keySelector } = setModifiers()
+
+export const { pool } = arrayModifiers()
+
+export const { field, builder } = objectModifiers()
