@@ -68,7 +68,7 @@ const defaultBuilderOptions: BuilderOptions = {
     arrayPoolFactory: arrayPool
 }
 
-export function builder(options: BuilderOptions = defaultBuilderOptions) {
+export function builder(options: Partial<BuilderOptions> = defaultBuilderOptions) {
     const { globalPools, arrayPoolFactory } = {
         ...defaultBuilderOptions,
         ...options
