@@ -105,27 +105,29 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
 
         const stack = new Stack<JsonParsingState>()
 
-        const reader = json.getReader({ mode: 'byob' })
-        const tempBuffer = bufferPool.rent(655_360)
+        const binaryReader = json.getReader({ mode: 'byob' })
+        const tempBuffer = bufferPool.rent(65536)
+        const reader = new JsonReader(tempBuffer, tempBuffer.length, true)
 
         let start = 0
         try {
             while (true) {
-                const { value, done } = await reader.read(tempBuffer.subarray(start))
+                const { value, done } = await binaryReader.read(tempBuffer.subarray(start))
 
-                if (value === undefined) {
-                    break
-                }
+                if (value === undefined) { break }
 
-                const jsonReader = new JsonReader(value, value.length, !done)
+                reader.setLength(start + value.length)
+                done && reader.close()
 
-                const result = metadataType.toValue(metadataType, { options: fullOptions, reader: jsonReader, stack }, 0, 0)
+                const result = metadataType.toValue(metadataType, { options: fullOptions, reader, stack }, 0, 0)
 
                 if (isError(result)) {
                     throw result.error
                 }
 
                 if (isNeedsMoreData(result)) {
+                    if (done) { break }
+
                     tempBuffer.copyWithin(0, result.nextIndex, tempBuffer.length)
                     start = result.nextIndex
                     continue
@@ -136,6 +138,7 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
 
             throw new Error()
         } finally {
+            reader.release()
             bufferPool.release(tempBuffer)
         }
     }

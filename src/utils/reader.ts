@@ -5,19 +5,27 @@ export type SparseIndex = {
 
 export class JsonReader {
     private readonly releaseCallbacks: Array<() => void> = []
-    
+
     public readonly sparseIndex?: SparseIndex
 
     constructor(
         public readonly bytes: Uint8Array,
-        public readonly bytesLength: number,
-        public readonly writable: boolean,
+        public bytesLength: number,
+        public writable: boolean,
         public readonly raw?: string,
         sparseIndex?: SparseIndex
     ) {
         if (raw !== undefined) {
             this.sparseIndex = sparseIndex ?? { charIndex: 0, byteIndex: 0 }
         }
+    }
+
+    public setLength(len: number) {
+        this.bytesLength = len
+    }
+
+    public close() {
+        this.writable = false
     }
 
     public onRelease(callback: () => void) {

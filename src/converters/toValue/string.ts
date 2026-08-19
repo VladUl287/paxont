@@ -14,8 +14,8 @@ const COMPLETE = ReadResultType.COMPLETE
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 const defaultOptions: StringParseOptions = Object.freeze({
-    defaultMemoryPages: 1, //~64KiB
-    maxMemoryPages: 128, //~8MiB,
+    defaultMemoryPages: 1, //~64KB
+    maxMemoryPages: 128, //~8MB,
     wasmInstance,
     useUtf16: IS_NODE || IS_BUN,
     newUtf16: IS_NODE || IS_BUN ? newUtf16LEBuffer : newUtf16LE,
