@@ -239,7 +239,7 @@
           (then
             (if (i32.eq (local.get $temp) (i32.const 34)) 
               (then
-                (if (i32.ge_u (local.tee $temp (call $find_unescaped_quote (local.get $i) (local.get $i))) (i32.const 0))
+                (if (i32.ge_s (local.tee $temp (call $find_unescaped_quote (local.get $i) (local.get $i))) (i32.const 0))
                   (then 
                     (global.set $utf16_length (local.get $utf16_ptr))
                     (return (local.get $temp)))
@@ -463,7 +463,7 @@
 
             (if (i32.eq (i32.and (local.get $byte) (i32.const 0x80808080)) (i32.const 0)) 
               (then 
-                (if (i32.gt_s 
+                (if (i32.ge_s 
                     (local.tee $temp (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (i32.const 4))))
                     (i32.const 0))
                   (then
@@ -503,7 +503,7 @@
 
             (if (i32.and 
                 (i32.eq (local.get $byte) (i32.const 34))
-                (i32.gt_s 
+                (i32.ge_s 
                   (local.tee $temp (call $find_unescaped_quote (local.get $i) (local.get $i))) 
                   (i32.const 0)))
               (then
