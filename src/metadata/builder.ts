@@ -307,6 +307,12 @@ export function builder({ encoder, resolvePool: poolFor }: BuilderOptions = defa
         ].reduce(applyModifier, defaultObjectMeta)
     }
 
+    const builder = <M extends ObjectMeta<{}>>(build: M['build']) => {
+        return (m: M): M => {
+            return { ...m, build }
+        }
+    }
+
     return {
         string,
         number,
