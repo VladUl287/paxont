@@ -115,7 +115,7 @@ export function withDefaults(m: Metadata): Metadata {
             { name: MAP, is: (v) => v instanceof Map, from: (ma, m) => map(m.from([...ma.values()][0])), order: 50 },
             {
                 name: OBJECT,
-                is: (v): v is {} => isPlainObject(v) && !isMetadata(v),
+                is: (v) => isPlainObject(v) && !isMetadata(v),
                 from: (o, m) => {
                     const fields = Object.entries(o).map(([key, value]) => field(key, m.from(value)))
                     return object(...fields)
@@ -126,29 +126,27 @@ export function withDefaults(m: Metadata): Metadata {
     }
 
     function withMetadata(meta: Metadata): Metadata {
-        const isType = <M extends BaseMeta<any> = BaseMeta<any>>(type: TypeName): JType<M>['is'] =>
-            (v: any): boolean => isMetadata(v) && v.type === type
-        const create = <M extends BaseMeta<any> = BaseMeta<any>>(type: TypeName, is: (v: any) => boolean = isType(type)): JType<M> =>
-            ({ name: type, is, from: (m) => m, order: 50 })
+        const isMetaType = (type: TypeName) => (v: any): boolean => isMetadata(v) && v.type === type
+        const create = (name: TypeName, is = isMetaType(name)): JType<any> => ({ name, is, from: (m) => m, order: 50 })
 
         meta.addMany(
             create(STRING), create(NUMBER), create(BIGINT), create(BOOL),
             create(DATE), create(I8), create(I16), create(I32),
             create(I64), create(U8), create(U16), create(U32), create(U64),
-            create(NULLABLE, (v): v is NullableMeta<any> => isMetadataContainer(v) && v.type === NULLABLE),
-            create(ARRAY, (v): v is ArrayMeta<any[], any> => isMetadataContainer(v) && v.type === ARRAY),
-            create(I8_ARRAY, (v): v is ArrayMeta<Int8Array, PrimitiveMeta<number>> => isMetadataContainer(v) && v.type === I8_ARRAY),
-            create(I16_ARRAY, (v): v is ArrayMeta<Int16Array, PrimitiveMeta<number>> => isMetadataContainer(v) && v.type === I16_ARRAY),
-            create(I32_ARRAY, (v): v is ArrayMeta<Int32Array, PrimitiveMeta<number>> => isMetadataContainer(v) && v.type === I32_ARRAY),
-            create(I64_ARRAY, (v): v is ArrayMeta<BigInt64Array, PrimitiveMeta<bigint>> => isMetadataContainer(v) && v.type === I64_ARRAY),
-            create(U8_ARRAY, (v): v is ArrayMeta<Uint8Array, PrimitiveMeta<number>> => isMetadataContainer(v) && v.type === U8_ARRAY),
-            create(U16_ARRAY, (v): v is ArrayMeta<Uint16Array, PrimitiveMeta<number>> => isMetadataContainer(v) && v.type === U16_ARRAY),
-            create(U32_ARRAY, (v): v is ArrayMeta<Uint32Array, PrimitiveMeta<number>> => isMetadataContainer(v) && v.type === U32_ARRAY),
-            create(U64_ARRAY, (v): v is ArrayMeta<BigUint64Array, PrimitiveMeta<bigint>> => isMetadataContainer(v) && v.type === U64_ARRAY),
-            create(SET, (v): v is SetMeta<any> => isMetadataContainer(v) && v.type === SET),
-            create(MAP, (v): v is MapMeta<any> => isMetadataContainer(v) && v.type === MAP && 'key' in v && isMetadata(v.key)),
+            create(NULLABLE, (v) => isMetadataContainer(v) && v.type === NULLABLE),
+            create(ARRAY, (v) => isMetadataContainer(v) && v.type === ARRAY),
+            create(I8_ARRAY, (v) => isMetadataContainer(v) && v.type === I8_ARRAY),
+            create(I16_ARRAY, (v) => isMetadataContainer(v) && v.type === I16_ARRAY),
+            create(I32_ARRAY, (v) => isMetadataContainer(v) && v.type === I32_ARRAY),
+            create(I64_ARRAY, (v) => isMetadataContainer(v) && v.type === I64_ARRAY),
+            create(U8_ARRAY, (v) => isMetadataContainer(v) && v.type === U8_ARRAY),
+            create(U16_ARRAY, (v) => isMetadataContainer(v) && v.type === U16_ARRAY),
+            create(U32_ARRAY, (v) => isMetadataContainer(v) && v.type === U32_ARRAY),
+            create(U64_ARRAY, (v) => isMetadataContainer(v) && v.type === U64_ARRAY),
+            create(SET, (v) => isMetadataContainer(v) && v.type === SET),
+            create(MAP, (v) => isMetadataContainer(v) && v.type === MAP && 'key' in v && isMetadata(v.key)),
             create(OBJECT,
-                (v): v is ObjectMeta<any> => isMetadata(v) && v.type === OBJECT &&
+                (v) => isMetadata(v) && v.type === OBJECT &&
                     'fields' in v && Array.isArray(v.fields) &&
                     'build' in v && typeof v.build === 'function' &&
                     'getFieldIndex' in v && typeof v.getFieldIndex === 'function'
