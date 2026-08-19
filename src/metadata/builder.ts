@@ -253,9 +253,9 @@ export function builder(options: BuilderOptions = defaultBuilderOptions) {
 
     type AsObjectMetaValue<M extends Modifier<ObjectMeta<any>>[]> = Expand<CombineModifiers<M>>
 
-    const defaultBuilder = (values: any[]): any => ({})
-    const defaultFieldIndex = (bytes: Uint8Array<ArrayBufferLike>, offset: number) => -1
-    const defaultToJson = (metadata: ObjectMeta<any>, value: any, options: any) => ''
+    const defaultBuilder = (_values: any[]): any => ({})
+    const defaultFieldIndex = (_bytes: Uint8Array<ArrayBufferLike>, _offset: number) => -1
+    const defaultToJson = (_metadata: ObjectMeta<any>, _value: any, _options: any) => ''
 
     const replaceDefaultToJsonModifier: Modifier<ObjectMeta<any>> = (meta) => {
         return meta.toJson === defaultToJson ?
@@ -275,7 +275,7 @@ export function builder(options: BuilderOptions = defaultBuilderOptions) {
             meta
     }
 
-    function object<M extends Modifier<ObjectMeta<any>>[]>(...modifiers: M): ObjectMeta<AsObjectMetaValue<M>> {
+    const object = <M extends Modifier<ObjectMeta<any>>[]>(...modifiers: M): ObjectMeta<AsObjectMetaValue<M>> => {
         const defaultObjectMeta: ObjectMeta<AsObjectMetaValue<M>> = {
             type: OBJECT,
             toValue: toObject,
