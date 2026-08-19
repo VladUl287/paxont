@@ -239,6 +239,103 @@ export function builder({ encoder, resolvePool: poolFor }: BuilderOptions = defa
         })
     }
 
+    type CombineModifiers<Mod extends Modifier<any>[]> =
+        Mod extends [infer First, ...infer Rest] ?
+        (First extends Modifier<any> ?
+            (ReturnType<First> extends ObjectMeta<infer U> ? U : never) & (Rest extends Modifier<any>[] ? CombineModifiers<Rest> : {}) :
+            never
+        ) :
+        unknown
+
+    function _field<K extends string, M extends BaseMeta<any>>(
+        name: K,
+        value: M
+    ): Modifier<ObjectMeta<{ [P in K]: M }>> {
+        return (m) => {
+            m.fields.push({
+                name: {
+                    value: name,
+                    bytes: encoder.encode(name)
+                },
+                value: value
+            })
+            return m
+        }
+    }
+
+    function _object<A extends Modifier<ObjectMeta<any>>[]>(...modifiers: A): ObjectMeta<Expand<CombineModifiers<A>>> {
+        return modifiers as any
+    }
+
+    const obj1 = _object(
+        _field('id', number()),
+        _field('name', string()),
+        _field('country', _object(
+            _field('name', string())
+        ))
+    )
+
+    // obj1.toValue()
+
+    // const f = _field('id', number())
+    // const f1 = _field('name', string())
+    // const f2 = _field('country', object(field('name', string())))
+
+    // type Test1 = Expand<CombineModifiers<[typeof f, typeof f1, typeof f2]>>
+
+    // const fiel = _field('key', number())
+    // fiel()
+
+    // type CombineModifiers<M extends Modifier<any>[]> = { [K in keyof M]: MetaValue<ReturnType<M[K]>> }
+
+    // type CombineModifiers<M extends Modifier<any>[]> = {
+    //     [K in keyof M]: MetaValue<ReturnType<M[K]>>
+    // }
+
+    // type CombineModifiers<Mod extends Modifier<any>[]> =
+    //     Mod extends [infer First, ...infer Rest] ?
+    //     (First extends Modifier<any> ? 
+    //         MetaValue<ReturnType<First>> & (Rest extends Modifier<any>[] ? CombineModifiers<Rest> : {}) : 
+    //         never
+    //     ) :
+    //     unknown
+
+    // type CombineModifiers<M extends BaseMeta<any>, Mod extends Modifier<M>[]> =
+    //     Mod extends [infer First, ...infer Rest] ?
+    //     (First extends Modifier<M> ? 
+    //         MetaValue<ReturnType<First>> & (Rest extends Modifier<M>[] ? CombineModifiers<M, Rest> : {}) : 
+    //         never
+    //     ) :
+    //     unknown
+
+    // type CombineModifiers<Meta extends BaseMeta<any>, Mods extends Modifier<Meta>[]> = {
+    //     [K in keyof Mods]: MetaValue<ReturnType<Mods[K]>>
+    // }
+
+    // type CombineModifiers<M extends Modifier<any>[]> = {
+    //     [K in keyof M]: M[K] extends Modifier<infer U> ? U : never
+    // }[number]
+
+    // type CombineModifiers<M extends Modifier<any>[]> =
+    //     M extends [infer First, ...infer Rest]
+    //     // ? ReturnType<First & Modifier<any>> & CombineModifiers<Rest & Modifier<any>[]>
+    //     // ? ReturnType<First extends Modifier<infer U>>
+    //     // ? (First extends Modifier<infer U> ? U : never) & CombineModifiers<Rest & Modifier<any>[]>
+    //     ? (First extends Modifier<infer U> ? U : never) & (Rest extends Modifier<any>[] ? CombineModifiers<Rest> : {})
+    //     : unknown
+
+    // type CombineModifiers<M extends Modifier<any>[]> = ReturnType<M[0]>
+
+    type Test = CombineModifiers<[
+        ((t: ObjectMeta<{ id: PrimitiveMeta<number> }>) => ObjectMeta<{ id: PrimitiveMeta<number> }>),
+        ((t: ObjectMeta<{ id: PrimitiveMeta<number> }>) => ObjectMeta<{ name: PrimitiveMeta<string> }>)
+    ]>
+
+    type Test1 = Expand<CombineModifiers<[
+        ((t: ObjectMeta<{ id: PrimitiveMeta<number> }>) => ObjectMeta<{ id: PrimitiveMeta<number> }>),
+        ((t: ObjectMeta<{ id: PrimitiveMeta<number> }>) => ObjectMeta<{ name: PrimitiveMeta<string> }>)
+    ]>>
+
     type ObjectParam<M extends ObjectParam<M>[]> = ObjectField<string, any> | Modifier<ObjectMeta<AsObject<M>>>
 
     type Filter<T, U> = T extends U ? T : never;
@@ -278,6 +375,11 @@ export function builder({ encoder, resolvePool: poolFor }: BuilderOptions = defa
             value: value
         }
     }
+
+    const obj = object(
+        field('id', number()),
+        field('name', number()),
+    )
 
     return {
         string,
