@@ -6,8 +6,12 @@ export const modifiers = () => {
     const toJson = <M extends BaseMeta<any>>(converter: M['toJson']) =>
         (m: M) => ({ ...m, toJson: converter })
 
+    const toValue = <M extends BaseMeta<any>>(converter: M['toValue']) =>
+        (m: M) => (<M>{ ...m, toValue: converter })
+
     return {
         toJson,
+        toValue,
         setModifiers: () => {
             const keySelector = <M extends SetMeta<any>>(selector: (value: MetaValue<M['value']>) => any): Modifier<M> =>
                 (meta: M): M => ({ ...meta, key: selector })
@@ -29,7 +33,7 @@ export const modifiers = () => {
     }
 }
 
-export const { toJson, objectModifiers, setModifiers, arrayModifiers } = modifiers()
+export const { toValue, toJson, objectModifiers, setModifiers, arrayModifiers } = modifiers()
 export const { keySelector } = setModifiers()
 export const { pool } = arrayModifiers()
 export const { builder } = objectModifiers()
