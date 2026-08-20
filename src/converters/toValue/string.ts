@@ -523,33 +523,38 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             return -1
         }
 
-        function findLastChar(b: Uint8Array, i: number): number {
+        function findLastChar(b: Uint8Array, start: number, len: number): number {
             function isContinuationByte(b: number) {
                 return ((b - 128) >>> 0) < 64
             }
 
-            const len = i
-
-            while (i >= 0 && isContinuationByte(b[i])) { i-- }
-            if (i < 0) return 0
+            let i = len - 1
+            if (i < start) { return start }
+            while (i > 0 && isContinuationByte(b[i])) { i-- }
 
             let byte = b[i]
             if (byte < 128) { return i }
 
             byte = (b[i] - 194) >>> 0
             if (byte < 30) {
-                if (i + 1 <= len) { return i + 1 }
-                return i - 1
+                if (i + 1 < len) {
+                    return i + 2
+                }
+                return Math.max(i, start)
             }
 
             if (byte < 46) {
-                if (i + 2 <= len) { return i + 2 }
-                return i - 1
+                if (i + 2 < len) {
+                    return i + 3
+                }
+                return Math.max(i, start)
             }
 
             if (byte < 50) {
-                if (i + 3 <= len) { return i + 3 }
-                return i - 1
+                if (i + 3 < len) {
+                    return i + 4
+                }
+                return Math.max(i, start)
             }
 
             return 0
@@ -567,7 +572,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
             if (end_index < 0) {
                 if (writable) {
-                    const end_index = findLastChar(b, bytesLength)
+                    const end_index = findLastChar(b, i, bytesLength)
                     stack.push({
                         isContinued: true,
                         base: base.length === 0 ?
