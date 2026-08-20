@@ -24,10 +24,6 @@ describe('tryParseString', () => {
             stack: new Stack()
         }
 
-        if(name === "Surrogate half (0xD800)") {
-            console.log('es')
-        }
-
         try {
             const result = meta.toValue(meta, context, 0, 0)
             expect(result).toStrictEqual({
@@ -35,7 +31,7 @@ describe('tryParseString', () => {
                 error: expect.any(JSONParseError)
             })
 
-            for (let i = 4; i < bytes.length; i++) {
+            for (let i = 0; i < bytes.length; i++) {
                 const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
                 const result = deserializePartially(meta, chunks)
 
