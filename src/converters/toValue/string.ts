@@ -265,7 +265,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                                 stack.push({
                                     isContinued: true,
                                     base: base.concat(ascii_only ?
-                                        utf8(0, end_index, ascii_only) :
+                                        utf8(start, end_index, ascii_only) :
                                         utf16(bytesLength - cacheViewStart + 1, get_utf16_length()))
                                 })
                                 return {
