@@ -1,38 +1,32 @@
-import { toDate } from "../../src/converters/date"
+import { toDate } from "../../src/converters/toValue/date"
 import { date } from "../../src/metadata/builder"
-import { JsonParsingContext, BaseMeta, JsonReader } from "../../src/metadata/types"
+import { JsonParsingContext, BaseMeta } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
+import { JsonReader } from "../../src/utils/reader"
+import { isComplete, ReadResultType } from "../../src/utils/result"
 import { Stack } from "../../src/utils/stack"
-import { isComplete, ReadResultType } from "../../src/utils/types"
 import { deserializePartially } from "./utils"
+import dayjs from 'dayjs'
 
 describe('toDate', () => {
     function toBytes(str: string) { return new TextEncoder().encode(str) }
 
     function callToDate(bytes: Uint8Array, i: number) {
         const meta: any = {}
-        const reader: JsonReader = { bytes: bytes, writable: false }
+        const reader = new JsonReader(bytes, bytes.length, false)
         const ctx: JsonParsingContext = { reader: reader, options: defaultOptions, stack: new Stack() }
         return toDate(meta, ctx, i, 0)
     }
 
     const dateMeta = date()
 
-    function parseISO(isoString: string) {
-        if (/^\d{4}-\d{2}-\d{2}$/.test(isoString)) {
-            const [year, month, day] = isoString.split('-').map(Number)
-            return new Date(year, month - 1, day, 0, 0, 0)
-        }
-        return new Date(isoString)
-    }
-
     function expectDate<M extends BaseMeta<Date>>(meta: M, str: string) {
-        const date = parseISO(str.substring(1, str.length - 1))
+        const expectedResult = dayjs(str.substring(1, str.length - 1))
         const bytes = toBytes(str)
 
         const context: JsonParsingContext = {
-            reader: { bytes: bytes, writable: false },
+            reader: new JsonReader(bytes, bytes.length, false),
             options: defaultOptions,
             stack: new Stack()
         }
@@ -41,7 +35,7 @@ describe('toDate', () => {
         expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: expect.any(Date), nextIndex: bytes.length })
 
         if (isComplete(result)) {
-            expect(result.value.toISOString()).toEqual(date.toISOString())
+            expect(result.value.toISOString()).toEqual(expectedResult.toISOString())
         }
 
         for (let i = 0; i < bytes.length; i++) {
@@ -51,7 +45,7 @@ describe('toDate', () => {
             expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: expect.any(Date), nextIndex: chunks[0].length })
 
             if (isComplete(result)) {
-                expect(result.value.toISOString()).toEqual(date.toISOString())
+                expect(result.value.toISOString()).toEqual(expectedResult.toISOString())
             }
         }
     }

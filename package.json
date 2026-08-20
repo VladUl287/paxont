@@ -2,6 +2,7 @@
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "benny": "^3.7.1",
+    "dayjs": "^1.11.23",
     "jest": "^30.3.0",
     "ts-jest": "^29.4.6",
     "wabt": "^1.0.39"
