@@ -13,11 +13,9 @@ export function toNullable<M extends BaseMeta<any>>(
     i: number,
     depth: number
 ): ReadResult<MetaValue<M> | null> {
-    const reader = context.reader
-    const b = reader.bytes
-    const len = b.length
+    const { bytes: b, bytesLength: l, writable } = context.reader
 
-    if (i + 3 < len && (b[i] | b[i + 1] << 8 | b[i + 2] << 16 | b[i + 3] << 24) === NULL) {
+    if (i + 3 < l && (b[i] | b[i + 1] << 8 | b[i + 2] << 16 | b[i + 3] << 24) === NULL) {
         return {
             type: COMPLETE,
             value: null,
@@ -25,7 +23,7 @@ export function toNullable<M extends BaseMeta<any>>(
         }
     }
 
-    if (i + 3 >= len && reader.writable) {
+    if (i + 3 >= l && writable) {
         return {
             type: NEEDS_MORE_DATA,
             nextIndex: i
