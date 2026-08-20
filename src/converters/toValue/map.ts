@@ -1,4 +1,4 @@
-import { BaseMeta, JsonParsingContext, MapMeta } from "../../metadata/types"
+import { BaseMeta, JsonParsingContext, MapMeta, MetaValue } from "../../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN } from "../../utils/ascii_symbols"
 import { skipWhitespace } from "../utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/result"
@@ -8,59 +8,54 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toMap<T, M extends BaseMeta<T>>(
-    metadata: MapMeta<M>,
-    context: JsonParsingContext,
+export function toMap<M extends BaseMeta<any>>(
+    m: MapMeta<M>,
+    ctx: JsonParsingContext,
     i: number,
-    depth: number,
-): ReadResult<Map<string, T>> {
-    const { reader, stack, options } = context
+    d: number,
+): ReadResult<Map<string, MetaValue<M>>> {
+    const { reader, options, stack } = ctx
 
-    if (depth > options.maxDepth) {
-        return {
-            type: ReadResultType.ERROR,
-            error: new JSONParseError(`Maximum depth exceeded`, { depth, index: i, metadata })
-        }
-    }
-
-    const state = stack.pop()
-
-    const isContinued: boolean = state?.isContinued ?? false
-    const value: Map<string, T> = state?.value ?? new Map<string, T>()
-    let keyValue: string | undefined = state?.keyValue ?? undefined
-    let colonIndex: number | undefined = state?.colonIndex ?? undefined
-
-    const b = reader.bytes
-    if (i >= b.length) {
-        if (reader.writable) {
-            return {
-                type: NEEDS_MORE_DATA,
-                nextIndex: i
-            }
-        }
-
+    if (d > options.maxDepth) {
         return {
             type: ERROR,
-            error: new JSONParseError(`Unexpected end of input`, {})
+            error: new JSONParseError(`Maximum depth exceeded`, { metadata: m, index: i, depth: d })
         }
     }
+    d++
 
-    let commaIndex = -1
+    const state = stack.pop()
+    const isContinued: boolean = state?.isContinued ?? false
+    const value: Map<string, MetaValue<M>> = state?.value ?? new Map()
+
+    const { bytes: b, bytesLength: bytesLen, writable } = reader
+
     if (!isContinued) {
         if (b[i] !== CURLY_OPEN) {
+            if (writable && i >= bytesLen) {
+                return {
+                    type: NEEDS_MORE_DATA,
+                    nextIndex: i
+                }
+            }
             return {
                 type: ERROR,
-                error: new JSONParseError(``)
+                error: new JSONParseError(`Unexpected end of input at index ${i} while parsing object`)
             }
         }
         i++
+
+        if (b[i] === CURLY_CLOSE) {
+            return {
+                type: COMPLETE,
+                value: value,
+                nextIndex: ++i
+            }
+        }
     }
     else {
         i = skipWhitespace(b, i)
-        if (b[i] === COMMA) {
-            commaIndex = i
-            i++
-        }
+        if (b[i] === COMMA) { i++ }
         else if (b[i] === CURLY_CLOSE) {
             return {
                 type: COMPLETE,
@@ -70,59 +65,34 @@ export function toMap<T, M extends BaseMeta<T>>(
         }
     }
 
-    if (i >= b.length && reader.writable) {
-        stack.push({
-            isContinued: true,
-            value
-        })
-        return {
-            type: NEEDS_MORE_DATA,
-            nextIndex: i
-        }
-    }
+    const keyMeta = m.key
+    const parseKey = keyMeta.toValue
+    const valueMeta = m.value
+    const parseValue = valueMeta.toValue
 
-    if (b[i] === CURLY_CLOSE) {
-        return {
-            type: COMPLETE,
-            value: value,
-            nextIndex: ++i
-        }
-    }
-
-    const keyMeta = metadata.key
-    const tryParseKey = metadata.key.toValue
-    const valueMeta = metadata.value
-    const tryParseValue = valueMeta.toValue
-
+    let key: string | undefined = state?.key ?? undefined
+    let colon: number | undefined = state?.colon ?? undefined
     while (true) {
-        if (!keyValue) {
+        if (key === undefined) {
             i = skipWhitespace(b, i)
 
-            const keyResult = tryParseKey(keyMeta, context, i, depth)
+            const result = parseKey(keyMeta, ctx, i, d)
 
-            if (isError(keyResult))
-                return keyResult
+            if (isError(result)) { return result }
 
-            if (isNeedsMoreData(keyResult)) {
-                stack.push({
-                    isContinued: true,
-                    value
-                })
-                return keyResult
+            if (isNeedsMoreData(result)) {
+                stack.push({ isContinued: true, value })
+                return result
             }
 
-            i = keyResult.nextIndex
-            keyValue = keyResult.value
+            key = result.value
+            i = result.nextIndex
         }
 
-        if (colonIndex === undefined) {
+        if (colon === undefined) {
             if (b[i] !== COLON) {
-                if (i >= b.length && reader.writable) {
-                    stack.push({
-                        isContinued: true,
-                        value,
-                        keyValue
-                    })
+                if (i >= bytesLen && writable) {
+                    stack.push({ isContinued: true, value, key })
                     return {
                         type: NEEDS_MORE_DATA,
                         nextIndex: i
@@ -133,83 +103,48 @@ export function toMap<T, M extends BaseMeta<T>>(
                     error: new JSONParseError('')
                 }
             }
+            colon = i
             i++
-            colonIndex = i
         }
 
         i = skipWhitespace(b, i)
 
-        const valueResult = tryParseValue(valueMeta, context, i, depth)
+        const result = parseValue(valueMeta, ctx, i, d)
 
-        if (isError(valueResult))
-            return valueResult
+        if (isError(result)) { return result }
 
-        if (isNeedsMoreData(valueResult)) {
-            stack.push({
-                isContinued: true,
-                value,
-                keyValue,
-                colonIndex
-            })
-            return valueResult
+        if (isNeedsMoreData(result)) {
+            stack.push({ isContinued: true, value, key, colon })
+            return result
         }
 
-        i = valueResult.nextIndex
+        value.set(key, result.value)
+        key = colon = undefined
 
-        value.set(keyValue, valueResult.value)
+        i = skipWhitespace(b, result.nextIndex)
 
-        i = skipWhitespace(b, i)
-
-        keyValue = undefined
-        colonIndex = undefined
-
-        if (i >= b.length && reader.writable) {
-            stack.push({
-                isContinued: true,
-                value
-            })
+        if (i >= bytesLen && writable) {
+            stack.push({ isContinued: true, value })
             return {
                 type: NEEDS_MORE_DATA,
                 nextIndex: i
             }
         }
 
-        if (b[i] === COMMA) {
-            commaIndex = i
-            i++
-            continue
-        }
+        if (b[i] === COMMA) { i++; continue }
+        else if (b[i] === CURLY_CLOSE) { break }
 
-        commaIndex = -1
-
-        if (b[i] === CURLY_CLOSE) { break }
-        else if (i >= b.length) {
-            if (reader.writable) {
-                stack.push({
-                    isContinued: true,
-                    value
-                })
-                return {
-                    type: NEEDS_MORE_DATA,
-                    nextIndex: i
-                }
-            }
+        if (i >= bytesLen && writable) {
+            stack.push({ isContinued: true, value })
             return {
-                type: ERROR,
-                error: new JSONParseError('')
+                type: NEEDS_MORE_DATA,
+                nextIndex: i
             }
         }
 
         return {
             type: ERROR,
             error: new JSONParseError('')
-        }
-    }
-
-    if (commaIndex >= 0) {
-        return {
-            type: ERROR,
-            error: new JSONParseError('Trail comma')
         }
     }
 
