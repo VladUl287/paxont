@@ -19,15 +19,7 @@ export class JsonReader {
             this.sparseIndex = sparseIndex ?? { charIndex: 0, byteIndex: 0 }
         }
     }
-
-    public setLength(len: number) {
-        this.bytesLength = len
-    }
-
-    public close() {
-        this.writable = false
-    }
-
+    
     public onRelease(callback: () => void) {
         this.releaseCallbacks.push(callback)
     }

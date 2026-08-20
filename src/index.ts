@@ -106,39 +106,52 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
         const stack = new Stack<JsonParsingState>()
 
         const binaryReader = json.getReader({ mode: 'byob' })
-        const tempBuffer = bufferPool.rent(65536)
-        const reader = new JsonReader(tempBuffer, tempBuffer.length, true)
-
-        let start = 0
+        
+        let tempBuffer = bufferPool.rent(65536)
+        let position = 0
         try {
             while (true) {
-                const { value, done } = await binaryReader.read(tempBuffer.subarray(start))
-
+                const { value, done } = await binaryReader.read(tempBuffer.subarray(position))
                 if (value === undefined) { break }
 
-                reader.setLength(start + value.length)
-                done && reader.close()
+                const reader = new JsonReader(tempBuffer, value.length, true)
+                try {
+                    const result = metadataType.toValue(metadataType, {
+                        options: fullOptions,
+                        reader,
+                        stack
+                    }, 0, 0)
 
-                const result = metadataType.toValue(metadataType, { options: fullOptions, reader, stack }, 0, 0)
+                    if (isError(result)) {
+                        throw result.error
+                    }
 
-                if (isError(result)) {
-                    throw result.error
+                    if (isNeedsMoreData(result)) {
+                        if (done) { break }
+                        position = result.nextIndex
+                        tempBuffer.copyWithin(0, position, value.length)
+
+                        if (((tempBuffer.length - position) * 100 / tempBuffer.length) >= 70) {
+                            const newBuffer = bufferPool.rent(tempBuffer.length * 2)
+                            let j = 0
+                            while (j < tempBuffer.length) {
+                                newBuffer[j] = tempBuffer[j]
+                                j++
+                            }
+                            bufferPool.release(tempBuffer)
+                            tempBuffer = newBuffer
+                        }
+
+                        continue
+                    }
+
+                    return result.value
+                } finally {
+                    reader.release()
                 }
-
-                if (isNeedsMoreData(result)) {
-                    if (done) { break }
-
-                    tempBuffer.copyWithin(0, result.nextIndex, tempBuffer.length)
-                    start = result.nextIndex
-                    continue
-                }
-
-                return result.value
             }
-
             throw new Error()
         } finally {
-            reader.release()
             bufferPool.release(tempBuffer)
         }
     }
