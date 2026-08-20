@@ -95,7 +95,6 @@ export function withDefaults(m: Metadata): Metadata {
     function withNative(meta: Metadata): Metadata {
         meta.addMany(
             { name: STRING, is: (v) => typeof v === 'string', from: () => string(), order: 50 },
-            { name: STRING, is: (v) => typeof v === 'string', from: () => string(), order: 50 },
             { name: NUMBER, is: (v) => typeof v === 'number', from: () => number(), order: 50 },
             { name: BIGINT, is: (v) => typeof v === 'bigint', from: () => bigInt(), order: 50 },
             { name: BOOL, is: (v) => typeof v === 'boolean', from: () => bool(), order: 50 },
