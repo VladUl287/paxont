@@ -73,7 +73,7 @@
                   (then 
                     (local.set $mask (i32.load offset=0 align=1 (local.get $i)))
 
-                    (br_if $non_ascii_loop
+                    (br_if $two_byte_block
                       (i32.ne
                         (i32.and (i32.sub (local.get $mask) (i32.const 32960)) (i32.const 49376))
                         (i32.const 0)))
@@ -154,7 +154,7 @@
             (if (i32.ge_u (i32.add (local.get $i) (i32.const 1)) (local.get $len)) 
               (then (return (local.get $i))))
 
-            (if (i32.gt_u (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 191)) 
+            (if (i32.lt_u (i32.sub (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 128)) (i32.const 64)) 
               (then (return (i32.const -1))))
             
             (local.set $i (i32.add (local.get $i) (i32.const 2)))
@@ -168,8 +168,8 @@
               (then (return (local.get $i))))
             
             (if (i32.or 
-              (i32.gt_u (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 191)) 
-              (i32.gt_u (i32.load8_u (i32.add (local.get $i) (i32.const 2))) (i32.const 191)))
+              (i32.lt_u (i32.sub (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 128)) (i32.const 64)) 
+              (i32.lt_u (i32.sub (i32.load8_u (i32.add (local.get $i) (i32.const 2))) (i32.const 128)) (i32.const 64)))
               (then (return (i32.const -1))))
             
             (local.set $i (i32.add (local.get $i) (i32.const 3)))
