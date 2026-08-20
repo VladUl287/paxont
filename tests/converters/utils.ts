@@ -2,7 +2,7 @@ import { BaseMeta, JsonParsingContext, JsonParsingState } from "../../src/metada
 import { defaultOptions } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { JsonReader } from "../../src/utils/reader"
-import { isNeedsMoreData, ReadResult, ReadResultType } from "../../src/utils/result"
+import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../src/utils/result"
 import { Stack } from "../../src/utils/stack"
 
 const encoder = new TextEncoder()
@@ -38,23 +38,32 @@ export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: U
 
     const stack = new Stack<JsonParsingState>()
 
+    const fullLength = chunks.reduce((acc, arr) => { return acc + arr.length }, 0)
+    const bytes = new Uint8Array(fullLength)
+
     while ((currentChunk = chunks.pop()) !== undefined) {
-        const ch = [...prevChunk, ...currentChunk]
-        const bytes = new Uint8Array(ch)
+        const ch = new Uint8Array([...prevChunk, ...currentChunk])
+        ch.forEach((v, i) => bytes[i] = v)
 
-        const context: JsonParsingContext = {
-            reader: new JsonReader(bytes, bytes.length, chunks.length !== 0),
-            options: defaultOptions,
-            stack: stack
+        const reader = new JsonReader(bytes, ch.length, chunks.length !== 0)
+        try {
+            const context: JsonParsingContext = {
+                reader: reader,
+                options: defaultOptions,
+                stack: stack
+            }
+            result = meta.toValue(meta, context, 0, 0)
+
+            if (isNeedsMoreData(result)) {
+                prevChunk = [...currentChunk.slice(result.nextIndex)]
+                continue
+            }
+
+        } finally {
+            reader.release()
         }
-        result = meta.toValue(meta, context, 0, 0)
 
-        if (isNeedsMoreData(result)) {
-            prevChunk = [...currentChunk.slice(result.nextIndex)]
-            continue
-        }
-
-        chunks[0] = bytes
+        chunks[0] = ch
         return result
     }
 
