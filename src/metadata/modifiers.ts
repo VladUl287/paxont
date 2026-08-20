@@ -2,8 +2,6 @@ import { ArrayPool } from "../utils/array"
 import { Modifier } from "./builder"
 import { ArrayMeta, BaseMeta, MetaValue, ObjectMeta, SetMeta } from "./types"
 
-type ObjectModifiersOptions = { encoder: TextEncoder }
-
 export const modifiers = () => {
     const toJson = <M extends BaseMeta<any>>(converter: M['toJson']) =>
         (m: M) => ({ ...m, toJson: converter })
@@ -22,27 +20,11 @@ export const modifiers = () => {
 
             return { pool }
         },
-        objectModifiers: ({ encoder }: ObjectModifiersOptions = { encoder: new TextEncoder() }) => {
+        objectModifiers: () => {
             const builder = <M extends ObjectMeta<{}>>(build: M['build']) =>
                 (m: M): M => ({ ...m, build })
 
-            const field = <K extends string, M extends BaseMeta<any>>(
-                name: K,
-                value: M
-            ): Modifier<ObjectMeta<{ [P in K]: M }>> => {
-                return (m) => {
-                    m.fields.push({
-                        name: {
-                            value: name,
-                            bytes: encoder.encode(name)
-                        },
-                        value: value
-                    })
-                    return m
-                }
-            }
-
-            return { builder, field }
+            return { builder }
         }
     }
 }
