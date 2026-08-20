@@ -1,13 +1,15 @@
 import { JsonParsingContext, PrimitiveMeta } from "../../../src/metadata/types"
 import { defaultOptions } from "../../../src/options"
 import { Stack } from "../../../src/utils/stack"
-import { ReadResultType } from "../../../src/utils/types"
 import { deserializePartially } from "../utils"
 import { number } from "../../../src/metadata/builder"
+import { JsonReader } from "../../../src/utils/reader"
+import { ReadResultType } from "../../../src/utils/result"
 
 describe('tryParseFloat', () => {
+  const encoder = new TextEncoder()
   const toContext = (str: string): JsonParsingContext => {
-    return { options: defaultOptions, reader: ({ bytes: new TextEncoder().encode(str), writable: false }), stack: new Stack() }
+    return { options: defaultOptions, reader: new JsonReader(encoder.encode(str), encoder.encode(str).length, false), stack: new Stack() }
   }
 
   const expectFloat = (meta: PrimitiveMeta<number>, str: string): void => {
