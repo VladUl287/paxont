@@ -529,8 +529,8 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             }
 
             let i = len - 1
-            if (i < start) { return start }
-            while (i > 0 && isContinuationByte(b[i])) { i-- }
+            if (i <= start) { return start }
+            while (i > start && isContinuationByte(b[i])) { i-- }
 
             let byte = b[i]
             if (byte < 128) { return i }
@@ -557,7 +557,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                 return Math.max(i, start)
             }
 
-            return 0
+            return start
         }
 
         function decodeBytes(base: string, ctx: JsonParsingContext, i: number): ReadResult<string> {
@@ -573,12 +573,18 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             if (end_index < 0) {
                 if (writable) {
                     const end_index = findLastChar(b, i, bytesLength)
-                    stack.push({
-                        isContinued: true,
-                        base: base.length === 0 ?
+                    try {
+                        base = base.length === 0 ?
                             utf8.decode(new Uint8Array(b.buffer, i, end_index - i)) :
                             base.concat(utf8.decode(new Uint8Array(b.buffer, i, end_index - i)))
-                    })
+                    }
+                    catch (error) {
+                        return {
+                            type: ERROR,
+                            error: new JSONParseError('Decode error', { cause: error, index: i })
+                        }
+                    }
+                    stack.push({ isContinued: true, base })
                     return {
                         type: NEEDS_MORE_DATA,
                         nextIndex: end_index
@@ -590,11 +596,20 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                 }
             }
 
+            try {
+                base = base.length === 0 ?
+                    utf8.decode(new Uint8Array(b.buffer, i, end_index - i)) :
+                    base.concat(utf8.decode(new Uint8Array(b.buffer, i, end_index - i)))
+            }
+            catch (error) {
+                return {
+                    type: ERROR,
+                    error: new JSONParseError('Decode error', { cause: error, index: i })
+                }
+            }
             return {
                 type: COMPLETE,
-                value: base.length === 0 ?
-                    utf8.decode(new Uint8Array(b.buffer, i, end_index - i)) :
-                    base.concat(utf8.decode(new Uint8Array(b.buffer, i, end_index - i))),
+                value: base,
                 nextIndex: end_index + 1
             }
         }
