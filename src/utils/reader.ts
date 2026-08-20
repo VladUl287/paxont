@@ -10,8 +10,8 @@ export class JsonReader {
 
     constructor(
         public readonly bytes: Uint8Array,
-        public bytesLength: number,
-        public writable: boolean,
+        public readonly bytesLength: number,
+        public readonly writable: boolean,
         public readonly raw?: string,
         sparseIndex?: SparseIndex
     ) {
