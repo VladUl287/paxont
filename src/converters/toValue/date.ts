@@ -14,43 +14,38 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 export function toDate(
     metadata: PrimitiveMeta<Date>,
     context: JsonParsingContext,
-    index: number,
+    i: number,
     depth: number,
 ): ReadResult<Date> {
-    const { reader } = context
-    const b = reader.bytes
-    const len = b.length
+    const { reader: { bytes: b, bytesLength: len, writable } } = context
 
-    if (index < len) {
-        if (b[index] === DOUBLE_QUOTE)
-            return fromString(context, index)
+    if (i < len) {
+        if (b[i] === DOUBLE_QUOTE)
+            return fromString(context, i)
 
-        if (isDigitU(b[index]))
-            return fromTimestamp(context, index)
+        if (isDigitU(b[i]))
+            return fromTimestamp(context, i)
     }
-    else if (reader.writable) {
+    else if (writable) {
         return {
             type: NEEDS_MORE_DATA,
-            nextIndex: index
+            nextIndex: i
         }
     }
 
     return {
         type: ERROR,
-        error: new JSONParseError(`Expected date value at index ${index}, but found '${String.fromCharCode(b[index])}'`)
+        error: new JSONParseError(`Expected date value, but found '${String.fromCharCode(b[i])}'`)
     }
 }
 
-type ISOResult = Extract<ReadResult<Date>, { type: ReadResultType.COMPLETE }>;
-
 function fromString(context: JsonParsingContext, i: number): ReadResult<Date> {
-    const { reader, options } = context
-    const b = reader.bytes
-    const len = b.length
+    const { reader: { bytes: b, bytesLength: bytesLen, writable }, options } = context
+
     const start = i
 
     if (b[i] !== DOUBLE_QUOTE) {
-        if (i >= b.length && reader.writable) {
+        if (i >= bytesLen && writable) {
             return {
                 type: NEEDS_MORE_DATA,
                 nextIndex: i
@@ -63,23 +58,19 @@ function fromString(context: JsonParsingContext, i: number): ReadResult<Date> {
     }
     i++
 
-    if (!reader.writable) {
-        const result: ISOResult = {
-            type: COMPLETE,
-            value: Date.prototype,
-            nextIndex: 0
-        }
-
-        if (tryParseISO8601(b, i, result)) {
-            result.nextIndex += 1
-            return result
+    if (!writable) {
+        let result: Extract<ReadResult<Date>, { type: typeof COMPLETE }> | undefined
+        if ((result = tryParseISO8601(b, bytesLen, i)) !== undefined) {
+            if (b[result.nextIndex] === DOUBLE_QUOTE) {
+                return result
+            }
         }
     }
 
-    while (i < len && b[i] !== DOUBLE_QUOTE) i++
+    while (i < bytesLen && b[i] !== DOUBLE_QUOTE) i++
 
     if (b[i] !== DOUBLE_QUOTE) {
-        if (reader.writable) {
+        if (writable) {
             return {
                 type: NEEDS_MORE_DATA,
                 nextIndex: start
@@ -112,125 +103,137 @@ function fromString(context: JsonParsingContext, i: number): ReadResult<Date> {
 
 const nonDigit = (b: number) => !isDigitU(b)
 
-function expectFourDigits(b: Uint8Array, i: number): number {
-    if (i + 4 >= b.length || nonDigit(b[i]) || nonDigit(b[++i]) || nonDigit(b[++i]) || nonDigit(b[++i]))
+function expectFourDigits(b: Uint8Array, len: number, i: number): number {
+    if (i + 4 >= len || nonDigit(b[i]) || nonDigit(b[++i]) || nonDigit(b[++i]) || nonDigit(b[++i]))
         return -1
     return ++i
 }
 
-function expectThreeDigits(b: Uint8Array, i: number): number {
-    if (i + 3 >= b.length || nonDigit(b[i]) || nonDigit(b[++i]) || nonDigit(b[++i]))
+function expectThreeDigits(b: Uint8Array, len: number, i: number): number {
+    if (i + 3 >= len || nonDigit(b[i]) || nonDigit(b[++i]) || nonDigit(b[++i]))
         return -1
     return ++i
 }
 
-function expectTwoDigits(b: Uint8Array, i: number): number {
-    if (i + 2 >= b.length || nonDigit(b[i]) || nonDigit(b[++i]))
+function expectTwoDigits(b: Uint8Array, len: number, i: number): number {
+    if (i + 2 >= len || nonDigit(b[i]) || nonDigit(b[++i]))
         return -1
     return ++i
 }
 
-function tryParseISO8601(b: Uint8Array, i: number, r: ISOResult): boolean {
-    const len1 = b.length - 1
-
-    if ((i = expectFourDigits(b, i)) < 0) //YYYY
-        return false
+function tryParseISO8601(b: Uint8Array, len: number, i: number): Extract<ReadResult<Date>, { type: typeof COMPLETE }> | undefined {
+    if ((i = expectFourDigits(b, len, i)) < 0) //YYYY
+        return
 
     const YYYY = ((b[i - 4] & 0x0F) * 1000) + ((b[i - 3] & 0x0F) * 100) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
-    if (i >= len1 || b[i++] !== MINUS) {
-        r.value = new Date(YYYY, 0)
-        r.nextIndex = i
-        return true
+    if (i >= len || b[i++] !== MINUS) {
+        return {
+            type: COMPLETE,
+            value: new Date(YYYY, 0),
+            nextIndex: i
+        }
     }
 
-    if ((i = expectTwoDigits(b, i)) < 0) //MM
-        return false
+    if ((i = expectTwoDigits(b, len, i)) < 0) //MM
+        return
 
     const MM = (((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)) - 1
     if (MM < 0 || MM > 11)
-        return false
+        return
 
-    if (i >= len1 || b[i++] !== MINUS) {
-        r.value = new Date(YYYY, MM)
-        r.nextIndex = i
-        return true
+    if (i >= len || b[i++] !== MINUS) {
+        return {
+            type: COMPLETE,
+            value: new Date(YYYY, MM),
+            nextIndex: i
+        }
     }
 
-    if ((i = expectTwoDigits(b, i)) < 0) //DD
-        return false
+    if ((i = expectTwoDigits(b, len, i)) < 0) //DD
+        return
 
     const DD = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
     if (DD < 1 || DD > 31)
-        return false
+        return
 
-    if (i >= len1 || b[i++] !== T_UPPER) {
-        r.value = new Date(YYYY, MM, DD)
-        r.nextIndex = i
-        return true
+    if (i >= len || b[i++] !== T_UPPER) {
+        return {
+            type: COMPLETE,
+            value: new Date(YYYY, MM, DD),
+            nextIndex: i
+        }
     }
 
-    if ((i = expectTwoDigits(b, i)) < 0 || b[i++] !== COLON || (i = expectTwoDigits(b, i)) < 0) //HH:mm
-        return false
+    if ((i = expectTwoDigits(b, len, i)) < 0 || b[i++] !== COLON || (i = expectTwoDigits(b, len, i)) < 0) //HH:mm
+        return
 
     const HH = ((b[i - 5] & 0x0F) * 10) + (b[i - 4] & 0x0F)
     if (HH < 0 || HH > 23)
-        return false
+        return
 
     const mm = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
     if (mm < 0 || mm > 59)
-        return false
+        return
 
-    if (i >= len1 || b[i++] !== COLON) {
-        r.value = new Date(YYYY, MM, DD, HH, mm)
-        r.nextIndex = i
-        return true
+    if (i >= len || b[i++] !== COLON) {
+        return {
+            type: COMPLETE,
+            value: new Date(YYYY, MM, DD, HH, mm),
+            nextIndex: i
+        }
     }
 
-    if ((i = expectTwoDigits(b, i)) < 0) //ss
-        return false
+    if ((i = expectTwoDigits(b, len, i)) < 0) //ss
+        return
 
     const ss = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
     if (ss < 0 || ss > 59)
-        return false
+        return
 
     let sss = 0
-    if (i <= len1 && b[i] === DOT) {
-        if ((i = expectThreeDigits(b, i + 1)) < 0) //sss
-            return false
+    if (i <= len && b[i] === DOT) {
+        if ((i = expectThreeDigits(b, len, i + 1)) < 0) //sss
+            return
 
         sss = ((b[i - 3] & 0x0F) * 100) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
         if (sss < 0 || ss > 999)
-            return false
+            return
     }
 
-    if (i < len1 && b[i] === Z) { //Z
-        r.value = new Date(utc(YYYY, MM, DD, HH, mm, ss, sss))
-        r.nextIndex = ++i
-        return true
+    if (i < len && b[i] === Z) { //Z
+        return {
+            type: COMPLETE,
+            value: new Date(utc(YYYY, MM, DD, HH, mm, ss, sss)),
+            nextIndex: i + 1
+        }
     }
 
-    if (i >= len1 && b[i] !== MINUS && b[i] !== PLUS) { //not ±
-        r.value = new Date(YYYY, MM, DD, HH, mm, ss, sss)
-        r.nextIndex = i
-        return true
+    if (i >= len && b[i] !== MINUS && b[i] !== PLUS) { //not ±
+        return {
+            type: COMPLETE,
+            value: new Date(YYYY, MM, DD, HH, mm, ss, sss),
+            nextIndex: i + 1
+        }
     }
 
     const sign = b[i++] === MINUS ? -1 : 1
 
-    if ((i = expectTwoDigits(b, i)) < 0 || b[i++] !== COLON || (i = expectTwoDigits(b, i)) < 0) //HH:mm
-        return false
+    if ((i = expectTwoDigits(b, len, i)) < 0 || b[i++] !== COLON || (i = expectTwoDigits(b, len, i)) < 0) //HH:mm
+        return
 
     const ZHH = ((b[i - 5] & 0x0F) * 10) + (b[i - 4] & 0x0F)
     if (ZHH < 0 || ZHH > 23)
-        return false
+        return
 
     const zmm = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
     if (zmm < 0 || zmm > 59)
-        return false
+        return
 
-    r.value = new Date(utc(YYYY, MM, DD, HH - (ZHH * sign), mm - (zmm * sign), ss, sss))
-    r.nextIndex = i
-    return true
+    return {
+        type: COMPLETE,
+        value: new Date(utc(YYYY, MM, DD, HH - (ZHH * sign), mm - (zmm * sign), ss, sss)),
+        nextIndex: i + 1
+    }
 }
 
 function fromTimestamp(ctx: JsonParsingContext, i: number): ReadResult<Date> {
