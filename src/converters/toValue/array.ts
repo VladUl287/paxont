@@ -11,24 +11,24 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends BaseMeta<any>>(
     metadata: ArrayMeta<A, M>,
-    context: JsonParsingContext,
+    ctx: JsonParsingContext,
     i: number,
-    depth: number
+    d: number
 ): ReadResult<A> {
-    const { reader, stack, options } = context
+    const { reader, stack, options } = ctx
 
-    if (depth > options.maxDepth) {
+    if (d > options.maxDepth) {
         return {
             type: ReadResultType.ERROR,
-            error: new JSONParseError(`Maximum depth exceeded`, { depth, index: i, metadata })
+            error: new JSONParseError(`Maximum depth exceeded`, { depth: d, index: i, metadata })
         }
     }
+    d++
 
-    const b = reader.bytes
-    const len = b.length
+    const { bytes: b, bytesLength: len, writable } = reader
 
     if (i >= len) {
-        if (reader.writable) {
+        if (writable) {
             return {
                 type: NEEDS_MORE_DATA,
                 nextIndex: i
@@ -37,28 +37,29 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
 
         return {
             type: ERROR,
-            error: new JSONParseError(`Unexpected end of input`, { depth, index: i, metadata })
+            error: new JSONParseError(`Unexpected end of input`, { depth: d, index: i, metadata })
         }
     }
 
 
     const state = stack.pop()
 
-    let isContinued: boolean = state?.isContinued ?? false
-    let bufferIndex: number = state?.bufferIndex ?? 0
+    const isContinued: boolean = state?.isContinued ?? false
+    const bufferIndex: number = state?.bufferIndex ?? 0
 
     const { rent, release, clear } = metadata.pool
-    const buffer: A = state?.buffer ?? rent(b.length - i)
+    const buffer: A = state?.buffer ?? rent(len - i)
 
     if (!isContinued) {
         if (b[i] !== SQUARE_OPEN) {
             return {
                 type: ERROR,
-                error: new JSONParseError(`Expected '[' but found '${String.fromCharCode(b[i])}'`, { depth, index: i, metadata })
+                error: new JSONParseError(`Expected '[' but found '${String.fromCharCode(b[i])}'`, { depth: d, index: i, metadata })
             }
         }
+        i++
 
-        if (b[++i] === SQUARE_CLOSE) {
+        if (b[i] === SQUARE_CLOSE) {
             return {
                 type: COMPLETE,
                 value: buffer.slice(0, 0),
@@ -75,17 +76,14 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
         i = skipWhitespace(b, i)
 
         if (isContinued) {
-            if (b[i] === COMMA) {
-                i++
-            }
-            else if (b[i] === SQUARE_CLOSE) {
-                break
-            }
+            if (b[i] === COMMA) { i = skipWhitespace(b, ++i) }
+            else if (b[i] === SQUARE_CLOSE) { break }
         }
 
-        const result = toValue(item, context, i, depth)
+        const result = toValue(item, ctx, i, d)
 
         if (isError(result)) {
+            clear(buffer, 0, j)
             release(buffer)
             return result
         }
@@ -101,29 +99,26 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
 
         i = skipWhitespace(b, i)
 
-        if (b[i] === COMMA) {
-            i++
-        }
-        else if (b[i] === SQUARE_CLOSE) {
-            break
-        }
+        if (b[i] === COMMA) { i++ }
+        else if (b[i] === SQUARE_CLOSE) { break }
         else {
-            if (i >= b.length && reader.writable) {
+            if (i >= len && writable) {
                 stack.push({ isContinued: true, buffer, bufferIndex: j })
                 return {
                     type: NEEDS_MORE_DATA,
                     nextIndex: i
                 }
             }
+            clear(buffer, 0, j)
             release(buffer)
             return {
                 type: ERROR,
-                error: new JSONParseError(`Expected ']' or ',' but found '${String.fromCharCode(b[i])}'`, { depth, index: i, metadata })
+                error: new JSONParseError(`Expected ']' or ',' but found '${String.fromCharCode(b[i])}'`, { depth: d, index: i, metadata })
             }
         }
     }
 
-    const result = buffer.slice(0, j);
+    const result = buffer.slice(0, j)
     clear(buffer, 0, j)
     release(buffer)
 
