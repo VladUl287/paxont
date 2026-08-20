@@ -30,7 +30,7 @@ export function expectError<M extends BaseMeta<any>>(meta: M, str: string) {
     }
 }
 
-export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: Uint8Array[]) => {
+export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: Uint8Array[], index = 0, depth = 0) => {
     let result: ReadResult<any>
 
     let currentChunk
@@ -52,7 +52,7 @@ export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: U
                 options: defaultOptions,
                 stack: stack
             }
-            result = meta.toValue(meta, context, 0, 0)
+            result = meta.toValue(meta, context, index, depth)
 
             if (isNeedsMoreData(result)) {
                 prevChunk = [...currentChunk.slice(result.nextIndex)]
