@@ -3,7 +3,6 @@ import { isComplete, ReadResult, ReadResultType } from "../../../utils/result"
 import { JsonParsingContext, PrimitiveMeta } from "../../../metadata/types"
 import { isDigitU } from "../../../utils/ascii"
 import { float64, FloatFormat } from "./floatFormats"
-import { genUnrolledFromCharCodeAscii } from "../../../code_gen/string"
 import { wasmInstance } from "../../../utils/wasm"
 import { clz, isGreaterThan, isGreaterThanOrEqual, isLessThan, shiftLeft, shiftRight } from "../../../utils/long_bitwise"
 import { toInt64 } from "../../../utils/bigint"
@@ -27,8 +26,8 @@ export function toFloat(
     depth: number): ReadResult<number> {
     const result = tryParseFloat(context, index, float64)
 
-    const { bytes, writable } = context.reader
-    if (writable && isComplete(result) && result.nextIndex >= bytes.length) {
+    const { writable, bytesLength } = context.reader
+    if (writable && isComplete(result) && result.nextIndex >= bytesLength) {
         return {
             type: NEEDS_MORE_DATA,
             nextIndex: index
@@ -41,12 +40,10 @@ export function toFloat(
 const factories = new Array<(data: ArrayLike<number>, i: number) => string>(64)
 factories[0] = (_a, _i) => ""
 
-function getNumberEndIndex(b: Uint8Array, i: number): number {
+function getNumberEndIndex(b: Uint8Array, len: number, i: number): number {
     const isNumberByte = (b: number) => isDigitU(b) || b === DOT || (b | 32) === E || b === PLUS || b === MINUS
 
     if (b[i] === MINUS) { i++ }
-
-    const len = b.length
 
     while (i < len) {
         const limit = len - 8
@@ -76,7 +73,7 @@ function getNumberEndIndex(b: Uint8Array, i: number): number {
 }
 
 export function tryParseFloat({ reader, options }: JsonParsingContext, i: number, format: FloatFormat): ReadResult<number> {
-    const b = reader.bytes
+    const { bytes: b, bytesLength } = reader
 
     const start = i
     const negative = b[i] === MINUS
@@ -91,7 +88,7 @@ export function tryParseFloat({ reader, options }: JsonParsingContext, i: number
         mHigh: 0 >>> 0
     }
 
-    if (tryFastParse(b, s)) {
+    if (tryFastParse(b, bytesLength, s)) {
         let { index: i, mantissa: m, mLow, mHigh, exponent: e } = s
 
         const eabs = Math.abs(e)
@@ -130,20 +127,9 @@ export function tryParseFloat({ reader, options }: JsonParsingContext, i: number
         }
     }
 
-    i = getNumberEndIndex(b, i)
+    i = getNumberEndIndex(b, bytesLength, i)
 
-    const length = i - start
-
-    if (length <= 64) {
-        const factory = (factories[length] ??= genUnrolledFromCharCodeAscii(length))
-        return {
-            type: COMPLETE,
-            value: Number(factory(b, start)),
-            nextIndex: i
-        }
-    }
-
-    const result = options.decoder.decode(new Uint8Array(b.buffer, start, length))
+    const result = options.decoder.decode(new Uint8Array(b.buffer, start, i - start))
     return {
         type: COMPLETE,
         value: Number(result),
@@ -163,27 +149,26 @@ for (let i = -1024; i <= 1024; i++) {
     POW2[i + 1024] = Math.pow(2, i)
 }
 
-function tryFastParse(b: Uint8Array, s: Store): boolean {
-    if (!tryParseInteger(b, s)) {
+function tryFastParse(b: Uint8Array, bytesLen: number, s: Store): boolean {
+    if (!tryParseInteger(b, bytesLen, s)) {
         return false
     }
 
     let i = s.index
     let dc = s.digitsCount
 
-    const len = b.length
-    if (i < len && b[i] === DOT) {
+    if (i < bytesLen && b[i] === DOT) {
         s.index = i + 1
 
         if (dc === 0)
-            while (i < len && b[i] === ZERO) i++
+            while (i < bytesLen && b[i] === ZERO) i++
 
         if ((s.mLow | s.mHigh) !== 0) {
-            if (!tryParseLong(b, s)) {
+            if (!tryParseLong(b, bytesLen, s)) {
                 return false
             }
         }
-        else if (!tryParseInteger(b, s)) {
+        else if (!tryParseInteger(b, bytesLen, s)) {
             return false
         }
 
@@ -191,10 +176,10 @@ function tryFastParse(b: Uint8Array, s: Store): boolean {
         s.exponent = dc - s.digitsCount
     }
 
-    if (i < len && (b[i] | 32) === E) {
+    if (i < bytesLen && (b[i] | 32) === E) {
         s.index = i + 1
 
-        return tryParseExponent(b, s)
+        return tryParseExponent(b, bytesLen, s)
     }
 
     return true
@@ -215,13 +200,13 @@ function willOverflow2(n: number, m: number, d: number) {
     return n > (9007199254740991 - d) / m
 }
 
-function tryParseInteger(b: Uint8Array, s: Store): boolean {
+function tryParseInteger(b: Uint8Array, bytesLen: number, s: Store): boolean {
     let i = s.index
     let m = s.mantissa
     let dc = s.digitsCount
 
     const start = i - dc
-    const len = Math.min(b.length, start + MAX_SAFE_INT_DIGITS)
+    const len = Math.min(bytesLen, start + MAX_SAFE_INT_DIGITS)
 
     while (i < len - 4) {
         const d = b[i], d2 = b[i + 1], d3 = b[i + 2], d4 = b[i + 3]
@@ -242,7 +227,7 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
             s.index = i
             s.mantissa = m
             s.digitsCount = dc
-            return tryParseLong(b, s)
+            return tryParseLong(b, bytesLen, s)
         }
 
         m = m * 10 + digit
@@ -250,11 +235,11 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
         i++
     }
 
-    if (i >= len && i < b.length && isDigitU(b[i])) {
+    if (i >= len && i < bytesLen && isDigitU(b[i])) {
         s.index = i
         s.mantissa = m
         s.digitsCount = i - start
-        return tryParseLong(b, s)
+        return tryParseLong(b, bytesLen, s)
     }
 
     s.index = i
@@ -263,7 +248,7 @@ function tryParseInteger(b: Uint8Array, s: Store): boolean {
     return true
 }
 
-function tryParseLong(b: Uint8Array, s: Store): boolean {
+function tryParseLong(b: Uint8Array, bytesLen: number, s: Store): boolean {
     let i = s.index
     let m = s.mantissa
     let dc = s.digitsCount
@@ -277,7 +262,7 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
     }
 
     const start = i - dc
-    const len = Math.min(b.length, start + MAX_SAFE_LONG_DIGITS + 1)
+    const len = Math.min(bytesLen, start + MAX_SAFE_LONG_DIGITS + 1)
 
     let added = 0
     while (i < len && isDigitU(b[i])) {
@@ -301,7 +286,7 @@ function tryParseLong(b: Uint8Array, s: Store): boolean {
     return true
 }
 
-function tryParseExponent(b: Uint8Array, s: Store): boolean {
+function tryParseExponent(b: Uint8Array, bytesLen: number, s: Store): boolean {
     let i = s.index
 
     let sign = 1
@@ -313,10 +298,8 @@ function tryParseExponent(b: Uint8Array, s: Store): boolean {
         i++
     }
 
-    const len = b.length
-
     let e = 0
-    while (i < len) {
+    while (i < bytesLen) {
         const d = (b[i] - 48) >>> 0
         if (d > 9) break
 
