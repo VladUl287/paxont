@@ -80,27 +80,23 @@ const bufferInt = new ArrayBuffer(8)
 const conversionU32 = new Uint32Array(bufferInt)
 const conversionU64 = new BigUint64Array(bufferInt)
 
-export function parseInt64(reader: JsonReader, i: number, minValue: bigint, maxValue: bigint, signed: boolean): ReadResult<bigint> {
+export function parseInt64(reader: JsonReader, index: number, minValue: bigint, maxValue: bigint, signed: boolean): ReadResult<bigint> {
     const MAX_DIGITS = 19
     const MAX_SAFE_INT_DIGITS = 16
 
-    const b = reader.bytes
+    const { bytes: b, bytesLength: bytesLen, writable } = reader
+    let i = index
 
     const negative = signed && b[i] === MINUS
     if (negative) i++
 
-    const len = Math.min(b.length, i + MAX_DIGITS)
-    const start = i
+    const len = Math.min(bytesLen, i + MAX_DIGITS)
 
     let temp = 0
     let dc = 0
-    while (i < len) {
-        const byte = b[i]
+    while (i < len && isDigitU(b[i])) {
+        const d = (b[i] & 0x0F)
 
-        if (!isDigitU(byte))
-            break
-
-        const d = byte & 0x0F
         if (dc < MAX_SAFE_INT_DIGITS) {
             temp = temp * 10 + d
         }
@@ -123,6 +119,13 @@ export function parseInt64(reader: JsonReader, i: number, minValue: bigint, maxV
     if (temp > 0) {
         conversionU32[0] = temp >>> 0
         conversionU32[1] = Math.floor(temp / 0x100000000)
+    }
+
+    if (i >= len && writable) {
+        return {
+            type: NEEDS_MORE_DATA,
+            nextIndex: index
+        }
     }
 
     const value = negative ? -conversionU64[0] : conversionU64[0]
