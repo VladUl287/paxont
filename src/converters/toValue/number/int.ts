@@ -53,14 +53,15 @@ export const toUint32 = (
 
 export function tryParseInt(
     reader: JsonReader,
-    i: number,
+    index: number,
     maxDigits: number,
     minValue: number,
     maxValue: number,
     signed: boolean
 ): ReadResult<number> {
-    const b = reader.bytes
-    const len = b.length
+    const { bytes: b, bytesLength: len, writable } = reader
+
+    let i = index
 
     const negative = signed && b[i] === MINUS
     if (negative) i++
@@ -80,7 +81,7 @@ export function tryParseInt(
         }
     }
 
-    if (i >= len && reader.writable) {
+    if (i >= len && writable) {
         return {
             type: NEEDS_MORE_DATA,
             nextIndex: start
