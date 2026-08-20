@@ -1,15 +1,16 @@
 import fs from 'fs'
 import { JsonParsingContext } from '../../../src/metadata/types'
-import { tryParseFloat } from '../../../src/converters/number/float'
-import { ReadResultType } from '../../../src/utils/types'
-import { float64 } from "../../../src/converters/number/floatFormats"
 import { defaultOptions } from '../../../src/options'
 import { Stack } from '../../../src/utils/stack'
+import { JsonReader } from '../../../src/utils/reader'
+import { float64 } from '../../../src/converters/toValue/number/floatFormats'
+import { tryParseFloat } from '../../../src/converters/toValue/number/float'
+import { ReadResultType } from '../../../src/utils/result'
 
 describe('parseNumberF64-files', () => {
     const encoder = new TextEncoder()
     const toContext = (str: string): JsonParsingContext => {
-        return { options: defaultOptions, reader: ({ bytes: encoder.encode(str), writable: false }), stack: new Stack() }
+        return { options: defaultOptions, reader: new JsonReader(encoder.encode(str), encoder.encode(str).length, false), stack: new Stack() }
     }
 
     const files = fs.readdirSync('./tests/data')
