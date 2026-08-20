@@ -1,10 +1,10 @@
-import { toMap } from "../../src/converters/map"
 import { bool, map } from "../../src/metadata/builder"
-import { JsonParsingState, JsonParsingContext, MapMeta } from "../../src/metadata/types"
+import { JsonParsingContext, MapMeta } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
+import { JsonReader } from "../../src/utils/reader"
+import { isComplete, ReadResultType } from "../../src/utils/result"
 import { Stack } from "../../src/utils/stack"
-import { isComplete, isNeedsMoreData, ReadResultType } from "../../src/utils/types"
 import { deserializePartially } from "./utils"
 
 describe('toMap', () => {
@@ -21,14 +21,18 @@ describe('toMap', () => {
         const bytes = toBytes(str)
 
         const context: JsonParsingContext = {
-            reader: { bytes: bytes, writable: false },
+            reader: new JsonReader(bytes, bytes.length, false),
             options: defaultOptions,
             stack: new Stack()
         }
 
         const result = meta.toValue(meta, context, 0, 0)
 
-        expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: expect.any(Map), nextIndex: bytes.length })
+        expect(result).toStrictEqual({
+            type: ReadResultType.COMPLETE,
+            value: expect.any(Map),
+            nextIndex: bytes.length
+        })
 
         if (isComplete(result)) {
             expect(mapToString(result.value)).toEqual(str)
@@ -38,10 +42,19 @@ describe('toMap', () => {
             const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
             const result = deserializePartially(meta, chunks)
 
-            expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: expect.any(Map), nextIndex: chunks[0].length })
+            try {
+                expect(result).toStrictEqual({
+                    type: ReadResultType.COMPLETE,
+                    value: expect.any(Map),
+                    nextIndex: chunks[0].length
+                })
 
-            if (isComplete(result)) {
-                expect(mapToString(result.value)).toEqual(str)
+                if (isComplete(result)) {
+                    expect(mapToString(result.value)).toEqual(str)
+                }
+            } catch (error) {
+                console.log('error on:', i)
+                throw error
             }
         }
     }
@@ -50,23 +63,27 @@ describe('toMap', () => {
         const bytes = toBytes(str)
 
         const context: JsonParsingContext = {
-            reader: { bytes: bytes, writable: false },
+            reader: new JsonReader(bytes, bytes.length, false),
             options: defaultOptions,
             stack: new Stack()
         }
 
         const result = meta.toValue(meta, context, 0, 0)
-
-        expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+        expect(result).toStrictEqual({
+            type: ReadResultType.ERROR,
+            error: expect.any(JSONParseError)
+        })
 
         for (let i = 0; i < bytes.length; i++) {
             const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
             const result = deserializePartially(meta, chunks)
             try {
-                expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
-            }
-            catch {
-                console.log('es')
+                expect(result).toStrictEqual({
+                    type: ReadResultType.ERROR,
+                    error: expect.any(JSONParseError)
+                })
+            } catch {
+                console.log('error on: ', i)
             }
         }
     }
