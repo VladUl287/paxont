@@ -18,6 +18,7 @@
     (local $quote_vec v128)
     (local $byte_mask i32)
     (local $trailing i32)
+    (local $partialChar i32)
 
     (global.set $dq_index (i32.const -1))
     (global.set $ascii_only (i32.const 1))
@@ -170,6 +171,16 @@
             (if (i32.or 
               (i32.ge_u (i32.sub (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 128)) (i32.const 64)) 
               (i32.ge_u (i32.sub (i32.load8_u (i32.add (local.get $i) (i32.const 2))) (i32.const 128)) (i32.const 64)))
+              (then (return (i32.const -1))))
+
+            (local.set $partialChar (i32.add 
+                (i32.shl (local.get $temp) (i32.const 12))
+                (i32.shl (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 6))
+              ))
+
+            (if (i32.or 
+              (i32.lt_u (local.get $partialChar) (i32.const 133120)) 
+              (i32.lt_u (i32.sub (local.get $partialChar) (i32.const 186368)) (i32.const 2048)))
               (then (return (i32.const -1))))
             
             (local.set $i (i32.add (local.get $i) (i32.const 3)))
