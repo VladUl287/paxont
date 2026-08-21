@@ -75,10 +75,6 @@ describe('toDate', () => {
             expectDate(meta, '"2024-01-15T08:30:00-08:00"')
         })
 
-        test('should parse RFC 2822 date', () => {
-            expectDate(meta, '"Mon, 15 Jan 2024 10:30:00 GMT"')
-        })
-
         test('should parse earliest ISO date - UTC', () => {
             expectDate(meta, '"0001-01-01T00:00:00Z"')
         })
@@ -109,6 +105,21 @@ describe('toDate', () => {
 
         test('should handle non-existent date (2024-04-31) by rolling over to next month', () => {
             expectDate(meta, '"2024-04-31"')
+        })
+    })
+
+
+    describe('valid RFC date formats', () => {
+        test('should parse RFC 2822 date', () => {
+            expectDate(meta, '"Mon, 15 Jan 2024 10:30:00 GMT"')
+        })
+        
+        test('should parse RFC 2822 date', () => {
+            expectDate(meta, '"Mon, 15 Jan 2024 10:30:00 +0300"')
+        })
+
+        test('should parse RFC 2822 date', () => {
+            expectDate(meta, '"Mon, 15 Jan 2024 10:30:00 EST"')
         })
     })
 
