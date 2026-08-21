@@ -27,7 +27,7 @@ describe('toArray', () => {
 
         for (let i = 0; i < bytes.length; i++) {
             const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
-            const result = deserializePartially(meta, chunks, index, depth)
+            const result = deserializePartially(meta, chunks)
 
             expect(result).toStrictEqual({
                 type: ReadResultType.ERROR,
@@ -36,7 +36,7 @@ describe('toArray', () => {
         }
     }
 
-    const expectToParse = (meta: ArrayMeta<any, any>, bytes: Uint8Array, index = 0, depth = 0, result?: any) => {
+    const expectToParse = (meta: ArrayMeta<any, any>, bytes: Uint8Array, result?: any) => {
         const reader = new JsonReader(bytes, bytes.length, false)
 
         const ctx: JsonParsingContext = {
@@ -47,7 +47,7 @@ describe('toArray', () => {
 
         const expectedResult = result ?? JSON.parse(new TextDecoder().decode(bytes))
 
-        const value = meta.toValue(meta, ctx, index, depth)
+        const value = meta.toValue(meta, ctx, 0, 0)
         expect(value).toStrictEqual({
             type: ReadResultType.COMPLETE,
             value: expectedResult,
@@ -58,7 +58,7 @@ describe('toArray', () => {
             const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
 
             try {
-                const result = deserializePartially(meta, chunks, index, depth)
+                const result = deserializePartially(meta, chunks)
 
                 expect(result).toStrictEqual({
                     type: ReadResultType.COMPLETE,
@@ -77,18 +77,18 @@ describe('toArray', () => {
     describe('valid array', () => {
         test('converts simple number array string to array', () => {
             const bytes = toBytes("[1, 2, 3]")
-            expectToParse(arrayMeta, bytes, 0, 0)
+            expectToParse(arrayMeta, bytes)
         })
 
         test('converts empty array string to empty array', () => {
             const bytes = toBytes('[]')
-            expectToParse(arrayMeta, bytes, 0, 0)
+            expectToParse(arrayMeta, bytes)
         })
 
         test('converts array with single element', () => {
             const bytes = toBytes('[42]')
-            expectToParse(arrayMeta, bytes, 0, 0)
-            expectToParse(arrayMeta, bytes, 0, 0)
+            expectToParse(arrayMeta, bytes)
+            expectToParse(arrayMeta, bytes)
         })
     })
 
@@ -179,49 +179,49 @@ describe('toArray', () => {
         test('converts to Int8Array when factory is provided', () => {
             const bytes = toBytes('[11, 2, 33]')
             const meta = i8Array()
-            expectToParse(meta, bytes, 0, 0, new Int8Array([11, 2, 33]))
+            expectToParse(meta, bytes, new Int8Array([11, 2, 33]))
         })
 
         test('converts to Uint8Array when factory is provided', () => {
             const bytes = toBytes('[1, 2, 3]')
             const meta = u8Array()
-            expectToParse(meta, bytes, 0, 0, new Uint8Array([1, 2, 3]))
+            expectToParse(meta, bytes, new Uint8Array([1, 2, 3]))
         })
 
         test('converts to Int16Array when factory is provided', () => {
             const bytes = toBytes('[1, 2, 3]')
             const meta = i16Array()
-            expectToParse(meta, bytes, 0, 0, new Int16Array([1, 2, 3]))
+            expectToParse(meta, bytes, new Int16Array([1, 2, 3]))
         })
 
         test('converts to Uint16Array when factory is provided', () => {
             const bytes = toBytes('[1, 2, 3]')
             const meta = u16Array()
-            expectToParse(meta, bytes, 0, 0, new Uint16Array([1, 2, 3]))
+            expectToParse(meta, bytes, new Uint16Array([1, 2, 3]))
         })
 
         test('converts to Int32Array when factory is provided', () => {
             const bytes = toBytes('[1, 2, 3]')
             const meta = i32Array()
-            expectToParse(meta, bytes, 0, 0, new Int32Array([1, 2, 3]))
+            expectToParse(meta, bytes, new Int32Array([1, 2, 3]))
         })
 
         test('converts to Uint32Array when factory is provided', () => {
             const bytes = toBytes('[1, 2, 3]')
             const meta = u32Array()
-            expectToParse(meta, bytes, 0, 0, new Uint32Array([1, 2, 3]))
+            expectToParse(meta, bytes, new Uint32Array([1, 2, 3]))
         })
 
         test('converts to BigInt64Array when factory is provided', () => {
             const bytes = toBytes('[1, 2, 3]')
             const meta = i64Array()
-            expectToParse(meta, bytes, 0, 0, new BigInt64Array([1n, 2n, 3n]))
+            expectToParse(meta, bytes, new BigInt64Array([1n, 2n, 3n]))
         })
 
         test('converts to BigUint64Array when factory is provided', () => {
             const bytes = toBytes('[123324, 23453, 3234235]')
             const meta = u64Array()
-            expectToParse(meta, bytes, 0, 0, new BigUint64Array([123324n, 23453n, 3234235n]))
+            expectToParse(meta, bytes, new BigUint64Array([123324n, 23453n, 3234235n]))
         })
     })
 })

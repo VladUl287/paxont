@@ -21,7 +21,7 @@ describe('toBoolean', () => {
 
     const meta = bool()
 
-    const expectToParse = (meta: PrimitiveMeta<boolean>, bytes: Uint8Array, index = 0, depth = 0) => {
+    const expectToParse = (meta: PrimitiveMeta<boolean>, bytes: Uint8Array) => {
         const reader = new JsonReader(bytes, bytes.length, false)
 
         const ctx: JsonParsingContext = {
@@ -30,19 +30,19 @@ describe('toBoolean', () => {
             stack: new Stack(),
         }
 
-        const actualValue = new TextDecoder().decode(bytes.subarray(index))
+        const actualValue = new TextDecoder().decode(bytes)
         const expectedResult = JSON.parse(actualValue)
 
-        const value = meta.toValue(meta, ctx, index, depth)
+        const value = meta.toValue(meta, ctx, 0, 0)
         expect(value).toStrictEqual({
             type: ReadResultType.COMPLETE,
             value: expectedResult,
             nextIndex: bytes.length
         })
 
-        for (let i = 1; i < bytes.length; i++) {
+        for (let i = 0; i < bytes.length; i++) {
             const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
-            const result = deserializePartially(meta, chunks, index, depth)
+            const result = deserializePartially(meta, chunks)
             expect(result).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: expectedResult,
@@ -54,12 +54,12 @@ describe('toBoolean', () => {
     describe('conversion', () => {
         it('should return true when bytes contain "true" at the given index', () => {
             const bytes = new Uint8Array([116, 114, 117, 101]) // t, r, u, e
-            expectToParse(meta, bytes, 0, 0)
+            expectToParse(meta, bytes)
         })
 
         it('should return false when bytes contain "false" at the given index', () => {
             const bytes = new Uint8Array([102, 97, 108, 115, 101]) // f, a, l, s, e
-            expectToParse(meta, bytes, 0, 0)
+            expectToParse(meta, bytes)
         })
     })
 

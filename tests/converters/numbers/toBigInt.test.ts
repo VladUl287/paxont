@@ -1,85 +1,79 @@
-import { toBigInt } from "../../../src/converters/number/bigint"
+import { array, bigInt } from "../../../src/metadata/builder"
+import { BaseMeta, JsonParsingContext } from "../../../src/metadata/types"
 import { defaultOptions } from "../../../src/options"
-import { ReadResultType } from "../../../src/utils/types"
+import { JsonReader } from "../../../src/utils/reader"
+import { ReadResultType } from "../../../src/utils/result"
+import { Stack } from "../../../src/utils/stack"
+import { deserializePartially, expectError, toBytes } from "../utils"
 
 describe('toBigInt', () => {
-  const encoder = new TextEncoder()
+  const expectToParse = <M extends BaseMeta<any>>(
+    options: {
+      meta: M,
+      raw?: string,
+      bytes?: Uint8Array,
+      start?: number,
+      end?: number,
+      depth?: number,
+      expected?: any
+    }) => {
+    let { meta, raw, bytes, start, end, depth, expected } = options
 
-  const createContext = (value: string) => ({
-    reader: { bytes: encoder.encode(value), writable: false },
-    options: defaultOptions,
-    stack: {} as any
+    bytes ??= toBytes(raw ?? '')
+    start ??= 0
+    depth ??= 0
+    const ctx: JsonParsingContext = {
+      reader: new JsonReader(bytes, bytes.length, false, raw),
+      options: defaultOptions,
+      stack: new Stack(),
+    }
+
+    const decodedValue = new TextDecoder().decode(bytes.subarray(start, end))
+    const expectedResult = expected ?? JSON.parse(decodedValue)
+
+    const value = meta.toValue(meta, ctx, start, depth)
+    expect(value).toStrictEqual({
+      type: ReadResultType.COMPLETE,
+      value: expectedResult,
+      nextIndex: end ? end : bytes.length
+    })
+
+    for (let i = 0; i < bytes.length; i++) {
+      const chunks = [bytes.slice(0, i), bytes.slice(i, end)].reverse()
+      const result = deserializePartially(meta, chunks)
+
+      try {
+        expect(result).toStrictEqual({
+          type: ReadResultType.COMPLETE,
+          value: expectedResult,
+          nextIndex: chunks[0].length
+        })
+      } catch (error) {
+        console.log('error on: ', i)
+        throw error
+      }
+    }
+  }
+
+  it('should parse usual bigint', () => {
+    expectToParse({ meta: bigInt(), raw: '18446744073709551600', expected: 18446744073709551600n })
   })
 
-  it('should parse uint64 as bigint from valid input', () => {
-    const metadata = {} as any
-    const context = createContext('18446744073709551600')
-
-    const result = toBigInt(metadata, context, 0, 0)
-    expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: 18446744073709551600n, nextIndex: context.reader.bytes.length })
-  })
-
-  it('should parse uint64 from small number as bigint', () => {
-    const metadata = {} as any
-    const context = createContext('42')
-
-    const result = toBigInt(metadata, context, 0, 0)
-    expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: 42n, nextIndex: context.reader.bytes.length })
-  })
-
-  it('should parse uint64 at maximum value', () => {
-    const metadata = {} as any
-    const context = createContext('18446744073709551615')
-
-    const result = toBigInt(metadata, context, 0, 0)
-    expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: 18446744073709551615n, nextIndex: context.reader.bytes.length })
-  })
-
-  it('should throw error for value > 18446744073709551615', () => {
-    const metadata = {} as any
-    const context = createContext('18446744073709551616')
-
-    const result = toBigInt(metadata, context, 0, 0)
-    expect(result).toEqual({ type: ReadResultType.ERROR, error: new Error() })
-  })
-
-  it('should throw error for negative value', () => {
-    const metadata = {} as any
-    const context = createContext('-1')
-
-    const result = toBigInt(metadata, context, 0, 0)
-    expect(result).toEqual({ type: ReadResultType.ERROR, error: new Error() })
-  })
-
-  it('should throw error for non-numeric input', () => {
-    const metadata = {} as any
-    const context = createContext('abc')
-
-    const result = toBigInt(metadata, context, 0, 0)
-    expect(result).toEqual({ type: ReadResultType.ERROR, error: new Error() })
+  it('should parse big bigint', () => {
+    const data = Array.from({ length: 1000 }, (_, i) => i).join('')
+    const bigint = BigInt(data)
+    expectToParse({ meta: bigInt(), raw: data, expected: bigint })
   })
 
   it('should handle zero', () => {
-    const metadata = {} as any
-    const context = createContext('0')
-
-    const result = toBigInt(metadata, context, 0, 0)
-    expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: 0n, nextIndex: context.reader.bytes.length })
-  })
-
-  it('should handle whitespace in input', () => {
-    const metadata = {} as any
-    const context = createContext(' 18446744073709551600 ')
-
-    const result = toBigInt(metadata, context, 1, 0)
-    expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: 18446744073709551600n, nextIndex: context.reader.bytes.length - 1 })
+    expectToParse({ meta: bigInt(), raw: '0', expected: 0n })
   })
 
   it('should handle leading zeros', () => {
-    const metadata = {} as any
-    const context = createContext('000123456789')
+    expectToParse({ meta: bigInt(), raw: '000123456789', expected: 123456789n })
+  })
 
-    const result = toBigInt(metadata, context, 0, 0)
-    expect(result).toStrictEqual({ type: ReadResultType.COMPLETE, value: 123456789n, nextIndex: context.reader.bytes.length })
+  it('should throw error for non-numeric input', () => {
+    expectError(bigInt(), 'abs')
   })
 })
