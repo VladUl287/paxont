@@ -28,13 +28,10 @@ export function toBigInt(
     context: JsonParsingContext,
     i: number,
     depth: number): ReadResult<bigint> {
-    const { reader, options } = context
-    const b = reader.bytes
-    const len = b.length
+    const { reader, options, stack } = context
+    const { bytes: b, bytesLength: len, writable } = reader
 
     const start = i
-    // if (state.isContinued)
-    //     i = state.lastIndex ?? i
 
     while (i < len - 4) {
         const a1 = b[i], a2 = b[i + 1], a3 = b[i + 2], a4 = b[i + 3]
@@ -49,26 +46,24 @@ export function toBigInt(
 
     while (i < len && isDigitU(b[i])) i++
 
-    // if (i === len && ctx.writable) {
-    //     state.isContinued = true
-    //     state.lastIndex = i
-
-    //     return {
-    //         type: NEEDS_MORE_DATA,
-    //         nextIndex: start
-    //     }
-    // }
+    if (i >= len && writable) {
+        stack.push({ isContinued: true })
+        return {
+            type: NEEDS_MORE_DATA,
+            nextIndex: start
+        }
+    }
 
     const length = i - start
     if (length <= 0) {
         return {
             type: ERROR,
-            error: new JSONParseError(`Expected at least one digit but found '${String.fromCharCode(b[i])}'`, { metadata, index: i, depth })
+            error: new JSONParseError(`Expected at least one digit`, { metadata, index: i, depth })
         }
     }
 
     const decoder = options.decoder
-    const view = new Uint8Array(b.buffer, start, i - start)
+    const view = new Uint8Array(b.buffer, start, length)
     return {
         type: COMPLETE,
         value: BigInt(decoder.decode(view)),
