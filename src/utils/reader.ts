@@ -1,5 +1,5 @@
 export type SparseIndex = {
-    charIndex: number
+    codeUnitIndex: number
     byteIndex: number
 }
 
@@ -16,7 +16,7 @@ export class JsonReader {
         sparseIndex?: SparseIndex
     ) {
         if (raw !== undefined) {
-            this.sparseIndex = sparseIndex ?? { charIndex: 0, byteIndex: 0 }
+            this.sparseIndex = sparseIndex ?? { codeUnitIndex: 0, byteIndex: 0 }
         }
     }
     

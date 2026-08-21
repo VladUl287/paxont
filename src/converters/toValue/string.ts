@@ -62,7 +62,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     }
                 }
 
-                let cI = sparseIndex?.charIndex ?? 0
+                let cI = sparseIndex?.codeUnitIndex ?? 0
                 let bI = sparseIndex?.byteIndex ?? 0
 
                 while (bI < i) {
@@ -98,7 +98,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                 }
 
                 if (sparseIndex) {
-                    sparseIndex.charIndex = cI
+                    sparseIndex.codeUnitIndex = cI
                     sparseIndex.byteIndex = bI
                 }
 
@@ -127,7 +127,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     }
                 }
 
-                let cI = sparseIndex?.charIndex ?? 0
+                let cI = sparseIndex?.codeUnitIndex ?? 0
                 let bI = sparseIndex?.byteIndex ?? 0
 
                 const diff = bI - cI
@@ -197,7 +197,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     cI += code_units_count!()
 
                     if (sparseIndex) {
-                        sparseIndex.charIndex = cI + 1
+                        sparseIndex.codeUnitIndex = cI + 1
                         sparseIndex.byteIndex = bI + 1
                     }
 
