@@ -24,9 +24,14 @@ export function expectError<M extends BaseMeta<any>>(meta: M, str: string) {
     expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
 
     for (let i = 0; i < bytes.length; i++) {
-        const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
-        const result = deserializePartially(meta, chunks)
-        expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+        try {
+            const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
+            const result = deserializePartially(meta, chunks)
+            expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+        } catch (error) {
+            console.log('error on: ', i)
+            throw error
+        }
     }
 }
 
