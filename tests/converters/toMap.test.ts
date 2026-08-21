@@ -82,8 +82,9 @@ describe('toMap', () => {
                     type: ReadResultType.ERROR,
                     error: expect.any(JSONParseError)
                 })
-            } catch {
+            } catch (error) {
                 console.log('error on: ', i)
+                throw error
             }
         }
     }
