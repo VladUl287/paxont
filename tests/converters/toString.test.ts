@@ -49,18 +49,25 @@ describe('tryParseString', () => {
     const expectToParse = <M extends BaseMeta<any>>(meta: M, str: string) => {
         const bytes = encoder.encode(str)
 
-        const reader = new JsonReader(bytes, bytes.length, false)
-
-        const ctx: JsonParsingContext = {
-            reader: reader,
-            options: defaultOptions,
-            stack: new Stack(),
-        }
-
         const expectedResult = str.substring(1, str.length - 1)
 
-        const value = meta.toValue(meta, ctx, 0, 0)
+        const value = meta.toValue(meta, {
+            reader: new JsonReader(bytes, bytes.length, false),
+            options: defaultOptions,
+            stack: new Stack(),
+        }, 0, 0)
         expect(value).toStrictEqual({
+            type: ReadResultType.COMPLETE,
+            value: expectedResult,
+            nextIndex: bytes.length
+        })
+
+        const valueRaw = meta.toValue(meta, {
+            reader: new JsonReader(encoder.encode(str), bytes.length, false, str),
+            options: defaultOptions,
+            stack: new Stack(),
+        }, 0, 0)
+        expect(valueRaw).toStrictEqual({
             type: ReadResultType.COMPLETE,
             value: expectedResult,
             nextIndex: bytes.length
