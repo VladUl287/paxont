@@ -27,7 +27,7 @@ describe('toArray', () => {
 
         for (let i = 0; i < bytes.length; i++) {
             const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
-            const result = deserializePartially(meta, chunks)
+            const result = deserializePartially(meta, chunks, depth)
 
             expect(result).toStrictEqual({
                 type: ReadResultType.ERROR,
