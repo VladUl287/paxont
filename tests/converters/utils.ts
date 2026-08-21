@@ -2,7 +2,7 @@ import { BaseMeta, JsonParsingContext, JsonParsingState } from "../../src/metada
 import { defaultOptions } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
 import { JsonReader } from "../../src/utils/reader"
-import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../src/utils/result"
+import { isNeedsMoreData, ReadResult, ReadResultType } from "../../src/utils/result"
 import { Stack } from "../../src/utils/stack"
 
 const encoder = new TextEncoder()
@@ -35,7 +35,7 @@ export function expectError<M extends BaseMeta<any>>(meta: M, str: string) {
     }
 }
 
-export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: Uint8Array[], index = 0, depth = 0) => {
+export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: Uint8Array[]) => {
     let result: ReadResult<any>
 
     let currentChunk
@@ -57,8 +57,8 @@ export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: U
                 options: defaultOptions,
                 stack: stack
             }
-            result = meta.toValue(meta, context, index, depth)
-
+            result = meta.toValue(meta, context, 0, 0)
+            
             if (isNeedsMoreData(result)) {
                 prevChunk = [...currentChunk.slice(result.nextIndex)]
                 continue
