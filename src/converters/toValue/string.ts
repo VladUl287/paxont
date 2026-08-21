@@ -65,36 +65,36 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                 let cI = sparseIndex?.charIndex ?? 0
                 let bI = sparseIndex?.byteIndex ?? 0
 
-                while (bI <= i - 8) {
-                    const a1 = b[bI] | b[bI + 1] << 8 | b[bI + 2] << 16 | b[bI + 3] << 24
-                    const a2 = b[bI + 4] | b[bI + 5] << 8 | b[bI + 6] << 16 | b[bI + 7] << 24
-                    const count1 = ((a1 & 0x80808080) * 0x01010101) >>> 24
-                    const count2 = ((a2 & 0x80808080) * 0x01010101) >>> 24
-                    cI += 8 - count1 - count2
-                    bI += 8
-                }
-
                 while (bI < i) {
-                    if ((b[bI++] & 192) !== 128) { cI++ }
+                    const byte = b[bI]
+
+                    if (byte < 128 || byte >= 192) {
+                        cI++
+                        if (byte >= 240) {
+                            cI++
+                        }
+                    }
+
+                    bI++
                 }
 
                 const charIndexStart = cI
 
-                while (bI <= bytesLength - 4) {
-                    const a1 = (b[bI] | b[bI + 1] << 8 | b[bI + 2] << 16 | b[bI + 3] << 24)
+                while (bI < bytesLength) {
+                    const byte = b[bI]
 
-                    const masked = a1 ^ 0x22222222
-                    if (((masked - 0x01010101) & (~masked) & 0x80808080) !== 0)
+                    if (b[bI] === DOUBLE_QUOTE && !isEscaped(b, i - 1)) {
                         break
+                    }
 
-                    const count = ((a1 & 0x80808080) * 0x01010101) >>> 24
-                    cI += 4 - count
-                    bI += 4
-                }
+                    if (byte < 128 || byte >= 192) {
+                        cI++
+                        if (byte >= 240) {
+                            cI++
+                        }
+                    }
 
-                while (bI <= bytesLength) {
-                    if (b[bI] === DOUBLE_QUOTE && !isEscaped(b, i - 1)) { break }
-                    if ((b[bI++] & 192) !== 128) { cI++ }
+                    bI++
                 }
 
                 if (sparseIndex) {
@@ -144,7 +144,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                             }
                         }
 
-                        j = index + 1
+                        j = index
 
                         let escaped = raw[--index] === '\\'
                         if (escaped) {
@@ -181,7 +181,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     }
 
                     bI += utf8_scan_exact!(start, end)
-                    cI += chars_count!()
+                    cI += code_units_count!()
 
                     const charStartIndex = cI
 
@@ -194,7 +194,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     }
 
                     bI += end_index
-                    cI += chars_count!()
+                    cI += code_units_count!()
 
                     if (sparseIndex) {
                         sparseIndex.charIndex = cI + 1
@@ -204,7 +204,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     return {
                         type: COMPLETE,
                         value: raw.substring(charStartIndex, cI),
-                        nextIndex: bI + 1
+                        nextIndex: bI
                     }
                 }
 
