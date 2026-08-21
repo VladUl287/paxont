@@ -82,6 +82,13 @@ function fromString(context: JsonParsingContext, i: number): ReadResult<Date> {
         }
     }
 
+    let result: Extract<ReadResult<Date>, { type: typeof COMPLETE }> | undefined
+    if ((result = tryParseISO8601(b, bytesLen, i)) !== undefined) {
+        if (b[result.nextIndex - 1] === DOUBLE_QUOTE) {
+            return result
+        }
+    }
+
     const st = start + 1
     const view = new Uint8Array(b.buffer, st, i - st)
     const date = options.decoder.decode(view)
