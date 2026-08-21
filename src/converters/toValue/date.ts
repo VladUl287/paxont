@@ -61,7 +61,7 @@ function fromString(context: JsonParsingContext, i: number): ReadResult<Date> {
     if (!writable) {
         let result: Extract<ReadResult<Date>, { type: typeof COMPLETE }> | undefined
         if ((result = tryParseISO8601(b, bytesLen, i)) !== undefined) {
-            if (b[result.nextIndex] === DOUBLE_QUOTE) {
+            if (b[result.nextIndex - 1] === DOUBLE_QUOTE) {
                 return result
             }
         }
