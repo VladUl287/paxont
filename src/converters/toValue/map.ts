@@ -57,6 +57,12 @@ export function toMap<M extends BaseMeta<any>>(
         i = skipWhitespace(b, i)
         if (b[i] === COMMA) { i++ }
         else if (b[i] === CURLY_CLOSE) {
+            if (state?.hasComma) {
+                return {
+                    type: ERROR,
+                    error: new JSONParseError(`Trailing comman`)
+                }
+            }
             return {
                 type: COMPLETE,
                 value: value,
@@ -70,6 +76,7 @@ export function toMap<M extends BaseMeta<any>>(
     const valueMeta = m.value
     const parseValue = valueMeta.toValue
 
+    let hasComma = false
     let key: string | undefined = state?.key ?? undefined
     let colon: number | undefined = state?.colon ?? undefined
     while (true) {
@@ -81,7 +88,7 @@ export function toMap<M extends BaseMeta<any>>(
             if (isError(result)) { return result }
 
             if (isNeedsMoreData(result)) {
-                stack.push({ isContinued: true, value })
+                stack.push({ isContinued: true, value, hasComma })
                 return result
             }
 
@@ -131,7 +138,11 @@ export function toMap<M extends BaseMeta<any>>(
             }
         }
 
-        if (b[i] === COMMA) { i++; continue }
+        if (b[i] === COMMA) {
+            hasComma = true
+            i++
+            continue
+        }
         else if (b[i] === CURLY_CLOSE) { break }
 
         if (i >= bytesLen && writable) {
