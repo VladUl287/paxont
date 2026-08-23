@@ -19,18 +19,15 @@ type Store = {
 const COMPLETE = ReadResultType.COMPLETE
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toFloat(
-    metadata: PrimitiveMeta<number>,
-    context: JsonParsingContext,
-    index: number,
-    depth: number): ReadResult<number> {
-    const result = tryParseFloat(context, index, float64)
+export function toFloat(metadata: PrimitiveMeta<number>, context: JsonParsingContext): ReadResult<number> {
+    const { writable, bytesLength, position: i } = context.reader
 
-    const { writable, bytesLength } = context.reader
+    const result = tryParseFloat(context, float64)
+
     if (writable && isComplete(result) && result.nextIndex >= bytesLength) {
         return {
             type: NEEDS_MORE_DATA,
-            nextIndex: index
+            nextIndex: i
         }
     }
 
@@ -72,10 +69,11 @@ function getNumberEndIndex(b: Uint8Array, len: number, i: number): number {
     return i
 }
 
-export function tryParseFloat({ reader, options }: JsonParsingContext, i: number, format: FloatFormat): ReadResult<number> {
-    const { bytes: b, bytesLength } = reader
-
-    const start = i
+export function tryParseFloat({ reader, options }: JsonParsingContext, format: FloatFormat): ReadResult<number> {
+    const { bytes: b, bytesLength: len, position: start } = reader
+    
+    let i = start
+    
     const negative = b[i] === MINUS
     if (negative) i++
 
@@ -88,7 +86,7 @@ export function tryParseFloat({ reader, options }: JsonParsingContext, i: number
         mHigh: 0 >>> 0
     }
 
-    if (tryFastParse(b, bytesLength, s)) {
+    if (tryFastParse(b, len, s)) {
         let { index: i, mantissa: m, mLow, mHigh, exponent: e } = s
 
         const eabs = Math.abs(e)
@@ -127,7 +125,7 @@ export function tryParseFloat({ reader, options }: JsonParsingContext, i: number
         }
     }
 
-    i = getNumberEndIndex(b, bytesLength, i)
+    i = getNumberEndIndex(b, len, i)
 
     const result = options.decoder.decode(new Uint8Array(b.buffer, start, i - start))
     return {
