@@ -1,6 +1,6 @@
 import { memoize } from "./utils/memo"
 import { defaultOptions, JsonOptions } from "./options"
-import { BaseMeta, JsonParsingState } from "./metadata/types"
+import { BaseMeta, JsonParsingContext, JsonParsingState } from "./metadata/types"
 import { arrayPool } from "./utils/array"
 import { getMaxBytesCount } from "./utils/utf8"
 import { isMeta } from "./metadata/utils"
@@ -69,7 +69,8 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
 
         const reader = new JsonReader(bytes, bytesLength, false, isString ? value : undefined)
         try {
-            const result = metadataType.toValue(metadataType, { options: fullOptions, reader, stack }, 0, 0)
+            const context = new JsonParsingContext(reader, fullOptions, stack)
+            const result = metadataType.toValue(metadataType, context, 0, 0)
 
             if (isError(result)) {
                 throw result.error
@@ -106,7 +107,7 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
         const stack = new Stack<JsonParsingState>()
 
         const binaryReader = json.getReader({ mode: 'byob' })
-        
+
         let tempBuffer = bufferPool.rent(65536)
         let position = 0
         try {
@@ -116,11 +117,8 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
 
                 const reader = new JsonReader(tempBuffer, value.length, true)
                 try {
-                    const result = metadataType.toValue(metadataType, {
-                        options: fullOptions,
-                        reader,
-                        stack
-                    }, 0, 0)
+                    const context = new JsonParsingContext(reader, fullOptions, stack)
+                    const result = metadataType.toValue(metadataType, context, 0, 0)
 
                     if (isError(result)) {
                         throw result.error
