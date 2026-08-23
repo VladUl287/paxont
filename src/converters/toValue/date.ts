@@ -13,14 +13,14 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toDate(metadata: PrimitiveMeta<Date>, context: JsonParsingContext): ReadResult<Date> {
     const { reader: { bytes: b, bytesLength: len, writable, position } } = context
-    
+
     let i = position
     if (i < len) {
         if (b[i] === DOUBLE_QUOTE)
-            return fromString(context, i)
+            return fromString(context)
 
         if (isDigitU(b[i]))
-            return fromTimestamp(context, i)
+            return fromTimestamp(context)
     }
     else if (writable) {
         return {
@@ -35,11 +35,12 @@ export function toDate(metadata: PrimitiveMeta<Date>, context: JsonParsingContex
     }
 }
 
-function fromString(context: JsonParsingContext, i: number): ReadResult<Date> {
-    const { reader: { bytes: b, bytesLength: bytesLen, writable }, options } = context
+function fromString(context: JsonParsingContext): ReadResult<Date> {
+    const { reader: { bytes: b, bytesLength: bytesLen, writable, position }, options } = context
 
-    const start = i
-
+    const start = position
+    
+    let i = start
     if (b[i] !== DOUBLE_QUOTE) {
         if (i >= bytesLen && writable) {
             return {
@@ -239,11 +240,11 @@ function tryParseISO8601(b: Uint8Array, len: number, i: number): Extract<ReadRes
     }
 }
 
-function fromTimestamp(ctx: JsonParsingContext, i: number): ReadResult<Date> {
+function fromTimestamp(context: JsonParsingContext): ReadResult<Date> {
     const maxValue = 8_640_000_000_000_000
     const minValue = -8_640_000_000_000_000
 
-    const result = tryParseFloat(ctx, i, float64)
+    const result = tryParseFloat(context, float64)
 
     if (isComplete(result)) {
         const value = result.value

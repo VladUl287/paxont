@@ -127,7 +127,7 @@ export function toObject<T extends { [k: string]: BaseMeta<any> }>(
         reader.setPosition(i)
 
         const fieldMeta = field.value
-        const result = fieldMeta.toValue(fieldMeta, context, i, d)
+        const result = fieldMeta.toValue(fieldMeta, context)
 
         if (isError(result)) { return result }
 

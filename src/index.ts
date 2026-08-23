@@ -70,7 +70,7 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
         const reader = new JsonReader(bytes, bytesLength, false, isString ? value : undefined)
         try {
             const context = new JsonParsingContext(reader, fullOptions, stack)
-            const result = metadataType.toValue(metadataType, context, 0, 0)
+            const result = metadataType.toValue(metadataType, context)
 
             if (isError(result)) {
                 throw result.error
@@ -118,7 +118,7 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
                 const reader = new JsonReader(tempBuffer, value.length, true)
                 try {
                     const context = new JsonParsingContext(reader, fullOptions, stack)
-                    const result = metadataType.toValue(metadataType, context, 0, 0)
+                    const result = metadataType.toValue(metadataType, context)
 
                     if (isError(result)) {
                         throw result.error

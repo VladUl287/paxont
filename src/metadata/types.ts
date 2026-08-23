@@ -27,7 +27,7 @@ export type JsonParsingState = {
 }
 
 export interface BaseMeta<T> {
-    readonly toValue: <M extends this>(metadata: M, context: JsonParsingContext, index: number, depth: number) => ReadResult<T>
+    readonly toValue: <M extends this>(metadata: M, context: JsonParsingContext) => ReadResult<T>
     readonly toJson: <M extends this>(metadata: M, value: T, options: JsonOptions) => string
     readonly type: TypeName
 }

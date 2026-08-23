@@ -80,7 +80,7 @@ export function toMap<M extends BaseMeta<any>>(meta: MapMeta<M>, context: JsonPa
             i = reader.skipWhitespace(i)
 
             reader.setPosition(i)
-            const result = parseKey(keyMeta, context, i, d)
+            const result = parseKey(keyMeta, context)
 
             if (isError(result)) { return result }
 
@@ -114,7 +114,7 @@ export function toMap<M extends BaseMeta<any>>(meta: MapMeta<M>, context: JsonPa
         i = reader.skipWhitespace(i)
 
         reader.setPosition(i)
-        const result = parseValue(valueMeta, context, i, d)
+        const result = parseValue(valueMeta, context)
 
         if (isError(result)) { return result }
 

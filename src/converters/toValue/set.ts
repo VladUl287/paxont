@@ -75,7 +75,7 @@ export function toSet<M extends BaseMeta<any>>(metadata: SetMeta<M>, context: Js
         i = reader.skipWhitespace(i)
 
         reader.setPosition(i)
-        const result = toValue(itemMeta, context, i, d)
+        const result = toValue(itemMeta, context)
 
         if (isError(result))
             return result

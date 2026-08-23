@@ -81,8 +81,7 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
         }
 
         reader.setPosition(i)
-
-        const result = toValue(item, context, i, d)
+        const result = toValue(item, context)
 
         if (isError(result)) {
             clear(buffer, 0, j)
