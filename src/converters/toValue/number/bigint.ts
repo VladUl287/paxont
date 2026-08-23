@@ -9,19 +9,12 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export const toInt64 = (
-    metadata: PrimitiveMeta<bigint>,
-    reader: JsonParsingContext,
-    index: number,
-    depth: number
-): ReadResult<bigint> => parseInt64(reader.reader, index, -9223372036854775808n, 9223372036854775807n, true)
+export const toInt64 = (metadata: PrimitiveMeta<bigint>, { reader }: JsonParsingContext): ReadResult<bigint> =>
+    parseInt64(reader, -9223372036854775808n, 9223372036854775807n, true)
 
 export const toUint64 = (
-    metadata: PrimitiveMeta<bigint>,
-    reader: JsonParsingContext,
-    index: number,
-    depth: number
-): ReadResult<bigint> => parseInt64(reader.reader, index, 0n, 18446744073709551615n, false)
+    metadata: PrimitiveMeta<bigint>, { reader }: JsonParsingContext): ReadResult<bigint> =>
+    parseInt64(reader, 0n, 18446744073709551615n, false)
 
 export function toBigInt(
     metadata: PrimitiveMeta<bigint>,
@@ -75,12 +68,13 @@ const bufferInt = new ArrayBuffer(8)
 const conversionU32 = new Uint32Array(bufferInt)
 const conversionU64 = new BigUint64Array(bufferInt)
 
-export function parseInt64(reader: JsonReader, index: number, minValue: bigint, maxValue: bigint, signed: boolean): ReadResult<bigint> {
+export function parseInt64(reader: JsonReader, minValue: bigint, maxValue: bigint, signed: boolean): ReadResult<bigint> {
     const MAX_DIGITS = 19
     const MAX_SAFE_INT_DIGITS = 16
 
-    const { bytes: b, bytesLength: bytesLen, writable } = reader
-    let i = index
+    const { bytes: b, bytesLength: bytesLen, writable, position } = reader
+    const start = position
+    let i = start
 
     const negative = signed && b[i] === MINUS
     if (negative) i++
@@ -119,7 +113,7 @@ export function parseInt64(reader: JsonReader, index: number, minValue: bigint, 
     if (i >= len && writable) {
         return {
             type: NEEDS_MORE_DATA,
-            nextIndex: index
+            nextIndex: start
         }
     }
 
