@@ -8,13 +8,11 @@ const COMPLETE = ReadResultType.COMPLETE
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toNullable<M extends BaseMeta<any>>(
-    { value }: NullableMeta<M>,
-    context: JsonParsingContext,
-    i: number,
-    depth: number
+    { value }: NullableMeta<M>, context: JsonParsingContext
 ): ReadResult<MetaValue<M> | null> {
-    const { bytes: b, bytesLength: l, writable } = context.reader
+    const { bytes: b, bytesLength: l, writable, position } = context.reader
 
+    let i = position    
     if (i + 3 < l && (b[i] | b[i + 1] << 8 | b[i + 2] << 16 | b[i + 3] << 24) === NULL) {
         return {
             type: COMPLETE,
@@ -30,5 +28,5 @@ export function toNullable<M extends BaseMeta<any>>(
         }
     }
 
-    return value.toValue(value, context, i, depth)
+    return value.toValue(value, context, 0, 0)
 }
