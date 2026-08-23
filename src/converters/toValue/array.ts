@@ -9,10 +9,7 @@ const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends BaseMeta<any>>(
-    metadata: ArrayMeta<A, M>,
-    ctx: JsonParsingContext,
-    _i: number,
-    _d: number
+    metadata: ArrayMeta<A, M>, ctx: JsonParsingContext
 ): ReadResult<A> {
     const { reader, stack, options, depth } = ctx
     const { bytes: b, bytesLength: len, writable, position } = reader
