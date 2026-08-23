@@ -9,9 +9,9 @@ const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends BaseMeta<any>>(
-    metadata: ArrayMeta<A, M>, ctx: JsonParsingContext
+    metadata: ArrayMeta<A, M>, context: JsonParsingContext
 ): ReadResult<A> {
-    const { reader, stack, options, depth } = ctx
+    const { reader, stack, options, depth } = context
     const { bytes: b, bytesLength: len, writable, position } = reader
 
     let i = position
@@ -23,7 +23,7 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
             error: new JSONParseError(`Maximum depth exceeded`, { depth: d, index: i, metadata })
         }
     }
-    ctx.setDepth(d)
+    context.setDepth(d)
 
     if (i >= len) {
         if (writable) {
@@ -82,7 +82,7 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
 
         reader.setPosition(i)
 
-        const result = toValue(item, ctx, i, d)
+        const result = toValue(item, context, i, d)
 
         if (isError(result)) {
             clear(buffer, 0, j)
@@ -124,7 +124,7 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
     clear(buffer, 0, j)
     release(buffer)
 
-    ctx.setDepth(depth)
+    context.setDepth(depth)
 
     return {
         type: COMPLETE,
