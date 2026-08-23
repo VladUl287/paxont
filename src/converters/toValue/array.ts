@@ -14,20 +14,19 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
     _i: number,
     _d: number
 ): ReadResult<A> {
-    const { reader, stack, options } = ctx
+    const { reader, stack, options, depth } = ctx
+    const { bytes: b, bytesLength: len, writable, position } = reader
 
-    let i = reader.position
+    let i = position
+    let d = depth + 1
 
-    let d = ctx.depth
     if (d > options.maxDepth) {
         return {
             type: ReadResultType.ERROR,
             error: new JSONParseError(`Maximum depth exceeded`, { depth: d, index: i, metadata })
         }
     }
-    ctx.setDepth(d + 1)
-
-    const { bytes: b, bytesLength: len, writable } = reader
+    ctx.setDepth(d)
 
     if (i >= len) {
         if (writable) {
@@ -129,7 +128,7 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
     release(buffer)
 
     reader.setPosition(++i)
-    ctx.setDepth(d)
+    ctx.setDepth(depth)
 
     return {
         type: COMPLETE,

@@ -7,34 +7,31 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toObject<T extends Record<string, BaseMeta<any>>>(
-    m: ObjectMeta<T>,
-    ctx: JsonParsingContext,
-    _i: number,
-    _d: number,
+export function toObject<T extends { [k: string]: BaseMeta<any> }>(
+    meta: ObjectMeta<T>, context: JsonParsingContext
 ): ReadResult<AsObject<T>> {
-    const { reader, options, stack } = ctx
-    const { bytes: b, bytesLength: len, writable } = reader
+    const { reader, options, stack, depth } = context
+    const { bytes: b, bytesLength: len, writable, position } = reader
 
-    let i = reader.position
+    let i = position
+    let d = depth + 1
 
-    let d = ctx.depth
     if (d > options.maxDepth) {
         return {
             type: ERROR,
-            error: new JSONParseError(`Maximum depth exceeded`, { metadata: m, index: i, depth: d })
+            error: new JSONParseError(`Maximum depth exceeded`, { metadata: meta, index: i, depth: d })
         }
     }
-    ctx.setDepth(d + 1)
+    context.setDepth(d)
 
-    const fields = m.fields
+    const fields = meta.fields
 
     const state = stack.pop()
 
     const isContinued: boolean = state?.isContinued ?? false
     const buffer: Array<any> = state?.buffer ?? new Array(fields.length)
 
-    const getFieldIndex = m.getFieldIndex
+    const getFieldIndex = meta.getFieldIndex
 
     let bufferIndex: number = state?.bufferIndex ?? 0
     if (!isContinued) {
@@ -82,7 +79,7 @@ export function toObject<T extends Record<string, BaseMeta<any>>>(
                 }
                 return {
                     type: ERROR,
-                    error: new JSONParseError('Maximum depth exceeded', { metadata: m, index: i, depth: d })
+                    error: new JSONParseError('Maximum depth exceeded', { metadata: meta, index: i, depth: d })
                 }
             }
             i++
@@ -130,7 +127,7 @@ export function toObject<T extends Record<string, BaseMeta<any>>>(
         reader.setPosition(i)
 
         const fieldMeta = field.value
-        const result = fieldMeta.toValue(fieldMeta, ctx, i, d)
+        const result = fieldMeta.toValue(fieldMeta, context, i, d)
 
         if (isError(result)) { return result }
 
@@ -176,11 +173,11 @@ export function toObject<T extends Record<string, BaseMeta<any>>>(
     }
 
     reader.setPosition(++i)
-    ctx.setDepth(d)
+    context.setDepth(depth)
 
     return {
         type: COMPLETE,
-        value: m.build(buffer),
+        value: meta.build(buffer),
         nextIndex: i
     }
 }
