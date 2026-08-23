@@ -8,18 +8,17 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toMap<M extends BaseMeta<any>>(
-    m: MapMeta<M>,
-    ctx: JsonParsingContext,
-    i: number,
-    d: number,
-): ReadResult<Map<string, MetaValue<M>>> {
-    const { reader, options, stack } = ctx
+export function toMap<M extends BaseMeta<any>>(meta: MapMeta<M>, context: JsonParsingContext): ReadResult<Map<string, MetaValue<M>>> {
+    const { reader, options, stack, depth } = context
+    const { bytes: b, bytesLength: len, writable, position } = reader
+
+    let i = position
+    let d = depth + 1
 
     if (d > options.maxDepth) {
         return {
             type: ERROR,
-            error: new JSONParseError(`Maximum depth exceeded`, { metadata: m, index: i, depth: d })
+            error: new JSONParseError(`Maximum depth exceeded`, { metadata: meta, index: i, depth: d })
         }
     }
     d++
@@ -28,11 +27,9 @@ export function toMap<M extends BaseMeta<any>>(
     const isContinued: boolean = state?.isContinued ?? false
     const value: Map<string, MetaValue<M>> = state?.value ?? new Map()
 
-    const { bytes: b, bytesLength: bytesLen, writable } = reader
-
     if (!isContinued) {
         if (b[i] !== CURLY_OPEN) {
-            if (writable && i >= bytesLen) {
+            if (writable && i >= len) {
                 return {
                     type: NEEDS_MORE_DATA,
                     nextIndex: i
@@ -71,9 +68,9 @@ export function toMap<M extends BaseMeta<any>>(
         }
     }
 
-    const keyMeta = m.key
+    const keyMeta = meta.key
     const parseKey = keyMeta.toValue
-    const valueMeta = m.value
+    const valueMeta = meta.value
     const parseValue = valueMeta.toValue
 
     let hasComma = false
@@ -83,7 +80,8 @@ export function toMap<M extends BaseMeta<any>>(
         if (key === undefined) {
             i = skipWhitespace(b, i)
 
-            const result = parseKey(keyMeta, ctx, i, d)
+            reader.setPosition(i)
+            const result = parseKey(keyMeta, context, i, d)
 
             if (isError(result)) { return result }
 
@@ -98,7 +96,7 @@ export function toMap<M extends BaseMeta<any>>(
 
         if (colon === undefined) {
             if (b[i] !== COLON) {
-                if (i >= bytesLen && writable) {
+                if (i >= len && writable) {
                     stack.push({ isContinued: true, value, key })
                     return {
                         type: NEEDS_MORE_DATA,
@@ -116,7 +114,8 @@ export function toMap<M extends BaseMeta<any>>(
 
         i = skipWhitespace(b, i)
 
-        const result = parseValue(valueMeta, ctx, i, d)
+        reader.setPosition(i)
+        const result = parseValue(valueMeta, context, i, d)
 
         if (isError(result)) { return result }
 
@@ -130,7 +129,7 @@ export function toMap<M extends BaseMeta<any>>(
 
         i = skipWhitespace(b, result.nextIndex)
 
-        if (i >= bytesLen && writable) {
+        if (i >= len && writable) {
             stack.push({ isContinued: true, value })
             return {
                 type: NEEDS_MORE_DATA,
@@ -145,7 +144,7 @@ export function toMap<M extends BaseMeta<any>>(
         }
         else if (b[i] === CURLY_CLOSE) { break }
 
-        if (i >= bytesLen && writable) {
+        if (i >= len && writable) {
             stack.push({ isContinued: true, value })
             return {
                 type: NEEDS_MORE_DATA,
