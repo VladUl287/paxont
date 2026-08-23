@@ -12,26 +12,19 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 export const toInt64 = (metadata: PrimitiveMeta<bigint>, { reader }: JsonParsingContext): ReadResult<bigint> =>
     parseInt64(reader, -9223372036854775808n, 9223372036854775807n, true)
 
-export const toUint64 = (
-    metadata: PrimitiveMeta<bigint>, { reader }: JsonParsingContext): ReadResult<bigint> =>
+export const toUint64 = (metadata: PrimitiveMeta<bigint>, { reader }: JsonParsingContext): ReadResult<bigint> =>
     parseInt64(reader, 0n, 18446744073709551615n, false)
 
-export function toBigInt(
-    metadata: PrimitiveMeta<bigint>,
-    context: JsonParsingContext,
-    i: number,
-    depth: number): ReadResult<bigint> {
+export function toBigInt(metadata: PrimitiveMeta<bigint>, context: JsonParsingContext): ReadResult<bigint> {
     const { reader, options, stack } = context
-    const { bytes: b, bytesLength: len, writable } = reader
+    const { bytes: b, bytesLength: len, writable, position: start } = reader
 
-    const start = i
-
+    let i = start
     while (i < len - 4) {
         const a1 = b[i], a2 = b[i + 1], a3 = b[i + 2], a4 = b[i + 3]
 
         const word = (a1 << 0 | a2 << 8 | a3 << 16 | a4 << 24) - 0x30303030
         const hasNonDigit = ((word + 0x76767676) | word) & 0x80808080
-
         if (hasNonDigit !== 0) break
 
         i += 4
@@ -51,7 +44,7 @@ export function toBigInt(
     if (length <= 0) {
         return {
             type: ERROR,
-            error: new JSONParseError(`Expected at least one digit`, { metadata, index: i, depth })
+            error: new JSONParseError(`Expected at least one digit`, { metadata, index: i })
         }
     }
 
