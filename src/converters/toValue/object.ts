@@ -172,12 +172,11 @@ export function toObject<T extends { [k: string]: BaseMeta<any> }>(
         }
     }
 
-    reader.setPosition(++i)
     context.setDepth(depth)
 
     return {
         type: COMPLETE,
         value: meta.build(buffer),
-        nextIndex: i
+        nextIndex: ++i
     }
 }

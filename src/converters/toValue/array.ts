@@ -124,12 +124,11 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
     clear(buffer, 0, j)
     release(buffer)
 
-    reader.setPosition(++i)
     ctx.setDepth(depth)
 
     return {
         type: COMPLETE,
         value: result,
-        nextIndex: i
+        nextIndex: ++i
     }
 }
