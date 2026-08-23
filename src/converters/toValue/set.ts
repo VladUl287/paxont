@@ -1,6 +1,5 @@
 import { BaseMeta, SetMeta, JsonParsingContext, MetaValue } from "../../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../../utils/ascii_symbols"
-import { skipWhitespace } from "../utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/result"
 import { JSONParseError } from "../../utils/error"
 
@@ -8,22 +7,18 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toSet<M extends BaseMeta<MetaValue<M>>>(
-    metadata: SetMeta<M>,
-    context: JsonParsingContext,
-    i: number,
-    d: number
-): ReadResult<Set<MetaValue<M>>> {
-    const { reader, options, stack } = context
+export function toSet<M extends BaseMeta<any>>(metadata: SetMeta<M>, context: JsonParsingContext): ReadResult<Set<MetaValue<M>>> {
+    const { reader, options, stack, depth } = context
+    const { bytes: b, bytesLength: len, writable, position } = reader
 
+    let i = position
+    let d = depth + 1
     if (d > options.maxDepth) {
         return {
             type: ERROR,
             error: new JSONParseError(`Maximum depth exceeded`, { depth: d, index: i, metadata })
         }
     }
-
-    const { bytes: b, bytesLength: len, writable } = reader
 
     const state = stack.pop()
 
@@ -77,8 +72,9 @@ export function toSet<M extends BaseMeta<MetaValue<M>>>(
     let hasComma = false
     let keySet: Set<any> | undefined = state?.keySet
     while (true) {
-        i = skipWhitespace(b, i)
+        i = reader.skipWhitespace(i)
 
+        reader.setPosition(i)
         const result = toValue(itemMeta, context, i, d)
 
         if (isError(result))
@@ -102,7 +98,7 @@ export function toSet<M extends BaseMeta<MetaValue<M>>>(
             set.add(result.value)
         }
 
-        i = skipWhitespace(b, result.nextIndex)
+        i = reader.skipWhitespace(result.nextIndex)
 
         if (b[i] === COMMA) {
             i++
