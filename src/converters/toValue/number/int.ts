@@ -9,59 +9,34 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export const toInt8 = (
-    metadata: PrimitiveMeta<number>,
-    { reader }: JsonParsingContext,
-    index: number,
-    depth: number
-): ReadResult<number> => tryParseInt(reader, index, 3, -128, 127, true)
+export const toInt8 = (metadata: PrimitiveMeta<number>, { reader }: JsonParsingContext): ReadResult<number> =>
+    tryParseInt(reader, 3, -128, 127, true)
 
-export const toUint8 = (
-    metadata: PrimitiveMeta<number>,
-    { reader }: JsonParsingContext,
-    index: number,
-    depth: number
-): ReadResult<number> => tryParseInt(reader, index, 3, 0, 255, false)
+export const toUint8 = (metadata: PrimitiveMeta<number>, { reader }: JsonParsingContext): ReadResult<number> =>
+    tryParseInt(reader, 3, 0, 255, false)
 
-export const toInt16 = (
-    metadata: PrimitiveMeta<number>,
-    { reader }: JsonParsingContext,
-    index: number,
-    depth: number
-): ReadResult<number> => tryParseInt(reader, index, 5, -32768, 32767, true)
+export const toInt16 = (metadata: PrimitiveMeta<number>, { reader }: JsonParsingContext): ReadResult<number> =>
+    tryParseInt(reader, 5, -32768, 32767, true)
 
-export const toUint16 = (
-    metadata: PrimitiveMeta<number>,
-    { reader }: JsonParsingContext,
-    index: number,
-    depth: number
-): ReadResult<number> => tryParseInt(reader, index, 5, 0, 65535, false)
+export const toUint16 = (metadata: PrimitiveMeta<number>, { reader }: JsonParsingContext): ReadResult<number> =>
+    tryParseInt(reader, 5, 0, 65535, false)
 
-export const toInt32 = (
-    metadata: PrimitiveMeta<number>,
-    { reader }: JsonParsingContext,
-    index: number,
-    depth: number
-): ReadResult<number> => tryParseInt(reader, index, 10, -2147483648, 2147483647, true)
+export const toInt32 = (metadata: PrimitiveMeta<number>, { reader }: JsonParsingContext): ReadResult<number> =>
+    tryParseInt(reader, 10, -2147483648, 2147483647, true)
 
-export const toUint32 = (
-    metadata: PrimitiveMeta<number>,
-    { reader }: JsonParsingContext,
-    index: number,
-    depth: number
-): ReadResult<number> => tryParseInt(reader, index, 10, 0, 4294967295, false)
+export const toUint32 = (metadata: PrimitiveMeta<number>, { reader }: JsonParsingContext): ReadResult<number> => 
+    tryParseInt(reader, 10, 0, 4294967295, false)
 
 export function tryParseInt(
     reader: JsonReader,
-    index: number,
     maxDigits: number,
     minValue: number,
     maxValue: number,
     signed: boolean
 ): ReadResult<number> {
-    const { bytes: b, bytesLength: len, writable } = reader
+    const { bytes: b, bytesLength: len, writable, position } = reader
 
-    let i = index
+    let i = position
 
     const negative = signed && b[i] === MINUS
     if (negative) i++
