@@ -1,6 +1,5 @@
 import { BaseMeta, JsonParsingContext, MapMeta, MetaValue } from "../../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN } from "../../utils/ascii_symbols"
-import { skipWhitespace } from "../utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/result"
 import { JSONParseError } from "../../utils/error"
 
@@ -51,7 +50,7 @@ export function toMap<M extends BaseMeta<any>>(meta: MapMeta<M>, context: JsonPa
         }
     }
     else {
-        i = skipWhitespace(b, i)
+        i = reader.skipWhitespace(i)
         if (b[i] === COMMA) { i++ }
         else if (b[i] === CURLY_CLOSE) {
             if (state?.hasComma) {
@@ -78,7 +77,7 @@ export function toMap<M extends BaseMeta<any>>(meta: MapMeta<M>, context: JsonPa
     let colon: number | undefined = state?.colon ?? undefined
     while (true) {
         if (key === undefined) {
-            i = skipWhitespace(b, i)
+            i = reader.skipWhitespace(i)
 
             reader.setPosition(i)
             const result = parseKey(keyMeta, context, i, d)
@@ -112,7 +111,7 @@ export function toMap<M extends BaseMeta<any>>(meta: MapMeta<M>, context: JsonPa
             i++
         }
 
-        i = skipWhitespace(b, i)
+        i = reader.skipWhitespace(i)
 
         reader.setPosition(i)
         const result = parseValue(valueMeta, context, i, d)
@@ -127,7 +126,7 @@ export function toMap<M extends BaseMeta<any>>(meta: MapMeta<M>, context: JsonPa
         value.set(key, result.value)
         key = colon = undefined
 
-        i = skipWhitespace(b, result.nextIndex)
+        i = reader.skipWhitespace(result.nextIndex)
 
         if (i >= len && writable) {
             stack.push({ isContinued: true, value })
