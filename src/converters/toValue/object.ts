@@ -12,17 +12,18 @@ export function toObject<T extends Record<string, BaseMeta<any>>>(
     m: ObjectMeta<T>,
     ctx: JsonParsingContext,
     i: number,
-    d: number,
+    _d: number,
 ): ReadResult<AsObject<T>> {
     const { reader: { bytes: b, bytesLength: len, writable }, options, stack } = ctx
 
+    let d = ctx.depth
     if (d > options.maxDepth) {
         return {
             type: ERROR,
             error: new JSONParseError(`Maximum depth exceeded`, { metadata: m, index: i, depth: d })
         }
     }
-    d++
+    ctx.setDepth(d + 1)
 
     const fields = m.fields
 
@@ -169,6 +170,8 @@ export function toObject<T extends Record<string, BaseMeta<any>>>(
             error: new JSONParseError(``)
         }
     }
+
+    ctx.setDepth(d)
 
     return {
         type: COMPLETE,

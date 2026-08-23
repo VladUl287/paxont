@@ -8,10 +8,17 @@ import { Expand } from "../utils/types"
 
 export type TypeName = BaseType | (string & {})
 
-export type JsonParsingContext = {
-    readonly reader: JsonReader,
-    readonly options: JsonOptions,
-    readonly stack: IStack<JsonParsingState>
+export class JsonParsingContext {
+    constructor(
+        public readonly reader: JsonReader,
+        public readonly options: JsonOptions,
+        public readonly stack: IStack<JsonParsingState>,
+        public depth: number = 0
+    ) { }
+
+    public setDepth(depth: number) {
+        this.depth = depth
+    }
 }
 
 export type JsonParsingState = {
