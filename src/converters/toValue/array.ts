@@ -1,6 +1,5 @@
 import { BaseMeta, ArrayMeta, JsonParsingContext, MetaValue } from "../../metadata/types"
 import { COMMA, SQUARE_CLOSE, SQUARE_OPEN } from "../../utils/ascii_symbols"
-import { skipWhitespace } from "../utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/result"
 import { ArrayLikeWritable } from "../../utils/array"
 import { JSONParseError } from "../../utils/error"
@@ -73,12 +72,16 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
 
     let j = bufferIndex
     while (true) {
-        i = skipWhitespace(b, i)
+        i = reader.skipWhitespace(i)
 
         if (isContinued) {
-            if (b[i] === COMMA) { i = skipWhitespace(b, ++i) }
+            if (b[i] === COMMA) {
+                i = reader.skipWhitespace(++i)
+            }
             else if (b[i] === SQUARE_CLOSE) { break }
         }
+
+        // reader.setPosition(i)
 
         const result = toValue(item, ctx, i, d)
 
@@ -97,7 +100,7 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
         i = result.nextIndex
         j++
 
-        i = skipWhitespace(b, i)
+        i = reader.skipWhitespace(i)
 
         if (b[i] === COMMA) { i++ }
         else if (b[i] === SQUARE_CLOSE) { break }

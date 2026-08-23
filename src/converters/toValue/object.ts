@@ -65,7 +65,7 @@ export function toObject<T extends Record<string, BaseMeta<any>>>(
     while (bufferIndex < fields.length) {
         let field
         if (fieldIndex === -1) {
-            i = skipWhitespace(b, i)
+            i = reader.skipWhitespace(i)
 
             const start = i
 
@@ -115,11 +115,13 @@ export function toObject<T extends Record<string, BaseMeta<any>>>(
                     error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${i}`)
                 }
             }
-            i = skipWhitespace(b, ++i)
+            i = reader.skipWhitespace(++i)
         }
         else {
             field = fields[fieldIndex]
-            if (!state?.inValue) { i = skipWhitespace(b, i) }
+            if (!state?.inValue) {
+                i = reader.skipWhitespace(i)
+            }
         }
 
         const fieldMeta = field.value
@@ -152,7 +154,7 @@ export function toObject<T extends Record<string, BaseMeta<any>>>(
         bufferIndex++
     }
 
-    i = skipWhitespace(b, i)
+    i = reader.skipWhitespace(i)
 
     if (b[i] !== CURLY_CLOSE) {
         if (i >= len && writable) {

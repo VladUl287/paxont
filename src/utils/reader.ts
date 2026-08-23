@@ -1,7 +1,15 @@
+import { CARRIAGE_RETURN, NEW_LINE, SPACE, TAB } from "../utils/ascii_symbols"
+
 export type SparseIndex = {
     codeUnitIndex: number
     byteIndex: number
 }
+
+const lookup = new Uint8Array(256)
+lookup[TAB] = 1
+lookup[SPACE] = 1
+lookup[NEW_LINE] = 1
+lookup[CARRIAGE_RETURN] = 1
 
 export class JsonReader {
     private readonly releaseCallbacks: Array<() => void> = []
@@ -19,6 +27,15 @@ export class JsonReader {
             this.sparseIndex = sparseIndex ?? { codeUnitIndex: 0, byteIndex: 0 }
         }
     }
+
+    public skipWhitespace(i: number): number {
+        const b = this.bytes
+        const bytesLen = this.bytesLength
+        if (b[i] > SPACE) return i
+        while (i < bytesLen && lookup[b[i]]) i++
+        return i
+    }
+
     
     public onRelease(callback: () => void) {
         this.releaseCallbacks.push(callback)
