@@ -112,7 +112,7 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
         let position = 0
         try {
             while (true) {
-                const { value, done } = await binaryReader.read(tempBuffer.subarray(position))
+                const { value } = await binaryReader.read(tempBuffer.subarray(position))
                 if (value === undefined) { break }
 
                 const reader = new JsonReader(tempBuffer, value.length, true)
@@ -125,21 +125,20 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
                     }
 
                     if (isNeedsMoreData(result)) {
-                        if (done) { break }
                         position = result.nextIndex
-                        tempBuffer.copyWithin(0, position, value.length)
 
                         if (((tempBuffer.length - position) * 100 / tempBuffer.length) >= 70) {
                             const newBuffer = bufferPool.rent(tempBuffer.length * 2)
-                            let j = 0
-                            while (j < tempBuffer.length) {
-                                newBuffer[j] = tempBuffer[j]
-                                j++
+                            let j = position
+                            let i = 0
+                            while (j < value.length) {
+                                newBuffer[i++] = tempBuffer[j++]
                             }
                             bufferPool.release(tempBuffer)
                             tempBuffer = newBuffer
+                            continue
                         }
-
+                        tempBuffer.copyWithin(0, position, value.length)
                         continue
                     }
 
