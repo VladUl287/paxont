@@ -643,13 +643,14 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
     const decode = decoderFactory(options)
 
-    const toString = (m: PrimitiveMeta<string>, context: JsonParsingContext, i: number, depth: number): ReadResult<string> => {
-        const { reader: { bytes: b, bytesLength, writable }, stack } = context
-
+    const toString = (metadata: PrimitiveMeta<string>, context: JsonParsingContext): ReadResult<string> => {
+        const { reader: { bytes: b, bytesLength, writable, position }, stack } = context
+        
         const state = stack.pop()
         const isContinued: boolean = state?.isContinued ?? false
         const base: string = state?.base ?? ''
-
+        
+        let i = position
         if (!isContinued) {
             if (b[i] !== DQ) {
                 if (i >= bytesLength && writable) {
@@ -660,7 +661,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                 }
                 return {
                     type: ERROR,
-                    error: new JSONParseError(`Expected ", but found ${String.fromCharCode(b[i])}`, { metadata: m, index: i, depth })
+                    error: new JSONParseError(`Expected ", but found ${String.fromCharCode(b[i])}`, { metadata, index: i })
                 }
             }
             i++
