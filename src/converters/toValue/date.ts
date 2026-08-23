@@ -11,14 +11,10 @@ const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
-export function toDate(
-    metadata: PrimitiveMeta<Date>,
-    context: JsonParsingContext,
-    i: number,
-    depth: number,
-): ReadResult<Date> {
-    const { reader: { bytes: b, bytesLength: len, writable } } = context
-
+export function toDate(metadata: PrimitiveMeta<Date>, context: JsonParsingContext): ReadResult<Date> {
+    const { reader: { bytes: b, bytesLength: len, writable, position } } = context
+    
+    let i = position
     if (i < len) {
         if (b[i] === DOUBLE_QUOTE)
             return fromString(context, i)
