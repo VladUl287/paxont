@@ -11,10 +11,12 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends BaseMeta<any>>(
     metadata: ArrayMeta<A, M>,
     ctx: JsonParsingContext,
-    i: number,
+    _i: number,
     _d: number
 ): ReadResult<A> {
     const { reader, stack, options } = ctx
+
+    let i = reader.position
 
     let d = ctx.depth
     if (d > options.maxDepth) {
@@ -82,7 +84,7 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
             else if (b[i] === SQUARE_CLOSE) { break }
         }
 
-        // reader.setPosition(i)
+        reader.setPosition(i)
 
         const result = toValue(item, ctx, i, d)
 
@@ -126,11 +128,12 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
     clear(buffer, 0, j)
     release(buffer)
 
+    reader.setPosition(++i)
     ctx.setDepth(d)
 
     return {
         type: COMPLETE,
         value: result,
-        nextIndex: ++i
+        nextIndex: i
     }
 }

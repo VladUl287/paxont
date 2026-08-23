@@ -15,6 +15,7 @@ export class JsonReader {
     private readonly releaseCallbacks: Array<() => void> = []
 
     public readonly sparseIndex?: SparseIndex
+    public position: number = 0
 
     constructor(
         public readonly bytes: Uint8Array,
@@ -36,7 +37,10 @@ export class JsonReader {
         return i
     }
 
-    
+    public setPosition(position: number) {
+        this.position = position
+    }
+
     public onRelease(callback: () => void) {
         this.releaseCallbacks.push(callback)
     }

@@ -1,4 +1,3 @@
-import { skipWhitespace } from "../utils"
 import { isError, isNeedsMoreData, ReadResult, ReadResultType } from "../../utils/result"
 import { AsObject, BaseMeta, JsonParsingContext, ObjectMeta } from "../../metadata/types"
 import { COLON, COMMA, CURLY_CLOSE, CURLY_OPEN, DOUBLE_QUOTE } from "../../utils/ascii_symbols"
@@ -11,10 +10,13 @@ const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 export function toObject<T extends Record<string, BaseMeta<any>>>(
     m: ObjectMeta<T>,
     ctx: JsonParsingContext,
-    i: number,
+    _i: number,
     _d: number,
 ): ReadResult<AsObject<T>> {
-    const { reader: { bytes: b, bytesLength: len, writable }, options, stack } = ctx
+    const { reader, options, stack } = ctx
+    const { bytes: b, bytesLength: len, writable } = reader
+
+    let i = reader.position
 
     let d = ctx.depth
     if (d > options.maxDepth) {
@@ -125,6 +127,8 @@ export function toObject<T extends Record<string, BaseMeta<any>>>(
             }
         }
 
+        reader.setPosition(i)
+
         const fieldMeta = field.value
         const result = fieldMeta.toValue(fieldMeta, ctx, i, d)
 
@@ -171,11 +175,12 @@ export function toObject<T extends Record<string, BaseMeta<any>>>(
         }
     }
 
+    reader.setPosition(++i)
     ctx.setDepth(d)
 
     return {
         type: COMPLETE,
         value: m.build(buffer),
-        nextIndex: ++i
+        nextIndex: i
     }
 }
