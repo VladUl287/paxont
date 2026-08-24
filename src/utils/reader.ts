@@ -11,6 +11,8 @@ lookup[SPACE] = 1
 lookup[NEW_LINE] = 1
 lookup[CARRIAGE_RETURN] = 1
 
+const SP = SPACE
+
 export class JsonReader {
     private readonly releaseCallbacks: Array<() => void> = []
 
@@ -32,7 +34,7 @@ export class JsonReader {
     public skipWhitespace(i: number): number {
         const b = this.bytes
         const bytesLen = this.bytesLength
-        if (b[i] > SPACE) return i
+        if (b[i] > SP) return i
         while (i < bytesLen && lookup[b[i]]) i++
         return i
     }
