@@ -58,8 +58,26 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
         return escaped
     }
 
+    const findEnd = (str: string, start: number): number => {
+        let j = str.indexOf('"', start)
+        let escaped = str[j - 1] === '\\'
+        if (escaped) {
+            do {
+                let i = j - 1
+                
+                while (str[i--] === '\\') {
+                    escaped = !escaped
+                }
+                if (!escaped) { break }
+
+                j = str.indexOf('"', ++j)
+            } while (j < str.length)
+        }
+        return j
+    }
+
     const sparseDecoderFactory = (memory: WebAssembly.Memory) => {
-        const decodeSparse = (reader: JsonReader, i: number): ReadResult<string> => {
+        let decodeScanning = (reader: JsonReader, i: number): ReadResult<string> => {
             const { bytes: b, bytesLength, raw, sparseIndex } = reader
 
             if (raw === undefined) {
@@ -120,52 +138,26 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             0, 97, 115, 109, 1, 0, 0, 0, 1, 11, 2, 96, 0, 1, 127, 96, 2, 127, 127, 1, 127, 2, 17, 1, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 1, 1, 128, 1, 3, 5, 4, 0, 1, 1, 1, 6, 6, 1, 127, 1, 65, 0, 11, 7, 50, 3, 16, 99, 111, 100, 101, 95, 117, 110, 105, 116, 115, 95, 99, 111, 117, 110, 116, 0, 0, 9, 117, 116, 102, 56, 95, 115, 99, 97, 110, 0, 1, 15, 117, 116, 102, 56, 95, 115, 99, 97, 110, 95, 101, 120, 97, 99, 116, 0, 2, 10, 237, 3, 4, 4, 0, 35, 0, 11, 210, 1, 2, 5, 123, 3, 127, 65, 34, 253, 15, 33, 6, 65, 128, 1, 253, 15, 33, 2, 65, 192, 1, 253, 15, 33, 3, 65, 240, 1, 253, 15, 33, 4, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 5, 32, 5, 32, 6, 253, 35, 253, 100, 13, 1, 32, 7, 32, 5, 32, 4, 253, 44, 253, 100, 105, 106, 33, 7, 32, 5, 32, 3, 253, 78, 33, 5, 32, 5, 32, 2, 253, 35, 33, 5, 32, 7, 65, 16, 32, 5, 253, 100, 105, 107, 106, 33, 7, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 8, 32, 8, 65, 34, 70, 4, 64, 32, 0, 32, 0, 16, 3, 34, 9, 65, 0, 78, 4, 64, 32, 7, 36, 0, 32, 9, 15, 11, 11, 32, 8, 65, 192, 1, 113, 65, 128, 1, 71, 4, 64, 32, 7, 65, 1, 32, 8, 65, 240, 1, 79, 106, 106, 33, 7, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11, 169, 1, 2, 4, 123, 2, 127, 65, 128, 1, 253, 15, 33, 2, 65, 192, 1, 253, 15, 33, 3, 65, 240, 1, 253, 15, 33, 4, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 5, 32, 6, 32, 5, 32, 4, 253, 44, 253, 100, 105, 106, 33, 6, 32, 5, 32, 3, 253, 78, 33, 5, 32, 5, 32, 2, 253, 35, 33, 5, 32, 6, 65, 16, 32, 5, 253, 100, 105, 107, 106, 33, 6, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 7, 32, 7, 65, 192, 1, 113, 65, 128, 1, 73, 4, 64, 32, 6, 65, 1, 32, 7, 65, 240, 1, 79, 106, 106, 33, 6, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 32, 6, 36, 0, 32, 0, 15, 11, 103, 1, 4, 127, 32, 0, 33, 2, 2, 64, 3, 64, 32, 0, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 3, 32, 3, 65, 34, 70, 4, 64, 32, 0, 33, 4, 65, 0, 33, 5, 2, 64, 3, 64, 32, 4, 65, 1, 107, 33, 4, 32, 4, 32, 2, 72, 13, 1, 32, 4, 45, 0, 0, 65, 220, 0, 71, 13, 1, 32, 5, 69, 33, 5, 12, 0, 11, 11, 32, 5, 69, 4, 64, 32, 0, 15, 11, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11
         ]), { memory })
 
-        const utf8_scan = utf8ScanModule?.utf8_scan
-        const utf8_scan_exact = utf8ScanModule?.utf8_scan_exact
-        const code_units_count = utf8ScanModule?.code_units_count
+        if (utf8ScanModule !== undefined) {
+            const utf8_scan = utf8ScanModule.utf8_scan
+            const utf8_scan_exact = utf8ScanModule.utf8_scan_exact
+            const code_units_count = utf8ScanModule.code_units_count
 
-        return (reader: JsonReader, i: number): ReadResult<string> => {
-            const { bytes: b, bytesLength, raw, sparseIndex } = reader
+            decodeScanning = (reader: JsonReader, i: number): ReadResult<string> => {
+                const { bytes: b, bytesLength: len, raw, sparseIndex } = reader
 
-            if (raw === undefined) {
-                return {
-                    type: ERROR,
-                    error: new JSONParseError("string not presented")
+                let cI = 0
+                let bI = 0
+                if (sparseIndex !== undefined) {
+                    cI = sparseIndex.codeUnitIndex
+                    bI = sparseIndex.byteIndex
                 }
-            }
-            let cI = sparseIndex?.codeUnitIndex ?? 0
-            let bI = sparseIndex?.byteIndex ?? 0
 
-            const diff = bI - cI
-            const ascii_only = raw.length === bytesLength || (bytesLength - raw.length === diff)
-
-            if (ascii_only) {
-                let j = raw.indexOf('"', i)
-                let escaped = raw[j - 1] === '\\'
-                if (escaped) {
-                    let index = j - 1
-                    do {
-                        while (index >= 0 && raw[index--] === '\\') {
-                            escaped = !escaped
-                        }
-                        if (!escaped) { break }
-
-                        index = raw.indexOf('"', ++j)
-                    } while (j < raw.length)
-                }
-                return {
-                    type: COMPLETE,
-                    value: raw.substring(i - diff, j - diff),
-                    nextIndex: j + 1
-                }
-            }
-
-            if (utf8ScanModule !== undefined && ensureMemory(memory, bytesLength, setView)) {
                 let start = 0
                 let end = i
 
                 if (cacheView !== b) {
-                    memoryView.set(new Uint8Array(b.buffer, bI, bytesLength))
+                    memoryView.set(new Uint8Array(b.buffer, bI, len))
                     cacheViewStart = bI
                     cacheView = b
                     end = i - bI
@@ -176,12 +168,12 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     end = i - cacheViewStart
                 }
 
-                bI += utf8_scan_exact!(start, end)
-                cI += code_units_count!()
+                bI += utf8_scan_exact(start, end)
+                cI += code_units_count()
 
                 const charStartIndex = cI
 
-                const end_index = utf8_scan!(end, bytesLength)
+                const end_index = utf8_scan(end, len)
                 if (end_index === -1) {
                     return {
                         type: ERROR,
@@ -190,7 +182,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                 }
 
                 bI += end_index
-                cI += code_units_count!()
+                cI += code_units_count()
 
                 if (sparseIndex) {
                     sparseIndex.codeUnitIndex = cI + 1
@@ -199,12 +191,43 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
                 return {
                     type: COMPLETE,
-                    value: raw.substring(charStartIndex, cI),
+                    value: raw!.substring(charStartIndex, cI),
                     nextIndex: bI
                 }
             }
+        }
 
-            return decodeSparse(reader, i)
+        return (reader: JsonReader, i: number): ReadResult<string> => {
+            const { bytes: b, bytesLength: len, raw, sparseIndex } = reader
+
+            if (raw === undefined) {
+                return {
+                    type: ERROR,
+                    error: new JSONParseError("")
+                }
+            }
+
+            let cI = 0
+            let bI = 0
+            if (sparseIndex !== undefined) {
+                cI = sparseIndex.codeUnitIndex
+                bI = sparseIndex.byteIndex
+            }
+
+            const str = raw!
+            const diff = bI - cI
+            const ascii_only = str.length === len || (len - str.length === diff)
+
+            if (ascii_only) {
+                const j = findEnd(str, i)
+                return {
+                    type: COMPLETE,
+                    value: str.substring(i - diff, j - diff),
+                    nextIndex: j + 1
+                }
+            }
+
+            return decodeScanning(reader, i)
         }
     }
 
