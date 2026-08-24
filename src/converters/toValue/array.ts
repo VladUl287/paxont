@@ -7,7 +7,7 @@ import { JSONParseError } from "../../utils/error"
 const COMPLETE = ReadResultType.COMPLETE
 const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
-const SP = SPACE
+const SP = SPACE, CM = COMMA, SQC = SQUARE_CLOSE, SQO = SQUARE_OPEN
 
 export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends BaseMeta<any>>(
     metadata: ArrayMeta<A, M>, context: JsonParsingContext
@@ -38,12 +38,12 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
     const skipWhitespace = reader.skipWhitespace.bind(reader)
 
     if (isContinued) {
-        if (b[i] === COMMA && !inValue) {
+        if (b[i] === CM && !inValue) {
             i = skipWhitespace(++i)
         }
     }
     else {
-        if (b[i] !== SQUARE_OPEN) {
+        if (b[i] !== SQO) {
             if (writable && i >= len) {
                 return {
                     type: NEEDS_MORE_DATA,
@@ -58,7 +58,7 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
         i++
     }
 
-    if (b[i] === SQUARE_CLOSE) {
+    if (b[i] === SQC) {
         return {
             type: COMPLETE,
             value: buffer.slice(0, 0),
@@ -93,8 +93,8 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
 
         (!(b[i] > SP) && (i = skipWhitespace(i)))
 
-        if (b[i] === COMMA) { i++; continue }
-        else if (b[i] === SQUARE_CLOSE) { break }
+        if (b[i] === CM) { i++; continue }
+        else if (b[i] === SQC) { break }
 
         if (writable && i >= len) {
             stack.push({ isContinued: true, buffer, bufferIndex: j })
