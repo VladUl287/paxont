@@ -33,7 +33,7 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
     const isContinued: boolean = state?.isContinued ?? false
     const bufferIndex: number = state?.bufferIndex ?? 0
     const buffer: A = state?.buffer ?? rent(len - i)
-    const inValue: boolean = state?.inValue ?? false
+    let inValue: boolean = state?.inValue ?? false
 
     const skipWhitespace = reader.skipWhitespace.bind(reader)
 
@@ -71,7 +71,7 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
 
     let j = bufferIndex
     while (true) {
-        (!(b[i] > SP) && (i = skipWhitespace(i)))
+        (!inValue && !(b[i] > SP) && (i = skipWhitespace(i)))
 
         reader.setPosition(i)
         const result = toValue(item, context)
@@ -89,6 +89,7 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
 
         buffer[j] = result.value
         i = result.nextIndex
+        inValue = false
         j++
 
         (!(b[i] > SP) && (i = skipWhitespace(i)))
