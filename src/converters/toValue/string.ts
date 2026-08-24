@@ -124,7 +124,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
         const utf8_scan_exact = utf8ScanModule?.utf8_scan_exact
         const code_units_count = utf8ScanModule?.code_units_count
 
-        return ({ reader }: JsonParsingContext, i: number): ReadResult<string> => {
+        return (reader: JsonReader, i: number): ReadResult<string> => {
             const { bytes: b, bytesLength, raw, sparseIndex } = reader
 
             if (raw === undefined) {
@@ -133,7 +133,6 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     error: new JSONParseError("string not presented")
                 }
             }
-
             let cI = sparseIndex?.codeUnitIndex ?? 0
             let bI = sparseIndex?.byteIndex ?? 0
 
@@ -141,28 +140,18 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             const ascii_only = raw.length === bytesLength || (bytesLength - raw.length === diff)
 
             if (ascii_only) {
-                let j = i
-                while (j < raw.length) {
-                    let index = raw.indexOf('"', j)
-                    if (index === -1) {
-                        return {
-                            type: ERROR,
-                            error: new Error()
-                        }
-                    }
-
-                    j = index
-
-                    let escaped = raw[--index] === '\\'
-                    if (escaped) {
-                        index--
+                let j = raw.indexOf('"', i)
+                let escaped = raw[j - 1] === '\\'
+                if (escaped) {
+                    let index = j - 1
+                    do {
                         while (index >= 0 && raw[index--] === '\\') {
                             escaped = !escaped
                         }
-                    }
+                        if (!escaped) { break }
 
-                    if (escaped) { continue }
-                    break
+                        index = raw.indexOf('"', ++j)
+                    } while (j < raw.length)
                 }
                 return {
                     type: COMPLETE,
@@ -656,7 +645,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
         }
 
         if (raw !== undefined) {
-            return decodeString(context, i)
+            return decodeString(reader, i)
         }
 
         return decode(base, context, i)
