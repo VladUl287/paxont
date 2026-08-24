@@ -32,45 +32,48 @@ export type Modifier<M extends BaseMeta<any>> = (metadata: M) => M
 export type BuilderOptions = {
     readonly encoder: TextEncoder
     readonly globalPools: Record<TypeName, ArrayPool<any>>
-    readonly arrayPoolFactory: typeof arrayPool
+    readonly arrayPool: typeof arrayPool
 }
+
+const clearArray = <T, A extends ArrayLikeWritable<T> & { fill: (value: T, start?: number, end?: number) => A }>(defaultValue: T) =>
+    (arr: A, start: number, end: number) => arr.fill(defaultValue, start, end)
 
 const defaultBuilderOptions: BuilderOptions = {
     encoder: new TextEncoder(),
     globalPools: {
-        number: arrayPool<Array<number>>(Array, 0),
-        string: arrayPool<Array<string>>(Array, ''),
-        object: arrayPool<Array<object>>(Array, {}),
-        boolean: arrayPool<Array<boolean>>(Array, false),
-        date: arrayPool<Array<Date>>(Array, Date.prototype),
-        bigint: arrayPool<Array<bigint>>(Array, 0n),
-        set: arrayPool<Array<Set<any>>>(Array, new Set()),
-        map: arrayPool<Array<Map<string, any>>>(Array, new Map()),
-        array: arrayPool<Array<object>>(Array, {}),
-        nullable: arrayPool(Array, null),
-        i8: arrayPool(Int8Array, 0),
-        i16: arrayPool(Int16Array, 0),
-        i32: arrayPool(Int32Array, 0),
-        i64: arrayPool(BigInt64Array, 0n),
-        u8: arrayPool(Uint8Array, 0),
-        u16: arrayPool(Uint16Array, 0),
-        u32: arrayPool(Uint32Array, 0),
-        u64: arrayPool(BigUint64Array, 0n),
-        'i8[]': arrayPool<Array<Int8Array>>(Array, new Int8Array()),
-        'i16[]': arrayPool<Array<Int16Array>>(Array, new Int16Array()),
-        'i32[]': arrayPool<Array<Int32Array>>(Array, new Int32Array()),
-        'i64[]': arrayPool<Array<BigInt64Array>>(Array, new BigInt64Array()),
-        'u8[]': arrayPool<Array<Uint8Array>>(Array, new Uint8Array()),
-        'u16[]': arrayPool<Array<Uint16Array>>(Array, new Uint16Array()),
-        'u32[]': arrayPool<Array<Uint32Array>>(Array, new Uint32Array()),
-        'u64[]': arrayPool<Array<BigUint64Array>>(Array, new BigUint64Array()),
-        'f64[]': arrayPool<Array<Float64Array>>(Array, new Float64Array()),
+        number: arrayPool({ ctor: Array }),
+        string: arrayPool({ ctor: Array }),
+        bigint: arrayPool({ ctor: Array }),
+        boolean: arrayPool({ ctor: Array }),
+        nullable: arrayPool({ ctor: Array }),
+        object: arrayPool({ ctor: Array, clear: clearArray({}) }),
+        date: arrayPool({ ctor: Array, clear: clearArray(Date.prototype) }),
+        set: arrayPool({ ctor: Array, clear: clearArray(new Set()) }),
+        map: arrayPool({ ctor: Array, clear: clearArray(new Map()) }),
+        array: arrayPool({ ctor: Array, clear: clearArray(new Array()) }),
+        i8: arrayPool({ ctor: Int8Array }),
+        i16: arrayPool({ ctor: Int16Array }),
+        i32: arrayPool({ ctor: Int32Array }),
+        i64: arrayPool({ ctor: BigInt64Array }),
+        u8: arrayPool({ ctor: Uint8Array }),
+        u16: arrayPool({ ctor: Uint16Array }),
+        u32: arrayPool({ ctor: Uint32Array }),
+        u64: arrayPool({ ctor: BigUint64Array }),
+        'i8[]': arrayPool({ ctor: Array, clear: clearArray(new Int8Array()) }),
+        'i16[]': arrayPool({ ctor: Array, clear: clearArray(new Int16Array()) }),
+        'i32[]': arrayPool({ ctor: Array, clear: clearArray(new Int32Array()) }),
+        'i64[]': arrayPool({ ctor: Array, clear: clearArray(new BigInt64Array()) }),
+        'u8[]': arrayPool({ ctor: Array, clear: clearArray(new Uint8Array()) }),
+        'u16[]': arrayPool({ ctor: Array, clear: clearArray(new Uint16Array()) }),
+        'u32[]': arrayPool({ ctor: Array, clear: clearArray(new Uint32Array()) }),
+        'u64[]': arrayPool({ ctor: Array, clear: clearArray(new BigUint64Array()) }),
+        'f64[]': arrayPool({ ctor: Array, clear: clearArray(new Float64Array()) }),
     },
-    arrayPoolFactory: arrayPool
+    arrayPool: arrayPool
 }
 
 export function builder(options: Partial<BuilderOptions> = defaultBuilderOptions) {
-    const { encoder, globalPools, arrayPoolFactory } = {
+    const { encoder, globalPools, arrayPool } = {
         ...defaultBuilderOptions,
         ...options
     }
@@ -155,7 +158,7 @@ export function builder(options: Partial<BuilderOptions> = defaultBuilderOptions
             toValue: toArray,
             toJson: arrayToJson,
             value: value,
-            pool: (globalPools[value.type] ??= arrayPoolFactory(Array, undefined))
+            pool: (globalPools[value.type] ??= arrayPool({ ctor: Array }))
         })
     }
 
@@ -197,7 +200,7 @@ export function builder(options: Partial<BuilderOptions> = defaultBuilderOptions
             toValue: toArray,
             toJson: arrayToJson,
             value: value,
-            pool: (globalPools[value.type] ??= arrayPoolFactory<ArrayLikeWritable<number>>(ctor, 0))
+            pool: (globalPools[value.type] ??= arrayPool({ ctor: ctor }))
         })
     }
 
@@ -212,7 +215,7 @@ export function builder(options: Partial<BuilderOptions> = defaultBuilderOptions
             toValue: toArray,
             toJson: arrayToJson,
             value: value,
-            pool: (globalPools[value.type] ??= arrayPoolFactory<ArrayLikeWritable<bigint>>(ctor, 0n))
+            pool: (globalPools[value.type] ??= arrayPool({ ctor: ctor }))
         })
     }
 

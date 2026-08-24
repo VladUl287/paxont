@@ -12,7 +12,7 @@ import { JsonReader } from "./utils/reader"
 
 const defaultJsontOptions: JsontOptions = Object.freeze({
     metadata: metadata(),
-    bufferPool: arrayPool<Uint8Array<ArrayBuffer>>(Uint8Array, 0),
+    bufferPool: arrayPool({ ctor: Uint8Array }),
     defaultSerializeOptions: defaultOptions,
     memoize: memoize,
 })

@@ -4,7 +4,6 @@ export interface ArrayLikeWritable<T> {
     readonly length: number
     [index: number]: T
     slice: (start?: number, end?: number) => this
-    fill: (value: T, start?: number, end?: number) => this
 }
 
 export type ArrayPool<A extends ArrayLike<any>> = {
@@ -35,10 +34,12 @@ export const clampLength = (minLength: number): number => {
     return 1 << (32 - Math.clz32(n))
 }
 
-export function arrayPool<A extends ArrayLikeWritable<any>>(
+type ArrayPoolOptions<A extends ArrayLikeWritable<any>> = {
     ctor: new (length: number) => A,
-    defaultValue: A extends ArrayLikeWritable<infer U> ? U : never
-): ArrayPool<A> {
+    clear?: (array: A, start: number, end: number) => void
+}
+
+export function arrayPool<A extends ArrayLikeWritable<any>>({ ctor, clear }: ArrayPoolOptions<A>): ArrayPool<A> {
     const MAX_LENGTH = 0x3fffffff
     const globalMinLength = 2
     const pool = new Map<number, Stack<A>>()
@@ -83,14 +84,7 @@ export function arrayPool<A extends ArrayLikeWritable<any>>(
         stack.push(array)
     }
 
-    const clear = (array: A, start: number, end: number): void => {
-        let len = array.length >>> 0
+    const fallbackClear = (array: A, start: number, end: number): void => { }
 
-        if (len > MAX_LENGTH) return
-        if (len & (len - 1)) return
-
-        array.fill(defaultValue, start, end)
-    }
-
-    return { rent, release, clear }
+    return { rent, release, clear: clear ?? fallbackClear }
 }
