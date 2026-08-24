@@ -50,170 +50,176 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
         cacheViewStart = 0
     }
 
-    const decoderFactory = (opt: StringParseOptions) => {
-        function sparseDecoderFactory(memory: WebAssembly.Memory) {
-            const decodeSparse = (reader: JsonReader, i: number): ReadResult<string> => {
-                const { bytes: b, bytesLength, raw, sparseIndex } = reader
+    function isEscaped(b: Uint8Array, i: number): boolean {
+        let escaped = false
+        while (b[i--] === BACKSLASH) {
+            escaped = !escaped
+        }
+        return escaped
+    }
 
-                if (raw === undefined) {
+    const sparseDecoderFactory = (memory: WebAssembly.Memory) => {
+        const decodeSparse = (reader: JsonReader, i: number): ReadResult<string> => {
+            const { bytes: b, bytesLength, raw, sparseIndex } = reader
+
+            if (raw === undefined) {
+                return {
+                    type: ERROR,
+                    error: new JSONParseError("")
+                }
+            }
+
+            let cI = sparseIndex?.codeUnitIndex ?? 0
+            let bI = sparseIndex?.byteIndex ?? 0
+
+            while (bI < i) {
+                const byte = b[bI]
+
+                if (byte < 128 || byte >= 192) {
+                    cI++
+                    if (byte >= 240) {
+                        cI++
+                    }
+                }
+
+                bI++
+            }
+
+            const charIndexStart = cI
+
+            while (bI < bytesLength) {
+                const byte = b[bI]
+
+                if (b[bI] === DOUBLE_QUOTE && !isEscaped(b, i - 1)) {
+                    break
+                }
+
+                if (byte < 128 || byte >= 192) {
+                    cI++
+                    if (byte >= 240) {
+                        cI++
+                    }
+                }
+
+                bI++
+            }
+
+            if (sparseIndex) {
+                sparseIndex.codeUnitIndex = cI
+                sparseIndex.byteIndex = bI
+            }
+
+            return {
+                type: COMPLETE,
+                value: raw.substring(charIndexStart, cI),
+                nextIndex: bI + 1
+            }
+        }
+
+        const utf8ScanModule = wasmInstance<utf8ScanModule>(new Uint8Array([
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 11, 2, 96, 0, 1, 127, 96, 2, 127, 127, 1, 127, 2, 17, 1, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 1, 1, 128, 1, 3, 5, 4, 0, 1, 1, 1, 6, 6, 1, 127, 1, 65, 0, 11, 7, 50, 3, 16, 99, 111, 100, 101, 95, 117, 110, 105, 116, 115, 95, 99, 111, 117, 110, 116, 0, 0, 9, 117, 116, 102, 56, 95, 115, 99, 97, 110, 0, 1, 15, 117, 116, 102, 56, 95, 115, 99, 97, 110, 95, 101, 120, 97, 99, 116, 0, 2, 10, 237, 3, 4, 4, 0, 35, 0, 11, 210, 1, 2, 5, 123, 3, 127, 65, 34, 253, 15, 33, 6, 65, 128, 1, 253, 15, 33, 2, 65, 192, 1, 253, 15, 33, 3, 65, 240, 1, 253, 15, 33, 4, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 5, 32, 5, 32, 6, 253, 35, 253, 100, 13, 1, 32, 7, 32, 5, 32, 4, 253, 44, 253, 100, 105, 106, 33, 7, 32, 5, 32, 3, 253, 78, 33, 5, 32, 5, 32, 2, 253, 35, 33, 5, 32, 7, 65, 16, 32, 5, 253, 100, 105, 107, 106, 33, 7, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 8, 32, 8, 65, 34, 70, 4, 64, 32, 0, 32, 0, 16, 3, 34, 9, 65, 0, 78, 4, 64, 32, 7, 36, 0, 32, 9, 15, 11, 11, 32, 8, 65, 192, 1, 113, 65, 128, 1, 71, 4, 64, 32, 7, 65, 1, 32, 8, 65, 240, 1, 79, 106, 106, 33, 7, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11, 169, 1, 2, 4, 123, 2, 127, 65, 128, 1, 253, 15, 33, 2, 65, 192, 1, 253, 15, 33, 3, 65, 240, 1, 253, 15, 33, 4, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 5, 32, 6, 32, 5, 32, 4, 253, 44, 253, 100, 105, 106, 33, 6, 32, 5, 32, 3, 253, 78, 33, 5, 32, 5, 32, 2, 253, 35, 33, 5, 32, 6, 65, 16, 32, 5, 253, 100, 105, 107, 106, 33, 6, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 7, 32, 7, 65, 192, 1, 113, 65, 128, 1, 73, 4, 64, 32, 6, 65, 1, 32, 7, 65, 240, 1, 79, 106, 106, 33, 6, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 32, 6, 36, 0, 32, 0, 15, 11, 103, 1, 4, 127, 32, 0, 33, 2, 2, 64, 3, 64, 32, 0, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 3, 32, 3, 65, 34, 70, 4, 64, 32, 0, 33, 4, 65, 0, 33, 5, 2, 64, 3, 64, 32, 4, 65, 1, 107, 33, 4, 32, 4, 32, 2, 72, 13, 1, 32, 4, 45, 0, 0, 65, 220, 0, 71, 13, 1, 32, 5, 69, 33, 5, 12, 0, 11, 11, 32, 5, 69, 4, 64, 32, 0, 15, 11, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11
+        ]), { memory })
+
+        const utf8_scan = utf8ScanModule?.utf8_scan
+        const utf8_scan_exact = utf8ScanModule?.utf8_scan_exact
+        const code_units_count = utf8ScanModule?.code_units_count
+
+        return ({ reader }: JsonParsingContext, i: number): ReadResult<string> => {
+            const { bytes: b, bytesLength, raw, sparseIndex } = reader
+
+            if (raw === undefined) {
+                return {
+                    type: ERROR,
+                    error: new JSONParseError("string not presented")
+                }
+            }
+
+            let cI = sparseIndex?.codeUnitIndex ?? 0
+            let bI = sparseIndex?.byteIndex ?? 0
+
+            const diff = bI - cI
+            const ascii_only = raw.length === bytesLength || (bytesLength - raw.length === diff)
+
+            if (ascii_only) {
+                let j = i
+                while (j < raw.length) {
+                    let index = raw.indexOf('"', j)
+                    if (index === -1) {
+                        return {
+                            type: ERROR,
+                            error: new Error()
+                        }
+                    }
+
+                    j = index
+
+                    let escaped = raw[--index] === '\\'
+                    if (escaped) {
+                        index--
+                        while (index >= 0 && raw[index--] === '\\') {
+                            escaped = !escaped
+                        }
+                    }
+
+                    if (escaped) { continue }
+                    break
+                }
+                return {
+                    type: COMPLETE,
+                    value: raw.substring(i - diff, j - diff),
+                    nextIndex: j + 1
+                }
+            }
+
+            if (utf8ScanModule !== undefined && ensureMemory(memory, bytesLength, setView)) {
+                let start = 0
+                let end = i
+
+                if (cacheView !== b) {
+                    memoryView.set(new Uint8Array(b.buffer, bI, bytesLength))
+                    cacheViewStart = bI
+                    cacheView = b
+                    end = i - bI
+                    reader.onRelease(clearCache)
+                }
+                else {
+                    start = bI - cacheViewStart
+                    end = i - cacheViewStart
+                }
+
+                bI += utf8_scan_exact!(start, end)
+                cI += code_units_count!()
+
+                const charStartIndex = cI
+
+                const end_index = utf8_scan!(end, bytesLength)
+                if (end_index === -1) {
                     return {
                         type: ERROR,
-                        error: new JSONParseError("")
+                        error: new JSONParseError("end of string not found")
                     }
                 }
 
-                let cI = sparseIndex?.codeUnitIndex ?? 0
-                let bI = sparseIndex?.byteIndex ?? 0
-
-                while (bI < i) {
-                    const byte = b[bI]
-
-                    if (byte < 128 || byte >= 192) {
-                        cI++
-                        if (byte >= 240) {
-                            cI++
-                        }
-                    }
-
-                    bI++
-                }
-
-                const charIndexStart = cI
-
-                while (bI < bytesLength) {
-                    const byte = b[bI]
-
-                    if (b[bI] === DOUBLE_QUOTE && !isEscaped(b, i - 1)) {
-                        break
-                    }
-
-                    if (byte < 128 || byte >= 192) {
-                        cI++
-                        if (byte >= 240) {
-                            cI++
-                        }
-                    }
-
-                    bI++
-                }
+                bI += end_index
+                cI += code_units_count!()
 
                 if (sparseIndex) {
-                    sparseIndex.codeUnitIndex = cI
-                    sparseIndex.byteIndex = bI
+                    sparseIndex.codeUnitIndex = cI + 1
+                    sparseIndex.byteIndex = bI + 1
                 }
 
                 return {
                     type: COMPLETE,
-                    value: raw.substring(charIndexStart, cI),
-                    nextIndex: bI + 1
+                    value: raw.substring(charStartIndex, cI),
+                    nextIndex: bI
                 }
             }
 
-            const utf8ScanModule = wasmInstance<utf8ScanModule>(new Uint8Array([
-                0, 97, 115, 109, 1, 0, 0, 0, 1, 11, 2, 96, 0, 1, 127, 96, 2, 127, 127, 1, 127, 2, 17, 1, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 1, 1, 128, 1, 3, 5, 4, 0, 1, 1, 1, 6, 6, 1, 127, 1, 65, 0, 11, 7, 50, 3, 16, 99, 111, 100, 101, 95, 117, 110, 105, 116, 115, 95, 99, 111, 117, 110, 116, 0, 0, 9, 117, 116, 102, 56, 95, 115, 99, 97, 110, 0, 1, 15, 117, 116, 102, 56, 95, 115, 99, 97, 110, 95, 101, 120, 97, 99, 116, 0, 2, 10, 237, 3, 4, 4, 0, 35, 0, 11, 210, 1, 2, 5, 123, 3, 127, 65, 34, 253, 15, 33, 6, 65, 128, 1, 253, 15, 33, 2, 65, 192, 1, 253, 15, 33, 3, 65, 240, 1, 253, 15, 33, 4, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 5, 32, 5, 32, 6, 253, 35, 253, 100, 13, 1, 32, 7, 32, 5, 32, 4, 253, 44, 253, 100, 105, 106, 33, 7, 32, 5, 32, 3, 253, 78, 33, 5, 32, 5, 32, 2, 253, 35, 33, 5, 32, 7, 65, 16, 32, 5, 253, 100, 105, 107, 106, 33, 7, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 8, 32, 8, 65, 34, 70, 4, 64, 32, 0, 32, 0, 16, 3, 34, 9, 65, 0, 78, 4, 64, 32, 7, 36, 0, 32, 9, 15, 11, 11, 32, 8, 65, 192, 1, 113, 65, 128, 1, 71, 4, 64, 32, 7, 65, 1, 32, 8, 65, 240, 1, 79, 106, 106, 33, 7, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11, 169, 1, 2, 4, 123, 2, 127, 65, 128, 1, 253, 15, 33, 2, 65, 192, 1, 253, 15, 33, 3, 65, 240, 1, 253, 15, 33, 4, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 5, 32, 6, 32, 5, 32, 4, 253, 44, 253, 100, 105, 106, 33, 6, 32, 5, 32, 3, 253, 78, 33, 5, 32, 5, 32, 2, 253, 35, 33, 5, 32, 6, 65, 16, 32, 5, 253, 100, 105, 107, 106, 33, 6, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 7, 32, 7, 65, 192, 1, 113, 65, 128, 1, 73, 4, 64, 32, 6, 65, 1, 32, 7, 65, 240, 1, 79, 106, 106, 33, 6, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 32, 6, 36, 0, 32, 0, 15, 11, 103, 1, 4, 127, 32, 0, 33, 2, 2, 64, 3, 64, 32, 0, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 3, 32, 3, 65, 34, 70, 4, 64, 32, 0, 33, 4, 65, 0, 33, 5, 2, 64, 3, 64, 32, 4, 65, 1, 107, 33, 4, 32, 4, 32, 2, 72, 13, 1, 32, 4, 45, 0, 0, 65, 220, 0, 71, 13, 1, 32, 5, 69, 33, 5, 12, 0, 11, 11, 32, 5, 69, 4, 64, 32, 0, 15, 11, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11
-            ]), { memory })
-
-            const utf8_scan = utf8ScanModule?.utf8_scan
-            const utf8_scan_exact = utf8ScanModule?.utf8_scan_exact
-            const code_units_count = utf8ScanModule?.code_units_count
-
-            return ({ reader }: JsonParsingContext, i: number): ReadResult<string> => {
-                const { bytes: b, bytesLength, raw, sparseIndex } = reader
-
-                if (raw === undefined) {
-                    return {
-                        type: ERROR,
-                        error: new JSONParseError("string not presented")
-                    }
-                }
-
-                let cI = sparseIndex?.codeUnitIndex ?? 0
-                let bI = sparseIndex?.byteIndex ?? 0
-
-                const diff = bI - cI
-                const ascii_only = raw.length === bytesLength || (bytesLength - raw.length === diff)
-
-                if (ascii_only) {
-                    let j = i
-                    while (j < raw.length) {
-                        let index = raw.indexOf('"', j)
-                        if (index === -1) {
-                            return {
-                                type: ERROR,
-                                error: new Error()
-                            }
-                        }
-
-                        j = index
-
-                        let escaped = raw[--index] === '\\'
-                        if (escaped) {
-                            index--
-                            while (index >= 0 && raw[index--] === '\\') {
-                                escaped = !escaped
-                            }
-                        }
-
-                        if (escaped) { continue }
-                        break
-                    }
-                    return {
-                        type: COMPLETE,
-                        value: raw.substring(i - diff, j - diff),
-                        nextIndex: j + 1
-                    }
-                }
-
-                if (utf8ScanModule !== undefined && ensureMemory(memory, bytesLength, setView)) {
-                    let start = 0
-                    let end = i
-
-                    if (cacheView !== b) {
-                        memoryView.set(new Uint8Array(b.buffer, bI, bytesLength))
-                        cacheViewStart = bI
-                        cacheView = b
-                        end = i - bI
-                        reader.onRelease(clearCache)
-                    }
-                    else {
-                        start = bI - cacheViewStart
-                        end = i - cacheViewStart
-                    }
-
-                    bI += utf8_scan_exact!(start, end)
-                    cI += code_units_count!()
-
-                    const charStartIndex = cI
-
-                    const end_index = utf8_scan!(end, bytesLength)
-                    if (end_index === -1) {
-                        return {
-                            type: ERROR,
-                            error: new JSONParseError("end of string not found")
-                        }
-                    }
-
-                    bI += end_index
-                    cI += code_units_count!()
-
-                    if (sparseIndex) {
-                        sparseIndex.codeUnitIndex = cI + 1
-                        sparseIndex.byteIndex = bI + 1
-                    }
-
-                    return {
-                        type: COMPLETE,
-                        value: raw.substring(charStartIndex, cI),
-                        nextIndex: bI
-                    }
-                }
-
-                return decodeSparse(reader, i)
-            }
+            return decodeSparse(reader, i)
         }
+    }
 
-        const decodeString = sparseDecoderFactory(memory)
-
+    const decoderFactory = (opt: StringParseOptions) => {
         if (opt.useUtf16) {
             const utf16Module = wasmInstance<utf16Module>(new Uint8Array([
                 0, 97, 115, 109, 1, 0, 0, 0, 1, 42, 7, 96, 0, 1, 127, 96, 4, 127, 127, 127, 127, 1, 127, 96, 3, 127, 127, 127, 0, 96, 1, 123, 1, 123, 96, 3, 127, 127, 127, 1, 127, 96, 2, 127, 127, 1, 127, 96, 1, 127, 1, 127, 2, 17, 1, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 1, 1, 128, 1, 3, 15, 14, 0, 0, 0, 1, 2, 3, 4, 5, 5, 6, 6, 6, 6, 4, 6, 16, 3, 127, 1, 65, 0, 11, 127, 1, 65, 127, 11, 127, 1, 65, 0, 11, 7, 65, 5, 6, 109, 101, 109, 111, 114, 121, 2, 0, 10, 97, 115, 99, 105, 105, 95, 111, 110, 108, 121, 0, 0, 8, 100, 113, 95, 105, 110, 100, 101, 120, 0, 1, 12, 117, 116, 102, 49, 54, 95, 108, 101, 110, 103, 116, 104, 0, 2, 13, 117, 116, 102, 56, 95, 116, 111, 95, 117, 116, 102, 49, 54, 0, 3, 10, 148, 16, 14, 4, 0, 35, 0, 11, 4, 0, 35, 1, 11, 4, 0, 35, 2, 11, 224, 7, 3, 3, 127, 2, 123, 3, 127, 65, 34, 253, 15, 33, 8, 65, 127, 36, 1, 65, 0, 36, 0, 65, 0, 36, 2, 32, 0, 32, 1, 65, 127, 16, 6, 34, 5, 32, 0, 75, 4, 64, 35, 1, 65, 0, 78, 4, 64, 65, 1, 36, 0, 35, 1, 15, 11, 32, 5, 32, 1, 70, 4, 64, 65, 1, 36, 0, 32, 5, 15, 11, 32, 0, 32, 5, 32, 2, 16, 4, 32, 2, 32, 5, 32, 0, 107, 65, 1, 116, 106, 33, 2, 32, 5, 33, 0, 11, 2, 64, 3, 64, 32, 0, 45, 0, 0, 65, 128, 1, 73, 4, 64, 32, 0, 32, 1, 32, 2, 16, 6, 33, 5, 32, 2, 32, 5, 32, 0, 107, 65, 1, 116, 106, 33, 2, 32, 5, 33, 0, 35, 1, 65, 0, 78, 4, 64, 32, 2, 36, 2, 35, 1, 15, 11, 11, 32, 0, 45, 0, 0, 34, 5, 65, 224, 1, 73, 4, 64, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 73, 4, 64, 32, 0, 253, 0, 4, 0, 34, 7, 253, 12, 224, 192, 224, 192, 224, 192, 224, 192, 224, 192, 224, 192, 224, 192, 224, 192, 253, 78, 253, 12, 192, 128, 192, 128, 192, 128, 192, 128, 192, 128, 192, 128, 192, 128, 192, 128, 253, 45, 253, 100, 33, 9, 32, 9, 65, 255, 255, 3, 70, 4, 64, 32, 2, 32, 7, 16, 5, 253, 11, 4, 0, 32, 0, 65, 16, 106, 33, 0, 32, 2, 65, 16, 106, 33, 2, 12, 2, 11, 32, 2, 32, 7, 16, 5, 253, 11, 4, 0, 32, 9, 65, 255, 255, 3, 115, 104, 33, 10, 32, 0, 32, 10, 106, 33, 0, 32, 2, 32, 10, 106, 33, 2, 12, 4, 11, 32, 0, 65, 4, 106, 32, 1, 75, 13, 4, 32, 0, 40, 0, 0, 33, 4, 32, 4, 65, 192, 129, 2, 107, 65, 224, 129, 3, 113, 65, 0, 70, 69, 13, 1, 32, 4, 65, 128, 128, 252, 135, 124, 113, 65, 128, 128, 136, 134, 120, 65, 128, 128, 252, 134, 120, 16, 13, 4, 64, 32, 2, 32, 4, 16, 10, 54, 2, 0, 32, 0, 65, 4, 106, 33, 0, 32, 2, 65, 4, 106, 33, 2, 32, 0, 40, 0, 0, 33, 4, 32, 0, 65, 4, 106, 32, 1, 75, 13, 4, 12, 1, 11, 32, 2, 32, 4, 16, 9, 59, 1, 0, 32, 2, 65, 2, 106, 33, 2, 32, 0, 65, 2, 106, 33, 0, 12, 3, 11, 11, 11, 32, 0, 65, 4, 106, 32, 1, 75, 13, 1, 32, 0, 40, 0, 0, 33, 4, 32, 4, 65, 224, 129, 130, 4, 107, 65, 240, 129, 131, 6, 113, 65, 0, 70, 4, 64, 32, 4, 65, 143, 192, 0, 113, 69, 32, 4, 65, 141, 192, 0, 107, 65, 143, 192, 0, 113, 69, 114, 69, 4, 64, 32, 2, 32, 4, 16, 11, 54, 2, 0, 32, 2, 65, 2, 106, 33, 2, 32, 0, 65, 3, 106, 33, 0, 12, 2, 11, 11, 32, 4, 65, 240, 129, 130, 132, 120, 107, 65, 248, 129, 131, 134, 124, 113, 65, 0, 70, 4, 64, 32, 4, 65, 255, 255, 3, 113, 65, 8, 16, 8, 65, 144, 129, 128, 128, 127, 65, 143, 129, 128, 160, 127, 16, 13, 4, 64, 32, 2, 32, 4, 16, 12, 54, 2, 0, 32, 2, 65, 4, 106, 33, 2, 32, 0, 65, 4, 106, 33, 0, 12, 2, 11, 11, 32, 3, 32, 0, 65, 4, 106, 32, 1, 75, 113, 4, 64, 32, 0, 15, 5, 65, 127, 15, 11, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 34, 5, 65, 128, 1, 73, 4, 64, 32, 5, 65, 34, 70, 4, 64, 32, 0, 32, 0, 16, 7, 34, 5, 65, 0, 78, 4, 64, 32, 2, 36, 2, 32, 5, 15, 11, 11, 32, 2, 32, 5, 59, 1, 0, 32, 0, 65, 1, 106, 33, 0, 32, 2, 65, 2, 106, 33, 2, 12, 1, 11, 32, 5, 65, 194, 1, 107, 33, 6, 32, 6, 65, 30, 73, 4, 64, 32, 0, 65, 1, 106, 32, 1, 79, 4, 64, 32, 2, 36, 2, 32, 0, 15, 11, 32, 0, 65, 1, 106, 45, 0, 0, 65, 128, 1, 107, 65, 192, 0, 79, 4, 64, 65, 127, 15, 11, 32, 2, 32, 5, 65, 31, 113, 65, 6, 116, 32, 0, 65, 1, 106, 45, 0, 0, 65, 63, 113, 114, 59, 1, 0, 32, 2, 65, 2, 106, 33, 2, 32, 0, 65, 2, 106, 33, 0, 12, 1, 11, 32, 6, 65, 46, 73, 4, 64, 32, 0, 65, 2, 106, 32, 1, 79, 4, 64, 32, 2, 36, 2, 32, 0, 15, 11, 32, 0, 65, 1, 106, 45, 0, 0, 65, 128, 1, 107, 65, 192, 0, 79, 32, 0, 65, 2, 106, 45, 0, 0, 65, 128, 1, 107, 65, 192, 0, 79, 114, 4, 64, 65, 127, 15, 11, 32, 6, 65, 12, 116, 32, 0, 65, 1, 106, 45, 0, 0, 65, 6, 116, 106, 33, 11, 32, 11, 65, 128, 144, 8, 73, 32, 11, 65, 128, 176, 11, 107, 65, 128, 16, 73, 114, 4, 64, 65, 127, 15, 11, 32, 2, 32, 5, 65, 15, 113, 65, 12, 116, 32, 0, 65, 1, 106, 45, 0, 0, 65, 63, 113, 65, 6, 116, 114, 32, 0, 65, 2, 106, 45, 0, 0, 65, 63, 113, 114, 59, 1, 0, 32, 2, 65, 2, 106, 33, 2, 32, 0, 65, 3, 106, 33, 0, 12, 1, 11, 11, 11, 32, 3, 32, 0, 65, 4, 106, 32, 1, 75, 113, 4, 64, 32, 2, 36, 2, 32, 0, 15, 11, 65, 127, 15, 11, 127, 2, 1, 127, 1, 123, 65, 0, 33, 3, 2, 64, 3, 64, 32, 3, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 32, 3, 106, 253, 0, 4, 0, 33, 4, 32, 2, 32, 4, 253, 137, 1, 253, 11, 4, 0, 32, 2, 65, 16, 106, 33, 2, 32, 2, 32, 4, 253, 138, 1, 253, 11, 4, 0, 32, 2, 65, 16, 106, 33, 2, 32, 3, 65, 16, 106, 33, 3, 12, 0, 11, 11, 2, 64, 3, 64, 32, 3, 65, 1, 106, 32, 1, 75, 13, 1, 32, 2, 32, 0, 32, 3, 106, 45, 0, 0, 59, 1, 0, 32, 3, 65, 1, 106, 33, 3, 32, 2, 65, 2, 106, 33, 2, 12, 0, 11, 11, 11, 76, 1, 2, 123, 32, 0, 253, 12, 31, 0, 31, 0, 31, 0, 31, 0, 31, 0, 31, 0, 31, 0, 31, 0, 253, 78, 33, 1, 32, 1, 65, 6, 253, 139, 1, 33, 1, 32, 0, 65, 8, 253, 141, 1, 33, 2, 32, 2, 253, 12, 63, 0, 63, 0, 63, 0, 63, 0, 63, 0, 63, 0, 63, 0, 63, 0, 253, 78, 33, 2, 32, 1, 32, 2, 253, 80, 11, 225, 3, 2, 4, 127, 3, 123, 65, 128, 1, 253, 15, 33, 8, 65, 34, 253, 15, 33, 9, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 73, 4, 64, 32, 0, 253, 0, 4, 0, 34, 7, 65, 0, 253, 15, 253, 43, 253, 100, 33, 6, 32, 6, 65, 255, 255, 3, 115, 104, 33, 5, 32, 5, 65, 32, 70, 4, 64, 65, 16, 33, 4, 5, 32, 5, 33, 4, 11, 32, 7, 32, 9, 253, 35, 253, 100, 4, 64, 32, 0, 32, 0, 32, 4, 106, 16, 7, 34, 3, 65, 0, 78, 4, 64, 32, 0, 32, 3, 107, 33, 4, 32, 2, 65, 127, 74, 4, 64, 32, 2, 32, 7, 253, 137, 1, 253, 11, 4, 0, 32, 2, 65, 16, 106, 32, 7, 253, 138, 1, 253, 11, 4, 0, 32, 2, 32, 4, 65, 1, 116, 106, 33, 2, 11, 32, 3, 15, 11, 11, 32, 4, 69, 4, 64, 32, 0, 15, 11, 32, 2, 65, 127, 74, 4, 64, 32, 2, 32, 7, 253, 137, 1, 253, 11, 4, 0, 32, 2, 65, 16, 106, 32, 7, 253, 138, 1, 253, 11, 4, 0, 32, 2, 32, 4, 65, 1, 116, 106, 33, 2, 11, 32, 0, 32, 4, 106, 33, 0, 32, 4, 65, 16, 70, 13, 1, 32, 0, 15, 11, 32, 0, 65, 4, 106, 32, 1, 73, 4, 64, 32, 0, 40, 0, 0, 33, 6, 32, 6, 65, 128, 129, 130, 132, 120, 113, 65, 0, 70, 4, 64, 32, 0, 32, 0, 65, 4, 106, 16, 7, 34, 3, 65, 0, 78, 4, 64, 32, 2, 65, 127, 74, 4, 64, 32, 6, 253, 17, 33, 7, 32, 7, 253, 137, 1, 33, 7, 32, 2, 32, 7, 253, 91, 3, 0, 0, 32, 2, 65, 8, 106, 33, 2, 11, 32, 3, 15, 11, 32, 2, 65, 127, 74, 4, 64, 32, 6, 253, 17, 33, 7, 32, 7, 253, 137, 1, 33, 7, 32, 2, 32, 7, 253, 91, 3, 0, 0, 32, 2, 65, 8, 106, 33, 2, 11, 32, 0, 65, 4, 106, 33, 0, 12, 2, 11, 11, 2, 64, 3, 64, 32, 0, 32, 1, 79, 13, 1, 32, 0, 45, 0, 0, 33, 6, 32, 6, 65, 128, 1, 79, 4, 64, 32, 0, 15, 11, 32, 6, 65, 34, 70, 32, 0, 32, 0, 16, 7, 34, 3, 65, 0, 78, 113, 4, 64, 32, 2, 65, 127, 74, 4, 64, 32, 2, 32, 6, 59, 1, 0, 32, 2, 65, 2, 106, 33, 2, 11, 32, 3, 15, 11, 32, 2, 65, 127, 74, 4, 64, 32, 2, 32, 6, 59, 1, 0, 32, 2, 65, 2, 106, 33, 2, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 32, 0, 15, 11, 11, 32, 0, 15, 11, 107, 1, 4, 127, 32, 0, 33, 2, 2, 64, 3, 64, 32, 0, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 3, 32, 3, 65, 34, 70, 4, 64, 32, 0, 33, 4, 65, 0, 33, 5, 2, 64, 3, 64, 32, 4, 65, 1, 107, 33, 4, 32, 4, 32, 2, 72, 13, 1, 32, 4, 45, 0, 0, 65, 220, 0, 71, 13, 1, 32, 5, 69, 33, 5, 12, 0, 11, 11, 32, 5, 69, 4, 64, 32, 0, 36, 1, 32, 0, 15, 11, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11, 16, 0, 32, 0, 32, 1, 118, 32, 0, 65, 32, 32, 1, 107, 116, 114, 11, 30, 0, 32, 0, 65, 8, 118, 65, 255, 1, 113, 32, 0, 65, 255, 1, 113, 65, 6, 116, 106, 65, 128, 224, 0, 107, 65, 128, 1, 107, 11, 26, 0, 32, 0, 65, 128, 254, 128, 248, 3, 113, 65, 8, 118, 32, 0, 65, 159, 128, 252, 0, 113, 65, 6, 116, 114, 11, 33, 0, 32, 0, 65, 128, 128, 252, 1, 113, 65, 16, 118, 32, 0, 65, 128, 254, 0, 113, 65, 2, 118, 114, 32, 0, 65, 15, 113, 65, 12, 116, 114, 11, 137, 1, 1, 3, 127, 32, 0, 65, 255, 1, 113, 33, 2, 32, 2, 65, 8, 116, 33, 3, 32, 3, 33, 1, 32, 0, 65, 128, 254, 0, 113, 65, 6, 118, 33, 3, 32, 1, 32, 3, 114, 33, 1, 32, 0, 65, 128, 128, 192, 1, 113, 65, 20, 118, 33, 3, 32, 1, 32, 3, 114, 33, 1, 32, 0, 65, 128, 128, 128, 248, 3, 113, 65, 8, 118, 33, 3, 32, 1, 32, 3, 114, 33, 1, 32, 0, 65, 128, 128, 60, 113, 65, 6, 116, 33, 3, 32, 1, 32, 3, 114, 33, 1, 32, 1, 65, 192, 0, 107, 33, 1, 32, 1, 65, 128, 192, 0, 107, 33, 1, 32, 1, 65, 128, 16, 106, 33, 1, 32, 1, 65, 128, 128, 128, 224, 125, 106, 15, 11, 13, 0, 32, 0, 32, 1, 107, 32, 2, 32, 1, 107, 77, 11
@@ -227,11 +233,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
                 return (base: string, context: JsonParsingContext, i: number): ReadResult<string> => {
                     const { reader, stack } = context
-                    const { raw, bytes: b, bytesLength, writable } = reader
-
-                    if (raw !== undefined) {
-                        return decodeString(context, i)
-                    }
+                    const { bytes: b, bytesLength, writable } = reader
 
                     const partial = Number(writable)
                     const max_length = (bytesLength - i) * 3
@@ -382,10 +384,6 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                 const { reader, stack } = ctx
                 const { bytes: b, bytesLength, writable, raw } = reader
 
-                if (raw !== undefined) {
-                    return decodeString(ctx, i)
-                }
-
                 const partial = Number(writable)
                 if (ensureMemory(memory, bytesLength, setView)) {
                     let start = 0
@@ -494,14 +492,6 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             }
         }
 
-        function isEscaped(b: Uint8Array, i: number): boolean {
-            let escaped = false
-            while (b[i--] === BACKSLASH) {
-                escaped = !escaped
-            }
-            return escaped
-        }
-
         function findEnd(b: Uint8Array, len: number, i: number): number {
             while (i <= len - 4) {
                 const a1 = (b[i] | b[i + 1] << 8 | b[i + 2] << 16 | b[i + 3] << 24) ^ 0x22222222
@@ -562,10 +552,6 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
         function decodeBytes(base: string, ctx: JsonParsingContext, i: number): ReadResult<string> {
             const { reader: { bytes: b, bytesLength, raw, writable }, stack, options } = ctx
-
-            if (raw) {
-                return decodeString(ctx, i)
-            }
 
             const utf8 = options.decoder
             const end_index = findEnd(b, bytesLength, i)
@@ -642,18 +628,20 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
     }
 
     const decode = decoderFactory(options)
+    const decodeString = sparseDecoderFactory(memory)
 
     const toString = (metadata: PrimitiveMeta<string>, context: JsonParsingContext): ReadResult<string> => {
-        const { reader: { bytes: b, bytesLength, writable, position }, stack } = context
-        
+        const { reader, stack } = context
+        const { bytes: b, bytesLength: len, writable, position, raw } = reader
+
         const state = stack.pop()
         const isContinued: boolean = state?.isContinued ?? false
         const base: string = state?.base ?? ''
-        
+
         let i = position
         if (!isContinued) {
             if (b[i] !== DQ) {
-                if (i >= bytesLength && writable) {
+                if (writable && i >= len) {
                     return {
                         type: NEEDS_MORE_DATA,
                         nextIndex: i
@@ -665,6 +653,10 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                 }
             }
             i++
+        }
+
+        if (raw !== undefined) {
+            return decodeString(context, i)
         }
 
         return decode(base, context, i)
