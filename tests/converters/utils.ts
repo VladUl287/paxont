@@ -40,7 +40,7 @@ export function expectError<M extends BaseMeta<any>>(options: {
         reader.setPosition(index)
         const context: JsonParsingContext = new JsonParsingContext(reader, defaultOptions, new Stack())
         context.setDepth(depth)
-        
+
         const rawlessResult = meta.toValue(meta, context)
         expect(rawlessResult).toStrictEqual({
             type: ReadResultType.ERROR,
@@ -67,9 +67,10 @@ export const expectToParse = <M extends BaseMeta<any>>(
         start?: number,
         end?: number,
         depth?: number,
-        expected?: any
+        expected?: any,
+        alsoExpect?: (value: ReturnType<M['toValue']>) => void
     }) => {
-    let { meta, raw, bytes, start, end, depth, expected } = options
+    let { meta, raw, bytes, start, end, depth, expected, alsoExpect } = options
 
     bytes ??= toBytes(raw ?? '')
     start ??= 0
@@ -90,6 +91,7 @@ export const expectToParse = <M extends BaseMeta<any>>(
         value: expectedResult,
         nextIndex: end !== undefined ? end : bytes.length
     })
+    alsoExpect && alsoExpect(value as any)
 
     if (raw !== undefined) {
         const reader = new JsonReader(bytes, bytes.length, false)
@@ -102,7 +104,10 @@ export const expectToParse = <M extends BaseMeta<any>>(
             value: expectedResult,
             nextIndex: end !== undefined ? end : bytes.length
         })
+
+        alsoExpect && alsoExpect(rawlessValue as any)
     }
+
 
     for (let i = 0; i < bytes.length; i++) {
         const chunks = [bytes.slice(0, i), bytes.slice(i, end)].reverse()
@@ -114,6 +119,8 @@ export const expectToParse = <M extends BaseMeta<any>>(
                 value: expectedResult,
                 nextIndex: chunks[0].length
             })
+            
+            alsoExpect && alsoExpect(result as any)
         } catch (error) {
             console.log('error on: ', i)
             throw error
