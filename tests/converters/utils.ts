@@ -13,13 +13,10 @@ export function toBytes(str: string): Uint8Array {
 export function expectError<M extends BaseMeta<any>>(meta: M, str: string) {
     const bytes = toBytes(str)
 
-    const context: JsonParsingContext = {
-        reader: new JsonReader(bytes, bytes.length, false),
-        options: defaultOptions,
-        stack: new Stack()
-    }
+    const reader = new JsonReader(bytes, bytes.length, false)
+    const context: JsonParsingContext = new JsonParsingContext(reader, defaultOptions, new Stack())
 
-    const result = meta.toValue(meta, context, 0, 0)
+    const result = meta.toValue(meta, context)
 
     expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
 
@@ -35,7 +32,7 @@ export function expectError<M extends BaseMeta<any>>(meta: M, str: string) {
     }
 }
 
-export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: Uint8Array[], depth = 0) => {
+export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: Uint8Array[], index = 0, depth = 0) => {
     let result: ReadResult<any>
 
     let currentChunk
@@ -46,21 +43,22 @@ export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: U
     const fullLength = chunks.reduce((acc, arr) => { return acc + arr.length }, 0)
     const bytes = new Uint8Array(fullLength)
 
+    let i = index
     while ((currentChunk = chunks.pop()) !== undefined) {
         const ch = new Uint8Array([...prevChunk, ...currentChunk])
         ch.forEach((v, i) => bytes[i] = v)
 
         const reader = new JsonReader(bytes, ch.length, chunks.length !== 0)
+        reader.setPosition(i)
         try {
-            const context: JsonParsingContext = {
-                reader: reader,
-                options: defaultOptions,
-                stack: stack
-            }
-            result = meta.toValue(meta, context, 0, depth)
-            
+            const context: JsonParsingContext = new JsonParsingContext(reader, defaultOptions, stack)
+            context.setDepth(depth)
+
+            result = meta.toValue(meta, context)
+
             if (isNeedsMoreData(result)) {
                 prevChunk = [...currentChunk.slice(result.nextIndex)]
+                i = 0
                 continue
             }
 
