@@ -64,7 +64,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
         if (escaped) {
             do {
                 let i = j - 1
-                
+
                 while (str[i--] === '\\') {
                     escaped = !escaped
                 }
@@ -139,41 +139,26 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
         ]), { memory })
 
         if (utf8ScanModule !== undefined) {
-            const utf8_scan = utf8ScanModule.utf8_scan
-            const utf8_scan_exact = utf8ScanModule.utf8_scan_exact
-            const code_units_count = utf8ScanModule.code_units_count
+            const { utf8_scan, utf8_scan_exact, code_units_count } = utf8ScanModule
 
             decodeScanning = (reader: JsonReader, i: number): ReadResult<string> => {
                 const { bytes: b, bytesLength: len, raw, sparseIndex } = reader
 
-                let cI = 0
-                let bI = 0
-                if (sparseIndex !== undefined) {
-                    cI = sparseIndex.codeUnitIndex
-                    bI = sparseIndex.byteIndex
-                }
-
-                let start = 0
-                let end = i
+                let cI = sparseIndex?.codeUnitIndex ?? 0
+                let bI = sparseIndex?.byteIndex ?? 0
 
                 if (cacheView !== b) {
-                    memoryView.set(new Uint8Array(b.buffer, bI, len))
-                    cacheViewStart = bI
+                    memoryView.set(new Uint8Array(b.buffer, 0, len))
                     cacheView = b
-                    end = i - bI
                     reader.onRelease(clearCache)
                 }
-                else {
-                    start = bI - cacheViewStart
-                    end = i - cacheViewStart
-                }
 
-                bI += utf8_scan_exact(start, end)
+                bI = utf8_scan_exact(bI, i)
                 cI += code_units_count()
 
-                const charStartIndex = cI
+                const start = cI
 
-                const end_index = utf8_scan(end, len)
+                const end_index = utf8_scan(bI, len)
                 if (end_index === -1) {
                     return {
                         type: ERROR,
@@ -181,18 +166,18 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     }
                 }
 
-                bI += end_index
+                bI = end_index
                 cI += code_units_count()
 
                 if (sparseIndex) {
-                    sparseIndex.codeUnitIndex = cI + 1
-                    sparseIndex.byteIndex = bI + 1
+                    sparseIndex.codeUnitIndex = cI
+                    sparseIndex.byteIndex = bI
                 }
 
                 return {
                     type: COMPLETE,
-                    value: raw!.substring(charStartIndex, cI),
-                    nextIndex: bI
+                    value: raw!.substring(start, cI),
+                    nextIndex: bI + 1
                 }
             }
         }
@@ -214,15 +199,14 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                 bI = sparseIndex.byteIndex
             }
 
-            const str = raw!
             const diff = bI - cI
-            const ascii_only = str.length === len || (len - str.length === diff)
+            const ascii_only = raw.length === len || (len - raw.length === diff)
 
             if (ascii_only) {
-                const j = findEnd(str, i)
+                const j = findEnd(raw, i)
                 return {
                     type: COMPLETE,
-                    value: str.substring(i - diff, j - diff),
+                    value: raw.substring(i - diff, j - diff),
                     nextIndex: j + 1
                 }
             }
