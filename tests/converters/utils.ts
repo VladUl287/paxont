@@ -12,14 +12,17 @@ export function toBytes(str: string): Uint8Array {
 
 export function expectError<M extends BaseMeta<any>>(options: {
     meta: M,
-    bytes: Uint8Array,
+    raw?: string,
+    bytes?: Uint8Array,
     index?: number,
     depth?: number
 }) {
-    let { meta, bytes, index, depth } = options
+    let { meta, bytes, raw, index, depth } = options
+
+    bytes ??= toBytes(raw ?? '')
 
     index ??= 0
-    const reader = new JsonReader(bytes, bytes.length, false)
+    const reader = new JsonReader(bytes, bytes.length, false, raw)
     reader.setPosition(index)
 
     depth ??= 0
@@ -31,6 +34,19 @@ export function expectError<M extends BaseMeta<any>>(options: {
         type: ReadResultType.ERROR,
         error: expect.any(JSONParseError)
     })
+
+    if (raw !== undefined) {
+        const reader = new JsonReader(bytes, bytes.length, false)
+        reader.setPosition(index)
+        const context: JsonParsingContext = new JsonParsingContext(reader, defaultOptions, new Stack())
+        context.setDepth(depth)
+        
+        const rawlessResult = meta.toValue(meta, context)
+        expect(rawlessResult).toStrictEqual({
+            type: ReadResultType.ERROR,
+            error: expect.any(JSONParseError)
+        })
+    }
 
     for (let i = 0; i < bytes.length; i++) {
         const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
@@ -74,6 +90,19 @@ export const expectToParse = <M extends BaseMeta<any>>(
         value: expectedResult,
         nextIndex: end !== undefined ? end : bytes.length
     })
+
+    if (raw !== undefined) {
+        const reader = new JsonReader(bytes, bytes.length, false)
+        reader.setPosition(start)
+        const ctx = new JsonParsingContext(reader, defaultOptions, new Stack())
+        ctx.setDepth(depth)
+        const rawlessValue = meta.toValue(meta, ctx)
+        expect(rawlessValue).toStrictEqual({
+            type: ReadResultType.COMPLETE,
+            value: expectedResult,
+            nextIndex: end !== undefined ? end : bytes.length
+        })
+    }
 
     for (let i = 0; i < bytes.length; i++) {
         const chunks = [bytes.slice(0, i), bytes.slice(i, end)].reverse()
