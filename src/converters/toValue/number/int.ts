@@ -38,10 +38,10 @@ export function tryParseInt(
 
     let i = position
 
+    const start = i
+
     const negative = signed && b[i] === MINUS
     if (negative) i++
-
-    const start = i
 
     let m = 0 >>> 0
 
