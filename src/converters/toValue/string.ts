@@ -401,7 +401,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                             error: new JSONParseError('Invalid data')
                         }
                     }
-                    i += end_index
+                    i = end_index + cacheViewStart
 
                     const dq_index = get_dq_index()
                     const ascii_only = get_ascii_only() === 1
@@ -411,8 +411,8 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                             stack.push({
                                 isContinued: true,
                                 base: base.length === 0 ?
-                                    utf8(0, end_index, ascii_only) :
-                                    base.concat(utf8(0, end_index, ascii_only))
+                                    utf8(start, end_index, ascii_only) :
+                                    base.concat(utf8(start, end_index, ascii_only))
                             })
                             return {
                                 type: NEEDS_MORE_DATA,
@@ -428,8 +428,8 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     return {
                         type: COMPLETE,
                         value: base.length === 0 ?
-                            utf8(0, dq_index, ascii_only) :
-                            base.concat(utf8(0, dq_index, ascii_only)),
+                            utf8(start, dq_index, ascii_only) :
+                            base.concat(utf8(start, dq_index, ascii_only)),
                         nextIndex: i + 1
                     }
                 }
