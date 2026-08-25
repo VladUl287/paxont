@@ -1,97 +1,10 @@
 import { stringParser } from "../../src/converters/toValue/string"
 import { string } from "../../src/metadata/builder"
-import { BaseMeta, JsonParsingContext } from "../../src/metadata/types"
-import { defaultOptions } from "../../src/options"
-import { JSONParseError } from "../../src/utils/error"
-import { JsonReader } from "../../src/utils/reader"
-import { ReadResultType } from "../../src/utils/result"
-import { Stack } from "../../src/utils/stack"
 import { utf16LeDecoder, utf16LeDecoderForBuffer } from "../../src/utils/utf16"
 import { utf8Decoder, utf8DecoderForBuffer } from "../../src/utils/utf8"
-import { deserializePartially } from "./utils"
+import { expectError, expectToParse } from "./utils"
 
 describe('tryParseString', () => {
-    const encoder = new TextEncoder()
-
-    function expectError<M extends BaseMeta<any>>(meta: M, { bytes, name, description }: {
-        name: string;
-        bytes: Uint8Array<ArrayBuffer>;
-        description: string;
-    }) {
-        const context: JsonParsingContext = {
-            reader: new JsonReader(bytes, bytes.length, false),
-            options: defaultOptions,
-            stack: new Stack()
-        }
-
-        try {
-            const result = meta.toValue(meta, context, 0, 0)
-            expect(result).toStrictEqual({
-                type: ReadResultType.ERROR,
-                error: expect.any(JSONParseError)
-            })
-
-            for (let i = 0; i < bytes.length; i++) {
-                const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
-                const result = deserializePartially(meta, chunks)
-
-                expect(result).toStrictEqual({
-                    type: ReadResultType.ERROR,
-                    error: expect.any(JSONParseError)
-                })
-            }
-        } catch (error) {
-            console.log(name, description)
-            throw error
-        }
-    }
-
-    const expectToParse = <M extends BaseMeta<any>>(meta: M, str: string) => {
-        const bytes = encoder.encode(str)
-
-        const expectedResult = str.substring(1, str.length - 1)
-
-        const value = meta.toValue(meta, {
-            reader: new JsonReader(bytes, bytes.length, false),
-            options: defaultOptions,
-            stack: new Stack(),
-        }, 0, 0)
-        expect(value).toStrictEqual({
-            type: ReadResultType.COMPLETE,
-            value: expectedResult,
-            nextIndex: bytes.length
-        })
-
-        const valueRaw = meta.toValue(meta, {
-            reader: new JsonReader(encoder.encode(str), bytes.length, false, str),
-            options: defaultOptions,
-            stack: new Stack(),
-        }, 0, 0)
-        expect(valueRaw).toStrictEqual({
-            type: ReadResultType.COMPLETE,
-            value: expectedResult,
-            nextIndex: bytes.length
-        })
-
-        const step = bytes.length > 65_536 ? 10 : 1
-        for (let i = 0; i < bytes.length; i += step) {
-            const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
-
-            try {
-                const result = deserializePartially(meta, chunks)
-
-                expect(result).toStrictEqual({
-                    type: ReadResultType.COMPLETE,
-                    value: expectedResult,
-                    nextIndex: chunks[0].length
-                })
-            }
-            catch (error) {
-                console.log(error)
-            }
-        }
-    }
-
     const meta = string()
     const jsonStrings = jsonTestStrings()
     const invalidJsonStrings = jsonTestInvalidStrings()
@@ -103,7 +16,7 @@ describe('tryParseString', () => {
         })
         jsonStrings
             .forEach(str => {
-                expectToParse({ ...meta, toValue: toString }, str)
+                expectToParse({ meta: { ...meta, toValue: toString }, raw: str })
             })
     })
 
@@ -114,7 +27,7 @@ describe('tryParseString', () => {
         })
         jsonStrings
             .forEach(str => {
-                expectToParse({ ...meta, toValue: toString }, str)
+                expectToParse({ meta: { ...meta, toValue: toString }, raw: str })
             })
     })
 
@@ -125,7 +38,7 @@ describe('tryParseString', () => {
         })
         jsonStrings
             .forEach(str => {
-                expectToParse({ ...meta, toValue: toString }, str)
+                expectToParse({ meta: { ...meta, toValue: toString }, raw: str })
             })
     })
 
@@ -136,7 +49,7 @@ describe('tryParseString', () => {
         })
         jsonStrings
             .forEach(str => {
-                expectToParse({ ...meta, toValue: toString }, str)
+                expectToParse({ meta: { ...meta, toValue: toString }, raw: str })
             })
     })
 
@@ -148,11 +61,11 @@ describe('tryParseString', () => {
         })
         jsonStrings
             .forEach(str => {
-                expectToParse({ ...meta, toValue: toString }, str)
+                expectToParse({ meta: { ...meta, toValue: toString }, raw: str })
             })
 
-        const veryLongString = `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(700)}"`
-        expectToParse({ ...meta, toValue: toString }, veryLongString)
+        const veryLongString = `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(1000)}"`
+        expectToParse({ meta: { ...meta, toValue: toString }, raw: veryLongString })
     })
 
     test('utf16 restrict memory string parser decoder', () => {
@@ -163,11 +76,11 @@ describe('tryParseString', () => {
         })
         jsonStrings
             .forEach(str => {
-                expectToParse({ ...meta, toValue: toString }, str)
+                expectToParse({ meta: { ...meta, toValue: toString }, raw: str })
             })
 
-        const veryLongString = `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(700)}"`
-        expectToParse({ ...meta, toValue: toString }, veryLongString)
+        const veryLongString = `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(1000)}"`
+        expectToParse({ meta: { ...meta, toValue: toString }, raw: veryLongString })
     })
 
     test('utf8 restrict memory string parser buffer', () => {
@@ -178,11 +91,11 @@ describe('tryParseString', () => {
         })
         jsonStrings
             .forEach(str => {
-                expectToParse({ ...meta, toValue: toString }, str)
+                expectToParse({ meta: { ...meta, toValue: toString }, raw: str })
             })
 
         const veryLongString = `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(700)}"`
-        expectToParse({ ...meta, toValue: toString }, veryLongString)
+        expectToParse({ meta: { ...meta, toValue: toString }, raw: veryLongString })
     })
 
     test('utf8 restrict memory string parser decoder', () => {
@@ -193,11 +106,11 @@ describe('tryParseString', () => {
         })
         jsonStrings
             .forEach(str => {
-                expectToParse({ ...meta, toValue: toString }, str)
+                expectToParse({ meta: { ...meta, toValue: toString }, raw: str })
             })
 
         const veryLongString = `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(700)}"`
-        expectToParse({ ...meta, toValue: toString }, veryLongString)
+        expectToParse({ meta: { ...meta, toValue: toString }, raw: veryLongString })
     })
 
     test('wasmless string parser', () => {
@@ -206,7 +119,7 @@ describe('tryParseString', () => {
         })
         jsonStrings
             .forEach(str => {
-                expectToParse({ ...meta, toValue: toString }, str)
+                expectToParse({ meta: { ...meta, toValue: toString }, raw: str })
             })
     })
 
@@ -217,7 +130,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ ...meta, toValue: toString }, str)
+                expectError({ meta: { ...meta, toValue: toString } })
             })
     })
 
@@ -228,7 +141,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ ...meta, toValue: toString }, str)
+                expectError({ meta: { ...meta, toValue: toString } })
             })
     })
 
@@ -239,7 +152,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ ...meta, toValue: toString }, str)
+                expectError({ meta: { ...meta, toValue: toString } })
             })
     })
 
@@ -250,7 +163,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ ...meta, toValue: toString }, str)
+                expectError({ meta: { ...meta, toValue: toString } })
             })
     })
 
@@ -262,7 +175,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ ...meta, toValue: toString }, str)
+                expectError({ meta: { ...meta, toValue: toString } })
             })
     })
 
@@ -274,7 +187,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ ...meta, toValue: toString }, str)
+                expectError({ meta: { ...meta, toValue: toString } })
             })
     })
 
@@ -286,7 +199,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ ...meta, toValue: toString }, str)
+                expectError({ meta: { ...meta, toValue: toString } })
             })
     })
 
@@ -298,7 +211,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ ...meta, toValue: toString }, str)
+                expectError({ meta: { ...meta, toValue: toString } })
             })
     })
 
@@ -308,7 +221,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ ...meta, toValue: toString }, str)
+                expectError({ meta: { ...meta, toValue: toString } })
             })
     })
 })
