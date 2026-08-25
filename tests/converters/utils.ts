@@ -10,21 +10,81 @@ export function toBytes(str: string): Uint8Array {
     return encoder.encode(str)
 }
 
-export function expectError<M extends BaseMeta<any>>(meta: M, str: string) {
-    const bytes = toBytes(str)
+export function expectError<M extends BaseMeta<any>>(options: {
+    meta: M,
+    bytes: Uint8Array,
+    index?: number,
+    depth?: number
+}) {
+    let { meta, bytes, index, depth } = options
 
+    index ??= 0
     const reader = new JsonReader(bytes, bytes.length, false)
+    reader.setPosition(index)
+
+    depth ??= 0
     const context: JsonParsingContext = new JsonParsingContext(reader, defaultOptions, new Stack())
+    context.setDepth(depth)
 
     const result = meta.toValue(meta, context)
-
-    expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+    expect(result).toStrictEqual({
+        type: ReadResultType.ERROR,
+        error: expect.any(JSONParseError)
+    })
 
     for (let i = 0; i < bytes.length; i++) {
+        const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
+        const result = deserializePartially(meta, chunks, index, depth)
+
+        expect(result).toStrictEqual({
+            type: ReadResultType.ERROR,
+            error: expect.any(JSONParseError)
+        })
+    }
+}
+
+export const expectToParse = <M extends BaseMeta<any>>(
+    options: {
+        meta: M,
+        raw?: string,
+        bytes?: Uint8Array,
+        start?: number,
+        end?: number,
+        depth?: number,
+        expected?: any
+    }) => {
+    let { meta, raw, bytes, start, end, depth, expected } = options
+
+    bytes ??= toBytes(raw ?? '')
+    start ??= 0
+    depth ??= 0
+
+    const reader = new JsonReader(bytes, bytes.length, false, raw)
+    reader.setPosition(start)
+
+    const ctx = new JsonParsingContext(reader, defaultOptions, new Stack())
+    ctx.setDepth(depth)
+
+    const decodedValue = new TextDecoder().decode(bytes.subarray(start, end))
+    const expectedResult = expected ?? JSON.parse(decodedValue)
+
+    const value = meta.toValue(meta, ctx)
+    expect(value).toStrictEqual({
+        type: ReadResultType.COMPLETE,
+        value: expectedResult,
+        nextIndex: end !== undefined ? end : bytes.length
+    })
+
+    for (let i = 0; i < bytes.length; i++) {
+        const chunks = [bytes.slice(0, i), bytes.slice(i, end)].reverse()
+        const result = deserializePartially(meta, chunks, start, depth)
+
         try {
-            const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
-            const result = deserializePartially(meta, chunks)
-            expect(result).toStrictEqual({ type: ReadResultType.ERROR, error: expect.any(JSONParseError) })
+            expect(result).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: expectedResult,
+                nextIndex: chunks[0].length
+            })
         } catch (error) {
             console.log('error on: ', i)
             throw error
