@@ -84,7 +84,9 @@ export function arrayPool<A extends ArrayLikeWritable<any>>({ ctor, clear }: Arr
         stack.push(array)
     }
 
-    const fallbackClear = (array: A, start: number, end: number): void => { }
-
-    return { rent, release, clear: clear ?? fallbackClear }
+    return {
+        rent,
+        release,
+        clear: clear ?? ((array: A, start: number, end: number): void => { })
+    }
 }
