@@ -24,7 +24,7 @@ export const toUint16 = (metadata: PrimitiveMeta<number>, { reader }: JsonParsin
 export const toInt32 = (metadata: PrimitiveMeta<number>, { reader }: JsonParsingContext): ReadResult<number> =>
     tryParseInt(reader, 10, -2147483648, 2147483647, true)
 
-export const toUint32 = (metadata: PrimitiveMeta<number>, { reader }: JsonParsingContext): ReadResult<number> => 
+export const toUint32 = (metadata: PrimitiveMeta<number>, { reader }: JsonParsingContext): ReadResult<number> =>
     tryParseInt(reader, 10, 0, 4294967295, false)
 
 export function tryParseInt(
@@ -40,8 +40,14 @@ export function tryParseInt(
 
     const start = i
 
-    const negative = signed && b[i] === MINUS
-    if (negative) i++
+    const negative = b[i] === MINUS
+    if (negative) {
+        if (signed) { i++ }
+        return {
+            type: ERROR,
+            error: new JSONParseError(``)
+        }
+    }
 
     let m = 0 >>> 0
 
