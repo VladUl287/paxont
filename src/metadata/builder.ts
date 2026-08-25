@@ -35,7 +35,7 @@ export type BuilderOptions = {
     readonly arrayPool: typeof arrayPool
 }
 
-const clearArray = <T, A extends ArrayLikeWritable<T> & { fill: (value: T, start?: number, end?: number) => A }>(defaultValue: T) =>
+const fillWith = <T, A extends ArrayLikeWritable<T> & { fill: (value: T, start?: number, end?: number) => A }>(defaultValue: T) =>
     (arr: A, start: number, end: number) => arr.fill(defaultValue, start, end)
 
 const defaultBuilderOptions: BuilderOptions = {
@@ -46,11 +46,11 @@ const defaultBuilderOptions: BuilderOptions = {
         bigint: arrayPool({ ctor: Array }),
         boolean: arrayPool({ ctor: Array }),
         nullable: arrayPool({ ctor: Array }),
-        object: arrayPool({ ctor: Array, clear: clearArray({}) }),
-        date: arrayPool({ ctor: Array, clear: clearArray(Date.prototype) }),
-        set: arrayPool({ ctor: Array, clear: clearArray(new Set()) }),
-        map: arrayPool({ ctor: Array, clear: clearArray(new Map()) }),
-        array: arrayPool({ ctor: Array, clear: clearArray(new Array()) }),
+        object: arrayPool({ ctor: Array, clear: fillWith({}) }),
+        date: arrayPool({ ctor: Array, clear: fillWith(Date.prototype) }),
+        set: arrayPool({ ctor: Array, clear: fillWith(new Set()) }),
+        map: arrayPool({ ctor: Array, clear: fillWith(new Map()) }),
+        array: arrayPool({ ctor: Array, clear: fillWith(new Array()) }),
         i8: arrayPool({ ctor: Int8Array }),
         i16: arrayPool({ ctor: Int16Array }),
         i32: arrayPool({ ctor: Int32Array }),
@@ -59,15 +59,15 @@ const defaultBuilderOptions: BuilderOptions = {
         u16: arrayPool({ ctor: Uint16Array }),
         u32: arrayPool({ ctor: Uint32Array }),
         u64: arrayPool({ ctor: BigUint64Array }),
-        'i8[]': arrayPool({ ctor: Array, clear: clearArray(new Int8Array()) }),
-        'i16[]': arrayPool({ ctor: Array, clear: clearArray(new Int16Array()) }),
-        'i32[]': arrayPool({ ctor: Array, clear: clearArray(new Int32Array()) }),
-        'i64[]': arrayPool({ ctor: Array, clear: clearArray(new BigInt64Array()) }),
-        'u8[]': arrayPool({ ctor: Array, clear: clearArray(new Uint8Array()) }),
-        'u16[]': arrayPool({ ctor: Array, clear: clearArray(new Uint16Array()) }),
-        'u32[]': arrayPool({ ctor: Array, clear: clearArray(new Uint32Array()) }),
-        'u64[]': arrayPool({ ctor: Array, clear: clearArray(new BigUint64Array()) }),
-        'f64[]': arrayPool({ ctor: Array, clear: clearArray(new Float64Array()) }),
+        'i8[]': arrayPool({ ctor: Array, clear: fillWith(new Int8Array()) }),
+        'i16[]': arrayPool({ ctor: Array, clear: fillWith(new Int16Array()) }),
+        'i32[]': arrayPool({ ctor: Array, clear: fillWith(new Int32Array()) }),
+        'i64[]': arrayPool({ ctor: Array, clear: fillWith(new BigInt64Array()) }),
+        'u8[]': arrayPool({ ctor: Array, clear: fillWith(new Uint8Array()) }),
+        'u16[]': arrayPool({ ctor: Array, clear: fillWith(new Uint16Array()) }),
+        'u32[]': arrayPool({ ctor: Array, clear: fillWith(new Uint32Array()) }),
+        'u64[]': arrayPool({ ctor: Array, clear: fillWith(new BigUint64Array()) }),
+        'f64[]': arrayPool({ ctor: Array, clear: fillWith(new Float64Array()) }),
     },
     arrayPool: arrayPool
 }
