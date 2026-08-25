@@ -61,7 +61,7 @@ export function toArray<A extends ArrayLikeWritable<MetaValue<M>>, M extends Bas
     if (b[i] === SQC) {
         return {
             type: COMPLETE,
-            value: buffer.slice(0, 0),
+            value: buffer.slice(0, bufferIndex),
             nextIndex: ++i
         }
     }
