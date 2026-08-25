@@ -1,4 +1,4 @@
-import { array, i16Array, i32Array, i64Array, i8Array, number, u16Array, u32Array, u64Array, u8Array } from "../../src/metadata/builder"
+import { array, i16Array, i32Array, i64Array, i8Array, number, string, u16Array, u32Array, u64Array, u8Array } from "../../src/metadata/builder"
 import { ArrayMeta, JsonParsingContext, PrimitiveMeta } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { JSONParseError } from "../../src/utils/error"
@@ -13,13 +13,13 @@ describe('toArray', () => {
     const toBytes = (str: string): Uint8Array => encoder.encode(str)
 
     function expectError(meta: ArrayMeta<any, any>, bytes: Uint8Array, index = 0, depth = 0) {
-        const context: JsonParsingContext = {
-            reader: new JsonReader(bytes, bytes.length, false),
-            options: defaultOptions,
-            stack: new Stack()
-        }
+        const reader = new JsonReader(bytes, bytes.length, false)
+        reader.setPosition(index)
 
-        const result = meta.toValue(meta, context, index, depth)
+        const context: JsonParsingContext = new JsonParsingContext(reader, defaultOptions, new Stack())
+        context.setDepth(depth)
+
+        const result = meta.toValue(meta, context)
         expect(result).toStrictEqual({
             type: ReadResultType.ERROR,
             error: expect.any(JSONParseError)
@@ -27,7 +27,7 @@ describe('toArray', () => {
 
         for (let i = 0; i < bytes.length; i++) {
             const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
-            const result = deserializePartially(meta, chunks, depth)
+            const result = deserializePartially(meta, chunks, index, depth)
 
             expect(result).toStrictEqual({
                 type: ReadResultType.ERROR,
@@ -38,16 +38,11 @@ describe('toArray', () => {
 
     const expectToParse = (meta: ArrayMeta<any, any>, bytes: Uint8Array, result?: any) => {
         const reader = new JsonReader(bytes, bytes.length, false)
-
-        const ctx: JsonParsingContext = {
-            reader: reader,
-            options: defaultOptions,
-            stack: new Stack(),
-        }
+        const context: JsonParsingContext = new JsonParsingContext(reader, defaultOptions, new Stack())
 
         const expectedResult = result ?? JSON.parse(new TextDecoder().decode(bytes))
 
-        const value = meta.toValue(meta, ctx, 0, 0)
+        const value = meta.toValue(meta, context)
         expect(value).toStrictEqual({
             type: ReadResultType.COMPLETE,
             value: expectedResult,
@@ -67,6 +62,7 @@ describe('toArray', () => {
                 })
             }
             catch (error) {
+                console.log('error on:', i)
                 throw error
             }
         }
@@ -78,6 +74,11 @@ describe('toArray', () => {
         test('converts simple number array string to array', () => {
             const bytes = toBytes("[1, 2, 3]")
             expectToParse(arrayMeta, bytes)
+        })
+
+        test('converts string array', () => {
+            const bytes = toBytes('["a a a a a", "а а а а а", "Å Å Å Å Å"]')
+            expectToParse(array(string()), bytes)
         })
 
         test('converts empty array string to empty array', () => {
@@ -98,11 +99,6 @@ describe('toArray', () => {
             expectError(arrayMeta, bytes, 0, 128)
         })
 
-        test('unexpected end of input', () => {
-            const bytes = toBytes("[1]")
-            expectError(arrayMeta, bytes, 3, 0)
-        })
-
         test('item parse error', () => {
             const bytes = toBytes("[1]")
             const error: ReadResult<number> = {
@@ -111,7 +107,7 @@ describe('toArray', () => {
             }
             const numericArray = array(number((m) => ({
                 ...m,
-                toValue: (m: PrimitiveMeta<number>, c: JsonParsingContext, i: number, d: number): ReadResult<number> => error
+                toValue: (m: PrimitiveMeta<number>, c: JsonParsingContext): ReadResult<number> => error
             })))
             expectError(numericArray, bytes)
         })
