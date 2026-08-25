@@ -1,154 +1,121 @@
-import { JsonParsingContext, PrimitiveMeta } from "../../../src/metadata/types"
-import { defaultOptions } from "../../../src/options"
-import { Stack } from "../../../src/utils/stack"
-import { deserializePartially } from "../utils"
+import { expectToParse } from "../utils"
 import { number } from "../../../src/metadata/builder"
-import { JsonReader } from "../../../src/utils/reader"
-import { ReadResultType } from "../../../src/utils/result"
 
 describe('tryParseFloat', () => {
-  const encoder = new TextEncoder()
-  const toContext = (str: string): JsonParsingContext => {
-    return { options: defaultOptions, reader: new JsonReader(encoder.encode(str), encoder.encode(str).length, false), stack: new Stack() }
-  }
-
-  const expectFloat = (meta: PrimitiveMeta<number>, str: string): void => {
-    const num = Number(str)
-    const ctx = toContext(str)
-    const bytes = ctx.reader.bytes
-
-    expect(meta.toValue(meta, ctx, 0, 0)).toStrictEqual({
-      type: ReadResultType.COMPLETE,
-      value: num,
-      nextIndex: bytes.length
-    })
-
-    for (let i = 0; i < bytes.length; i++) {
-      const chunks = [bytes.slice(0, i), bytes.slice(i)].reverse()
-      const result = deserializePartially(meta, chunks)
-
-      expect(result).toStrictEqual({
-        type: ReadResultType.COMPLETE,
-        value: num,
-        nextIndex: chunks[0].length
-      })
-    }
-  }
-
   const meta = number()
 
   describe('Basic numeric parsing', () => {
     test('parses positive integer', () => {
-      expectFloat(meta, '123')
+      expectToParse({ meta, raw: '123' })
     })
 
     test('parses negative integer', () => {
-      expectFloat(meta, '-456')
+      expectToParse({ meta, raw: '-456' })
     })
 
     test('parses zero', () => {
-      expectFloat(meta, '0')
+      expectToParse({ meta, raw: '0' })
     })
 
     test('parses multiple zeros', () => {
-      expectFloat(meta, '000')
+      expectToParse({ meta, raw: '000', expected: 0 })
     })
   })
 
   describe('Decimal numbers', () => {
     test('parses positive decimal', () => {
-      expectFloat(meta, '123.456')
+      expectToParse({ meta, raw: '123.456' })
     })
 
     test('parses negative decimal', () => {
-      expectFloat(meta, '-123.456')
+      expectToParse({ meta, raw: '-123.456' })
     })
 
     test('parses decimal without leading zeros', () => {
-      expectFloat(meta, '.123')
+      expectToParse({ meta, raw: '.123', expected: 0.123 })
     })
 
     test('parses decimal without trailing zeros', () => {
-      expectFloat(meta, '123.')
+      expectToParse({ meta, raw: '123.', expected: 123 })
     })
 
     test('parses decimal with leading zeros', () => {
-      expectFloat(meta, '00123.456')
+      expectToParse({ meta, raw: '00123.456', expected: 123.456 })
     })
   })
 
   describe('Scientific notation', () => {
     test('parses scientific notation with e', () => {
-      expectFloat(meta, '1.23e4')
+      expectToParse({ meta, raw: '1.23e4' })
     })
 
     test('parses scientific notation with E', () => {
-      expectFloat(meta, '1.23E4')
+      expectToParse({ meta, raw: '1.23E4' })
     })
 
     test('parses scientific notation with negative exponent', () => {
-      expectFloat(meta, '1.23e-2')
+      expectToParse({ meta, raw: '1.23e-2' })
     })
 
     test('parses scientific notation with positive exponent sign', () => {
-      expectFloat(meta, '1.23e+2')
+      expectToParse({ meta, raw: '1.23e+2' })
     })
 
     test('parses scientific notation without decimal', () => {
-      expectFloat(meta, '123e4')
+      expectToParse({ meta, raw: '123e4' })
     })
 
     test('parses scientific notation with negative base', () => {
-      expectFloat(meta, '-1.23e4')
+      expectToParse({ meta, raw: '-1.23e4' })
     })
   })
 
   describe('Edge cases and boundaries', () => {
     test('parses maximum safe integer', () => {
-      expectFloat(meta, '9007199254740991')
+      expectToParse({ meta, raw: '9007199254740991' })
     })
 
     test('parses Number.MAX_VALUE', () => {
       const maxValue = Number.MAX_VALUE
-      expectFloat(meta, maxValue.toString())
+      expectToParse({ meta, raw: maxValue.toString() })
     })
 
     test('parses Number.MIN_VALUE', () => {
       const minValue = Number.MIN_VALUE
-      expectFloat(meta, minValue.toString())
+      expectToParse({ meta, raw: minValue.toString() })
     })
 
     test('parses very small number', () => {
-      expectFloat(meta, '1e-308')
+      expectToParse({ meta, raw: '1e-308' })
     })
 
     test('parses very large number', () => {
-      expectFloat(meta, '1e308')
+      expectToParse({ meta, raw: '1e308' })
     })
 
     test('whole max value number', () => {
-      expectFloat(meta, '179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368')
+      expectToParse({ meta, raw: '179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368' })
     })
   })
 
   describe('Format variations', () => {
     test('parses number with leading zeros and decimal', () => {
-      expectFloat(meta, '000.456')
+      expectToParse({ meta, raw: '000.456', expected: 0.456 })
     })
 
     test('parses negative zero', () => {
-      expectFloat(meta, '-0')
+      expectToParse({ meta, raw: '-0' })
     })
   })
 
   describe('Precision tests', () => {
     test('maintains precision for double values', () => {
-      expectFloat(meta, '0.1')
+      expectToParse({ meta, raw: '0.1' })
     })
 
     test('parses epsilon', () => {
       const epsilon = 2.220446049250313e-16
-      expectFloat(meta, epsilon.toString())
+      expectToParse({ meta, raw: epsilon.toString() })
     })
   })
 
@@ -282,25 +249,25 @@ describe('tryParseFloat', () => {
       return str
     }
 
-    testNumbers.forEach(num => {
-      test(`correctly parses roundtrip for ${toRange(num, 50)}`, () => {
-        expectFloat(meta, num)
+    testNumbers.forEach(raw => {
+      test(`correctly parses roundtrip for ${toRange(raw, 50)}`, () => {
+        expectToParse({ meta, raw: raw })
       })
     })
   })
 
   describe('Common math constants', () => {
     test('Math.PI', () => {
-      expectFloat(meta, Math.PI.toString())
+      expectToParse({ meta, raw: Math.PI.toString() })
     })
     test('Math.E', () => {
-      expectFloat(meta, Math.E.toString())
+      expectToParse({ meta, raw: Math.E.toString() })
     })
     test('Math.SQRT2', () => {
-      expectFloat(meta, Math.SQRT2.toString())
+      expectToParse({ meta, raw: Math.SQRT2.toString() })
     })
     test('Math.LN2', () => {
-      expectFloat(meta, Math.LN2.toString())
+      expectToParse({ meta, raw: Math.LN2.toString() })
     })
   })
 })
