@@ -38,8 +38,8 @@ export function generateTrie(values: Uint8Array[]): (bytes: Uint8Array, offset: 
             return 'return (' + chunks.join(' && ') + `) ? ${index} : -1;`
         }
 
-        const canPack4 = values.every(c => (c.bytes.length - d) >= 4)
-        const canPack3 = values.every(c => (c.bytes.length - d) >= 3)
+        const canPack4 = values.every(c => (c.bytes.length - d) > 4)
+        const canPack3 = values.every(c => (c.bytes.length - d) > 3)
 
         const map = new Map<number, Value[]>()
         if (canPack4) {
