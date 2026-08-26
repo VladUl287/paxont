@@ -379,15 +379,19 @@
 
   (func $parse_ascii_prefix (param $i i32) (param $len i32) (param $target i32) (result i32)
     (local $temp i32)
+    (local $temp_mask i32)
     (local $byte_count i32)
-    (local $trailing i32)
     (local $byte i32)
-    (local $temp_v128 v128)
-    (local $ascii_vec v128)          
+    (local $data_vec v128)
+    (local $zero_vec v128)
     (local $quote_vec v128)
+    (local $backslash_vec v128)
+    (local $ascii_vec v128)
 
-    (local.set $ascii_vec (i8x16.splat (i32.const 128)))
+    (local.set $zero_vec (i8x16.splat (i32.const 0)))
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
+    (local.set $backslash_vec (i8x16.splat (i32.const 92)))
+    (local.set $ascii_vec (i8x16.splat (i32.const 128)))
 
     (block $ascii_byte_block
       (loop $ascii_byte_loop
@@ -397,20 +401,24 @@
             (local.set $byte
               (i8x16.bitmask
                 (i8x16.ge_s
-                  (local.tee $temp_v128 (v128.load (local.get $i)))
+                  (local.tee $data_vec (v128.load (local.get $i)))
                   (i8x16.splat (i32.const 0))
                 )))
 
-            (local.set $trailing
-              (i32.ctz (i32.xor (local.get $byte) (i32.const 0xFFFF))))
+            (local.set $byte_count (i32.ctz (i32.xor (local.get $byte) (i32.const 0xFFFF))))
 
-            (if (i32.eq (local.get $trailing) (i32.const 32))
+            (if (i32.eqz (local.get $byte_count)) 
+              (then (return (local.get $i)))
+            )
+            (if (i32.eq (local.get $byte_count) (i32.const 32))
               (then (local.set $byte_count (i32.const 16)))
-              (else (local.set $byte_count (local.get $trailing)))
             )
 
-            ;; double quotes
-            (if (i8x16.bitmask (i8x16.eq (local.get $temp_v128) (local.get $quote_vec)))
+            (local.set $temp (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec))))
+            (local.set $temp_mask (i32.and (local.get $temp) (i32.shl (local.get $temp) (i32.const 1))))
+            (local.set $temp_mask (i32.and (local.get $temp) (i32.xor (local.get $temp_mask) (i32.const -1))))
+
+            (if (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec)))
               (then 
                 (if 
                   (i32.ge_s
@@ -422,25 +430,35 @@
 
                     (if (i32.gt_s (local.get $target) (i32.const -1))
                       (then
-                        (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
-                        (v128.store (i32.add (local.get $target) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $temp_v128)))
+                        (if (local.get $temp_mask)
+                          (then
+                            (call $store_sequentially (local.get $i) (i32.add (local.get $i) (local.get $byte_count)) (local.get $target))
+                          )
+                        )
+                        (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $data_vec)))
+                        (v128.store (i32.add (local.get $target) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $data_vec)))
                         (local.set $target (i32.add (local.get $target) (i32.shl (local.get $byte_count) (i32.const 1))))
-                      ))
+                      )
+                    )
 
                     (return (local.get $temp))
                   )
                 )
               )
             )
-    
-            (if (i32.eqz (local.get $byte_count)) (then (return (local.get $i))))
 
             (if (i32.gt_s (local.get $target) (i32.const -1))
               (then
-                (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
-                (v128.store (i32.add (local.get $target) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $temp_v128)))
+                (if (local.get $temp_mask)
+                  (then
+                    (call $store_sequentially (local.get $i) (i32.add (local.get $i) (local.get $byte_count)) (local.get $target))
+                  )
+                )
+                (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $data_vec)))
+                (v128.store (i32.add (local.get $target) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $data_vec)))
                 (local.set $target (i32.add (local.get $target) (i32.shl (local.get $byte_count) (i32.const 1))))
-              ))
+              )
+            )
           
             (local.set $i (i32.add (local.get $i) (local.get $byte_count)))
             
@@ -461,9 +479,9 @@
                   (then
                     (if (i32.gt_s (local.get $target) (i32.const -1))
                       (then
-                        (local.set $temp_v128 (i32x4.splat (local.get $byte)))
-                        (local.set $temp_v128 (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
-                        (v128.store64_lane 0 (local.get $target) (local.get $temp_v128))
+                        (local.set $data_vec (i32x4.splat (local.get $byte)))
+                        (local.set $data_vec (i16x8.extend_low_i8x16_u (local.get $data_vec)))
+                        (v128.store64_lane 0 (local.get $target) (local.get $data_vec))
                         (local.set $target (i32.add (local.get $target) (i32.const 8)))
                       ))
 
@@ -472,9 +490,9 @@
 
                 (if (i32.gt_s (local.get $target) (i32.const -1))
                   (then
-                    (local.set $temp_v128 (i32x4.splat (local.get $byte)))
-                    (local.set $temp_v128 (i16x8.extend_low_i8x16_u (local.get $temp_v128)))
-                    (v128.store64_lane 0 (local.get $target) (local.get $temp_v128))
+                    (local.set $data_vec (i32x4.splat (local.get $byte)))
+                    (local.set $data_vec (i16x8.extend_low_i8x16_u (local.get $data_vec)))
+                    (v128.store64_lane 0 (local.get $target) (local.get $data_vec))
                     (local.set $target (i32.add (local.get $target) (i32.const 8)))
                   ))
 
