@@ -600,6 +600,290 @@
     (return (i32.const -1))
   )
  
+  (func $store_sequentially (param $start i32) (param $end i32) (param $target i32)
+    (local $i i32)
+    (local $byte i32)
+    (local $j i32)
+    (local $code_point i32)
+    (local $hex_digit i32)
+    (local $hex_value i32)
+
+    (local.set $i (local.get $start))
+    (local.set $j (local.get $target))
+
+    (block $done
+      (loop $loop
+        (br_if $done
+          (i32.ge_u (local.get $i) (local.get $end))
+        )
+
+        (local.set $byte (i32.load8_u (local.get $i)))
+
+        (if (i32.eq (local.get $byte) (i32.const 0x5C))  ;; '\'
+          (then
+            (local.set $i (i32.add (local.get $i) (i32.const 1)))
+
+            (br_if $done
+              (i32.ge_u (local.get $i) (local.get $end))
+            )
+
+            (local.set $byte (i32.load8_u (local.get $i)))
+
+            (block $escape_done
+              (if (i32.eq (local.get $byte) (i32.const 0x6E))  ;; 'n'
+                (then
+                  (i32.store16 (local.get $j) (i32.const 0x0A))  ;; LF
+                  (local.set $j (i32.add (local.get $j) (i32.const 2)))
+                  (local.set $i (i32.add (local.get $i) (i32.const 1)))
+                  (br $escape_done)
+                )
+              )
+              (if (i32.eq (local.get $byte) (i32.const 0x74))  ;; 't'
+                (then
+                  (i32.store16 (local.get $j) (i32.const 0x09))  ;; TAB
+                  (local.set $j (i32.add (local.get $j) (i32.const 2)))
+                  (local.set $i (i32.add (local.get $i) (i32.const 1)))
+                  (br $escape_done)
+                )
+              )
+              (if (i32.eq (local.get $byte) (i32.const 0x72))  ;; 'r'
+                (then
+                  (i32.store16 (local.get $j) (i32.const 0x0D))  ;; CR
+                  (local.set $j (i32.add (local.get $j) (i32.const 2)))
+                  (local.set $i (i32.add (local.get $i) (i32.const 1)))
+                  (br $escape_done)
+                )
+              )
+              (if (i32.eq (local.get $byte) (i32.const 0x62))  ;; 'b'
+                (then
+                  (i32.store16 (local.get $j) (i32.const 0x08))  ;; Backspace
+                  (local.set $j (i32.add (local.get $j) (i32.const 2)))
+                  (local.set $i (i32.add (local.get $i) (i32.const 1)))
+                  (br $escape_done)
+                )
+              )
+              (if (i32.eq (local.get $byte) (i32.const 0x66))  ;; 'f'
+                (then
+                  (i32.store16 (local.get $j) (i32.const 0x0C))  ;; Form feed
+                  (local.set $j (i32.add (local.get $j) (i32.const 2)))
+                  (local.set $i (i32.add (local.get $i) (i32.const 1)))
+                  (br $escape_done)
+                )
+              )
+              (if (i32.eq (local.get $byte) (i32.const 0x5C))  ;; '\\'
+                (then
+                  (i32.store16 (local.get $j) (i32.const 0x5C))  ;; Backslash
+                  (local.set $j (i32.add (local.get $j) (i32.const 2)))
+                  (local.set $i (i32.add (local.get $i) (i32.const 1)))
+                  (br $escape_done)
+                )
+              )
+              (if (i32.eq (local.get $byte) (i32.const 0x22))  ;; '"'
+                (then
+                  (i32.store16 (local.get $j) (i32.const 0x22))  ;; Double quote
+                  (local.set $j (i32.add (local.get $j) (i32.const 2)))
+                  (local.set $i (i32.add (local.get $i) (i32.const 1)))
+                  (br $escape_done)
+                )
+              )
+              (if (i32.eq (local.get $byte) (i32.const 0x27))  ;; '\''
+                (then
+                  (i32.store16 (local.get $j) (i32.const 0x27))  ;; Single quote
+                  (local.set $j (i32.add (local.get $j) (i32.const 2)))
+                  (local.set $i (i32.add (local.get $i) (i32.const 1)))
+                  (br $escape_done)
+                )
+              )
+
+              ;; unicode escape \uXXXX
+              (if (i32.eq (local.get $byte) (i32.const 0x75))  ;; 'u'
+                (then
+                  (local.set $i (i32.add (local.get $i) (i32.const 1)))
+
+                  (br_if $done
+                    (i32.gt_u (i32.add (local.get $i) (i32.const 4)) (local.get $end))
+                  )
+
+                  (local.set $hex_value (i32.const 0))
+
+                  (local.set $hex_digit (i32.load8_u (local.get $i)))
+                  (call $hex_to_value (local.get $hex_digit))
+                  (local.set $hex_value (i32.or (local.get $hex_value) (i32.shl (local.get $hex_digit) (i32.const 12))))
+                  (local.set $i (i32.add (local.get $i) (i32.const 1)))
+
+                  (local.set $hex_digit (i32.load8_u (local.get $i)))
+                  (call $hex_to_value (local.get $hex_digit))
+                  (local.set $hex_value (i32.or (local.get $hex_value) (i32.shl (local.get $hex_digit) (i32.const 8))))
+                  (local.set $i (i32.add (local.get $i) (i32.const 1)))
+
+                  (local.set $hex_digit (i32.load8_u (local.get $i)))
+                  (call $hex_to_value (local.get $hex_digit))
+                  (local.set $hex_value (i32.or (local.get $hex_value) (i32.shl (local.get $hex_digit) (i32.const 4))))
+                  (local.set $i (i32.add (local.get $i) (i32.const 1)))
+
+                  (local.set $hex_digit (i32.load8_u (local.get $i)))
+                  (call $hex_to_value (local.get $hex_digit))
+                  (local.set $hex_value (i32.or (local.get $hex_value) (local.get $hex_digit)))
+                  (local.set $i (i32.add (local.get $i) (i32.const 1)))
+
+                  (call $store_utf16 (local.get $j) (local.get $hex_value))
+                  (local.set $j 
+                    (i32.add 
+                      (local.get $j)
+                      (if (result i32) 
+                        (i32.gt_u (local.get $hex_value) (i32.const 0xFFFF))
+                        (then (i32.const 4))
+                        (else (i32.const 2))
+                      )
+                    )
+                  )
+                  (br $escape_done)
+                )
+              )
+            )
+            (br $loop)
+          )
+        )
+
+        (if (i32.lt_u (local.get $byte) (i32.const 0x80))
+          (then
+            ;; single-byte
+            (i32.store16 (local.get $j) (local.get $byte))
+            (local.set $j (i32.add (local.get $j) (i32.const 2)))
+            (local.set $i (i32.add (local.get $i) (i32.const 1)))
+          )
+          (else
+            (if (i32.eq (i32.and (local.get $byte) (i32.const 0xE0)) (i32.const 0xC0))
+              (then
+                ;; 2-byte sequence
+                (local.set $code_point 
+                  (i32.or 
+                    (i32.shl (i32.and (local.get $byte) (i32.const 0x1F)) (i32.const 6))
+                    (i32.and (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 0x3F))
+                  )
+                )
+                (call $store_utf16 (local.get $j) (local.get $code_point))
+                (local.set $j 
+                  (i32.add 
+                    (local.get $j)
+                    (if (result i32) 
+                      (i32.gt_u (local.get $code_point) (i32.const 0xFFFF))
+                      (then (i32.const 4))
+                      (else (i32.const 2))
+                    )
+                  )
+                )
+                (local.set $i (i32.add (local.get $i) (i32.const 2)))
+              )
+              (else
+                (if (i32.eq (i32.and (local.get $byte) (i32.const 0xF0)) (i32.const 0xE0))
+                  (then
+                    ;; 3-byte sequence
+                    (local.set $code_point
+                      (i32.or
+                        (i32.or
+                          (i32.shl (i32.and (local.get $byte) (i32.const 0x0F)) (i32.const 12))
+                          (i32.shl (i32.and (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 0x3F)) (i32.const 6))
+                        )
+                        (i32.and (i32.load8_u (i32.add (local.get $i) (i32.const 2))) (i32.const 0x3F))
+                      )
+                    )
+                    (call $store_utf16 (local.get $j) (local.get $code_point))
+                    (local.set $j
+                      (i32.add 
+                        (local.get $j)
+                        (if (result i32) 
+                          (i32.gt_u (local.get $code_point) (i32.const 0xFFFF))
+                          (then (i32.const 4))
+                          (else (i32.const 2))
+                        )
+                      )
+                    )
+                    (local.set $i (i32.add (local.get $i) (i32.const 3)))
+                  )
+                  (else
+                    (if (i32.eq (i32.and (local.get $byte) (i32.const 0xF8)) (i32.const 0xF0))
+                      (then
+                        ;; 4-byte sequence
+                        (local.set $code_point
+                          (i32.or
+                            (i32.or
+                              (i32.or
+                                (i32.shl (i32.and (local.get $byte) (i32.const 0x07)) (i32.const 18))
+                                (i32.shl (i32.and (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 0x3F)) (i32.const 12))
+                              )
+                              (i32.shl (i32.and (i32.load8_u (i32.add (local.get $i) (i32.const 2))) (i32.const 0x3F)) (i32.const 6))
+                            )
+                            (i32.and (i32.load8_u (i32.add (local.get $i) (i32.const 3))) (i32.const 0x3F))
+                          )
+                        )
+                        (call $store_utf16 (local.get $j) (local.get $code_point))
+                        (local.set $j
+                          (i32.add 
+                            (local.get $j)
+                            (if (result i32) 
+                              (i32.gt_u (local.get $code_point) (i32.const 0xFFFF))
+                              (then (i32.const 4))
+                              (else (i32.const 2))
+                            )
+                          )
+                        )
+                        (local.set $i (i32.add (local.get $i) (i32.const 4)))
+                      )
+                      (else
+                        ;; invalid, skip byte
+                        (local.set $i (i32.add (local.get $i) (i32.const 1)))
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+        (br $loop)
+      )
+    )
+  )
+
+  (func $hex_to_value (param $char i32) (result i32)
+    (local $value i32)
+    (local.set $value (i32.const -1))
+
+    (if (i32.and (i32.ge_u (local.get $char) (i32.const 0x30)) (i32.le_u (local.get $char) (i32.const 0x39)))
+      (then (local.set $value (i32.sub (local.get $char) (i32.const 0x30))))
+    )
+    (if (i32.and (i32.ge_u (local.get $char) (i32.const 0x41)) (i32.le_u (local.get $char) (i32.const 0x46)))
+      (then (local.set $value (i32.add (i32.sub (local.get $char) (i32.const 0x41)) (i32.const 10))))
+    )
+    (if (i32.and (i32.ge_u (local.get $char) (i32.const 0x61)) (i32.le_u (local.get $char) (i32.const 0x66)))
+      (then (local.set $value (i32.add (i32.sub (local.get $char) (i32.const 0x61)) (i32.const 10))))
+    )
+
+    (return (local.get $value))
+  )
+
+  (func $store_utf16 (param $offset i32) (param $code_point i32)
+    (if (i32.gt_u (local.get $code_point) (i32.const 0xFFFF))
+      (then
+        (local.set $code_point (i32.sub (local.get $code_point) (i32.const 0x10000)))
+        (i32.store16 (local.get $offset) 
+          (i32.or (i32.const 0xD800) 
+            (i32.shr_u (local.get $code_point) (i32.const 10))
+          )
+        )
+        (i32.store16 (i32.add (local.get $offset) (i32.const 2))
+          (i32.or (i32.const 0xDC00)
+            (i32.and (local.get $code_point) (i32.const 0x3FF))
+          )
+        )
+      )
+      (else
+        (i32.store16 (local.get $offset) (local.get $code_point))
+      )
+    )
+  )
+
   (func $rotate_r (param $value i32) (param $offset i32) (result i32)
     (i32.or
       (i32.shr_u (local.get $value) (local.get $offset))
