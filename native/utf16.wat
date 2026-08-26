@@ -412,14 +412,11 @@
             ;; double quotes
             (if (i8x16.bitmask (i8x16.eq (local.get $temp_v128) (local.get $quote_vec)))
               (then 
-                (if (i32.ge_s
-                    (local.tee $temp 
-                      (call $find_unescaped_quote 
-                        (local.get $i) 
-                        (i32.add 
-                          (local.get $i) 
-                          (local.get $byte_count))))
-                    (i32.const 0))
+                (if 
+                  (i32.ge_s
+                    (local.tee $temp (call $find_unescaped_quote (local.get $i) (i32.add (local.get $i) (local.get $byte_count))))
+                    (i32.const 0)
+                  )
                   (then
                     (local.set $byte_count (i32.sub (local.get $i) (local.get $temp)))
 
@@ -431,7 +428,10 @@
                       ))
 
                     (return (local.get $temp))
-                  ))))
+                  )
+                )
+              )
+            )
     
             (if (i32.eqz (local.get $byte_count)) (then (return (local.get $i))))
 
