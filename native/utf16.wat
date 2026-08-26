@@ -2,6 +2,7 @@
   (import "env" "memory" (memory 1 128))
   (export "memory" (memory 0))
 
+  (global $has_escaped (mut i32) (i32.const 0))
   (global $ascii_only (mut i32) (i32.const 0))
   (global $dq_index (mut i32) (i32.const -1))
   (global $utf16_length (mut i32) (i32.const 0))
@@ -336,6 +337,12 @@
     
     (local.set $i (i32.const 0))
     
+    (if (global.get $has_escaped)
+      (then
+        (call $store_sequentially (local.get $i) (local.get $len) (local.get $target))
+      )
+    )
+    
     (block $extend_ascii_block
       (loop $extend_ascii_simd
         ;; i + 16 < length
@@ -403,7 +410,9 @@
                 (i8x16.ge_s
                   (local.tee $data_vec (v128.load (local.get $i)))
                   (i8x16.splat (i32.const 0))
-                )))
+                )
+              )
+            )
 
             (local.set $byte_count (i32.ctz (i32.xor (local.get $byte) (i32.const 0xFFFF))))
 
@@ -417,6 +426,12 @@
             (local.set $temp (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec))))
             (local.set $temp_mask (i32.and (local.get $temp) (i32.shl (local.get $temp) (i32.const 1))))
             (local.set $temp_mask (i32.and (local.get $temp) (i32.xor (local.get $temp_mask) (i32.const -1))))
+
+            (if (local.get $temp_mask)
+              (then
+                (global.set $has_escaped (i32.const 1))
+              )
+            )
 
             (if (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec)))
               (then 
