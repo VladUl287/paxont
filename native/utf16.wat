@@ -377,25 +377,6 @@
     )
   )
 
-  (func $decode_8_two_byte_sequences (param $input v128) (result v128)  
-    (local $leads v128)
-    (local $conts v128)
-  
-    (local.set $leads
-      (v128.and (local.get $input) (v128.const i16x8 0x001F 0x001F 0x001F 0x001F 0x001F 0x001F 0x001F 0x001F)))
-  
-    (local.set $leads
-      (i16x8.shl (local.get $leads) (i32.const 6)))
-  
-    (local.set $conts
-      (i16x8.shr_u (local.get $input) (i32.const 8)))
-  
-    (local.set $conts
-      (v128.and (local.get $conts) (v128.const i16x8 0x003F 0x003F 0x003F 0x003F 0x003F 0x003F 0x003F 0x003F)))
-  
-    (v128.or (local.get $leads) (local.get $conts))
-  )
-
   (func $parse_ascii_prefix (param $i i32) (param $len i32) (param $target i32) (result i32)
     (local $temp i32)
     (local $byte_count i32)
@@ -882,6 +863,25 @@
         (i32.store16 (local.get $offset) (local.get $code_point))
       )
     )
+  )
+
+  (func $decode_8_two_byte_sequences (param $input v128) (result v128)  
+    (local $leads v128)
+    (local $conts v128)
+  
+    (local.set $leads
+      (v128.and (local.get $input) (v128.const i16x8 0x001F 0x001F 0x001F 0x001F 0x001F 0x001F 0x001F 0x001F)))
+  
+    (local.set $leads
+      (i16x8.shl (local.get $leads) (i32.const 6)))
+  
+    (local.set $conts
+      (i16x8.shr_u (local.get $input) (i32.const 8)))
+  
+    (local.set $conts
+      (v128.and (local.get $conts) (v128.const i16x8 0x003F 0x003F 0x003F 0x003F 0x003F 0x003F 0x003F 0x003F)))
+  
+    (v128.or (local.get $leads) (local.get $conts))
   )
 
   (func $rotate_r (param $value i32) (param $offset i32) (result i32)
