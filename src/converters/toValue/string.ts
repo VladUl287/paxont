@@ -233,7 +233,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
                     const partial = Number(writable)
                     const max_length = (bytesLength - i) * 3
-                    if (ensureMemory(memory, max_length, setView)) {
+                    if (max_length < memoryView.length || ensureMemory(memory, max_length, setView)) {
                         let start = 0
 
                         if (cacheView !== b) {
@@ -381,7 +381,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                 const { bytes: b, bytesLength, writable, raw } = reader
 
                 const partial = Number(writable)
-                if (ensureMemory(memory, bytesLength, setView)) {
+                if (bytesLength < memoryView.length || ensureMemory(memory, bytesLength, setView)) {
                     let start = 0
 
                     if (cacheView !== b) {
