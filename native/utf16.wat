@@ -441,7 +441,11 @@
         (if (i32.eq (local.get $byte) (i32.const 92))
           (then
             ;; check escaped or not
+            (if (i32.eqz (local.get $extend)) 
+              (then (local.set $src (local.get $start)))
+            )
             (local.set $temp_mask (i32.const 1))
+            (local.set $extend (i32.const 1))
           )
         )
 
