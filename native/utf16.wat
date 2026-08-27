@@ -390,7 +390,12 @@
                   (then
                     (if (local.get $temp_mask)
                       (then
-                        (call $store_sequentially (local.get $src) (i32.add (local.get $src) (local.get $byte_count)) (local.get $target))
+                        (call $store_sequentially 
+                          (local.get $src) 
+                          (i32.add (local.get $src) (local.get $byte_count)) 
+                          (local.get $len) 
+                          (local.get $target)
+                        )
                       )
                       (else
                         (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $data_vec)))
@@ -411,7 +416,12 @@
           (then
             (if (local.get $temp_mask)
               (then
-                (call $store_sequentially (local.get $src) (i32.add (local.get $src) (local.get $byte_count)) (local.get $target))
+                (call $store_sequentially 
+                  (local.get $src) 
+                  (i32.add (local.get $src) (local.get $byte_count)) 
+                  (local.get $len) 
+                  (local.get $target)
+                )
               )
               (else
                 (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $data_vec)))
@@ -455,7 +465,12 @@
               (then
                 (if (i32.and (local.get $extend) (local.get $temp_mask))
                   (then
-                    (call $store_sequentially (local.get $src) (i32.add (local.get $src) (i32.const 1)) (local.get $target))
+                    (call $store_sequentially 
+                      (local.get $src) 
+                      (i32.add (local.get $src) (i32.const 1)) 
+                      (local.get $len) 
+                      (local.get $target)
+                    )
                   )
                   (else
                     (i32.store16 (local.get $target) (local.get $byte))
@@ -470,7 +485,12 @@
 
         (if (i32.and (local.get $extend) (local.get $temp_mask))
           (then
-            (call $store_sequentially (local.get $src) (i32.add (local.get $src) (i32.const 1)) (local.get $target))
+            (call $store_sequentially 
+              (local.get $src) 
+              (i32.add (local.get $src) (i32.const 1)) 
+              (local.get $len) 
+              (local.get $target)
+            )
           )
           (else
             (i32.store16 (local.get $target) (local.get $byte))
@@ -544,7 +564,7 @@
     (return (i32.const -1))
   )
  
-  (func $store_sequentially (param $start i32) (param $end i32) (param $target i32)
+  (func $store_sequentially (param $start i32) (param $end i32) (param $len i32) (param $target i32)
     (local $i i32)
     (local $byte i32)
     (local $j i32)
