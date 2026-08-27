@@ -450,20 +450,20 @@
                   )
                   (then
                     (local.set $byte_count (i32.sub (local.get $i) (local.get $temp)))
-
                     (if (i32.gt_s (local.get $target) (i32.const -1))
                       (then
                         (if (local.get $temp_mask)
                           (then
                             (call $store_sequentially (local.get $i) (i32.add (local.get $i) (local.get $byte_count)) (local.get $target))
                           )
+                          (else
+                            (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $data_vec)))
+                            (v128.store (i32.add (local.get $target) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $data_vec)))
+                            (local.set $target (i32.add (local.get $target) (i32.shl (local.get $byte_count) (i32.const 1))))
+                          )
                         )
-                        (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $data_vec)))
-                        (v128.store (i32.add (local.get $target) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $data_vec)))
-                        (local.set $target (i32.add (local.get $target) (i32.shl (local.get $byte_count) (i32.const 1))))
                       )
                     )
-
                     (return (local.get $temp))
                   )
                 )
@@ -476,10 +476,12 @@
                   (then
                     (call $store_sequentially (local.get $i) (i32.add (local.get $i) (local.get $byte_count)) (local.get $target))
                   )
+                  (else
+                    (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $data_vec)))
+                    (v128.store (i32.add (local.get $target) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $data_vec)))
+                    (local.set $target (i32.add (local.get $target) (i32.shl (local.get $byte_count) (i32.const 1))))
+                  )
                 )
-                (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $data_vec)))
-                (v128.store (i32.add (local.get $target) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $data_vec)))
-                (local.set $target (i32.add (local.get $target) (i32.shl (local.get $byte_count) (i32.const 1))))
               )
             )
           
