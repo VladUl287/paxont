@@ -1,6 +1,6 @@
 (module
   (import "env" "memory" (memory 1 128))
-  (export "memory" (memory 0))
+  (import "utils" "find_quote" (func $find_quote (param $i i32) (param $start i32) (param $end i32) (result i32)))
 
   (global $ascii_only (mut i32) (i32.const 0))
   (global $dq_index (mut i32) (i32.const -1))
@@ -24,7 +24,10 @@
     (local $byte_mask i32)
     (local $trailing i32)
     (local $partialChar i32)
+    (local $start i32)
     
+    (local.set $start (local.get $i))
+
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
 
     (global.set $dq_index (i32.const -1))
@@ -230,7 +233,7 @@
           (then
             (if (i32.eq (local.get $temp) (i32.const 34)) 
               (then
-                (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $i) (local.get $i))) (i32.const 0))
+                (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
                   (then 
                     (global.set $utf16_length (local.get $utf16_ptr))
                     (return (local.get $temp)))
@@ -380,7 +383,7 @@
           (then 
             (if
               (i32.ge_s
-                (local.tee $temp (call $find_quote (local.get $src) (i32.add (local.get $src) (local.get $byte_count))))
+                (local.tee $temp (call $find_quote (local.get $src) (local.get $start) (i32.add (local.get $src) (local.get $byte_count))))
                 (i32.const 0)
               )
               (then
@@ -461,7 +464,7 @@
 
         (if (i32.eq (local.get $byte) (i32.const 34))
           (then
-            (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $src) (local.get $src))) (i32.const 0))
+            (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $src) (local.get $start) (local.get $src))) (i32.const 0))
               (then
                 (if (i32.and (local.get $extend) (local.get $temp_mask))
                   (then
@@ -506,64 +509,6 @@
     (return (local.get $src) (local.get $target))
   )
 
-  (func $find_quote (param $i i32) (param $len i32) (result i32)
-    (local $start i32)
-    (local $byte i32)
-    (local $j i32)
-    (local $is_escaped i32)
-    
-    (local.set $start (local.get $i))
-
-    (block $scan_done
-      (loop $scan_loop
-        (br_if $scan_done
-          (i32.gt_u (local.get $i) (local.get $len)))
-
-        (local.set $byte (i32.load8_u (local.get $i)))
-
-        ;; quote -> check if escaped
-        (if (i32.eq (local.get $byte) (i32.const 34))
-          (then
-            (local.set $j (local.get $i))
-            (local.set $is_escaped (i32.const 0))
-
-            ;; count consecutive backslashes before the quote
-            (block $backslash_loop
-              (loop $backslash
-                ;; j -= 1
-                (local.set $j (i32.sub (local.get $j) (i32.const 1)))
-
-                ;; if j < start
-                (br_if $backslash_loop
-                  (i32.lt_s (local.get $j) (local.get $start))
-                )
-
-                ;; stop if current byte is not a backslash
-                (br_if $backslash_loop
-                  (i32.ne (i32.load8_u (local.get $j)) (i32.const 92))
-                )
-
-                ;; is_escaped != is_escaped
-                (local.set $is_escaped (i32.eqz (local.get $is_escaped)))
-                (br $backslash)
-              )
-            )
-
-            ;; if not escaped, the prefix ends here
-            (if (i32.eqz (local.get $is_escaped))
-              (then 
-                (global.set $dq_index (local.get $i))
-                (return (local.get $i)))
-            )
-          )
-        )
-
-        (local.set $i (i32.add (local.get $i) (i32.const 1)))
-        (br $scan_loop)
-      ))
-    (return (i32.const -1))
-  )
- 
   (func $store_sequentially (param $start i32) (param $end i32) (param $len i32) (param $target i32)
     (local $i i32)
     (local $byte i32)
