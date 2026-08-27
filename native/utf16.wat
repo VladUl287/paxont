@@ -611,7 +611,7 @@
                 (then
                   (local.set $i (i32.add (local.get $i) (i32.const 1)))
 
-                  (call $parse_unicode_escape (local.get $i) (local.get $end))
+                  (call $parse_unicode_escape (local.get $i) (local.get $len))
                   (local.set $hex_value)
                   (local.set $i)
 
@@ -633,7 +633,7 @@
                         )
 
                         (local.set $i (i32.add (local.get $i) (i32.const 2)))
-                        (call $parse_unicode_escape (local.get $i) (local.get $end))
+                        (call $parse_unicode_escape (local.get $i) (local.get $len))
                         (local.set $hex_value)
                         (local.set $i)
 
