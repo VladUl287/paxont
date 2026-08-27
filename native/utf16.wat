@@ -37,8 +37,9 @@
     (call $parse_ascii (local.get $i) (local.get $len) (local.get $utf16_ptr) (i32.const -1))
     (local.set $i)
     (local.set $temp)
+    (global.set $dq_index)
 
-    (if (global.get $dq_index)
+    (if (i32.ge_s (global.get $dq_index) (i32.const 0))
       (then
         (global.set $ascii_only (i32.eq (local.get $utf16_ptr) (local.get $temp)))
         (global.set $utf16_length (local.get $temp))
@@ -55,6 +56,7 @@
             (call $parse_ascii (local.get $i) (local.get $len) (local.get $utf16_ptr) (i32.const 1))
             (local.set $i)
             (local.set $utf16_ptr)
+            (global.set $dq_index)
 
             (if (i32.ge_s (global.get $dq_index) (i32.const 0))
               (then
@@ -323,7 +325,7 @@
     (return (i32.const -1))
   )
   
-  (func $parse_ascii (param $src i32) (param $len i32) (param $target i32) (param $extend i32) (result i32 i32)
+  (func $parse_ascii (param $src i32) (param $len i32) (param $target i32) (param $extend i32) (result i32 i32 i32)
     (local $temp i32)
     (local $temp_mask i32)
     (local $byte_count i32)
@@ -360,7 +362,7 @@
         )
 
         (if (i32.eqz (local.get $byte_count)) 
-          (then (return (local.get $src) (local.get $target)))
+          (then (return (local.get $src) (local.get $target) (i32.const -1)))
         )
         (if (i32.eq (local.get $byte_count) (i32.const 32))
           (then (local.set $byte_count (i32.const 16)))
@@ -409,7 +411,7 @@
                   )
                 )
                 
-                (return (local.get $temp) (local.get $target))
+                (return (local.get $temp) (local.get $target) (local.get $temp))
               )
             )
           )
@@ -438,7 +440,7 @@
         (local.set $src (i32.add (local.get $src) (local.get $byte_count)))
             
         (br_if $loop (i32.eq (local.get $byte_count) (i32.const 16)))
-        (return (local.get $src) (local.get $target))
+        (return (local.get $src) (local.get $target) (i32.const -1))
       )
     )
 
@@ -449,7 +451,7 @@
         (local.set $byte (i32.load8_u (local.get $src)))
   
         (if (i32.ge_u (local.get $byte) (i32.const 128))
-          (then (return (local.get $src) (local.get $target)))
+          (then (return (local.get $src) (local.get $target) (i32.const -1)))
         )
         (if (i32.eq (local.get $byte) (i32.const 92))
           (then
@@ -480,7 +482,7 @@
                     (local.set $target (i32.add (local.get $target) (i32.const 2)))
                   )
                 )
-                (return (local.get $temp) (local.get $target)) 
+                (return (local.get $temp) (local.get $target) (local.get $temp)) 
               )
             )
           )
@@ -506,7 +508,7 @@
       )
     )
 
-    (return (local.get $src) (local.get $target))
+    (return (local.get $src) (local.get $target) (i32.const -1))
   )
 
   (func $store_sequentially (param $start i32) (param $end i32) (param $len i32) (param $target i32)
