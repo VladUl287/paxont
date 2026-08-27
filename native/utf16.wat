@@ -35,9 +35,9 @@
     (global.set $utf16_length (i32.const 0))
 
     (call $parse_ascii (local.get $i) (local.get $len) (local.get $utf16_ptr) (i32.const -1))
-    (local.set $i)
-    (local.set $temp)
     (global.set $dq_index)
+    (local.set $temp)
+    (local.set $i)
 
     (if (i32.ge_s (global.get $dq_index) (i32.const 0))
       (then
@@ -54,9 +54,9 @@
         (if (i32.lt_u (i32.load8_u (local.get $i)) (i32.const 128)) 
           (then
             (call $parse_ascii (local.get $i) (local.get $len) (local.get $utf16_ptr) (i32.const 1))
-            (local.set $i)
-            (local.set $utf16_ptr)
             (global.set $dq_index)
+            (local.set $utf16_ptr)
+            (local.set $i)
 
             (if (i32.ge_s (global.get $dq_index) (i32.const 0))
               (then
@@ -398,11 +398,11 @@
                         (call $store_sequentially 
                           (local.get $i) 
                           (i32.add (local.get $i) (local.get $byte_count)) 
-                          (local.get $len) 
                           (local.get $target)
+                          (local.get $len)
                         )
-                        (local.set $i)
                         (local.set $target)
+                        (local.set $i)
                       )
                       (else
                         (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $data_vec)))
@@ -426,11 +426,11 @@
                 (call $store_sequentially 
                   (local.get $i) 
                   (i32.add (local.get $i) (local.get $byte_count)) 
-                  (local.get $len) 
                   (local.get $target)
+                  (local.get $len) 
                 )
-                (local.set $i)
                 (local.set $target)
+                (local.set $i)
               )
               (else
                 (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $data_vec)))
@@ -480,8 +480,8 @@
                       (local.get $len) 
                       (local.get $target)
                     )
-                    (local.set $i)
                     (local.set $target)
+                    (local.set $i)
                   )
                   (else
                     (i32.store16 (local.get $target) (local.get $byte))
@@ -502,8 +502,8 @@
               (local.get $len) 
               (local.get $target)
             )
-            (local.set $i)
             (local.set $target)
+            (local.set $i)
           )
           (else
             (i32.store16 (local.get $target) (local.get $byte))
