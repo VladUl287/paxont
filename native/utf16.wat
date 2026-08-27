@@ -582,11 +582,11 @@
 
         (if (i32.eq (local.get $byte) (i32.const 0x5C))  ;; '\'
           (then
-            (local.set $i (i32.add (local.get $i) (i32.const 1)))
-
             (br_if $done
-              (i32.ge_u (local.get $i) (local.get $len))
+              (i32.ge_u (i32.add (local.get $i) (i32.const 1)) (local.get $len))
             )
+
+            (local.set $i (i32.add (local.get $i) (i32.const 1)))
 
             (local.set $byte (i32.load8_u (local.get $i)))
 
@@ -734,6 +734,8 @@
                   (br $escape_done)
                 )
               )
+              
+              ;; unknown escape
             )
             (br $loop)
           )
