@@ -401,6 +401,8 @@
                           (local.get $len) 
                           (local.get $target)
                         )
+                        (local.set $i)
+                        (local.set $target)
                       )
                       (else
                         (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $data_vec)))
@@ -427,6 +429,8 @@
                   (local.get $len) 
                   (local.get $target)
                 )
+                (local.set $i)
+                (local.set $target)
               )
               (else
                 (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $data_vec)))
@@ -476,6 +480,8 @@
                       (local.get $len) 
                       (local.get $target)
                     )
+                    (local.set $i)
+                    (local.set $target)
                   )
                   (else
                     (i32.store16 (local.get $target) (local.get $byte))
@@ -496,6 +502,8 @@
               (local.get $len) 
               (local.get $target)
             )
+            (local.set $i)
+            (local.set $target)
           )
           (else
             (i32.store16 (local.get $target) (local.get $byte))
@@ -511,7 +519,7 @@
     (return (local.get $i) (local.get $target) (i32.const -1))
   )
 
-  (func $store_sequentially (param $start i32) (param $end i32) (param $len i32) (param $target i32)
+  (func $store_sequentially (param $start i32) (param $end i32) (param $len i32) (param $target i32) (result i32 i32)
     (local $i i32)
     (local $byte i32)
     (local $j i32)
@@ -788,6 +796,8 @@
         (br $loop)
       )
     )
+
+    (return (local.get $i) (local.get $j))
   )
 
   (func $parse_unicode_escape (param $pos i32) (param $end i32) (result i32 i32)
