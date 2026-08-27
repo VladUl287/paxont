@@ -436,13 +436,13 @@
                 (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $data_vec)))
                 (v128.store (i32.add (local.get $target) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $data_vec)))
                 (local.set $target (i32.add (local.get $target) (i32.shl (local.get $byte_count) (i32.const 1))))
+                (local.set $i (i32.add (local.get $i) (local.get $byte_count)))
               )
             )
           )
+          (else (local.set $i (i32.add (local.get $i) (local.get $byte_count))))
         )
-          
-        (local.set $i (i32.add (local.get $i) (local.get $byte_count)))
-            
+        
         (br_if $loop (i32.eq (local.get $byte_count) (i32.const 16)))
         (return (local.get $i) (local.get $target) (i32.const -1))
       )
@@ -457,26 +457,28 @@
         (if (i32.ge_u (local.get $byte) (i32.const 128))
           (then (return (local.get $i) (local.get $target) (i32.const -1)))
         )
-        (if (i32.eq (local.get $byte) (i32.const 92))
-          (then
-            ;; check escaped or not
-            (if (i32.eqz (local.get $extend)) 
-              (then 
-                (local.set $i (local.get $start))
-                (local.set $extend (i32.const 1))
-                (local.set $temp_mask (i32.const 0))
-                (br $tail_loop)
-              )
-            )
-            (local.set $temp_mask (i32.const 1))
-          )
-        )
 
         (if (i32.eq (local.get $byte) (i32.const 34))
           (then
             (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
               (then (return (local.get $temp) (local.get $target) (local.get $temp)))
             )
+          )
+        )
+
+        (local.set $temp_mask (i32.const 0))
+
+        (if (i32.eq (local.get $byte) (i32.const 92))
+          (then
+            ;; TODO: check escaped or not
+            (if (i32.eqz (local.get $extend)) 
+              (then 
+                (local.set $i (local.get $start))
+                (local.set $extend (i32.const 1))
+                (br $tail_loop)
+              )
+            )
+            (local.set $temp_mask (i32.const 1))
           )
         )
 
@@ -492,6 +494,7 @@
                 )
                 (local.set $target)
                 (local.set $i)
+                (br $tail_loop)
               )
               (else
                 (i32.store16 (local.get $target) (local.get $byte))
