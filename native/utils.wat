@@ -1,7 +1,7 @@
 (module
   (import "env" "memory" (memory 1 128))
 
-  (func $find_quote (param $i i32) (param $start i32) (param $end i32) (result i32)
+  (func (export "find_quote") (param $i i32) (param $start i32) (param $end i32) (result i32)
     (local $value i32)
     (local $j i32)
     (local $is_escaped i32)
