@@ -43,7 +43,20 @@
       (then
         (global.set $ascii_only (i32.eq (local.get $utf16_ptr) (local.get $temp)))
         (global.set $utf16_length (local.get $temp))
-        (return (global.get $dq_index))
+        (return (local.get $i))
+      )
+    )
+
+    (if (i32.eq (local.get $i) (local.get $len))
+      (then
+        (if (local.get $partial)
+          (then
+            (global.set $ascii_only (i32.eq (local.get $utf16_ptr) (local.get $temp)))
+            (global.set $utf16_length (local.get $temp))
+            (return (local.get $i))
+          )
+          (else (return (i32.const -1)))
+        )
       )
     )
 
