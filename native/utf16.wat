@@ -34,7 +34,7 @@
     (global.set $ascii_only (i32.const 0))
     (global.set $utf16_length (i32.const 0))
 
-    (call $parse_ascii (local.get $i) (local.get $len) (local.get $utf16_ptr) (i32.const -1))
+    (call $parse_ascii (local.get $i) (local.get $len) (local.get $utf16_ptr) (i32.const 0))
     (global.set $dq_index)
     (local.set $temp)
     (local.set $i)
