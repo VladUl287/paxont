@@ -461,53 +461,43 @@
           (then
             ;; check escaped or not
             (if (i32.eqz (local.get $extend)) 
-              (then (local.set $i (local.get $start)))
+              (then 
+                (local.set $i (local.get $start))
+                (local.set $extend (i32.const 1))
+                (local.set $temp_mask (i32.const 0))
+                (br $tail_loop)
+              )
             )
             (local.set $temp_mask (i32.const 1))
-            (local.set $extend (i32.const 1))
           )
         )
 
         (if (i32.eq (local.get $byte) (i32.const 34))
           (then
             (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
-              (then
-                (if (i32.and (local.get $extend) (local.get $temp_mask))
-                  (then
-                    (call $store_sequentially 
-                      (local.get $i) 
-                      (i32.add (local.get $i) (i32.const 1)) 
-                      (local.get $len) 
-                      (local.get $target)
-                    )
-                    (local.set $target)
-                    (local.set $i)
-                  )
-                  (else
-                    (i32.store16 (local.get $target) (local.get $byte))
-                    (local.set $target (i32.add (local.get $target) (i32.const 2)))
-                  )
-                )
-                (return (local.get $temp) (local.get $target) (local.get $temp)) 
-              )
+              (then (return (local.get $temp) (local.get $target) (local.get $temp)))
             )
           )
         )
 
-        (if (i32.and (local.get $extend) (local.get $temp_mask))
+        (if (local.get $extend)
           (then
-            (call $store_sequentially 
-              (local.get $i) 
-              (i32.add (local.get $i) (i32.const 1)) 
-              (local.get $len) 
-              (local.get $target)
+            (if (local.get $temp_mask)
+              (then
+                (call $store_sequentially 
+                  (local.get $i) 
+                  (i32.add (local.get $i) (i32.const 1)) 
+                  (local.get $len) 
+                  (local.get $target)
+                )
+                (local.set $target)
+                (local.set $i)
+              )
+              (else
+                (i32.store16 (local.get $target) (local.get $byte))
+                (local.set $target (i32.add (local.get $target) (i32.const 2)))
+              )
             )
-            (local.set $target)
-            (local.set $i)
-          )
-          (else
-            (i32.store16 (local.get $target) (local.get $byte))
-            (local.set $target (i32.add (local.get $target) (i32.const 2)))
           )
         )
 
@@ -543,7 +533,7 @@
             (local.set $i (i32.add (local.get $i) (i32.const 1)))
 
             (br_if $done
-              (i32.ge_u (local.get $i) (local.get $end))
+              (i32.ge_u (local.get $i) (local.get $len))
             )
 
             (local.set $byte (i32.load8_u (local.get $i)))
