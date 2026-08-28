@@ -1,6 +1,7 @@
 (module
   (import "env" "memory" (memory 1 128))
   (import "utils" "find_quote" (func $find_quote (param $i i32) (param $start i32) (param $end i32) (result i32)))
+  (import "store" "write" (func $write (param $start i32) (param $end i32) (param $len i32) (param $target i32) (param $unsafe i32) (result i32 i32)))
   
   (func $parse_ascii (param $i i32) (param $src i32) (param $len i32) (param $target i32) 
     (param $extend i32) (param $partial i32) (result i32 i32 i32 i32)
@@ -86,23 +87,15 @@
 
                 (if (local.get $extend)
                   (then
-                    (if (local.get $temp_mask)
-                      (then
-                        (call $store_sequentially 
-                          (local.get $i) 
-                          (i32.add (local.get $i) (local.get $byte_count)) 
-                          (local.get $len)
-                          (local.get $target)
-                        )
-                        (local.set $target)
-                        (local.set $i)
-                      )
-                      (else
-                        (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $data_vec)))
-                        (v128.store (i32.add (local.get $target) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $data_vec)))
-                        (local.set $target (i32.add (local.get $target) (i32.shl (local.get $byte_count) (i32.const 1))))
-                      )
+                    (call $write 
+                      (local.get $i) 
+                      (i32.add (local.get $i) (local.get $byte_count)) 
+                      (local.get $len)
+                      (local.get $target) 
+                      (i32.eqz (local.get $temp_mask))
                     )
+                    (local.set $target)
+                    (local.set $i)
                   )
                 )
                 
@@ -114,24 +107,15 @@
 
         (if (local.get $extend)
           (then
-            (if (local.get $temp_mask)
-              (then
-                (call $store_sequentially 
-                  (local.get $i) 
-                  (i32.add (local.get $i) (local.get $byte_count)) 
-                  (local.get $len) 
-                  (local.get $target)
-                )
-                (local.set $target)
-                (local.set $i)
-              )
-              (else
-                (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $data_vec)))
-                (v128.store (i32.add (local.get $target) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $data_vec)))
-                (local.set $target (i32.add (local.get $target) (i32.shl (local.get $byte_count) (i32.const 1))))
-                (local.set $i (i32.add (local.get $i) (local.get $byte_count)))
-              )
+            (call $write 
+              (local.get $i) 
+              (i32.add (local.get $i) (local.get $byte_count)) 
+              (local.get $len)
+              (local.get $target)
+              (i32.eqz (local.get $temp_mask))
             )
+            (local.set $target)
+            (local.set $i)
           )
           (else (local.set $i (i32.add (local.get $i) (local.get $byte_count))))
         )
@@ -160,8 +144,16 @@
           (then
             (if (i32.eqz (local.get $extend))
               (then 
-                (return (call $parse_ascii (local.get $start) (local.get $src) (local.get $len) 
-                  (local.get $start_target) (local.get $partial) (i32.const 1)))
+                (return 
+                  (call $parse_ascii
+                    (local.get $start)
+                    (local.get $src)
+                    (local.get $len)
+                    (local.get $start_target)
+                    (local.get $partial)
+                    (i32.const 1)
+                  )
+                )
               )
               (else (return (local.get $i) (local.get $target) (i32.const -1) (i32.const 0)))
             )
@@ -194,30 +186,26 @@
 
         (if (local.get $extend)
           (then
-            (if (local.get $temp_mask)
+            (call $write
+              (local.get $i) 
+              (i32.add (local.get $i) (local.get $byte_count)) 
+              (local.get $len)
+              (local.get $target) 
+              (i32.eqz (local.get $temp_mask))
+            )
+            (local.set $target)
+            (local.set $i)
+            
+            (if (i32.eq (local.get $i) (local.get $byte))
               (then
-                (local.set $byte (local.get $i))
-                (call $store_sequentially 
-                  (local.get $i) (i32.add (local.get $i) (i32.const 1))
-                  (local.get $len) (local.get $target)
+                (if (local.get $partial)
+                  (then (return (local.get $byte) (local.get $target) (i32.const -1) (i32.const 1)))
+                  (else (return (i32.const -1) (i32.const -1) (i32.const -1) (i32.const 0)))
                 )
-                (local.set $target)
-                (local.set $i)
-                (if (i32.eq (local.get $i) (local.get $byte))
-                  (then
-                    (if (local.get $partial)
-                      (then (return (local.get $byte) (local.get $target) (i32.const -1) (i32.const 1)))
-                      (else (return (i32.const -1) (i32.const -1) (i32.const -1) (i32.const 0)))
-                    )
-                  )
-                )
-                (br $tail_loop)
-              )
-              (else
-                (i32.store16 (local.get $target) (local.get $byte))
-                (local.set $target (i32.add (local.get $target) (i32.const 2)))
               )
             )
+
+            (br $tail_loop)
           )
         )
 
