@@ -35,7 +35,7 @@
         (local.set $data_vec (v128.load (local.get $i)))
 
         (local.set $temp_mask (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec))))
-        (local.set $escaped_mask (i32.and (local.get $temp_mask) (i32.shr_u (local.get $temp) (i32.const 1))))
+        (local.set $escaped_mask (i32.and (local.get $temp_mask) (i32.shr_u (local.get $temp_mask) (i32.const 1))))
 
         ;; if has escaped
         (if (i32.and (local.get $temp_mask) (i32.xor (local.get $escaped_mask) (i32.const -1)))
