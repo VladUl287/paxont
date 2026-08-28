@@ -25,6 +25,7 @@
     (local $trailing i32)
     (local $partialChar i32)
     (local $start i32)
+    (local $finished i32)
     
     (local.set $start (local.get $i))
 
@@ -34,11 +35,16 @@
     (global.set $ascii_only (i32.const 0))
     (global.set $utf16_length (i32.const 0))
 
-    (call $parse_ascii (local.get $i) (local.get $start) (local.get $len) (local.get $utf16_ptr) (i32.const 0))
+    (call $parse_ascii (local.get $i) (local.get $start) (local.get $len) (local.get $utf16_ptr) (i32.const 0) (local.get $partial))
+    (local.set $finished)
     (global.set $dq_index)
     (local.set $temp)
     (local.set $i)
 
+    (if (i32.eq (local.get $i) (i32.const -1))
+      (then (return (i32.const -1)))
+    )
+    
     (if (i32.ge_s (global.get $dq_index) (i32.const 0))
       (then
         (global.set $ascii_only (i32.eq (local.get $utf16_ptr) (local.get $temp)))
@@ -47,7 +53,7 @@
       )
     )
 
-    (if (i32.eq (local.get $i) (local.get $len))
+    (if (i32.or (i32.eq (local.get $i) (local.get $len)) (local.get $finished))
       (then
         (if (local.get $partial)
           (then
@@ -66,17 +72,36 @@
       (loop $non_ascii_loop
         (if (i32.lt_u (i32.load8_u (local.get $i)) (i32.const 128)) 
           (then
-            (call $parse_ascii (local.get $i) (local.get $start) (local.get $len) (local.get $utf16_ptr) (i32.const 1))
+            (call $parse_ascii (local.get $i) (local.get $start) (local.get $len) (local.get $utf16_ptr) (i32.const 1) (local.get $partial))
+            (local.set $finished)
             (global.set $dq_index)
-            (local.set $utf16_ptr)
+            (local.set $temp)
             (local.set $i)
+
+            (if (i32.eq (local.get $i) (i32.const -1))
+              (then (return (i32.const -1)))
+            )
 
             (if (i32.ge_s (global.get $dq_index) (i32.const 0))
               (then
-                (global.set $utf16_length (local.get $utf16_ptr))
+                (global.set $utf16_length (local.get $temp))
                 (return (global.get $dq_index))
               )
             )
+
+            (if (i32.or (i32.eq (local.get $i) (local.get $len)) (local.get $finished))
+              (then
+                (if (local.get $partial)
+                  (then
+                    (global.set $utf16_length (local.get $temp))
+                    (return (local.get $i))
+                  )
+                  (else (return (i32.const -1)))
+                )
+              )
+            )
+
+            (local.set $utf16_ptr (local.get $temp))
           )
         )
 
@@ -343,7 +368,8 @@
     (return (i32.const -1))
   )
   
-  (func $parse_ascii (param $i i32) (param $src i32) (param $len i32) (param $target i32) (param $extend i32) (result i32 i32 i32)
+  (func $parse_ascii (param $i i32) (param $src i32) (param $len i32) (param $target i32) 
+    (param $extend i32) (param $partial i32) (result i32 i32 i32 i32)
     (local $temp i32)
     (local $temp_mask i32)
     (local $byte_count i32)
@@ -390,7 +416,7 @@
                 (br $loop)
               )
             )
-            (return (local.get $i) (local.get $target) (i32.const -1))
+            (return (local.get $i) (local.get $target) (i32.const -1) (i32.const 0))
           )
         )
         (if (i32.eq (local.get $byte_count) (i32.const 32))
@@ -431,8 +457,8 @@
                         (call $store_sequentially 
                           (local.get $i) 
                           (i32.add (local.get $i) (local.get $byte_count)) 
-                          (local.get $target)
                           (local.get $len)
+                          (local.get $target)
                         )
                         (local.set $target)
                         (local.set $i)
@@ -446,7 +472,7 @@
                   )
                 )
                 
-                (return (local.get $temp) (local.get $target) (local.get $temp))
+                (return (local.get $temp) (local.get $target) (local.get $temp) (i32.const 0))
               )
             )
           )
@@ -459,8 +485,8 @@
                 (call $store_sequentially 
                   (local.get $i) 
                   (i32.add (local.get $i) (local.get $byte_count)) 
-                  (local.get $target)
                   (local.get $len) 
+                  (local.get $target)
                 )
                 (local.set $target)
                 (local.set $i)
@@ -486,7 +512,7 @@
           )
         )
 
-        (return (local.get $i) (local.get $target) (i32.const -1))
+        (return (local.get $i) (local.get $target) (i32.const -1) (i32.const 0))
       )
     )
 
@@ -500,9 +526,10 @@
           (then
             (if (i32.eqz (local.get $extend))
               (then 
-                (return (call $parse_ascii (local.get $start) (local.get $src) (local.get $len) (local.get $start_target) (i32.const 1)))
+                (return (call $parse_ascii (local.get $start) (local.get $src) (local.get $len) 
+                  (local.get $start_target) (local.get $partial) (i32.const 1)))
               )
-              (else (return (local.get $i) (local.get $target) (i32.const -1)))
+              (else (return (local.get $i) (local.get $target) (i32.const -1) (i32.const 0)))
             )
           )
         )
@@ -510,7 +537,7 @@
         (if (i32.eq (local.get $byte) (i32.const 34))
           (then
             (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
-              (then (return (local.get $temp) (local.get $target) (local.get $temp)))
+              (then (return (local.get $temp) (local.get $target) (local.get $temp) (i32.const 0)))
             )
           )
         )
@@ -535,14 +562,21 @@
           (then
             (if (local.get $temp_mask)
               (then
+                (local.set $byte (local.get $i))
                 (call $store_sequentially 
-                  (local.get $i) 
-                  (i32.add (local.get $i) (i32.const 1)) 
-                  (local.get $len) 
-                  (local.get $target)
+                  (local.get $i) (i32.add (local.get $i) (i32.const 1))
+                  (local.get $len) (local.get $target)
                 )
                 (local.set $target)
                 (local.set $i)
+                (if (i32.eq (local.get $i) (local.get $byte))
+                  (then
+                    (if (local.get $partial)
+                      (then (return (local.get $byte) (local.get $target) (i32.const -1) (i32.const 1)))
+                      (else (return (i32.const -1) (i32.const -1) (i32.const -1) (i32.const 0)))
+                    )
+                  )
+                )
                 (br $tail_loop)
               )
               (else
@@ -558,7 +592,7 @@
       )
     )
 
-    (return (local.get $i) (local.get $target) (i32.const -1))
+    (return (local.get $i) (local.get $target) (i32.const -1) (i32.const 0))
   )
 
   (func $store_sequentially (param $start i32) (param $end i32) (param $len i32) (param $target i32) (result i32 i32)
@@ -665,6 +699,10 @@
                   (local.set $hex_value)
                   (local.set $i)
 
+                  (if (i32.eq (local.get $hex_value) (i32.const -1))
+                    (then (return (i32.sub (local.get $i) (i32.const 2)) (local.get $j)))
+                  )
+
                   (if 
                     (i32.and 
                       (i32.ge_u (local.get $hex_value) (i32.const 0xD800))
@@ -686,6 +724,10 @@
                         (call $parse_unicode_escape (local.get $i) (local.get $len))
                         (local.set $hex_value)
                         (local.set $i)
+
+                        (if (i32.eq (local.get $hex_value) (i32.const -1))
+                          (then (return (i32.sub (local.get $i) (i32.const 2)) (local.get $j)))
+                        )
 
                         (if (i32.and 
                               (i32.ge_u (local.get $hex_value) (i32.const 0xDC00))
@@ -731,10 +773,11 @@
                       )
                     )
                   )
+
                   (br $escape_done)
                 )
               )
-              
+
               ;; unknown escape
             )
             (br $loop)
