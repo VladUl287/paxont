@@ -94,6 +94,9 @@
     (local $quote_vec v128)
     (local $backslash_vec v128)
 
+    (global.set $has_escaped (i32.const 0))
+    (global.set $code_units_count (i32.const 0))
+
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
     (local.set $backslash_vec (i8x16.splat (i32.const 92)))
 
@@ -125,6 +128,7 @@
     (if (local.tee $temp_mask (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec))))
       (then (return (i32.ctz (local.get $temp_mask))))
     )
+
     (return (i32.const -1))
   )
 
@@ -142,6 +146,9 @@
     (local $mask2 v128)
     (local $mask3 v128)
     
+    (global.set $has_escaped (i32.const 0))
+    (global.set $code_units_count (i32.const 0))
+
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
     (local.set $backslash_vec (i8x16.splat (i32.const 92)))
     (local.set $mask1 (i8x16.splat (i32.const 128)))
@@ -161,7 +168,7 @@
       ))
 
     (local.set $data_vec (i64x2.replace_lane 1 (i64x2.splat (local.get $low_i64)) (local.get $high_i64)))
-        
+
     (local.set $temp_mask (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec))))
     (local.set $escaped_mask (i32.and (local.get $temp_mask) (i32.shr_u (local.get $temp_mask) (i32.const 1))))
 
@@ -186,10 +193,12 @@
     )
 
     (if (local.tee $temp_mask (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec))))
-      ;; find quote
-      ;; code units count before dq index
-      (then (return (i32.ctz (local.get $temp_mask))))
+      (then
+        (global.set $code_units_count (i32.const 0))
+        (return (i32.ctz (local.get $temp_mask)))
+      )
     )
+
     (return (i32.const -1))
   )
 
