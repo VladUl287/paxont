@@ -3,10 +3,9 @@ import { IS_BUN, IS_NODE } from "../../utils/platform"
 import { BACKSLASH, DOUBLE_QUOTE, DOUBLE_QUOTE as DQ } from "../../utils/ascii_symbols"
 import { JSONParseError } from "../../utils/error"
 import { wasmInstance } from "../../utils/wasm"
-import { StringParseOptions, utf16Module, utf8Module, utf8ScanModule } from "../types/string"
+import { StringParseOptions, utf16Module, utf8Module, utf8ScanModule, utilsModule } from "../types/string"
 import { utf16LeDecoder, utf16LeDecoderForBuffer } from "../../utils/utf16"
 import { utf8Decoder, utf8DecoderForBuffer } from "../../utils/utf8"
-import { JsonReader } from "../../utils/reader"
 import { ReadResult, ReadResultType } from "../../utils/result"
 
 const ERROR = ReadResultType.ERROR
@@ -58,27 +57,24 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
         return escaped
     }
 
-    const findEnd = (str: string, start: number): number => {
-        let j = str.indexOf('"', start)
-        let escaped = str[j - 1] === '\\'
-        if (escaped) {
-            do {
-                let i = j - 1
+    const sparseDecoderFactory = (memory: WebAssembly.Memory, bytesDecoder: (ctx: JsonParsingContext, start: number) => ReadResult<string>) => {
+        const scanModule = wasmInstance<utf8ScanModule>(
+            new Uint8Array([
+                0, 97, 115, 109, 1, 0, 0, 0, 1, 19, 3, 96, 0, 1, 127, 96, 2, 127, 127, 1, 127, 96, 4, 127, 127, 127, 127, 1, 127, 2, 17, 1, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 1, 1, 128, 1, 3, 6, 5, 0, 0, 1, 2, 1, 6, 11, 2, 127, 1, 65, 127, 11, 127, 1, 65, 0, 11, 7, 72, 4, 16, 99, 111, 100, 101, 95, 117, 110, 105, 116, 115, 95, 99, 111, 117, 110, 116, 0, 0, 8, 100, 113, 95, 105, 110, 100, 101, 120, 0, 1, 15, 117, 116, 102, 56, 95, 115, 99, 97, 110, 95, 97, 115, 99, 105, 105, 0, 2, 20, 117, 116, 102, 56, 95, 115, 99, 97, 110, 95, 97, 115, 99, 105, 105, 95, 111, 110, 108, 121, 0, 3, 10, 145, 3, 5, 4, 0, 35, 1, 11, 4, 0, 35, 0, 11, 165, 1, 4, 3, 127, 2, 123, 2, 127, 1, 123, 65, 220, 0, 253, 15, 33, 9, 65, 34, 253, 15, 33, 6, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 5, 32, 5, 32, 9, 253, 35, 253, 100, 33, 2, 32, 2, 32, 2, 65, 1, 116, 113, 33, 3, 32, 2, 32, 3, 65, 127, 115, 113, 33, 2, 32, 2, 105, 33, 4, 32, 5, 32, 6, 253, 35, 253, 100, 13, 1, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 7, 32, 7, 65, 34, 70, 4, 64, 32, 0, 32, 0, 16, 4, 34, 8, 65, 0, 78, 4, 64, 32, 8, 36, 0, 32, 4, 15, 11, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11, 118, 3, 3, 127, 2, 126, 3, 123, 65, 127, 36, 0, 65, 34, 253, 15, 33, 10, 65, 220, 0, 253, 15, 33, 11, 32, 1, 173, 66, 32, 134, 32, 0, 173, 132, 33, 7, 32, 3, 173, 66, 32, 134, 32, 2, 173, 132, 33, 8, 32, 7, 253, 18, 32, 8, 253, 30, 1, 33, 9, 32, 9, 32, 11, 253, 35, 253, 100, 33, 4, 32, 4, 32, 4, 65, 1, 116, 113, 33, 5, 32, 4, 32, 5, 65, 127, 115, 113, 33, 4, 32, 4, 105, 33, 6, 32, 9, 32, 10, 253, 35, 253, 100, 33, 4, 32, 4, 4, 64, 32, 4, 104, 36, 0, 11, 32, 6, 15, 11, 103, 1, 4, 127, 32, 0, 33, 2, 2, 64, 3, 64, 32, 0, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 3, 32, 3, 65, 34, 70, 4, 64, 32, 0, 33, 4, 65, 0, 33, 5, 2, 64, 3, 64, 32, 4, 65, 1, 107, 33, 4, 32, 4, 32, 2, 72, 13, 1, 32, 4, 45, 0, 0, 65, 220, 0, 71, 13, 1, 32, 5, 69, 33, 5, 12, 0, 11, 11, 32, 5, 69, 4, 64, 32, 0, 15, 11, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11
+            ]),
+            { imports: { env: { memory } } }
+        ) ?? {
 
-                while (str[i--] === '\\') {
-                    escaped = !escaped
-                }
-                if (!escaped) { break }
+        } as utf8ScanModule
 
-                j = str.indexOf('"', ++j)
-            } while (j < str.length)
-        }
-        return j
-    }
+        const {
+            code_units_count, has_escaped, utf8_scan_i32, utf8_scan,
+            utf8_scan_ascii_i32, utf8_scan_ascii, utf8_scan_exact
+        } = scanModule
 
-    const sparseDecoderFactory = (memory: WebAssembly.Memory) => {
-        let decodeScanning = (reader: JsonReader, i: number): ReadResult<string> => {
-            const { bytes: b, bytesLength, raw, sparseIndex } = reader
+        return (ctx: JsonParsingContext, i: number): ReadResult<string> => {
+            const { reader } = ctx
+            const { bytes: b, bytesLength: len, raw, sparseIndex, writable } = reader
 
             if (raw === undefined) {
                 return {
@@ -90,62 +86,51 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             let cI = sparseIndex?.codeUnitIndex ?? 0
             let bI = sparseIndex?.byteIndex ?? 0
 
-            while (bI < i) {
-                const byte = b[bI]
+            const diff = bI - cI
+            const ascii_only = raw.length === len || (len - raw.length === diff)
 
-                if (byte < 128 || byte >= 192) {
-                    cI++
-                    if (byte >= 240) {
-                        cI++
+            if (ascii_only) {
+                let j = i
+
+                if (len > memoryView.length && !ensureMemory(memory, len, setView)) { //Replace memory view to scanmodule memory
+                    while (j < len - 16) {
+                        const a1 = b[j] | b[j + 1] << 8 | b[j + 2] << 16 | b[j + 3] << 24
+                        const a2 = b[j + 4] | b[j + 5] << 8 | b[j + 6] << 16 | b[j + 7] << 24
+                        const a3 = b[j + 8] | b[j + 9] << 8 | b[j + 10] << 16 | b[j + 11] << 24
+                        const a4 = b[j + 12] | b[j + 13] << 8 | b[j + 14] << 16 | b[j + 15] << 24
+
+                        const end_index = utf8_scan_ascii_i32(a1, a2, a3, a4)
+                        if (end_index > 0) {
+                            j += end_index
+                            break
+                        }
+
+                        const has_escape = has_escaped()
+                        if (has_escape) {
+                            return bytesDecoder(ctx, i)
+                        }
+
+                        j += 16
+                    }
+
+                    while (j < len) {
+                        const byte = b[j]
+                        if (byte === BACKSLASH) {
+                            return bytesDecoder(ctx, i)
+                        }
+                        if (byte === DOUBLE_QUOTE) {
+                            break
+                        }
+                        j++
+                    }
+
+                    const result = raw.substring(i - diff, j - diff)
+                    return {
+                        type: COMPLETE,
+                        value: result,
+                        nextIndex: j + 1
                     }
                 }
-
-                bI++
-            }
-
-            const charIndexStart = cI
-
-            while (bI < bytesLength) {
-                const byte = b[bI]
-
-                if (b[bI] === DOUBLE_QUOTE && !isEscaped(b, i - 1)) {
-                    break
-                }
-
-                if (byte < 128 || byte >= 192) {
-                    cI++
-                    if (byte >= 240) {
-                        cI++
-                    }
-                }
-
-                bI++
-            }
-
-            if (sparseIndex) {
-                sparseIndex.codeUnitIndex = cI
-                sparseIndex.byteIndex = bI
-            }
-
-            return {
-                type: COMPLETE,
-                value: raw.substring(charIndexStart, cI),
-                nextIndex: bI + 1
-            }
-        }
-
-        const utf8ScanModule = wasmInstance<utf8ScanModule>(new Uint8Array([
-            0, 97, 115, 109, 1, 0, 0, 0, 1, 11, 2, 96, 0, 1, 127, 96, 2, 127, 127, 1, 127, 2, 17, 1, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 1, 1, 128, 1, 3, 5, 4, 0, 1, 1, 1, 6, 6, 1, 127, 1, 65, 0, 11, 7, 50, 3, 16, 99, 111, 100, 101, 95, 117, 110, 105, 116, 115, 95, 99, 111, 117, 110, 116, 0, 0, 9, 117, 116, 102, 56, 95, 115, 99, 97, 110, 0, 1, 15, 117, 116, 102, 56, 95, 115, 99, 97, 110, 95, 101, 120, 97, 99, 116, 0, 2, 10, 237, 3, 4, 4, 0, 35, 0, 11, 210, 1, 2, 5, 123, 3, 127, 65, 34, 253, 15, 33, 6, 65, 128, 1, 253, 15, 33, 2, 65, 192, 1, 253, 15, 33, 3, 65, 240, 1, 253, 15, 33, 4, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 5, 32, 5, 32, 6, 253, 35, 253, 100, 13, 1, 32, 7, 32, 5, 32, 4, 253, 44, 253, 100, 105, 106, 33, 7, 32, 5, 32, 3, 253, 78, 33, 5, 32, 5, 32, 2, 253, 35, 33, 5, 32, 7, 65, 16, 32, 5, 253, 100, 105, 107, 106, 33, 7, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 8, 32, 8, 65, 34, 70, 4, 64, 32, 0, 32, 0, 16, 3, 34, 9, 65, 0, 78, 4, 64, 32, 7, 36, 0, 32, 9, 15, 11, 11, 32, 8, 65, 192, 1, 113, 65, 128, 1, 71, 4, 64, 32, 7, 65, 1, 32, 8, 65, 240, 1, 79, 106, 106, 33, 7, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11, 169, 1, 2, 4, 123, 2, 127, 65, 128, 1, 253, 15, 33, 2, 65, 192, 1, 253, 15, 33, 3, 65, 240, 1, 253, 15, 33, 4, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 5, 32, 6, 32, 5, 32, 4, 253, 44, 253, 100, 105, 106, 33, 6, 32, 5, 32, 3, 253, 78, 33, 5, 32, 5, 32, 2, 253, 35, 33, 5, 32, 6, 65, 16, 32, 5, 253, 100, 105, 107, 106, 33, 6, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 7, 32, 7, 65, 192, 1, 113, 65, 128, 1, 73, 4, 64, 32, 6, 65, 1, 32, 7, 65, 240, 1, 79, 106, 106, 33, 6, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 32, 6, 36, 0, 32, 0, 15, 11, 103, 1, 4, 127, 32, 0, 33, 2, 2, 64, 3, 64, 32, 0, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 3, 32, 3, 65, 34, 70, 4, 64, 32, 0, 33, 4, 65, 0, 33, 5, 2, 64, 3, 64, 32, 4, 65, 1, 107, 33, 4, 32, 4, 32, 2, 72, 13, 1, 32, 4, 45, 0, 0, 65, 220, 0, 71, 13, 1, 32, 5, 69, 33, 5, 12, 0, 11, 11, 32, 5, 69, 4, 64, 32, 0, 15, 11, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11
-        ]), { memory })
-
-        if (utf8ScanModule !== undefined) {
-            const { utf8_scan, utf8_scan_exact, code_units_count } = utf8ScanModule
-
-            decodeScanning = (reader: JsonReader, i: number): ReadResult<string> => {
-                const { bytes: b, bytesLength: len, raw, sparseIndex } = reader
-
-                let cI = sparseIndex?.codeUnitIndex ?? 0
-                let bI = sparseIndex?.byteIndex ?? 0
 
                 if (cacheView !== b) {
                     memoryView.set(new Uint8Array(b.buffer, 0, len))
@@ -153,60 +138,160 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     reader.onRelease(clearCache)
                 }
 
-                bI = utf8_scan_exact(bI, i)
-                cI += code_units_count()
-
-                const start = cI
-
-                const end_index = utf8_scan(bI, len)
-                if (end_index === -1) {
+                const end_index = utf8_scan_ascii(i, len)
+                if (end_index < 0) {
                     return {
                         type: ERROR,
-                        error: new JSONParseError("end of string not found")
+                        error: new JSONParseError('Invalid data')
+                    }
+                }
+                j = end_index
+
+                const has_escape = has_escaped()
+                if (has_escape > 0) {
+                    return bytesDecoder(ctx, i)
+                }
+
+                const result = raw.substring(i - diff, j - diff)
+                return {
+                    type: COMPLETE,
+                    value: result,
+                    nextIndex: j + 1
+                }
+            }
+
+            if (len > memoryView.length && !ensureMemory(memory, len, setView)) {
+                let j = bI
+
+                while (j < i - 16) {
+                    const a1 = b[j] | b[j + 1] << 8 | b[j + 2] << 16 | b[j + 3] << 24
+                    const a2 = b[j + 4] | b[j + 5] << 8 | b[j + 6] << 16 | b[j + 7] << 24
+                    const a3 = b[j + 8] | b[j + 9] << 8 | b[j + 10] << 16 | b[j + 11] << 24
+                    const a4 = b[j + 12] | b[j + 13] << 8 | b[j + 14] << 16 | b[j + 15] << 24
+
+                    utf8_scan_i32(a1, a2, a3, a4)
+
+                    const has_escape = has_escaped()
+                    if (has_escape) {
+                        return bytesDecoder(ctx, i)
+                    }
+
+                    j += 16
+                    cI += code_units_count()
+                }
+
+                while (j < i) {
+                    const byte = b[j]
+                    if (byte === BACKSLASH) {
+                        return bytesDecoder(ctx, i)
+                    }
+
+                    j++
+                    if (byte < 128 || byte >= 192) {
+                        cI++
+                        if (byte >= 240) {
+                            cI++
+                        }
                     }
                 }
 
-                bI = end_index
-                cI += code_units_count()
+                const start = cI
+
+                while (j < len - 16) {
+                    const a1 = b[j] | b[j + 1] << 8 | b[j + 2] << 16 | b[j + 3] << 24
+                    const a2 = b[j + 4] | b[j + 5] << 8 | b[j + 6] << 16 | b[j + 7] << 24
+                    const a3 = b[j + 8] | b[j + 9] << 8 | b[j + 10] << 16 | b[j + 11] << 24
+                    const a4 = b[j + 12] | b[j + 13] << 8 | b[j + 14] << 16 | b[j + 15] << 24
+
+                    const end_index = utf8_scan_i32(a1, a2, a3, a4)
+                    if (end_index > 0) {
+                        j += end_index
+                        cI += code_units_count()
+                        break
+                    }
+
+                    const has_escape = has_escaped()
+                    if (has_escape) {
+                        return bytesDecoder(ctx, i)
+                    }
+
+                    j += 16
+                    cI += code_units_count()
+                }
+
+                while (j < len) {
+                    const byte = b[j]
+                    if (byte === BACKSLASH) {
+                        return bytesDecoder(ctx, i)
+                    }
+                    if (byte === DOUBLE_QUOTE) {
+                        break
+                    }
+
+                    j++
+                    if (byte < 128 || byte >= 192) {
+                        cI++
+                        if (byte >= 240) {
+                            cI++
+                        }
+                    }
+                }
 
                 if (sparseIndex) {
                     sparseIndex.codeUnitIndex = cI
-                    sparseIndex.byteIndex = bI
+                    sparseIndex.byteIndex = j
                 }
 
                 return {
                     type: COMPLETE,
-                    value: raw!.substring(start, cI),
-                    nextIndex: bI + 1
+                    value: raw.substring(start, cI),
+                    nextIndex: j + 1
                 }
             }
-        }
 
-        return (reader: JsonReader, i: number): ReadResult<string> => {
-            const { bytes: b, bytesLength: len, raw, sparseIndex } = reader
+            if (cacheView !== b) {
+                memoryView.set(new Uint8Array(b.buffer, 0, len))
+                cacheView = b
+                reader.onRelease(clearCache)
+            }
 
-            if (raw === undefined) {
+            utf8_scan_exact(bI, i)
+
+            let has_escape = has_escaped()
+            if (has_escape) {
+                return bytesDecoder(ctx, i)
+            }
+
+            cI += code_units_count()
+
+            const start = cI
+
+            const end_index = utf8_scan(i, len)
+            if (end_index < 0) {
                 return {
                     type: ERROR,
-                    error: new JSONParseError("")
+                    error: new JSONParseError('')
                 }
             }
 
-            let cI = 0
-            let bI = 0
-            if (sparseIndex !== undefined) {
-                cI = sparseIndex.codeUnitIndex
-                bI = sparseIndex.byteIndex
+            has_escape = has_escaped()
+            if (has_escape) {
+                return bytesDecoder(ctx, i)
             }
 
-            const diff = bI - cI
-            const ascii_only = raw.length === len || (len - raw.length === diff)
+            if (sparseIndex) {
+                sparseIndex.codeUnitIndex = cI
+                sparseIndex.byteIndex = end_index
+            }
 
-            if (ascii_only) {
-                const j = findEnd(raw, i)
-                return {
-                    type: COMPLETE,
-                    value: raw.substring(i - diff, j - diff),
+            const result = raw.substring(start, cI)
+            return {
+                type: COMPLETE,
+                value: result,
+                nextIndex: end_index + 1
+            }
+        }
+    }
                     nextIndex: j + 1
                 }
             }
