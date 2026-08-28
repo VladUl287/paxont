@@ -17,11 +17,19 @@ export type utf16Module = {
     readonly utf8_to_utf16: (start: number, length: number, target: number, partial: number) => number
 }
 
+export type utilsModule = {
+    readonly find_quote: (i: number, start: number, end: number) => number
+}
+
 export type utf8ScanModule = {
-    readonly memory: WebAssembly.Memory
     readonly code_units_count: () => number
-    readonly utf8_scan: (start: number, end: number) => number
-    readonly utf8_scan_exact: (start: number, end: number) => number
+    readonly has_escaped: () => number
+
+    readonly utf8_scan_i32: (a1: number, a2: number, a3: number, a4: number) => number
+    readonly utf8_scan: (i: number, len: number, exact: number) => number
+
+    readonly utf8_scan_ascii_i32: (a1: number, a2: number, a3: number, a4: number) => number
+    readonly utf8_scan_ascii: (i: number, len: number) => number
 }
 
 export type StringParseOptions = {
