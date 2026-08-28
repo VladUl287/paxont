@@ -711,7 +711,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
     }
 
     const decode = decoderFactory(options)
-    const decodeString = sparseDecoderFactory(memory)
+    const decodeString = sparseDecoderFactory(memory, decode.bind(null, ''))
 
     const toString = (metadata: PrimitiveMeta<string>, context: JsonParsingContext): ReadResult<string> => {
         const { reader, stack } = context
@@ -739,7 +739,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
         }
 
         if (raw !== undefined) {
-            return decodeString(reader, i)
+            return decodeString(context, i)
         }
 
         return decode(base, context, i)
