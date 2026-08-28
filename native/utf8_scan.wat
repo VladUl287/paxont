@@ -80,17 +80,16 @@
     (return (i32.const -1))
   )
 
-  (func (export "utf8_scan_ascii_only") (param $a1 i32) (param $a2 i32) (param $a3 i32) (param $a4 i32) (result i32)
-    (local $mask i32)
+  (func (export "utf8_scan_ascii_i32") (param $a1 i32) (param $a2 i32) (param $a3 i32) (param $a4 i32) (result i32)
+    (local $temp_mask i32)
     (local $escaped_mask i32)
-    (local $count i32)
+    
     (local $low_i64 i64)
     (local $high_i64 i64)
-    (local $vec v128)
+
+    (local $data_vec v128)
     (local $quote_vec v128)
     (local $backslash_vec v128)
-
-    (global.set $dq_index (i32.const -1))
 
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
     (local.set $backslash_vec (i8x16.splat (i32.const 92)))
@@ -107,20 +106,22 @@
         (i64.extend_i32_u (local.get $a3))
       ))
 
-    (local.set $vec (i64x2.replace_lane 1 (i64x2.splat (local.get $low_i64)) (local.get $high_i64)))
+    (local.set $data_vec (i64x2.replace_lane 1 (i64x2.splat (local.get $low_i64)) (local.get $high_i64)))
+        
+    (local.set $temp_mask (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec))))
+    (local.set $escaped_mask (i32.and (local.get $temp_mask) (i32.shr_u (local.get $temp_mask) (i32.const 1))))
 
-    ;; escapes
-    (local.set $mask (i8x16.bitmask (i8x16.eq (local.get $vec) (local.get $backslash_vec))))
-    (local.set $escaped_mask (i32.and (local.get $mask) (i32.shl (local.get $mask) (i32.const 1))))
-    (local.set $mask (i32.and (local.get $mask) (i32.xor (local.get $escaped_mask) (i32.const -1))))
-    (local.set $count (i32.popcnt (local.get $mask)))
-
-    ;; dq
-    (local.set $mask (i8x16.bitmask (i8x16.eq (local.get $vec) (local.get $quote_vec))))
-    (if (local.get $mask)
-      (then (global.set $dq_index (i32.ctz (local.get $mask))))
+    ;; if has escaped
+    (if (i32.and (local.get $temp_mask) (i32.xor (local.get $escaped_mask) (i32.const -1)))
+      (then
+        (global.set $has_escaped (i32.const 1))
+        (return (i32.const -1))
+      )
     )
 
-    (return (local.get $count))
+    (if (local.tee $temp_mask (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec))))
+      (then (return (i32.ctz (local.get $temp_mask))))
+    )
+    (return (i32.const -1))
   )
 )
