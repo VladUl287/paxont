@@ -67,9 +67,12 @@
 
         (if (i32.eq (local.get $temp) (i32.const 92))
           (then
-            ;; TODO: check if backslashed
-            (global.set $has_escaped (i32.const 1))
-            (return (local.get $i))
+            (if (i32.ne (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 92))
+              (then
+                (global.set $has_escaped (i32.const 1))
+                (return (local.get $i))
+              )
+            )
           )
         )
 
@@ -274,9 +277,12 @@
 
         (if (i32.eq (local.get $temp) (i32.const 92))
           (then
-            ;; TODO: check if backslashed
-            (global.set $has_escaped (i32.const 1))
-            (return (local.get $i))
+            (if (i32.ne (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 92))
+              (then
+                (global.set $has_escaped (i32.const 1))
+                (return (local.get $i))
+              )
+            )
           )
         )
 
