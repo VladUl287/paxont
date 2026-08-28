@@ -36,7 +36,8 @@ export type StringParseOptions = {
     readonly wasmInstance: typeof wasmInstance
     readonly maxMemoryPages: number
     readonly defaultMemoryPages: number
-    readonly useUtf16: boolean,
-    readonly utf16LeDecoder: typeof utf16LeDecoder,
+    readonly useUtf16: boolean
+    readonly utf16LeDecoder: typeof utf16LeDecoder
     readonly utf8Decoder: typeof utf8Decoder
+    readonly onError: (error: unknown) => void
 }
