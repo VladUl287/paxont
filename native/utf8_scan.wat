@@ -190,7 +190,7 @@
     (return (i32.const -1))
   )
 
-  (func (export "utf8_scan") (param $i i32) (param $len i32) (result i32)
+  (func (export "utf8_scan") (param $i i32) (param $len i32) (param $exact i32) (result i32)
     (local $start i32)
     (local $temp i32)
     (local $temp_mask i32)
@@ -230,7 +230,12 @@
           )
         )
 
-        (br_if $scan_block (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec))))
+        (br_if $scan_block 
+          (i32.and 
+            (i32.eqz (local.get $exact))
+            (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec)))
+          )
+        )
 
         (global.set $code_units_count 
           (i32.add
@@ -259,7 +264,7 @@
 
         (local.set $temp (i32.load8_u (local.get $i)))
 
-        (if (i32.eq (local.get $temp) (i32.const 34))
+        (if (i32.and (i32.eqz (local.get $exact)) (i32.eq (local.get $temp) (i32.const 34)))
           (then
             (if (i32.ge_s (local.tee $temp_mask (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0)) 
               (then (return (local.get $temp_mask)))
