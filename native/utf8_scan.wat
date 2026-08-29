@@ -101,7 +101,6 @@
     (local $backslash_vec v128)
 
     (global.set $has_escaped (i32.const 0))
-    (global.set $code_units_count (i32.const 0))
 
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
     (local.set $backslash_vec (i8x16.splat (i32.const 92)))
@@ -110,13 +109,15 @@
       (i64.or 
         (i64.shl (i64.extend_i32_u (local.get $a2)) (i64.const 32))
         (i64.extend_i32_u (local.get $a1))
-      ))
+      )
+    )
 
     (local.set $high_i64 
       (i64.or 
         (i64.shl (i64.extend_i32_u (local.get $a4)) (i64.const 32))
         (i64.extend_i32_u (local.get $a3))
-      ))
+      )
+    )
 
     (local.set $data_vec (i64x2.replace_lane 1 (i64x2.splat (local.get $low_i64)) (local.get $high_i64)))
         
