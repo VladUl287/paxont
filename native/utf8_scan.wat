@@ -22,7 +22,6 @@
     (local $backslash_vec v128)
 
     (global.set $has_escaped (i32.const 0))
-    (global.set $code_units_count (i32.const 0))
 
     (local.set $start (local.get $i))
 
@@ -40,9 +39,7 @@
         (if (local.tee $temp_mask (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec))))
           (then
             (local.set $escaped_mask (i32.and (local.get $temp_mask) (i32.shr_u (local.get $temp_mask) (i32.const 1))))
-            (if (i32.and (local.get $temp_mask) (i32.xor (local.get $escaped_mask) (i32.const -1)))
-              (then (br $scan_block))
-            )
+            (br_if $scan_block (i32.and (local.get $temp_mask) (i32.xor (local.get $escaped_mask) (i32.const -1))))
           )
         )
 
