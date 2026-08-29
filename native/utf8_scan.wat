@@ -12,6 +12,7 @@
     (global.get $has_escaped))
 
   (func (export "utf8_scan_ascii") (param $i i32) (param $len i32) (result i32)
+    (local $j i32)
     (local $start i32)
     (local $temp i32)
     (local $temp_mask i32)
@@ -34,18 +35,16 @@
 
         (local.set $data_vec (v128.load (local.get $i)))
 
-        (local.set $temp_mask (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec))))
-        (local.set $escaped_mask (i32.and (local.get $temp_mask) (i32.shr_u (local.get $temp_mask) (i32.const 1))))
+        (br_if $scan_block (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec))))
 
-        ;; if has escaped
-        (if (i32.and (local.get $temp_mask) (i32.xor (local.get $escaped_mask) (i32.const -1)))
+        (if (local.tee $temp_mask (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec))))
           (then
-            (global.set $has_escaped (i32.const 1))
-            (return (local.get $i))
+            (local.set $escaped_mask (i32.and (local.get $temp_mask) (i32.shr_u (local.get $temp_mask) (i32.const 1))))
+            (if (i32.and (local.get $temp_mask) (i32.xor (local.get $escaped_mask) (i32.const -1)))
+              (then (br $scan_block))
+            )
           )
         )
-
-        (br_if $scan_block (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec))))
 
         (local.set $i (i32.add (local.get $i) (i32.const 16)))
         (br $scan_loop)
@@ -57,21 +56,31 @@
 
         (local.set $temp (i32.load8_u (local.get $i)))
 
-        (if (i32.eq (local.get $temp) (i32.const 34))
+        (if (i32.eq (local.get $temp) (i32.const 92))
           (then
-            (if (i32.ge_s (local.tee $temp_mask (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0)) 
-              (then (return (local.get $temp_mask)))
+            (local.set $j (i32.add (local.get $i) (i32.const 1)))
+
+            (if (i32.ge_s (local.get $j) (local.get $len))
+              (then (return (i32.const -1)))
+            )
+
+            (if (i32.eq (i32.load8_u (local.get $j)) (i32.const 92))
+              (then
+                (local.set $i (i32.add (local.get $j) (i32.const 1)))
+                (br $scan_loop)
+              )
+              (else
+                (global.set $has_escaped (i32.const 1))
+                (return (local.get $i))
+              )
             )
           )
         )
 
-        (if (i32.eq (local.get $temp) (i32.const 92))
+        (if (i32.eq (local.get $temp) (i32.const 34))
           (then
-            (if (i32.ne (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 92))
-              (then
-                (global.set $has_escaped (i32.const 1))
-                (return (local.get $i))
-              )
+            (if (i32.ge_s (local.tee $temp_mask (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0)) 
+              (then (return (local.get $temp_mask)))
             )
           )
         )
