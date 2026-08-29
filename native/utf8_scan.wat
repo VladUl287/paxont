@@ -120,15 +120,16 @@
     )
 
     (local.set $data_vec (i64x2.replace_lane 1 (i64x2.splat (local.get $low_i64)) (local.get $high_i64)))
-        
-    (local.set $temp_mask (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec))))
-    (local.set $escaped_mask (i32.and (local.get $temp_mask) (i32.shr_u (local.get $temp_mask) (i32.const 1))))
 
-    ;; if has escaped
-    (if (i32.and (local.get $temp_mask) (i32.xor (local.get $escaped_mask) (i32.const -1)))
+    (if (local.tee $temp_mask (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec))))
       (then
-        (global.set $has_escaped (i32.const 1))
-        (return (i32.const -1))
+        (local.set $escaped_mask (i32.and (local.get $temp_mask) (i32.shr_u (local.get $temp_mask) (i32.const 1))))
+        (if (i32.and (local.get $temp_mask) (i32.xor (local.get $escaped_mask) (i32.const -1)))
+          (then
+            (global.set $has_escaped (i32.const 1))
+            (return (i32.const -1))
+          )
+        )
       )
     )
 
