@@ -62,6 +62,11 @@
       )
     )
 
+    ;; check if target not changed
+    (call $parse_ascii (local.get $start) (local.get $len) (local.get $target) (i32.const 1))
+    (local.set $target)
+    (local.set $i)
+
     (block $non_ascii_block
       (loop $non_ascii_loop
         (if (i32.lt_u (i32.load8_u (local.get $i)) (i32.const 128)) 
