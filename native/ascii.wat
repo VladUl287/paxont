@@ -1,12 +1,12 @@
 (module
   (import "env" "memory" (memory 1 128))
-  (import "utils" "find_quote" (func $find_quote (param $i i32) (param $start i32) (param $end i32) (result i32)))
+  (import "utils" "find_quote" (func $find_quote (param $i i32) (param $local_start i32) (param $end i32) (result i32)))
   (import "ascii_utils" "store_32" (func $store_32 (param $byte i32) (param $target i32) (result i32)))
   (import "ascii_utils" "store_128_unsafe" (func $store_128_unsafe (param $data v128) (param $byte_count i32) (param $target i32) (result i32)))
   (import "ascii_utils" "store_code_point" (func $store_code_point (param $byte i32) (param $target i32) (result i32)))
   
-  (func $parse_ascii (param $start i32) (param $end i32) (param $target i32) (param $extend i32) (result i32 i32)
-    (local $i i32)
+  (func $parse_ascii (param $i i32) (param $start i32) (param $end i32) (param $target i32) (param $extend i32) (result i32 i32)
+    (local $local_start i32)
     (local $temp i32)
     (local $temp_mask i32)
     (local $byte_count i32)
@@ -17,7 +17,7 @@
     (local $backslash_vec v128)
     (local $ascii_vec v128)
 
-    (local.set $i (local.get $start))
+    (local.set $local_start (local.get $start))
     (local.set $zero_vec (i8x16.splat (i32.const 0)))
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
     (local.set $backslash_vec (i8x16.splat (i32.const 92)))
@@ -48,7 +48,7 @@
           (then
             (if (i32.eqz (local.get $extend))
               (then
-                (local.set $i (local.get $start))
+                (local.set $i (local.get $local_start))
                 (local.set $extend (i32.const 1))
                 (br $loop)
               )
@@ -64,7 +64,7 @@
               (then
                 (if (i32.eqz (local.get $extend))
                   (then
-                    (local.set $i (local.get $start))
+                    (local.set $i (local.get $local_start))
                     (local.set $extend (i32.const 1))
                     (br $loop)
                   )
@@ -148,7 +148,7 @@
           (then
             (if (local.get $extend)
               (then (return (local.get $i) (local.get $target)))
-              (else (return (call $parse_ascii (local.get $start) (local.get $end) (local.get $target) (i32.const 1))))
+              (else (return (call $parse_ascii (local.get $i) (local.get $start) (local.get $end) (local.get $target) (i32.const 1))))
             )
           )
         )
@@ -168,7 +168,7 @@
             (if (local.get $extend)
               (then (local.set $temp_mask (i32.const 1)))
               (else
-                (local.set $i (local.get $start))
+                (local.set $i (local.get $local_start))
                 (local.set $extend (i32.const 1))
                 (br $loop)
               )
@@ -206,7 +206,7 @@
     (return (local.get $i) (local.get $target))
   )
 
-  (func $store_sequentially (param $start i32) (param $end i32) (param $len i32) (param $target i32) (result i32 i32)
+  (func $store_sequentially (param $local_start i32) (param $end i32) (param $len i32) (param $target i32) (result i32 i32)
     (local $i i32)
     (local $byte i32)
     (local $j i32)
@@ -214,7 +214,7 @@
     (local $hex_value i32)
     (local $surrogate_high i32)
 
-    (local.set $i (local.get $start))
+    (local.set $i (local.get $local_start))
     (local.set $j (local.get $target))
 
     (block $done
