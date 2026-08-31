@@ -4,18 +4,18 @@
   (import "ascii" "parse_ascii"
     (func $parse_ascii (param $i i32) (param $start i32) (param $end i32) (param $target i32) (param $extend i32) (result i32 i32)))
 
-  (global $ascii_only (mut i32) (i32.const 0))
+  (global $not_extended (mut i32) (i32.const 0))
   (global $dq_index (mut i32) (i32.const -1))
-  (global $utf16_length (mut i32) (i32.const 0))
+  (global $target (mut i32) (i32.const 0))
 
-  (func (export "ascii_only") (result i32)
-    (global.get $ascii_only))
+  (func (export "not_extended") (result i32)
+    (global.get $not_extended))
 
   (func (export "dq_index") (result i32)
     (global.get $dq_index))
 
-  (func (export "utf16_length") (result i32)
-    (global.get $utf16_length))
+  (func (export "target") (result i32)
+    (global.get $target))
 
   (func (export "utf8_to_utf16") (param $i i32) (param $len i32) (param $target i32) (param $partial i32) (result i32)
     (local $mask i32)
@@ -33,9 +33,9 @@
 
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
 
+    (global.set $not_extended (i32.const 0))
     (global.set $dq_index (i32.const -1))
-    (global.set $ascii_only (i32.const 0))
-    (global.set $utf16_length (i32.const 0))
+    (global.set $target (i32.const 0))
 
     (call $parse_ascii (local.get $i) (local.get $start) (local.get $len) (local.get $target) (i32.const 0))
     (local.set $target_temp)
@@ -50,8 +50,8 @@
         (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
           (then
             (global.set $dq_index (local.get $temp))
-            (global.set $ascii_only (i32.eq (local.get $target) (local.get $target_temp)))
-            (global.set $utf16_length (local.get $target_temp))
+            (global.set $not_extended (i32.eq (local.get $target) (local.get $target_temp)))
+            (global.set $target (local.get $target_temp))
             (return (local.get $temp)))
         )
       )
@@ -59,7 +59,7 @@
 
     (if (i32.eq (local.get $i) (local.get $len))
       (then
-        (global.set $utf16_length (local.get $target_temp))
+        (global.set $target (local.get $target_temp))
         (return (local.get $i))
       )
     )
@@ -83,8 +83,8 @@
                 (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
                   (then
                     (global.set $dq_index (local.get $temp))
-                    (global.set $ascii_only (i32.eq (local.get $target) (local.get $target_temp)))
-                    (global.set $utf16_length (local.get $target_temp))
+                    (global.set $not_extended (i32.eq (local.get $target) (local.get $target_temp)))
+                    (global.set $target (local.get $target_temp))
                     (return (local.get $temp)))
                 )
               )
@@ -92,7 +92,7 @@
 
             (if (i32.eq (local.get $i) (local.get $len))
               (then
-                (global.set $utf16_length (local.get $target_temp))
+                (global.set $target (local.get $target_temp))
                 (return (local.get $i))
               )
             )
@@ -275,7 +275,7 @@
               (then
                 (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
                   (then 
-                    (global.set $utf16_length (local.get $target))
+                    (global.set $target (local.get $target))
                     (global.set $dq_index (local.get $temp))
                     (return (local.get $temp)))
                 )))
@@ -293,7 +293,7 @@
           (then
             (if (i32.ge_u (i32.add (local.get $i) (i32.const 1)) (local.get $len)) 
               (then
-                (global.set $utf16_length (local.get $target))
+                (global.set $target (local.get $target))
                 (return (local.get $i))))
 
             (if (i32.ge_u (i32.sub (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 128)) (i32.const 64)) 
@@ -319,7 +319,7 @@
           (then
             (if (i32.ge_u (i32.add (local.get $i) (i32.const 2)) (local.get $len)) 
               (then
-                (global.set $utf16_length (local.get $target))
+                (global.set $target (local.get $target))
                 (return (local.get $i))))
             
             (if (i32.or 
@@ -358,7 +358,7 @@
 
     (if (i32.and (local.get $partial) (i32.gt_u (i32.add (local.get $i) (i32.const 4)) (local.get $len)))
       (then 
-        (global.set $utf16_length (local.get $target))
+        (global.set $target (local.get $target))
         (return (local.get $i))))
     
     (return (i32.const -1))
