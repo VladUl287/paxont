@@ -1,8 +1,7 @@
 (module
   (import "env" "memory" (memory 1 128))
   (import "utils" "find_quote" (func $find_quote (param $i i32) (param $start i32) (param $end i32) (result i32)))
-  (import "ascii" "parse_ascii"
-    (func $parse_ascii (param $i i32) (param $start i32) (param $end i32) (param $target i32) (param $extend i32) (result i32 i32)))
+  (import "ascii" "parse_ascii" (func $parse_ascii (param $i i32) (param $end i32) (param $target i32) (param $extend i32) (result i32 i32)))
 
   (global $dq_index (mut i32) (i32.const -1))
   (global $target (mut i32) (i32.const 0))
@@ -16,7 +15,6 @@
   (func (export "utf8_to_utf16") (param $i i32) (param $len i32) (param $target i32) (param $partial i32) (result i32)
     (local $mask i32)
     (local $temp i32)
-    (local $target_temp i32)
     (local $start_byte i32)
     (local $temp_v128 v128)
     (local $quote_vec v128)
@@ -32,20 +30,21 @@
     (global.set $dq_index (i32.const -1))
     (global.set $target (i32.const 0))
 
-    (call $parse_ascii (local.get $i) (local.get $start) (local.get $len) (local.get $target) (i32.const 0))
-    (local.set $target_temp)
+    (call $parse_ascii (local.get $i) (local.get $len) (local.get $target) (i32.const 0))
+    (local.set $target)
     (local.set $i)
 
     (if (i32.eq (local.get $i) (i32.const -1))
       (then (return (i32.const -1)))
     )
-
+    
     (if (i32.eq (i32.load8_u (local.get $i)) (i32.const 34))
-      (then 
+      (then
+        ;; use result flag and not search
         (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
           (then
             (global.set $dq_index (local.get $temp))
-            (global.set $target (local.get $target_temp))
+            (global.set $target (local.get $target))
             (return (local.get $temp)))
         )
       )
@@ -53,18 +52,21 @@
 
     (if (i32.eq (local.get $i) (local.get $len))
       (then
-        (global.set $target (local.get $target_temp))
-        (return (local.get $i))
+        (if (local.get $partial)
+          (then
+            (global.set $target (local.get $target))
+            (return (local.get $i))
+          )
+          (else (return (i32.const -1)))
+        )
       )
     )
-
-    (local.set $target (local.get $target_temp))
 
     (block $non_ascii_block
       (loop $non_ascii_loop
         (if (i32.lt_u (i32.load8_u (local.get $i)) (i32.const 128)) 
           (then
-            (call $parse_ascii (local.get $i) (local.get $start) (local.get $len) (local.get $target) (i32.const 1))
+            (call $parse_ascii (local.get $i) (local.get $len) (local.get $target) (i32.const 1))
             (local.set $target)
             (local.set $i)
 
@@ -74,6 +76,7 @@
 
             (if (i32.eq (i32.load8_u (local.get $i)) (i32.const 34))
               (then 
+                ;; use result flag and not search
                 (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
                   (then
                     (global.set $dq_index (local.get $temp))
@@ -85,12 +88,15 @@
 
             (if (i32.eq (local.get $i) (local.get $len))
               (then
-                (global.set $target (local.get $target_temp))
-                (return (local.get $i))
+                (if (local.get $partial)
+                  (then
+                    (global.set $target (local.get $target))
+                    (return (local.get $i))
+                  )
+                  (else (return (i32.const -1)))
+                )
               )
             )
-
-            (local.set $target (local.get $target_temp))
           )
         )
 

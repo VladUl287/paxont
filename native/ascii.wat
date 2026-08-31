@@ -1,13 +1,11 @@
 (module
   (import "env" "memory" (memory 1 128))
-  (import "utils" "find_quote" (func $find_quote (param $i i32) (param $local_start i32) (param $end i32) (result i32)))
   (import "ascii_utils" "store_32" (func $store_32 (param $byte i32) (param $target i32) (result i32)))
   (import "ascii_utils" "store_128_unsafe" (func $store_128_unsafe (param $data v128) (param $byte_count i32) (param $target i32) (result i32)))
   (import "ascii_utils" "store_code_point" (func $store_code_point (param $byte i32) (param $target i32) (result i32)))
   
-  (func $parse_ascii (export "parse_ascii") (param $i i32) (param $start i32) (param $end i32) (param $target i32) (param $extend i32) (result i32 i32)
-    (local $local_start i32)
-    (local $backslashed i32)
+  (func $parse_ascii (export "parse_ascii") (param $i i32) (param $end i32) (param $target i32) (param $extend i32) (result i32 i32)
+    (local $start i32)
     (local $byte_count i32)
     (local $byte i32)
     (local $data_vec v128)
@@ -16,7 +14,7 @@
     (local $backslash_vec v128)
     (local $ascii_vec v128)
 
-    (local.set $local_start (local.get $start))
+    (local.set $start (local.get $i))
     (local.set $zero_vec (i8x16.splat (i32.const 0)))
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
     (local.set $backslash_vec (i8x16.splat (i32.const 92)))
@@ -43,85 +41,24 @@
         (if (i32.eq (local.get $byte_count) (i32.const 32))
           (then (local.set $byte_count (i32.const 16)))
         )
-        (if (i32.lt_u (local.get $byte_count) (i32.const 16))
+
+        (if (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec)))
           (then
-            (if (i32.eqz (local.get $extend))
-              (then
-                (local.set $i (local.get $local_start))
-                (local.set $extend (i32.const 1))
-                (br $loop)
-              )
-            )
+            (br_if $block (local.get $extend))
+
+            (local.set $i (local.get $start))
+            (local.set $extend (i32.const 1))
+            (br $loop)
           )
         )
 
-        (if (local.tee $backslashed (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec))))
-          (then
-            (if (i32.eqz (local.get $extend))
-              (then
-                (local.set $i (local.get $local_start))
-                (local.set $extend (i32.const 1))
-                (br $loop)
-              )
-            )
-          )
-        )
-
-        (if (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec)))
-          (then
-            (local.set $byte_count (i32.sub (local.get $i) (local.get $backslashed)))
-
-            (if (local.get $extend)
-              (then
-                (if (local.get $backslashed)
-                  (then
-                    (call $store_sequentially 
-                      (local.get $i)
-                      (i32.add (local.get $i) (local.get $byte_count))
-                      (local.get $end)
-                      (local.get $target)
-                    )
-                    (local.set $target)
-                    (local.set $i)
-                    (if (i32.eq (local.get $i) (i32.const -1))
-                      (then (return (i32.const -1) (i32.const -1)))
-                    )
-                  )
-                  (else (local.set $target (call $store_128_unsafe (local.get $data_vec) (local.get $byte_count) (local.get $target))))
-                )
-              )
-            )
-            
-            (return (local.get $backslashed) (local.get $target))
-          )
-        )
+        (br_if $block (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec))))
 
         (if (local.get $extend)
-          (then
-            (if (local.get $backslashed)
-              (then
-                (call $store_sequentially 
-                  (local.get $i)
-                  (i32.add (local.get $i) (local.get $byte_count))
-                  (local.get $end)
-                  (local.get $target)
-                )
-                (local.set $target)
-                (local.set $i)
-                (if (i32.eq (local.get $i) (i32.const -1))
-                  (then (return (i32.const -1) (i32.const -1)))
-                )
-              )
-              (else 
-                (local.set $target 
-                  (call $store_128_unsafe (local.get $data_vec) (local.get $byte_count) (local.get $target))
-                )
-              )
-            )
-          )
-          (else (local.set $i (i32.add (local.get $i) (local.get $byte_count))))
+          (then (local.set $target (call $store_128_unsafe (local.get $data_vec) (local.get $byte_count) (local.get $target))))
         )
-        
+
+        (local.set $i (i32.add (local.get $i) (local.get $byte_count)))
         (br_if $loop (i32.eq (local.get $byte_count) (i32.const 16)))
         (return (local.get $i) (local.get $target))
       )
@@ -134,38 +71,16 @@
         (local.set $byte (i32.load8_u (local.get $i)))
   
         (if (i32.ge_u (local.get $byte) (i32.const 128))
-          (then
-            (if (local.get $extend)
-              (then (return (local.get $i) (local.get $target)))
-              (else (return (call $parse_ascii (local.get $i) (local.get $start) (local.get $end) (local.get $target) (i32.const 1))))
-            )
-          )
+          (then (return (local.get $i) (local.get $target)))
         )
 
         (if (i32.eq (local.get $byte) (i32.const 34))
-          (then
-            (if (i32.ge_s (local.tee $backslashed (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
-              (then (return (local.get $backslashed) (local.get $target)))
-            )
-          )
+          (then (return (local.get $i) (local.get $target)))
         )
 
         (if (i32.eq (local.get $byte) (i32.const 92))
           (then
-            (local.set $backslashed (i32.const 1))
-            (if (i32.eqz (local.get $extend))
-              (then
-                (local.set $i (local.get $local_start))
-                (local.set $extend (i32.const 1))
-                (br $loop)
-              )
-            )
-          )
-        )
-
-        (if (local.get $extend)
-          (then
-            (if (local.get $backslashed)
+            (if (local.get $extend)
               (then
                 (call $store_sequentially 
                   (local.get $i) 
@@ -180,11 +95,15 @@
                 )
                 (br $loop)
               )
-              (else (local.set $target (call $store_32 (local.get $byte) (local.get $target))))
             )
+            (return (call $parse_ascii (local.get $start) (local.get $end) (local.get $target) (i32.const 1)))
           )
         )
 
+        (if (local.get $extend) 
+          (then (local.set $target (call $store_32 (local.get $byte) (local.get $target))))
+        )
+        
         (local.set $i (i32.add (local.get $i) (i32.const 1)))
         (br $loop)
       )
@@ -193,7 +112,7 @@
     (return (local.get $i) (local.get $target))
   )
 
-  (func $store_sequentially (param $local_start i32) (param $end i32) (param $len i32) (param $target i32) (result i32 i32)
+  (func $store_sequentially (param $start i32) (param $end i32) (param $len i32) (param $target i32) (result i32 i32)
     (local $i i32)
     (local $byte i32)
     (local $j i32)
@@ -201,7 +120,7 @@
     (local $hex_value i32)
     (local $surrogate_high i32)
 
-    (local.set $i (local.get $local_start))
+    (local.set $i (local.get $start))
     (local.set $j (local.get $target))
 
     (block $done
