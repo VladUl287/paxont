@@ -17,11 +17,14 @@ const defaultOptions: StringParseOptions = {
     maxMemoryPages: 128, //~8MB,
     wasmInstance,
     useUtf16: IS_NODE || IS_BUN,
+    // useUtf16: false,
     utf16LeDecoder: IS_NODE || IS_BUN ? utf16LeDecoderForBuffer : utf16LeDecoder,
     utf8Decoder: IS_NODE || IS_BUN ? utf8DecoderForBuffer : utf8Decoder,
     onError: console.error
 }
 
+// utf8 validate v128 and not check if two or three or four bytes sequence
+// find last integer character and not use partial at all
 export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) {
     const options: StringParseOptions = { ...defaultOptions, ...opt }
     const { defaultMemoryPages, maxMemoryPages, utf8Decoder: newUtf8, utf16LeDecoder: newUtf16, wasmInstance, onError } = options
@@ -61,11 +64,11 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
     const sparseDecoderFactory = (memory: WebAssembly.Memory, bytesDecoder: (ctx: JsonParsingContext, start: number) => ReadResult<string>) => {
         const scanModule = wasmInstance<utf8ScanModule>(
             new Uint8Array([
-                0, 97, 115, 109, 1, 0, 0, 0, 1, 26, 4, 96, 3, 127, 127, 127, 1, 127, 96, 0, 1, 127, 96, 2, 127, 127, 1, 127, 96, 4, 127, 127, 127, 127, 1, 127, 2, 36, 2, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 1, 1, 128, 1, 5, 117, 116, 105, 108, 115, 10, 102, 105, 110, 100, 95, 113, 117, 111, 116, 101, 0, 0, 3, 7, 6, 1, 1, 2, 3, 3, 0, 6, 11, 2, 127, 1, 65, 0, 11, 127, 1, 65, 0, 11, 7, 102, 6, 16, 99, 111, 100, 101, 95, 117, 110, 105, 116, 115, 95, 99, 111, 117, 110, 116, 0, 1, 11, 104, 97, 115, 95, 101, 115, 99, 97, 112, 101, 100, 0, 2, 15, 117, 116, 102, 56, 95, 115, 99, 97, 110, 95, 97, 115, 99, 105, 105, 0, 3, 19, 117, 116, 102, 56, 95, 115, 99, 97, 110, 95, 97, 115, 99, 105, 105, 95, 105, 51, 50, 0, 4, 13, 117, 116, 102, 56, 95, 115, 99, 97, 110, 95, 105, 51, 50, 0, 5, 9, 117, 116, 102, 56, 95, 115, 99, 97, 110, 0, 6, 10, 196, 6, 6, 4, 0, 35, 1, 11, 4, 0, 35, 0, 11, 205, 1, 2, 4, 127, 3, 123, 65, 0, 36, 0, 65, 0, 36, 1, 32, 0, 33, 2, 65, 34, 253, 15, 33, 7, 65, 220, 0, 253, 15, 33, 8, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 6, 32, 6, 32, 8, 253, 35, 253, 100, 33, 4, 32, 4, 32, 4, 65, 1, 118, 113, 33, 5, 32, 4, 32, 5, 65, 127, 115, 113, 4, 64, 65, 1, 36, 0, 32, 0, 15, 11, 32, 6, 32, 7, 253, 35, 253, 100, 13, 1, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 3, 32, 3, 65, 34, 70, 4, 64, 32, 0, 32, 2, 32, 0, 16, 0, 34, 4, 65, 0, 78, 4, 64, 32, 4, 15, 11, 11, 32, 3, 65, 220, 0, 70, 4, 64, 32, 0, 65, 1, 106, 45, 0, 0, 65, 220, 0, 71, 4, 64, 65, 1, 36, 0, 32, 0, 15, 11, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11, 122, 3, 2, 127, 2, 126, 3, 123, 65, 0, 36, 0, 65, 0, 36, 1, 65, 34, 253, 15, 33, 9, 65, 220, 0, 253, 15, 33, 10, 32, 1, 173, 66, 32, 134, 32, 0, 173, 132, 33, 6, 32, 3, 173, 66, 32, 134, 32, 2, 173, 132, 33, 7, 32, 6, 253, 18, 32, 7, 253, 30, 1, 33, 8, 32, 8, 32, 10, 253, 35, 253, 100, 33, 4, 32, 4, 32, 4, 65, 1, 118, 113, 33, 5, 32, 4, 32, 5, 65, 127, 115, 113, 4, 64, 65, 1, 36, 0, 65, 127, 15, 11, 32, 8, 32, 9, 253, 35, 253, 100, 34, 4, 4, 64, 32, 4, 104, 15, 11, 65, 127, 15, 11, 187, 1, 3, 2, 127, 2, 126, 6, 123, 65, 0, 36, 0, 65, 0, 36, 1, 65, 34, 253, 15, 33, 9, 65, 220, 0, 253, 15, 33, 10, 65, 128, 1, 253, 15, 33, 11, 65, 192, 1, 253, 15, 33, 12, 65, 240, 1, 253, 15, 33, 13, 32, 1, 173, 66, 32, 134, 32, 0, 173, 132, 33, 6, 32, 3, 173, 66, 32, 134, 32, 2, 173, 132, 33, 7, 32, 6, 253, 18, 32, 7, 253, 30, 1, 33, 8, 32, 8, 32, 10, 253, 35, 253, 100, 33, 4, 32, 4, 32, 4, 65, 1, 118, 113, 33, 5, 32, 4, 32, 5, 65, 127, 115, 113, 4, 64, 65, 1, 36, 0, 65, 127, 15, 11, 32, 8, 32, 13, 253, 44, 253, 100, 105, 36, 1, 32, 8, 32, 12, 253, 78, 33, 8, 32, 8, 32, 11, 253, 35, 33, 8, 35, 1, 65, 16, 32, 8, 253, 100, 105, 107, 106, 36, 1, 32, 8, 32, 9, 253, 35, 253, 100, 34, 4, 4, 64, 65, 0, 36, 1, 32, 4, 104, 15, 11, 65, 127, 15, 11, 176, 2, 2, 4, 127, 6, 123, 65, 0, 36, 0, 65, 0, 36, 1, 32, 0, 33, 3, 65, 34, 253, 15, 33, 8, 65, 220, 0, 253, 15, 33, 9, 65, 128, 1, 253, 15, 33, 10, 65, 192, 1, 253, 15, 33, 11, 65, 240, 1, 253, 15, 33, 12, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 7, 32, 7, 32, 9, 253, 35, 253, 100, 33, 5, 32, 5, 32, 5, 65, 1, 118, 113, 33, 6, 32, 5, 32, 6, 65, 127, 115, 113, 4, 64, 65, 1, 36, 0, 32, 0, 15, 11, 32, 2, 69, 32, 7, 32, 8, 253, 35, 253, 100, 113, 13, 1, 35, 1, 32, 7, 32, 12, 253, 44, 253, 100, 105, 106, 36, 1, 32, 7, 32, 11, 253, 78, 33, 7, 32, 7, 32, 10, 253, 35, 33, 7, 35, 1, 65, 16, 32, 7, 253, 100, 105, 107, 106, 36, 1, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 4, 32, 2, 69, 32, 4, 65, 34, 70, 113, 4, 64, 32, 0, 32, 3, 32, 0, 16, 0, 34, 5, 65, 0, 78, 4, 64, 32, 5, 15, 11, 11, 32, 4, 65, 220, 0, 70, 4, 64, 32, 0, 65, 1, 106, 45, 0, 0, 65, 220, 0, 71, 4, 64, 65, 1, 36, 0, 32, 0, 15, 11, 11, 32, 4, 65, 192, 1, 113, 65, 128, 1, 71, 4, 64, 35, 1, 65, 1, 32, 4, 65, 240, 1, 79, 106, 106, 36, 1, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11
+                0, 97, 115, 109, 1, 0, 0, 0, 1, 26, 4, 96, 3, 127, 127, 127, 1, 127, 96, 0, 1, 127, 96, 2, 127, 127, 1, 127, 96, 4, 127, 127, 127, 127, 1, 127, 2, 36, 2, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 1, 1, 128, 1, 5, 117, 116, 105, 108, 115, 10, 102, 105, 110, 100, 95, 113, 117, 111, 116, 101, 0, 0, 3, 7, 6, 1, 1, 2, 3, 3, 0, 6, 11, 2, 127, 1, 65, 0, 11, 127, 1, 65, 0, 11, 7, 102, 6, 16, 99, 111, 100, 101, 95, 117, 110, 105, 116, 115, 95, 99, 111, 117, 110, 116, 0, 1, 11, 104, 97, 115, 95, 101, 115, 99, 97, 112, 101, 100, 0, 2, 15, 117, 116, 102, 56, 95, 115, 99, 97, 110, 95, 97, 115, 99, 105, 105, 0, 3, 19, 117, 116, 102, 56, 95, 115, 99, 97, 110, 95, 97, 115, 99, 105, 105, 95, 105, 51, 50, 0, 4, 13, 117, 116, 102, 56, 95, 115, 99, 97, 110, 95, 105, 51, 50, 0, 5, 9, 117, 116, 102, 56, 95, 115, 99, 97, 110, 0, 6, 10, 176, 6, 6, 4, 0, 35, 1, 11, 4, 0, 35, 0, 11, 185, 1, 2, 4, 127, 3, 123, 65, 0, 36, 0, 65, 0, 36, 1, 32, 0, 33, 2, 65, 34, 253, 15, 33, 7, 65, 220, 0, 253, 15, 33, 8, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 6, 32, 6, 32, 8, 253, 35, 253, 100, 4, 64, 65, 1, 36, 0, 32, 0, 15, 11, 32, 6, 32, 7, 253, 35, 253, 100, 13, 1, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 3, 32, 3, 65, 34, 70, 4, 64, 32, 0, 32, 2, 32, 0, 16, 0, 34, 4, 65, 0, 78, 4, 64, 32, 4, 15, 11, 11, 32, 3, 65, 220, 0, 70, 4, 64, 32, 0, 65, 1, 106, 45, 0, 0, 65, 220, 0, 71, 4, 64, 65, 1, 36, 0, 32, 0, 15, 11, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11, 122, 3, 2, 127, 2, 126, 3, 123, 65, 0, 36, 0, 65, 0, 36, 1, 65, 34, 253, 15, 33, 9, 65, 220, 0, 253, 15, 33, 10, 32, 1, 173, 66, 32, 134, 32, 0, 173, 132, 33, 6, 32, 3, 173, 66, 32, 134, 32, 2, 173, 132, 33, 7, 32, 6, 253, 18, 32, 7, 253, 30, 1, 33, 8, 32, 8, 32, 10, 253, 35, 253, 100, 33, 4, 32, 4, 32, 4, 65, 1, 118, 113, 33, 5, 32, 4, 32, 5, 65, 127, 115, 113, 4, 64, 65, 1, 36, 0, 65, 127, 15, 11, 32, 8, 32, 9, 253, 35, 253, 100, 34, 4, 4, 64, 32, 4, 104, 15, 11, 65, 127, 15, 11, 187, 1, 3, 2, 127, 2, 126, 6, 123, 65, 0, 36, 0, 65, 0, 36, 1, 65, 34, 253, 15, 33, 9, 65, 220, 0, 253, 15, 33, 10, 65, 128, 1, 253, 15, 33, 11, 65, 192, 1, 253, 15, 33, 12, 65, 240, 1, 253, 15, 33, 13, 32, 1, 173, 66, 32, 134, 32, 0, 173, 132, 33, 6, 32, 3, 173, 66, 32, 134, 32, 2, 173, 132, 33, 7, 32, 6, 253, 18, 32, 7, 253, 30, 1, 33, 8, 32, 8, 32, 10, 253, 35, 253, 100, 33, 4, 32, 4, 32, 4, 65, 1, 118, 113, 33, 5, 32, 4, 32, 5, 65, 127, 115, 113, 4, 64, 65, 1, 36, 0, 65, 127, 15, 11, 32, 8, 32, 13, 253, 44, 253, 100, 105, 36, 1, 32, 8, 32, 12, 253, 78, 33, 8, 32, 8, 32, 11, 253, 35, 33, 8, 35, 1, 65, 16, 32, 8, 253, 100, 105, 107, 106, 36, 1, 32, 8, 32, 9, 253, 35, 253, 100, 34, 4, 4, 64, 65, 0, 36, 1, 32, 4, 104, 15, 11, 65, 127, 15, 11, 176, 2, 2, 4, 127, 6, 123, 65, 0, 36, 0, 65, 0, 36, 1, 32, 0, 33, 3, 65, 34, 253, 15, 33, 8, 65, 220, 0, 253, 15, 33, 9, 65, 128, 1, 253, 15, 33, 10, 65, 192, 1, 253, 15, 33, 11, 65, 240, 1, 253, 15, 33, 12, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 7, 32, 7, 32, 9, 253, 35, 253, 100, 33, 5, 32, 5, 32, 5, 65, 1, 118, 113, 33, 6, 32, 5, 32, 6, 65, 127, 115, 113, 4, 64, 65, 1, 36, 0, 32, 0, 15, 11, 32, 2, 69, 32, 7, 32, 8, 253, 35, 253, 100, 113, 13, 1, 35, 1, 32, 7, 32, 12, 253, 44, 253, 100, 105, 106, 36, 1, 32, 7, 32, 11, 253, 78, 33, 7, 32, 7, 32, 10, 253, 35, 33, 7, 35, 1, 65, 16, 32, 7, 253, 100, 105, 107, 106, 36, 1, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 4, 32, 2, 69, 32, 4, 65, 34, 70, 113, 4, 64, 32, 0, 32, 3, 32, 0, 16, 0, 34, 5, 65, 0, 78, 4, 64, 32, 5, 15, 11, 11, 32, 4, 65, 220, 0, 70, 4, 64, 32, 0, 65, 1, 106, 45, 0, 0, 65, 220, 0, 71, 4, 64, 65, 1, 36, 0, 32, 0, 15, 11, 11, 32, 4, 65, 192, 1, 113, 65, 128, 1, 71, 4, 64, 35, 1, 65, 1, 32, 4, 65, 240, 1, 79, 106, 106, 36, 1, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11
             ]),
             { imports: { env: { memory }, utils: utilsModule! }, onError }
         ) ?? {
-            
+
         } as utf8ScanModule
 
         const {
@@ -316,8 +319,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
             if (utf16Module) {
                 const get_dq_index = utf16Module.dq_index
-                const get_ascii_only = utf16Module.ascii_only
-                const get_utf16_length = utf16Module.utf16_length
+                const get_target = utf16Module.target
                 const utf8_to_utf16 = utf16Module.utf8_to_utf16
 
                 return (base: string, context: JsonParsingContext, i: number): ReadResult<string> => {
@@ -339,7 +341,8 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                             start = i - cacheViewStart
                         }
 
-                        const end_index = utf8_to_utf16(start, bytesLength - cacheViewStart, bytesLength - cacheViewStart + 1, partial)
+                        const target = bytesLength - cacheViewStart + 1
+                        const end_index = utf8_to_utf16(start, bytesLength - cacheViewStart, target, partial)
                         if (end_index < 0) {
                             return {
                                 type: ERROR,
@@ -348,16 +351,17 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         }
                         i = end_index + cacheViewStart
 
+                        const result_target = get_target()
                         const dq_index = get_dq_index()
-                        const ascii_only = get_ascii_only() === 1
+                        const ascii_only = result_target === target
 
                         if (dq_index === -1) {
-                            if (reader.writable) {
+                            if (writable) {
                                 stack.push({
                                     isContinued: true,
                                     base: base.concat(ascii_only ?
                                         utf8(start, end_index, ascii_only) :
-                                        utf16(bytesLength - cacheViewStart + 1, get_utf16_length()))
+                                        utf16(bytesLength - cacheViewStart + 1, result_target))
                                 })
                                 return {
                                     type: NEEDS_MORE_DATA,
@@ -380,12 +384,11 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                             }
                         }
 
-                        const utf16_end = get_utf16_length()
                         return {
                             type: COMPLETE,
                             value: base.length === 0 ?
-                                utf16(bytesLength - cacheViewStart + 1, utf16_end) :
-                                base.concat(utf16(bytesLength - cacheViewStart + 1, utf16_end)),
+                                utf16(bytesLength - cacheViewStart + 1, result_target) :
+                                base.concat(utf16(bytesLength - cacheViewStart + 1, result_target)),
                             nextIndex: i + 1
                         }
                     }
@@ -400,7 +403,8 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
                         memoryView.set(new Uint8Array(b.buffer, i, length))
 
-                        const end_index = utf8_to_utf16(0, length, length + 1, chunkPartial)
+                        const target = length + 1
+                        const end_index = utf8_to_utf16(0, length, target, chunkPartial)
                         if (end_index < 0) {
                             return {
                                 type: ERROR,
@@ -409,14 +413,15 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         }
                         i += end_index
 
+                        const result_target = get_target()
                         const dq_index = get_dq_index()
-                        const ascii_only = get_ascii_only() === 1
+                        const ascii_only = result_target === target
 
                         if (dq_index === -1) {
                             if (!lastChunk) {
                                 base = ascii_only ?
                                     base.concat(utf8(0, end_index, ascii_only)) :
-                                    base.concat(utf16(length + 1, get_utf16_length()))
+                                    base.concat(utf16(length + 1, get_target()))
                                 continue
                             }
                             if (reader.writable) {
@@ -424,7 +429,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                                     isContinued: true,
                                     base: ascii_only ?
                                         base.concat(utf8(0, end_index, ascii_only)) :
-                                        base.concat(utf16(length + 1, get_utf16_length()))
+                                        base.concat(utf16(length + 1, get_target()))
                                 })
                                 return {
                                     type: NEEDS_MORE_DATA,
@@ -447,7 +452,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                             }
                         }
 
-                        const utf16_end = get_utf16_length()
+                        const utf16_end = get_target()
                         return {
                             type: COMPLETE,
                             value: base.length === 0 ?
@@ -468,7 +473,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
         )
 
         if (utf8Module) {
-            const get_ascii_only = utf8Module.ascii_only
+            const get_target = utf8Module.target
             const get_dq_index = utf8Module.dq_index
             const utf8_to_utf8 = utf8Module.utf8_to_utf8
 
@@ -490,7 +495,8 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         start = i - cacheViewStart
                     }
 
-                    const end_index = utf8_to_utf8(start, bytesLength - cacheViewStart, partial)
+                    const target = bytesLength - cacheViewStart + 1
+                    const end_index = utf8_to_utf8(start, bytesLength - cacheViewStart, target, partial)
                     if (end_index < 0) {
                         return {
                             type: ERROR,
@@ -499,8 +505,9 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     }
                     i = end_index + cacheViewStart
 
+                    const result_target = get_target()
                     const dq_index = get_dq_index()
-                    const ascii_only = get_ascii_only() === 1
+                    const ascii_only = result_target === target
 
                     if (dq_index === -1) {
                         if (reader.writable) {
@@ -540,7 +547,8 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
                     memoryView.set(new Uint8Array(b.buffer, i, length))
 
-                    const end_index = utf8_to_utf8(0, length, chunkPartial)
+                    const target = length + 1
+                    const end_index = utf8_to_utf8(0, length, target, chunkPartial)
                     if (end_index < 0) {
                         return {
                             type: ERROR,
@@ -549,8 +557,9 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     }
                     i += end_index
 
+                    const result_target = get_target()
                     const dq_index = get_dq_index()
-                    const ascii_only = get_ascii_only() === 1
+                    const ascii_only = result_target === target
 
                     if (dq_index === -1) {
                         if (!lastChunk) {

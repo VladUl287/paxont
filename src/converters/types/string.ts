@@ -4,16 +4,15 @@ import type { wasmInstance } from "../../utils/wasm"
 
 export type utf8Module = {
     readonly memory: WebAssembly.Memory
-    readonly ascii_only: () => number
     readonly dq_index: () => number
-    readonly utf8_to_utf8: (start: number, length: number, partial: number) => number
+    readonly target: () => number
+    readonly utf8_to_utf8: (start: number, length: number, target: number, partial: number) => number
 }
 
 export type utf16Module = {
     readonly memory: WebAssembly.Memory
-    readonly ascii_only: () => number
     readonly dq_index: () => number
-    readonly utf16_length: () => number
+    readonly target: () => number
     readonly utf8_to_utf16: (start: number, length: number, target: number, partial: number) => number
 }
 
