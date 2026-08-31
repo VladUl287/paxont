@@ -198,7 +198,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     utf8_scan_i32(a1, a2, a3, a4)
 
                     const has_escape = has_escaped()
-                    if (has_escape) {
+                    if (has_escape > 0) {
                         return fallbackDecoder(ctx, i)
                     }
 
@@ -215,50 +215,46 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     j++
                     if (byte < 128 || byte >= 192) {
                         cI++
-                        if (byte >= 240) {
-                            cI++
-                        }
+                        if (byte >= 240) { cI++ }
                     }
                 }
 
                 const start = cI
 
+                let end_index = -1
                 while (j < len - 16) {
                     const a1 = b[j] | b[j + 1] << 8 | b[j + 2] << 16 | b[j + 3] << 24
                     const a2 = b[j + 4] | b[j + 5] << 8 | b[j + 6] << 16 | b[j + 7] << 24
                     const a3 = b[j + 8] | b[j + 9] << 8 | b[j + 10] << 16 | b[j + 11] << 24
                     const a4 = b[j + 12] | b[j + 13] << 8 | b[j + 14] << 16 | b[j + 15] << 24
 
-                    const end_index = utf8_scan_i32(a1, a2, a3, a4)
-                    if (end_index > 0) {
-                        j += end_index
-                        cI += code_units_count()
-                        break
-                    }
+                    end_index = utf8_scan_i32(a1, a2, a3, a4)
 
                     const has_escape = has_escaped()
-                    if (has_escape) {
+                    if (has_escape > 0) {
                         return fallbackDecoder(ctx, i)
                     }
 
-                    j += 16
                     cI += code_units_count()
-                }
 
-                while (j < len) {
-                    const byte = b[j]
-                    if (byte === BACKSLASH) {
-                        return fallbackDecoder(ctx, i)
-                    }
-                    if (byte === DOUBLE_QUOTE) {
+                    if (end_index > 0) {
+                        j += end_index
                         break
                     }
+                    j += 16
+                }
 
-                    j++
-                    if (byte < 128 || byte >= 192) {
-                        cI++
-                        if (byte >= 240) {
+                if (end_index < 0) {
+                    while (j < len) {
+                        const byte = b[j]
+                        if (byte === BACKSLASH) {
+                            return fallbackDecoder(ctx, i)
+                        }
+                        if (byte === DOUBLE_QUOTE) { break }
+                        j++
+                        if (byte < 128 || byte >= 192) {
                             cI++
+                            if (byte >= 240) { cI++ }
                         }
                     }
                 }
