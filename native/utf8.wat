@@ -51,8 +51,13 @@
 
     (if (i32.eq (local.get $i) (local.get $len))
       (then
-        (global.set $target (local.get $target_temp))
-        (return (local.get $i))
+        (if (local.get $partial)
+          (then
+            (global.set $target (local.get $target))
+            (return (local.get $i))
+          )
+          (else (return (i32.const -1)))
+        )
       )
     )
 
