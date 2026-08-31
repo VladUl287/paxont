@@ -23,8 +23,6 @@ const defaultOptions: StringParseOptions = {
     onError: console.error
 }
 
-// utf8 validate v128 and not check if two or three or four bytes sequence
-// find last integer character and not use partial at all
 export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) {
     const options: StringParseOptions = { ...defaultOptions, ...opt }
     const { defaultMemoryPages, maxMemoryPages, utf8Decoder: newUtf8, utf16LeDecoder: newUtf16, wasmInstance, onError } = options
