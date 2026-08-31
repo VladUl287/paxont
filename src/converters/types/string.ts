@@ -2,6 +2,10 @@ import type { utf16LeDecoder } from "../../utils/utf16"
 import type { utf8Decoder } from "../../utils/utf8"
 import type { wasmInstance } from "../../utils/wasm"
 
+export type utilsModule = {
+    readonly find_quote: (i: number, start: number, end: number) => number
+}
+
 export type utf8Module = {
     readonly memory: WebAssembly.Memory
     readonly dq_index: () => number
@@ -16,8 +20,14 @@ export type utf16Module = {
     readonly utf8_to_utf16: (start: number, length: number, target: number, partial: number) => number
 }
 
-export type utilsModule = {
-    readonly find_quote: (i: number, start: number, end: number) => number
+export type asciiModule = {
+    readonly parse_ascii: (i: number, start: number, end: number, target: number, extend: number) => unknown
+}
+
+export type asciiUtilsModule = {
+    readonly store_32: (byte: number, target: number) => number
+    readonly store_128_unsafe: (data: any, byte_count: number, target: number) => number
+    readonly store_code_point: (offset: number, code_point: number) => number
 }
 
 export type utf8ScanModule = {
