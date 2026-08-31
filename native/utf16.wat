@@ -71,7 +71,7 @@
         (if (i32.lt_u (i32.load8_u (local.get $i)) (i32.const 128)) 
           (then
             (call $parse_ascii (local.get $i) (local.get $start) (local.get $len) (local.get $target) (i32.const 1))
-            (local.set $target_temp)
+            (local.set $target)
             (local.set $i)
 
             (if (i32.eq (local.get $i) (i32.const -1))
@@ -83,8 +83,7 @@
                 (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
                   (then
                     (global.set $dq_index (local.get $temp))
-                    (global.set $not_extended (i32.eq (local.get $target) (local.get $target_temp)))
-                    (global.set $target (local.get $target_temp))
+                    (global.set $target (local.get $target))
                     (return (local.get $temp)))
                 )
               )
