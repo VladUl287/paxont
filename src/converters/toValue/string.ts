@@ -594,33 +594,12 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             }
         }
 
-        function findEnd(b: Uint8Array, len: number, i: number): number {
-            while (i <= len - 4) {
-                const a1 = (b[i] | b[i + 1] << 8 | b[i + 2] << 16 | b[i + 3] << 24) ^ 0x22222222
-
-                if (((a1 - 0x01010101) & (~a1) & 0x80808080) !== 0)
-                    break
-
-                i += 4
+        function isEscaped(b: Uint8Array, i: number): boolean {
+            let escaped = false
+            while (b[i--] === BACKSLASH) {
+                escaped = !escaped
             }
-
-            function isEscaped(b: Uint8Array, i: number): boolean {
-                let escaped = false
-                while (b[i--] === BACKSLASH) {
-                    escaped = !escaped
-                }
-                return escaped
-            }
-
-            while (i < len) {
-                if (b[i] === DQ) {
-                    return isEscaped(b, i) ?
-                        findEnd(b, len, i + 1) :
-                        i
-                }
-                i++
-            }
-            return -1
+            return escaped
         }
 
         function findLastChar(b: Uint8Array, start: number, len: number): number {
@@ -661,18 +640,31 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
         }
 
         function decodeBytes(base: string, ctx: JsonParsingContext, i: number): ReadResult<string> {
-            const { reader: { bytes: b, bytesLength, raw, writable }, stack, options } = ctx
+            const { reader: { bytes: b, bytesLength, writable }, stack, options } = ctx
 
             const utf8 = options.decoder
-            const end_index = findEnd(b, bytesLength, i)
+
+            let end_index = b.indexOf(DOUBLE_QUOTE, i)
+            let has_escaped = false
+            if (end_index > -1 && isEscaped(b, i)) {
+                has_escaped = true
+                while (true) {
+                    end_index = b.indexOf(DOUBLE_QUOTE, i)
+                    if (end_index > -1 && isEscaped(b, i)) {
+                        has_escaped = true
+                        continue
+                    }
+                    break
+                }
+            }
 
             if (end_index < 0) {
                 if (writable) {
                     const end_index = findLastChar(b, i, bytesLength)
+
                     try {
-                        base = base.length === 0 ?
-                            utf8.decode(new Uint8Array(b.buffer, i, end_index - i)) :
-                            base.concat(utf8.decode(new Uint8Array(b.buffer, i, end_index - i)))
+                        const segment = new Uint8Array(b.buffer, i, end_index - i)
+                        base = base.length > 0 ? base.concat(utf8.decode(segment)) : utf8.decode(segment)
                     }
                     catch (error) {
                         return {
@@ -680,12 +672,14 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                             error: new JSONParseError('Decode error', { cause: error, index: i })
                         }
                     }
+
                     stack.push({ isContinued: true, base })
                     return {
                         type: NEEDS_MORE_DATA,
                         nextIndex: end_index
                     }
                 }
+
                 return {
                     type: ERROR,
                     error: new JSONParseError('')
@@ -693,9 +687,14 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             }
 
             try {
-                base = base.length === 0 ?
-                    utf8.decode(new Uint8Array(b.buffer, i, end_index - i)) :
-                    base.concat(utf8.decode(new Uint8Array(b.buffer, i, end_index - i)))
+                const segment = new Uint8Array(b.buffer, i, end_index - i)
+
+                const backslash_index = segment.indexOf(BACKSLASH)
+                if (backslash_index > -1) {
+                    // mutate in place?
+                }
+
+                base = base.length > 0 ? base.concat(utf8.decode(segment)) : utf8.decode(segment)
             }
             catch (error) {
                 return {
@@ -703,6 +702,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     error: new JSONParseError('Decode error', { cause: error, index: i })
                 }
             }
+
             return {
                 type: COMPLETE,
                 value: base,
