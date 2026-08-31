@@ -98,7 +98,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
         return (ctx: JsonParsingContext, i: number): ReadResult<string> => {
             const { reader } = ctx
-            const { bytes: b, bytesLength: len, raw, sparseIndex, writable } = reader
+            const { bytes: b, bytesLength: len, raw, sparseIndex } = reader
 
             if (raw === undefined) {
                 return {
@@ -116,18 +116,18 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             if (ascii_only) {
                 let j = i
 
-                if (len > memoryView.length && !ensureMemory(memory, len, setView)) { //Replace memory view to scanmodule memory
+                if (len > memoryView.length && !ensureMemory(memory, len, setView)) {
+                    let end_index = -1
                     while (j < len - 16) {
                         const a1 = b[j] | b[j + 1] << 8 | b[j + 2] << 16 | b[j + 3] << 24
                         const a2 = b[j + 4] | b[j + 5] << 8 | b[j + 6] << 16 | b[j + 7] << 24
                         const a3 = b[j + 8] | b[j + 9] << 8 | b[j + 10] << 16 | b[j + 11] << 24
                         const a4 = b[j + 12] | b[j + 13] << 8 | b[j + 14] << 16 | b[j + 15] << 24
 
-                        const end_index = utf8_scan_ascii_i32(a1, a2, a3, a4)
-
+                        end_index = utf8_scan_ascii_i32(a1, a2, a3, a4)
                         const has_escape = has_escaped()
-                        if (has_escape) {
-                            // check if actually has escaped and if index of it bigger than end_index
+
+                        if (has_escape > 0) {
                             return fallbackDecoder(ctx, i)
                         }
 
@@ -139,17 +139,15 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         j += 16
                     }
 
-                    while (j < len) {
-                        const byte = b[j]
-                        if (byte === BACKSLASH) {
-                            //check if escaped
-                            return fallbackDecoder(ctx, i)
+                    if (end_index < 0) {
+                        while (j < len) {
+                            const byte = b[j]
+                            if (byte === BACKSLASH) {
+                                return fallbackDecoder(ctx, i)
+                            }
+                            if (byte === DOUBLE_QUOTE) { break }
+                            j++
                         }
-                        if (byte === DOUBLE_QUOTE) {
-                            //check if escaped
-                            break
-                        }
-                        j++
                     }
 
                     const result = raw.substring(i - diff, j - diff)
@@ -633,14 +631,6 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             }
         }
 
-        function isEscaped(b: Uint8Array, i: number): boolean {
-            let escaped = false
-            while (b[i--] === BACKSLASH) {
-                escaped = !escaped
-            }
-            return escaped
-        }
-
         function findEnd(b: Uint8Array, len: number, i: number): number {
             while (i <= len - 4) {
                 const a1 = (b[i] | b[i + 1] << 8 | b[i + 2] << 16 | b[i + 3] << 24) ^ 0x22222222
@@ -649,6 +639,14 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     break
 
                 i += 4
+            }
+
+            function isEscaped(b: Uint8Array, i: number): boolean {
+                let escaped = false
+                while (b[i--] === BACKSLASH) {
+                    escaped = !escaped
+                }
+                return escaped
             }
 
             while (i < len) {
