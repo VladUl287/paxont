@@ -52,7 +52,17 @@
           )
         )
 
-        (br_if $block (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec))))
+        (if (local.tee $byte (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec))))
+          (then
+            (local.set $byte (i32.ctz (local.get $byte)))
+            ;; check if bytes count is before double quote position
+            (local.set $byte_count (i32.sub (local.get $i) (local.get $byte)))
+            (if (local.get $extend)
+              (then (local.set $target (call $store_128_unsafe (local.get $data_vec) (local.get $byte_count) (local.get $target))))
+            )
+            (return (i32.ctz (local.get $byte)) (local.get $target))
+          )
+        )
 
         (if (local.get $extend)
           (then (local.set $target (call $store_128_unsafe (local.get $data_vec) (local.get $byte_count) (local.get $target))))
