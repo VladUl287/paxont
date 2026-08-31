@@ -7,8 +7,7 @@
   
   (func $parse_ascii (export "parse_ascii") (param $i i32) (param $start i32) (param $end i32) (param $target i32) (param $extend i32) (result i32 i32)
     (local $local_start i32)
-    (local $temp i32)
-    (local $temp_mask i32)
+    (local $backslashed i32)
     (local $byte_count i32)
     (local $byte i32)
     (local $data_vec v128)
@@ -56,68 +55,54 @@
           )
         )
 
-        (local.set $temp_mask (i32.const 0))
-        (if (local.tee $temp (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec))))
+        (if (local.tee $backslashed (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec))))
           (then
-            (local.set $temp_mask (i32.and (local.get $temp) (i32.shr_u (local.get $temp) (i32.const 1))))
-            (if (i32.and (local.get $temp) (i32.xor (local.get $temp_mask) (i32.const -1)))
+            (if (i32.eqz (local.get $extend))
               (then
-                (if (i32.eqz (local.get $extend))
-                  (then
-                    (local.set $i (local.get $local_start))
-                    (local.set $extend (i32.const 1))
-                    (br $loop)
-                  )
-                )
+                (local.set $i (local.get $local_start))
+                (local.set $extend (i32.const 1))
+                (br $loop)
               )
             )
           )
         )
 
         (if (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec)))
-          (then 
-            (if
-              (i32.ge_s
-                (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (i32.add (local.get $i) (local.get $byte_count))))
-                (i32.const 0)
-              )
-              (then
-                (local.set $byte_count (i32.sub (local.get $i) (local.get $temp)))
+          (then
+            (local.set $byte_count (i32.sub (local.get $i) (local.get $backslashed)))
 
-                (if (local.get $extend)
+            (if (local.get $extend)
+              (then
+                (if (local.get $backslashed)
                   (then
-                    (if (local.get $temp_mask)
-                      (then
-                        (call $store_sequentially 
-                          (local.get $i)
-                          (local.get $temp)
-                          (local.get $end)
-                          (local.get $target)
-                        )
-                        (local.set $target)
-                        (local.set $i)
-                        (if (i32.eq (local.get $i) (i32.const -1))
-                          (then (return (i32.const -1) (i32.const -1)))
-                        )
-                      )
-                      (else (local.set $target (call $store_128_unsafe (local.get $data_vec) (local.get $byte_count) (local.get $target))))
+                    (call $store_sequentially 
+                      (local.get $i)
+                      (i32.add (local.get $i) (local.get $byte_count))
+                      (local.get $end)
+                      (local.get $target)
+                    )
+                    (local.set $target)
+                    (local.set $i)
+                    (if (i32.eq (local.get $i) (i32.const -1))
+                      (then (return (i32.const -1) (i32.const -1)))
                     )
                   )
+                  (else (local.set $target (call $store_128_unsafe (local.get $data_vec) (local.get $byte_count) (local.get $target))))
                 )
-                
-                (return (local.get $temp) (local.get $target))
               )
             )
+            
+            (return (local.get $backslashed) (local.get $target))
           )
         )
 
         (if (local.get $extend)
           (then
-            (if (local.get $temp_mask)
+            (if (local.get $backslashed)
               (then
                 (call $store_sequentially 
                   (local.get $i)
-                  (local.get $temp)
+                  (i32.add (local.get $i) (local.get $byte_count))
                   (local.get $end)
                   (local.get $target)
                 )
@@ -127,7 +112,11 @@
                   (then (return (i32.const -1) (i32.const -1)))
                 )
               )
-              (else (local.set $target (call $store_128_unsafe (local.get $data_vec) (local.get $byte_count) (local.get $target))))
+              (else 
+                (local.set $target 
+                  (call $store_128_unsafe (local.get $data_vec) (local.get $byte_count) (local.get $target))
+                )
+              )
             )
           )
           (else (local.set $i (i32.add (local.get $i) (local.get $byte_count))))
@@ -155,19 +144,17 @@
 
         (if (i32.eq (local.get $byte) (i32.const 34))
           (then
-            (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
-              (then (return (local.get $temp) (local.get $target)))
+            (if (i32.ge_s (local.tee $backslashed (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
+              (then (return (local.get $backslashed) (local.get $target)))
             )
           )
         )
 
-        (local.set $temp_mask (i32.const 0))
         (if (i32.eq (local.get $byte) (i32.const 92))
           (then
-            ;; TODO: check escaped or not
-            (if (local.get $extend)
-              (then (local.set $temp_mask (i32.const 1)))
-              (else
+            (local.set $backslashed (i32.const 1))
+            (if (i32.eqz (local.get $extend))
+              (then
                 (local.set $i (local.get $local_start))
                 (local.set $extend (i32.const 1))
                 (br $loop)
@@ -178,7 +165,7 @@
 
         (if (local.get $extend)
           (then
-            (if (local.get $temp_mask)
+            (if (local.get $backslashed)
               (then
                 (call $store_sequentially 
                   (local.get $i) 
