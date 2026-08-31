@@ -4,12 +4,8 @@
   (import "ascii" "parse_ascii"
     (func $parse_ascii (param $i i32) (param $start i32) (param $end i32) (param $target i32) (param $extend i32) (result i32 i32)))
   
-  (global $not_extended (mut i32) (i32.const 0))
   (global $dq_index (mut i32) (i32.const -1))
   (global $target (mut i32) (i32.const 0))
-
-  (func (export "not_extended") (result i32)
-    (global.get $not_extended))
 
   (func (export "dq_index") (result i32)
     (global.get $dq_index))
@@ -30,7 +26,6 @@
 
     (global.set $target (i32.const 0))
     (global.set $dq_index (i32.const -1))
-    (global.set $not_extended (i32.const 0))
 
     (local.set $start (local.get $i))
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
@@ -48,7 +43,6 @@
         (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
           (then
             (global.set $dq_index (local.get $temp))
-            (global.set $not_extended (i32.eq (local.get $target) (local.get $target_temp)))
             (global.set $target (local.get $target_temp))
             (return (local.get $temp)))
         )
@@ -79,7 +73,6 @@
                 (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
                   (then
                     (global.set $dq_index (local.get $temp))
-                    (global.set $not_extended (i32.eq (local.get $target) (local.get $target_temp)))
                     (global.set $target (local.get $target_temp))
                     (return (local.get $temp)))
                 )
@@ -96,8 +89,6 @@
             )
           )
         )
-
-        (global.set $not_extended (i32.const 0))
 
         ;; two byte value
         (if (i32.lt_u (local.tee $temp (i32.load8_u (local.get $i))) (i32.const 224))
