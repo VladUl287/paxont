@@ -153,7 +153,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                 }
             }
 
-            if (len > memoryView.length && !ensureMemory(memory, len, setView)) {
+            if (len >= memoryView.length && !ensureMemory(memory, len, setView)) {
                 let j = bI
 
                 while (j < i - 16) {
