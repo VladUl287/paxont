@@ -115,7 +115,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
                     const result = raw.substring(i - diff, j - diff)
 
-                    if (result.indexOf('\\') > -1) {
+                    if (result.indexOf('\\', i - diff) > -1) {
                         return fallbackDecoder(ctx, i)
                     }
 
