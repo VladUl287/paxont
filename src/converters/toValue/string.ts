@@ -17,7 +17,6 @@ const defaultOptions: StringParseOptions = {
     maxMemoryPages: 128, //~8MB,
     wasmInstance,
     useUtf16: IS_NODE || IS_BUN,
-    // useUtf16: false,
     utf16LeDecoder: IS_NODE || IS_BUN ? utf16LeDecoderForBuffer : utf16LeDecoder,
     utf8Decoder: IS_NODE || IS_BUN ? utf8DecoderForBuffer : utf8Decoder,
     onError: console.error
@@ -43,6 +42,29 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
         utf16 = newUtf16(memoryView)
         utf8 = newUtf8(memoryView)
     }
+    function ensureMemory(memory: WebAssembly.Memory, reqLength: number, onGrow: (memory: WebAssembly.Memory) => void): boolean {
+        try {
+            const currentLength = memory.buffer.byteLength
+
+            if (reqLength > MAX_MEMORY_BYTES) {
+                return false
+            }
+
+            if (reqLength > currentLength) {
+                const pages = currentLength / PAGE_SIZE_BYTES
+                const requiredPages = Math.ceil(reqLength / PAGE_SIZE_BYTES)
+                memory.grow(requiredPages - pages)
+                onGrow(memory)
+                return true
+            }
+
+            return true
+        }
+        catch (error) {
+            onError(error)
+            return false
+        }
+    }
 
     let cacheView: Uint8Array | undefined = undefined
     let cacheViewStart: number = 0
@@ -51,23 +73,22 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
         cacheViewStart = 0
     }
 
-    function isEscaped(b: Uint8Array, i: number): boolean {
-        let escaped = false
-        while (b[i--] === BACKSLASH) {
-            escaped = !escaped
-        }
-        return escaped
-    }
+    const utilsModule = wasmInstance<utilsModule>(
+        new Uint8Array([
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 1, 96, 3, 127, 127, 127, 1, 127, 2, 17, 1, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 1, 1, 128, 1, 3, 2, 1, 0, 7, 14, 1, 10, 102, 105, 110, 100, 95, 113, 117, 111, 116, 101, 0, 0, 10, 101, 1, 99, 1, 3, 127, 2, 64, 3, 64, 32, 0, 32, 2, 75, 13, 1, 32, 0, 45, 0, 0, 33, 3, 32, 3, 65, 34, 70, 4, 64, 32, 0, 33, 4, 65, 0, 33, 5, 2, 64, 3, 64, 32, 4, 65, 1, 107, 33, 4, 32, 4, 32, 1, 72, 13, 1, 32, 4, 45, 0, 0, 65, 220, 0, 71, 13, 1, 32, 5, 69, 33, 5, 12, 0, 11, 11, 32, 5, 69, 4, 64, 32, 0, 15, 11, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11
+        ]),
+        { imports: { env: { memory } }, onError }
+    )
 
-    const sparseDecoderFactory = (memory: WebAssembly.Memory, bytesDecoder: (ctx: JsonParsingContext, start: number) => ReadResult<string>) => {
+    const useRawDecoder = (memory: WebAssembly.Memory, fallbackDecoder: (ctx: JsonParsingContext, start: number) => ReadResult<string>) => {
         const scanModule = wasmInstance<utf8ScanModule>(
             new Uint8Array([
                 0, 97, 115, 109, 1, 0, 0, 0, 1, 26, 4, 96, 3, 127, 127, 127, 1, 127, 96, 0, 1, 127, 96, 2, 127, 127, 1, 127, 96, 4, 127, 127, 127, 127, 1, 127, 2, 36, 2, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 1, 1, 128, 1, 5, 117, 116, 105, 108, 115, 10, 102, 105, 110, 100, 95, 113, 117, 111, 116, 101, 0, 0, 3, 7, 6, 1, 1, 2, 3, 3, 0, 6, 11, 2, 127, 1, 65, 0, 11, 127, 1, 65, 0, 11, 7, 102, 6, 16, 99, 111, 100, 101, 95, 117, 110, 105, 116, 115, 95, 99, 111, 117, 110, 116, 0, 1, 11, 104, 97, 115, 95, 101, 115, 99, 97, 112, 101, 100, 0, 2, 15, 117, 116, 102, 56, 95, 115, 99, 97, 110, 95, 97, 115, 99, 105, 105, 0, 3, 19, 117, 116, 102, 56, 95, 115, 99, 97, 110, 95, 97, 115, 99, 105, 105, 95, 105, 51, 50, 0, 4, 13, 117, 116, 102, 56, 95, 115, 99, 97, 110, 95, 105, 51, 50, 0, 5, 9, 117, 116, 102, 56, 95, 115, 99, 97, 110, 0, 6, 10, 176, 6, 6, 4, 0, 35, 1, 11, 4, 0, 35, 0, 11, 185, 1, 2, 4, 127, 3, 123, 65, 0, 36, 0, 65, 0, 36, 1, 32, 0, 33, 2, 65, 34, 253, 15, 33, 7, 65, 220, 0, 253, 15, 33, 8, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 6, 32, 6, 32, 8, 253, 35, 253, 100, 4, 64, 65, 1, 36, 0, 32, 0, 15, 11, 32, 6, 32, 7, 253, 35, 253, 100, 13, 1, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 3, 32, 3, 65, 34, 70, 4, 64, 32, 0, 32, 2, 32, 0, 16, 0, 34, 4, 65, 0, 78, 4, 64, 32, 4, 15, 11, 11, 32, 3, 65, 220, 0, 70, 4, 64, 32, 0, 65, 1, 106, 45, 0, 0, 65, 220, 0, 71, 4, 64, 65, 1, 36, 0, 32, 0, 15, 11, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11, 122, 3, 2, 127, 2, 126, 3, 123, 65, 0, 36, 0, 65, 0, 36, 1, 65, 34, 253, 15, 33, 9, 65, 220, 0, 253, 15, 33, 10, 32, 1, 173, 66, 32, 134, 32, 0, 173, 132, 33, 6, 32, 3, 173, 66, 32, 134, 32, 2, 173, 132, 33, 7, 32, 6, 253, 18, 32, 7, 253, 30, 1, 33, 8, 32, 8, 32, 10, 253, 35, 253, 100, 33, 4, 32, 4, 32, 4, 65, 1, 118, 113, 33, 5, 32, 4, 32, 5, 65, 127, 115, 113, 4, 64, 65, 1, 36, 0, 65, 127, 15, 11, 32, 8, 32, 9, 253, 35, 253, 100, 34, 4, 4, 64, 32, 4, 104, 15, 11, 65, 127, 15, 11, 187, 1, 3, 2, 127, 2, 126, 6, 123, 65, 0, 36, 0, 65, 0, 36, 1, 65, 34, 253, 15, 33, 9, 65, 220, 0, 253, 15, 33, 10, 65, 128, 1, 253, 15, 33, 11, 65, 192, 1, 253, 15, 33, 12, 65, 240, 1, 253, 15, 33, 13, 32, 1, 173, 66, 32, 134, 32, 0, 173, 132, 33, 6, 32, 3, 173, 66, 32, 134, 32, 2, 173, 132, 33, 7, 32, 6, 253, 18, 32, 7, 253, 30, 1, 33, 8, 32, 8, 32, 10, 253, 35, 253, 100, 33, 4, 32, 4, 32, 4, 65, 1, 118, 113, 33, 5, 32, 4, 32, 5, 65, 127, 115, 113, 4, 64, 65, 1, 36, 0, 65, 127, 15, 11, 32, 8, 32, 13, 253, 44, 253, 100, 105, 36, 1, 32, 8, 32, 12, 253, 78, 33, 8, 32, 8, 32, 11, 253, 35, 33, 8, 35, 1, 65, 16, 32, 8, 253, 100, 105, 107, 106, 36, 1, 32, 8, 32, 9, 253, 35, 253, 100, 34, 4, 4, 64, 65, 0, 36, 1, 32, 4, 104, 15, 11, 65, 127, 15, 11, 176, 2, 2, 4, 127, 6, 123, 65, 0, 36, 0, 65, 0, 36, 1, 32, 0, 33, 3, 65, 34, 253, 15, 33, 8, 65, 220, 0, 253, 15, 33, 9, 65, 128, 1, 253, 15, 33, 10, 65, 192, 1, 253, 15, 33, 11, 65, 240, 1, 253, 15, 33, 12, 2, 64, 3, 64, 32, 0, 65, 16, 106, 32, 1, 75, 13, 1, 32, 0, 253, 0, 4, 0, 33, 7, 32, 7, 32, 9, 253, 35, 253, 100, 33, 5, 32, 5, 32, 5, 65, 1, 118, 113, 33, 6, 32, 5, 32, 6, 65, 127, 115, 113, 4, 64, 65, 1, 36, 0, 32, 0, 15, 11, 32, 2, 69, 32, 7, 32, 8, 253, 35, 253, 100, 113, 13, 1, 35, 1, 32, 7, 32, 12, 253, 44, 253, 100, 105, 106, 36, 1, 32, 7, 32, 11, 253, 78, 33, 7, 32, 7, 32, 10, 253, 35, 33, 7, 35, 1, 65, 16, 32, 7, 253, 100, 105, 107, 106, 36, 1, 32, 0, 65, 16, 106, 33, 0, 12, 0, 11, 11, 2, 64, 3, 64, 32, 0, 65, 1, 106, 32, 1, 75, 13, 1, 32, 0, 45, 0, 0, 33, 4, 32, 2, 69, 32, 4, 65, 34, 70, 113, 4, 64, 32, 0, 32, 3, 32, 0, 16, 0, 34, 5, 65, 0, 78, 4, 64, 32, 5, 15, 11, 11, 32, 4, 65, 220, 0, 70, 4, 64, 32, 0, 65, 1, 106, 45, 0, 0, 65, 220, 0, 71, 4, 64, 65, 1, 36, 0, 32, 0, 15, 11, 11, 32, 4, 65, 192, 1, 113, 65, 128, 1, 71, 4, 64, 35, 1, 65, 1, 32, 4, 65, 240, 1, 79, 106, 106, 36, 1, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11
             ]),
             { imports: { env: { memory }, utils: utilsModule! }, onError }
-        ) ?? {
+        )
 
-        } as utf8ScanModule
+        if (!scanModule) { return fallbackDecoder }
 
         const {
             code_units_count, has_escaped,
@@ -107,7 +128,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         const has_escape = has_escaped()
                         if (has_escape) {
                             // check if actually has escaped and if index of it bigger than end_index
-                            return bytesDecoder(ctx, i)
+                            return fallbackDecoder(ctx, i)
                         }
 
                         if (end_index > 0) {
@@ -122,7 +143,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         const byte = b[j]
                         if (byte === BACKSLASH) {
                             //check if escaped
-                            return bytesDecoder(ctx, i)
+                            return fallbackDecoder(ctx, i)
                         }
                         if (byte === DOUBLE_QUOTE) {
                             //check if escaped
@@ -156,7 +177,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
                 const has_escape = has_escaped()
                 if (has_escape > 0) {
-                    return bytesDecoder(ctx, i)
+                    return fallbackDecoder(ctx, i)
                 }
 
                 const result = raw.substring(i - diff, j - diff)
@@ -180,7 +201,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
                     const has_escape = has_escaped()
                     if (has_escape) {
-                        return bytesDecoder(ctx, i)
+                        return fallbackDecoder(ctx, i)
                     }
 
                     j += 16
@@ -190,7 +211,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                 while (j < i) {
                     const byte = b[j]
                     if (byte === BACKSLASH) {
-                        return bytesDecoder(ctx, i)
+                        return fallbackDecoder(ctx, i)
                     }
 
                     j++
@@ -219,7 +240,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
                     const has_escape = has_escaped()
                     if (has_escape) {
-                        return bytesDecoder(ctx, i)
+                        return fallbackDecoder(ctx, i)
                     }
 
                     j += 16
@@ -229,7 +250,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                 while (j < len) {
                     const byte = b[j]
                     if (byte === BACKSLASH) {
-                        return bytesDecoder(ctx, i)
+                        return fallbackDecoder(ctx, i)
                     }
                     if (byte === DOUBLE_QUOTE) {
                         break
@@ -266,7 +287,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
             let has_escape = has_escaped()
             if (has_escape) {
-                return bytesDecoder(ctx, i)
+                return fallbackDecoder(ctx, i)
             }
 
             cI += code_units_count()
@@ -283,7 +304,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
             has_escape = has_escaped()
             if (has_escape) {
-                return bytesDecoder(ctx, i)
+                return fallbackDecoder(ctx, i)
             }
 
             if (sparseIndex) {
@@ -300,15 +321,8 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
         }
     }
 
-    const utilsModule = wasmInstance<utilsModule>(
-        new Uint8Array([
-            0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 1, 96, 3, 127, 127, 127, 1, 127, 2, 17, 1, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 1, 1, 128, 1, 3, 2, 1, 0, 7, 14, 1, 10, 102, 105, 110, 100, 95, 113, 117, 111, 116, 101, 0, 0, 10, 101, 1, 99, 1, 3, 127, 2, 64, 3, 64, 32, 0, 32, 2, 75, 13, 1, 32, 0, 45, 0, 0, 33, 3, 32, 3, 65, 34, 70, 4, 64, 32, 0, 33, 4, 65, 0, 33, 5, 2, 64, 3, 64, 32, 4, 65, 1, 107, 33, 4, 32, 4, 32, 1, 72, 13, 1, 32, 4, 45, 0, 0, 65, 220, 0, 71, 13, 1, 32, 5, 69, 33, 5, 12, 0, 11, 11, 32, 5, 69, 4, 64, 32, 0, 15, 11, 11, 32, 0, 65, 1, 106, 33, 0, 12, 0, 11, 11, 65, 127, 15, 11
-        ]),
-        { imports: { env: { memory } }, onError }
-    )
-
-    const decoderFactory = (opt: StringParseOptions) => {
-        if (opt.useUtf16) {
+    const useBytesDecoder = ({ useUtf16 }: StringParseOptions) => {
+        if (useUtf16) {
             const asciiUtf16UtilsModule = wasmInstance<asciiUtilsModule>(
                 new Uint8Array([
                     0, 97, 115, 109, 1, 0, 0, 0, 1, 14, 2, 96, 2, 127, 127, 1, 127, 96, 3, 123, 127, 127, 1, 127, 2, 17, 1, 3, 101, 110, 118, 6, 109, 101, 109, 111, 114, 121, 2, 1, 1, 128, 1, 3, 4, 3, 0, 1, 0, 7, 50, 3, 8, 115, 116, 111, 114, 101, 95, 51, 50, 0, 0, 16, 115, 116, 111, 114, 101, 95, 49, 50, 56, 95, 117, 110, 115, 97, 102, 101, 0, 1, 16, 115, 116, 111, 114, 101, 95, 99, 111, 100, 101, 95, 112, 111, 105, 110, 116, 0, 2, 10, 131, 1, 3, 16, 0, 32, 1, 32, 0, 59, 1, 0, 32, 1, 65, 2, 106, 34, 1, 11, 37, 0, 32, 2, 32, 0, 253, 137, 1, 253, 11, 4, 0, 32, 2, 65, 16, 106, 32, 0, 253, 138, 1, 253, 11, 4, 0, 32, 2, 32, 1, 65, 1, 116, 106, 34, 2, 11, 74, 0, 32, 1, 65, 255, 255, 3, 75, 4, 64, 32, 1, 65, 128, 128, 4, 107, 33, 1, 32, 0, 65, 128, 176, 3, 32, 1, 65, 10, 118, 114, 59, 1, 0, 32, 0, 65, 2, 106, 65, 128, 184, 3, 32, 1, 65, 255, 7, 113, 114, 59, 1, 0, 32, 0, 65, 4, 106, 15, 11, 32, 0, 32, 1, 59, 1, 0, 32, 0, 65, 2, 106, 15, 11
@@ -619,6 +633,14 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             }
         }
 
+        function isEscaped(b: Uint8Array, i: number): boolean {
+            let escaped = false
+            while (b[i--] === BACKSLASH) {
+                escaped = !escaped
+            }
+            return escaped
+        }
+
         function findEnd(b: Uint8Array, len: number, i: number): number {
             while (i <= len - 4) {
                 const a1 = (b[i] | b[i + 1] << 8 | b[i + 2] << 16 | b[i + 3] << 24) ^ 0x22222222
@@ -730,32 +752,8 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
         return decodeBytes
     }
 
-    const ensureMemory = (memory: WebAssembly.Memory, reqLength: number, onGrow: (memory: WebAssembly.Memory) => void): boolean => {
-        try {
-            const currentLength = memory.buffer.byteLength
-
-            if (reqLength > MAX_MEMORY_BYTES) {
-                return false
-            }
-
-            if (reqLength > currentLength) {
-                const pages = currentLength / PAGE_SIZE_BYTES
-                const requiredPages = Math.ceil(reqLength / PAGE_SIZE_BYTES)
-                memory.grow(requiredPages - pages)
-                onGrow(memory)
-                return true
-            }
-
-            return true
-        }
-        catch (error) {
-            console.error(error)
-            return false
-        }
-    }
-
-    const decode = decoderFactory(options)
-    const decodeString = sparseDecoderFactory(memory, decode.bind(null, ''))
+    const decodeFromBytes = useBytesDecoder(options)
+    const decodeFromString = useRawDecoder(memory, decodeFromBytes.bind(null, ''))
 
     const toString = (metadata: PrimitiveMeta<string>, context: JsonParsingContext): ReadResult<string> => {
         const { reader, stack } = context
@@ -783,10 +781,10 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
         }
 
         if (raw !== undefined) {
-            return decodeString(context, i)
+            return decodeFromString(context, i)
         }
 
-        return decode(base, context, i)
+        return decodeFromBytes(base, context, i)
     }
 
     return {
