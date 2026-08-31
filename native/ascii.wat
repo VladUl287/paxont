@@ -5,7 +5,7 @@
   (import "ascii_utils" "store_128_unsafe" (func $store_128_unsafe (param $data v128) (param $byte_count i32) (param $target i32) (result i32)))
   (import "ascii_utils" "store_code_point" (func $store_code_point (param $byte i32) (param $target i32) (result i32)))
   
-  (func $parse_ascii (param $i i32) (param $start i32) (param $end i32) (param $target i32) (param $extend i32) (result i32 i32)
+  (func $parse_ascii (export "parse_ascii") (param $i i32) (param $start i32) (param $end i32) (param $target i32) (param $extend i32) (result i32 i32)
     (local $local_start i32)
     (local $temp i32)
     (local $temp_mask i32)

@@ -1,18 +1,18 @@
 (module
   (import "env" "memory" (memory 1 128))
 
-  (func $store32 (param $byte i32) (param $target i32) (result i32) 
+  (func $store_32 (export "store_32") (param $byte i32) (param $target i32) (result i32) 
     (i32.store16 (local.get $target) (local.get $byte))
     (local.tee $target (i32.add (local.get $target) (i32.const 2)))
   )
 
-  (func $store128_unsafe (param $data v128) (param $byte_count i32) (param $target i32) (result i32)
+  (func $store_128_unsafe (export "store_128_unsafe") (param $data v128) (param $byte_count i32) (param $target i32) (result i32)
     (v128.store (local.get $target) (i16x8.extend_low_i8x16_u (local.get $data)))
     (v128.store (i32.add (local.get $target) (i32.const 16)) (i16x8.extend_high_i8x16_u (local.get $data)))
     (local.tee $target (i32.add (local.get $target) (i32.shl (local.get $byte_count) (i32.const 1))))
   )
 
-  (func $store_code_point (param $offset i32) (param $code_point i32) (result i32)   
+  (func $store_code_point (export "store_code_point") (param $offset i32) (param $code_point i32) (result i32)   
     (if (i32.gt_u (local.get $code_point) (i32.const 0xFFFF))
       (then
         (local.set $code_point (i32.sub (local.get $code_point) (i32.const 0x10000)))
