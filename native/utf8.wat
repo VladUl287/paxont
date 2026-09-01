@@ -1,8 +1,7 @@
 (module
   (import "env" "memory" (memory 1 128))
   (import "utils" "find_quote" (func $find_quote (param $i i32) (param $start i32) (param $end i32) (result i32)))
-  (import "ascii" "parse_ascii"
-    (func $parse_ascii (param $i i32) (param $start i32) (param $end i32) (param $target i32) (param $extend i32) (result i32 i32)))
+  (import "ascii" "parse_ascii" (func $parse_ascii (param $i i32) (param $end i32) (param $target i32) (param $extend i32) (result i32 i32)))
   
   (global $dq_index (mut i32) (i32.const -1))
   (global $target (mut i32) (i32.const 0))
@@ -14,10 +13,11 @@
     (global.get $target))
 
   (func (export "utf8_to_utf8") (param $i i32) (param $len i32) (param $target i32) (param $partial i32) (result i32)
+    (local $extend i32)
     (local $start i32)
+    (local $target_temp i32)
     (local $mask i32)
     (local $temp i32)
-    (local $target_temp i32)
     (local $temp_v128 v128)
     (local $quote_vec v128)
     (local $byte_mask i32)
@@ -30,7 +30,7 @@
     (local.set $start (local.get $i))
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
 
-    (call $parse_ascii (local.get $i) (local.get $start) (local.get $len) (local.get $target) (i32.const 0))
+    (call $parse_ascii (local.get $i) (local.get $len) (local.get $target) (i32.const 0))
     (local.set $target_temp)
     (local.set $i)
 
@@ -53,7 +53,7 @@
       (then
         (if (local.get $partial)
           (then
-            (global.set $target (local.get $target))
+            (global.set $target (local.get $target_temp))
             (return (local.get $i))
           )
           (else (return (i32.const -1)))
@@ -61,11 +61,19 @@
       )
     )
 
+    (if (i32.gt_u (local.get $target_temp) (local.get $target))
+      (then
+        (local.set $target (local.get $target_temp))
+        (local.set $extend (i32.const 1))
+        (local.set $i (local.get $start))
+      )
+    )
+
     (block $block
       (loop $loop
         (if (i32.lt_u (i32.load8_u (local.get $i)) (i32.const 128)) 
           (then
-            (call $parse_ascii (local.get $i) (local.get $start) (local.get $len) (local.get $target) (i32.const 0))
+            (call $parse_ascii (local.get $i) (local.get $len) (local.get $target) (local.get $extend))
             (local.set $target_temp)
             (local.set $i)
         
@@ -83,13 +91,29 @@
                 )
               )
             )
-        
-            ;; if extended thats means escaped character met, extend whole string from start
 
             (if (i32.eq (local.get $i) (local.get $len))
               (then
-                (global.set $target (local.get $target_temp))
-                (return (local.get $i))
+                (if (local.get $partial)
+                  (then
+                    (global.set $target (local.get $target_temp))
+                    (return (local.get $i))
+                  )
+                  (else (return (i32.const -1)))
+                )
+              )
+            )
+
+            (if (i32.eqz (local.get $extend))
+              (then
+                (if (i32.gt_u (local.get $target_temp) (local.get $target))
+                  (then
+                    (local.set $target (local.get $target_temp))
+                    (local.set $extend (i32.const 1))
+                    (local.set $i (local.get $start))
+                    (br $loop)
+                  )
+                )
               )
             )
           )
