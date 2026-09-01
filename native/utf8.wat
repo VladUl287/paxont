@@ -132,17 +132,33 @@
                         (i16x8.eq
                           (v128.and
                             (local.tee $temp_v128 (v128.load (local.get $i))) 
-                            (v128.const i16x8 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0))
-                          (v128.const i16x8 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0))))
+                            (v128.const i16x8 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0 0xC0E0)
+                          )
+                          (v128.const i16x8 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0 0x80C0)
+                        )
+                      )
+                    )
   
                     (if (i32.eq (local.get $byte_mask) (i32.const 0xFFFF))
                       (then
+                        (if (local.get $extend) 
+                          (then
+                            (v128.store (local.get $target) (local.get $temp_v128))
+                            (local.set $target (i32.add (local.get $target) (i32.const 16)))
+                          )
+                        )
                         (local.set $i (i32.add (local.get $i) (i32.const 16)))
                         (br $two_byte_loop)
-                      ))
+                      )
+                    )
   
+                    (if (local.get $extend) 
+                      (then
+                        (v128.store (local.get $target) (local.get $temp_v128))
+                        (local.set $target (i32.add (local.get $target) (local.get $trailing)))
+                      )
+                    )
                     (local.set $trailing (i32.ctz (i32.xor (local.get $byte_mask) (i32.const 0xFFFF))))
-
                     (local.set $i (i32.add (local.get $i) (local.get $trailing)))
                     (br $loop)
                   ))
@@ -153,22 +169,38 @@
                     (local.set $mask (i32.load offset=0 align=1 (local.get $i)))
 
                     (br_if $two_byte_block
-                      (i32.ne
+                      (i32.ne 
                         (i32.and (i32.sub (local.get $mask) (i32.const 32960)) (i32.const 49376))
-                        (i32.const 0)))
+                        (i32.const 0)
+                      )
+                    )
 
                     (if (call $in_range_inclusive
                       (i32.and (local.get $mask) (i32.const 0xC0FF0000))
                       (i32.const 2160197632)
                       (i32.const 2162098176)) 
                       (then
+                        (if (local.get $extend) 
+                          (then
+                            (i32.store (local.get $target) (local.get $mask))
+                            (local.set $target (i32.add (local.get $target) (i32.const 4)))
+                          )
+                        )
                         (local.set $i (i32.add (local.get $i) (i32.const 4)))
                         (br $two_byte_loop)
-                      ))
+                      )
+                    )
 
+                    (if (local.get $extend) 
+                      (then
+                        (i32.store (local.get $target) (local.get $mask))
+                        (local.set $target (i32.add (local.get $target) (i32.const 2)))
+                      )
+                    )
                     (local.set $i (i32.add (local.get $i) (i32.const 2)))
                     (br $loop)
-                  ))
+                  )
+                )
 
                 (br $block)
               ))
@@ -182,14 +214,25 @@
         ;; three byte value
         (if (i32.eq (i32.and (i32.sub (local.get $mask) (i32.const 8421600)) (i32.const 12632304)) (i32.const 0)) 
           (then
-            (if (i32.eqz (i32.or
-              (i32.eqz (i32.and (local.get $mask) (i32.const 0x200F)))
-              (i32.eqz (i32.and (i32.sub (local.get $mask) (i32.const 8205)) (i32.const 0x200F))))) 
+            (if 
+              (i32.eqz 
+                (i32.or
+                  (i32.eqz (i32.and (local.get $mask) (i32.const 0x200F)))
+                  (i32.eqz (i32.and (i32.sub (local.get $mask) (i32.const 8205)) (i32.const 0x200F)))
+                )
+              )
               (then
+                (if (local.get $extend) 
+                  (then
+                    (i32.store8 (local.get $target) (local.get $mask))
+                    (local.set $target (i32.add (local.get $target) (i32.const 3)))
+                  )
+                )
                 (local.set $i (i32.add (local.get $i) (i32.const 3)))
                 (br $loop)
               ))
-          ))
+          )
+        )
 
         ;; four byte value
         (if (i32.eq (i32.and (i32.sub (local.get $mask) (i32.const 2155905264)) (i32.const 3233857784)) (i32.const 0)) 
@@ -199,35 +242,54 @@
               (i32.const 4026531984)
               (i32.const 4093640847))
               (then
+                (if (local.get $extend) 
+                  (then
+                    (i32.store8 (local.get $target) (local.get $mask))
+                    (local.set $target (i32.add (local.get $target) (i32.const 4)))
+                  )
+                )
                 (local.set $i (i32.add (local.get $i) (i32.const 4)))
                 (br $loop)
-              ))
-          ))
+              )
+            )
+          )
+        )
 
         (if (i32.and (local.get $partial) (i32.gt_u (i32.add (local.get $i) (i32.const 4)) (local.get $len)))
           (then (return (local.get $i)))
-          (else (return (i32.const -1))))
-      ))
+          (else (return (i32.const -1)))
+        )
+      )
+    )
     
-    (block $non_ascii_tail
-      (loop $non_ascii_loop_tail
+    (block $block
+      (loop $loop
         ;; i + 1 < length
-        (br_if $non_ascii_tail (i32.gt_u (i32.add (local.get $i) (i32.const 1)) (local.get $len)))
+        (br_if $block (i32.gt_u (i32.add (local.get $i) (i32.const 1)) (local.get $len)))
         
         (if (i32.lt_u (local.tee $temp (i32.load8_u (local.get $i))) (i32.const 128))
           (then
+            (if (i32.eq (local.get $temp) (i32.const 92)) (then))
+
             (if (i32.eq (local.get $temp) (i32.const 34))
               (then
-                (if 
-                  (i32.ge_s 
-                    (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i))) 
+                (if
+                  (i32.ge_s
+                    (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i)))
                     (i32.const 0)
                   )
-                  (then (return (local.get $temp))))
+                  (then (return (local.get $temp)))
+                )
+              )
+            )
+            (if (local.get $extend) 
+              (then
+                (i32.store8 (local.get $target) (local.get $temp))
+                (local.set $target (i32.add (local.get $target) (i32.const 1)))
               )
             )
             (local.set $i (i32.add (local.get $i) (i32.const 1)))
-            (br $non_ascii_loop_tail)
+            (br $loop)
           )
         )
 
@@ -236,13 +298,23 @@
         (if (i32.lt_u (local.get $temp) (i32.const 30))
           (then
             (if (i32.ge_u (i32.add (local.get $i) (i32.const 1)) (local.get $len)) 
-              (then (return (local.get $i))))
+              (then (return (local.get $i)))
+            )
 
             (if (i32.ge_u (i32.sub (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 128)) (i32.const 64)) 
-              (then (return (i32.const -1))))
+              (then (return (i32.const -1)))
+            )
             
+            (if (local.get $extend) 
+              (then
+                (i32.store8 (local.get $target) (i32.load8_u (local.get $i)))
+                (local.set $target (i32.add (local.get $target) (i32.const 1)))
+                (i32.store8 (local.get $target) (i32.load8_u (i32.add (local.get $i) (i32.const 1))))
+                (local.set $target (i32.add (local.get $target) (i32.const 1)))
+              )
+            )
             (local.set $i (i32.add (local.get $i) (i32.const 2)))
-            (br $non_ascii_loop_tail)
+            (br $loop)
           )
         )
 
@@ -251,30 +323,48 @@
             (if (i32.ge_u (i32.add (local.get $i) (i32.const 2)) (local.get $len)) 
               (then (return (local.get $i))))
             
-            (if (i32.or 
-              (i32.ge_u (i32.sub (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 128)) (i32.const 64)) 
-              (i32.ge_u (i32.sub (i32.load8_u (i32.add (local.get $i) (i32.const 2))) (i32.const 128)) (i32.const 64)))
-              (then (return (i32.const -1))))
+            (if 
+              (i32.or 
+                (i32.ge_u (i32.sub (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 128)) (i32.const 64)) 
+                (i32.ge_u (i32.sub (i32.load8_u (i32.add (local.get $i) (i32.const 2))) (i32.const 128)) (i32.const 64))
+              )
+              (then (return (i32.const -1)))
+            )
 
             (local.set $partialChar (i32.add 
                 (i32.shl (local.get $temp) (i32.const 12))
                 (i32.shl (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 6))
-              ))
+              )
+            )
 
-            (if (i32.or 
-              (i32.lt_u (local.get $partialChar) (i32.const 133120)) 
-              (i32.lt_u (i32.sub (local.get $partialChar) (i32.const 186368)) (i32.const 2048)))
-              (then (return (i32.const -1))))
+            (if 
+              (i32.or 
+                (i32.lt_u (local.get $partialChar) (i32.const 133120)) 
+                (i32.lt_u (i32.sub (local.get $partialChar) (i32.const 186368)) (i32.const 2048))
+              )
+              (then (return (i32.const -1)))
+            )
             
+            (if (local.get $extend) 
+              (then
+                (i32.store8 (local.get $target) (i32.load8_u (local.get $i)))
+                (local.set $target (i32.add (local.get $target) (i32.const 1)))
+                (i32.store8 (local.get $target) (i32.load8_u (i32.add (local.get $i) (i32.const 1))))
+                (local.set $target (i32.add (local.get $target) (i32.const 1)))
+                (i32.store8 (local.get $target) (i32.load8_u (i32.add (local.get $i) (i32.const 2))))
+                (local.set $target (i32.add (local.get $target) (i32.const 1)))
+              )
+            )
+
             (local.set $i (i32.add (local.get $i) (i32.const 3)))
-            (br $non_ascii_loop_tail)
+            (br $loop)
           )
         )
       ))
 
     (if (i32.and (local.get $partial) (i32.gt_u (i32.add (local.get $i) (i32.const 4)) (local.get $len)))
-      (then (return (local.get $i))))
-    
+      (then (return (local.get $i)))
+    )
     (return (i32.const -1))
   )
 
