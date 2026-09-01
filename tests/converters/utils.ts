@@ -91,6 +91,7 @@ export const expectToParse = <M extends BaseMeta<any>>(
         value: expectedResult,
         nextIndex: end !== undefined ? end : bytes.length
     })
+    reader.release()
     alsoExpect && alsoExpect(value as any)
 
     if (raw !== undefined) {
@@ -104,25 +105,25 @@ export const expectToParse = <M extends BaseMeta<any>>(
             value: expectedResult,
             nextIndex: end !== undefined ? end : bytes.length
         })
-
+        reader.release()
         alsoExpect && alsoExpect(rawlessValue as any)
     }
 
 
     for (let i = 0; i < bytes.length; i++) {
-        const chunks = [bytes.slice(0, i), bytes.slice(i, end)].reverse()
-        const result = deserializePartially(meta, chunks, start, depth)
-
         try {
+            const chunks = [bytes.slice(0, i), bytes.slice(i, end)].reverse()
+            const result = deserializePartially(meta, chunks, start, depth)
+
             expect(result).toStrictEqual({
                 type: ReadResultType.COMPLETE,
                 value: expectedResult,
                 nextIndex: chunks[0].length
             })
-            
+
             alsoExpect && alsoExpect(result as any)
         } catch (error) {
-            console.log('error on: ', i)
+            console.log('error on: ', i, expectedResult)
             throw error
         }
     }
