@@ -116,9 +116,15 @@
     (local $byte i32)
     (local $esc_len i32)
     
+    (if (i32.ge_u (local.get $start) (local.get $end))
+      (then (return (local.get $end)))
+    )
+
+    (local.set $pos (local.get $end))
+
     (block $done
       (loop $loop
-        (if (i32.lt_u (local.get $pos) (local.get $start))
+        (if (i32.lt_s (local.get $pos) (local.get $start))
           (then (return (i32.const -1)))
         )
         
@@ -128,9 +134,9 @@
           (then
             (local.set $esc_len (call $escape_sequence_length (local.get $pos) (local.get $end)))
             
-            (if (i32.gt_u (local.get $esc_len) (i32.const 0))
+            (if (i32.gt_s (local.get $esc_len) (i32.const 0))
               (then
-                (if (i32.le_u (i32.add (local.get $pos) (local.get $esc_len)) (local.get $end))
+                (if (i32.le_s (i32.add (local.get $pos) (local.get $esc_len)) (local.get $end))
                   (then
                     (return (i32.add (local.get $pos) (local.get $esc_len)))
                   )
@@ -155,7 +161,7 @@
               (else
                 (local.set $seq_len (call $utf8_sequence_length (local.get $pos)))
                 
-                (if (i32.le_u (i32.add (local.get $pos) (local.get $seq_len)) (local.get $end))
+                (if (i32.le_s (i32.add (local.get $pos) (local.get $seq_len)) (local.get $end))
                   (then
                     (return (i32.add (local.get $pos) (local.get $seq_len)))
                   )
