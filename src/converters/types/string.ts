@@ -3,6 +3,7 @@ import type { utf8Decoder } from "../../utils/utf8"
 import type { wasmInstance } from "../../utils/wasm"
 
 export type utilsModule = {
+    readonly trim_to_last_char: (start: number, end: number) => number
     readonly find_quote: (i: number, start: number, end: number) => number
 }
 
