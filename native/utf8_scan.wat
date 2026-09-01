@@ -117,6 +117,10 @@
       )
     )
 
+    (if (local.tee $temp_mask (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec))))
+      (then (return (i32.ctz (local.get $temp_mask))))
+    )
+
     (global.set $code_units_count (i32.popcnt (i8x16.bitmask (i8x16.ge_u (local.get $data_vec) (local.get $mask3)))))
 
     (local.set $data_vec (v128.and (local.get $data_vec) (local.get $mask2)))
@@ -127,10 +131,6 @@
         (global.get $code_units_count) 
         (i32.sub (i32.const 16) (i32.popcnt (i8x16.bitmask (local.get $data_vec))))
       )
-    )
-
-    (if (local.tee $temp_mask (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec))))
-      (then (return (i32.ctz (local.get $temp_mask))))
     )
 
     (return (i32.const -1))
