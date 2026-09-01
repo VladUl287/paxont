@@ -110,7 +110,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             const ascii_only = raw.length === len || (len - raw.length === diff)
 
             if (ascii_only) {
-                if (len > memoryView.length && !ensureMemory(memory, len, setView)) {
+                if (len >= memoryView.length && !ensureMemory(memory, len, setView)) {
                     const j = raw.indexOf('"', i - diff)
 
                     const result = raw.substring(i - diff, j - diff)
