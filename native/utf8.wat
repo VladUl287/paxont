@@ -12,7 +12,7 @@
   (func (export "target") (result i32)
     (global.get $target))
 
-  (func (export "utf8_to_utf8") (param $i i32) (param $len i32) (param $target i32) (param $partial i32) (result i32)
+  (func (export "utf8_to_utf8") (param $i i32) (param $len i32) (param $target i32) (result i32)
     (local $extend i32)
     (local $start i32)
     (local $target_temp i32)
@@ -50,15 +50,7 @@
     )
 
     (if (i32.eq (local.get $i) (local.get $len))
-      (then
-        (if (local.get $partial)
-          (then
-            (global.set $target (local.get $target_temp))
-            (return (local.get $i))
-          )
-          (else (return (i32.const -1)))
-        )
-      )
+      (then (return (local.get $i)))
     )
 
     (if (i32.gt_u (local.get $target_temp) (local.get $target))
@@ -93,15 +85,7 @@
             )
 
             (if (i32.eq (local.get $i) (local.get $len))
-              (then
-                (if (local.get $partial)
-                  (then
-                    (global.set $target (local.get $target_temp))
-                    (return (local.get $i))
-                  )
-                  (else (return (i32.const -1)))
-                )
-              )
+              (then (return (local.get $i)))
             )
 
             (if (i32.eqz (local.get $extend))
@@ -255,10 +239,7 @@
           )
         )
 
-        (if (i32.and (local.get $partial) (i32.gt_u (i32.add (local.get $i) (i32.const 4)) (local.get $len)))
-          (then (return (local.get $i)))
-          (else (return (i32.const -1)))
-        )
+        (return (i32.const -1))
       )
     )
     
@@ -360,11 +341,9 @@
             (br $loop)
           )
         )
-      ))
-
-    (if (i32.and (local.get $partial) (i32.gt_u (i32.add (local.get $i) (i32.const 4)) (local.get $len)))
-      (then (return (local.get $i)))
+      )
     )
+
     (return (i32.const -1))
   )
 
