@@ -40,7 +40,6 @@
     
     (if (i32.eq (i32.load8_u (local.get $i)) (i32.const 34))
       (then
-        ;; use result flag and not search
         (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
           (then
             (global.set $dq_index (local.get $temp))
@@ -62,10 +61,7 @@
       )
     )
 
-    ;; check if target not changed
-    (call $parse_ascii (local.get $start) (local.get $len) (local.get $target) (i32.const 1))
-    (local.set $target)
-    (local.set $i)
+    (local.set $i (local.get $start))
 
     (block $non_ascii_block
       (loop $non_ascii_loop
@@ -80,8 +76,7 @@
             )
 
             (if (i32.eq (i32.load8_u (local.get $i)) (i32.const 34))
-              (then 
-                ;; use result flag and not search
+              (then
                 (if (i32.ge_s (local.tee $temp (call $find_quote (local.get $i) (local.get $start) (local.get $i))) (i32.const 0))
                   (then
                     (global.set $dq_index (local.get $temp))
