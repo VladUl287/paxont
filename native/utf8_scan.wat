@@ -70,11 +70,8 @@
 
   (func (export "utf8_scan_i32") (param $a1 i32) (param $a2 i32) (param $a3 i32) (param $a4 i32) (result i32)
     (local $temp_mask i32)
-    (local $escaped_mask i32)
-    
     (local $low_i64 i64)
     (local $high_i64 i64)
-
     (local $data_vec v128)
     (local $quote_vec v128)
     (local $backslash_vec v128)
