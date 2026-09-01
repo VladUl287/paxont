@@ -202,22 +202,39 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         return fallbackDecoder(ctx, i)
                     }
 
-                    cI += code_units_count()
-
                     if (end_index > 0) {
-                        j += end_index
+                        while (j < end_index) {
+                            const byte = b[j]
+
+                            if (byte === DOUBLE_QUOTE) {
+                                break
+                            }
+
+                            j++
+                            if (byte < 128 || byte >= 192) {
+                                cI++
+                                if (byte >= 240) { cI++ }
+                            }
+                        }
                         break
                     }
+
+                    cI += code_units_count()
                     j += 16
                 }
 
                 if (end_index < 0) {
                     while (j < len) {
                         const byte = b[j]
+
                         if (byte === BACKSLASH) {
                             return fallbackDecoder(ctx, i)
                         }
-                        if (byte === DOUBLE_QUOTE) { break }
+
+                        if (byte === DOUBLE_QUOTE) {
+                            break
+                        }
+
                         j++
                         if (byte < 128 || byte >= 192) {
                             cI++
