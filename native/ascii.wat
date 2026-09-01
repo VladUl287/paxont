@@ -2,7 +2,7 @@
   (import "env" "memory" (memory 1 128))
   (import "ascii_utils" "store_32" (func $store_32 (param $byte i32) (param $target i32) (result i32)))
   (import "ascii_utils" "store_128_unsafe" (func $store_128_unsafe (param $data v128) (param $byte_count i32) (param $target i32) (result i32)))
-  (import "ascii_utils" "store_code_point" (func $store_code_point (param $byte i32) (param $target i32) (result i32)))
+  (import "ascii_utils" "store_code_point" (func $store_code_point (param $offset i32) (param $code_point i32) (result i32)))
   
   (func $parse_ascii (export "parse_ascii") (param $i i32) (param $end i32) (param $target i32) (param $extend i32) (result i32 i32)
     (local $start i32)
@@ -275,7 +275,7 @@
                             (local.set $code_point
                               (i32.add (local.get $code_point) (i32.const 0x10000))
                             )
-                            (local.set $j (call $store_code_point (local.get $code_point) (local.get $j)))
+                            (local.set $j (call $store_code_point (local.get $j) (local.get $code_point)))
                             (br $escape_done)
                           )
                           (else
@@ -288,7 +288,7 @@
                       (local.set $j (call $store_32 (local.get $j) (local.get $surrogate_high)))
                     )
                     (else
-                      (local.set $j (call $store_code_point (local.get $hex_value) (local.get $j)))
+                      (local.set $j (call $store_code_point (local.get $j) (local.get $hex_value)))
                     )
                   )
 
@@ -318,7 +318,7 @@
                     (i32.and (i32.load8_u (i32.add (local.get $i) (i32.const 1))) (i32.const 0x3F))
                   )
                 )
-                (local.set $j (call $store_code_point (local.get $code_point) (local.get $j)))
+                (local.set $j (call $store_code_point (local.get $j) (local.get $code_point)))
                 (local.set $i (i32.add (local.get $i) (i32.const 2)))
               )
               (else
@@ -334,7 +334,7 @@
                         (i32.and (i32.load8_u (i32.add (local.get $i) (i32.const 2))) (i32.const 0x3F))
                       )
                     )
-                    (local.set $j (call $store_code_point (local.get $code_point) (local.get $j)))
+                    (local.set $j (call $store_code_point (local.get $j) (local.get $code_point)))
                     (local.set $i (i32.add (local.get $i) (i32.const 3)))
                   )
                   (else
@@ -353,7 +353,7 @@
                             (i32.and (i32.load8_u (i32.add (local.get $i) (i32.const 3))) (i32.const 0x3F))
                           )
                         )
-                        (local.set $j (call $store_code_point (local.get $code_point) (local.get $j)))
+                        (local.set $j (call $store_code_point (local.get $j) (local.get $code_point)))
                         (local.set $i (i32.add (local.get $i) (i32.const 4)))
                       )
                       (else (return (i32.const -1) (i32.const -1)))
