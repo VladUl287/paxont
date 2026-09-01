@@ -31,14 +31,14 @@
 
         (local.set $data_vec (v128.load (local.get $i)))
 
-        (br_if $scan_block (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec))))
-
         (if (local.tee $temp_mask (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec))))
           (then
             (global.set $has_escaped (i32.const 1))
             (return (local.get $i))
           )
         )
+
+        (br_if $scan_block (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec))))
 
         (local.set $i (i32.add (local.get $i) (i32.const 16)))
         (br $scan_loop)
