@@ -168,7 +168,7 @@
         (br_if $scan_block 
           (i32.and 
             (i32.eqz (local.get $exact))
-            (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec)))
+            (i32.ne (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec))) (i32.const 0))
           )
         )
 
