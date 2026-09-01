@@ -11,14 +11,14 @@ export type utf8Module = {
     readonly memory: WebAssembly.Memory
     readonly dq_index: () => number
     readonly target: () => number
-    readonly utf8_to_utf8: (start: number, length: number, target: number, partial: number) => number
+    readonly utf8_to_utf8: (start: number, length: number, target: number) => number
 }
 
 export type utf16Module = {
     readonly memory: WebAssembly.Memory
     readonly dq_index: () => number
     readonly target: () => number
-    readonly utf8_to_utf16: (start: number, length: number, target: number, partial: number) => number
+    readonly utf8_to_utf16: (start: number, length: number, target: number) => number
 }
 
 export type asciiModule = {
