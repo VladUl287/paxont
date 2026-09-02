@@ -9,6 +9,7 @@ export type utilsModule = {
 
 export type utf8Module = {
     readonly memory: WebAssembly.Memory
+    readonly ascii_only: () => number
     readonly dq_index: () => number
     readonly target: () => number
     readonly utf8_to_utf8: (start: number, length: number, target: number) => number
