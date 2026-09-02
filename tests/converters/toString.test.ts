@@ -276,6 +276,29 @@ function jsonTestStrings() {
         "\"\\u0007\"", // BELL
         "\"\\u001B\"", // ESC
         "\"\\u007F\"", // DELETE
+        "\"\\u007F\"", // DEL - Delete
+        "\"\\u00A0\"", // NBSP - Non-Breaking Space (not a control char but often treated specially)
+        "\"\\u200B\"", // ZWSP - Zero Width Space
+        "\"\\u200C\"", // ZWNJ - Zero Width Non-Joiner
+        "\"\\u200D\"", // ZWJ - Zero Width Joiner
+        "\"\\uFEFF\"", // BOM - Byte Order Mark / Zero Width No-Break Space
+        "\"\\uFFFE\"", // Non-character
+        "\"\\uFFFF\"", // Non-character
+
+        // Surrogate pairs (UTF-16 surrogates - should be rejected in valid JSON)
+        "\"\\uD800\\uDC00\"", // Surrogate pair U+10000 (𐀀) - valid surrogate pair
+        "\"\\uD800\\uDFFF\"", // Surrogate pair U+103FF (𐏿) - valid surrogate pair
+        "\"\\uDBFF\\uDFFF\"", // Surrogate pair U+10FFFF (􏿿) - valid surrogate pair (max Unicode)
+        "\"\\uD800\\uDD0D\"", // Surrogate pair U+1010D (𐄍)
+        "\"\\uD834\\uDD1E\"", // Surrogate pair U+1D11E (𝄞) - musical symbol G clef
+        "\"\\uD800\\uDC00\\uD800\\uDC00\"", // Two surrogate pairs
+        "\"\\uD83D\\uDE0A\"", // Surrogate pair U+1F60A (😊) - smiley face
+        "\"\\uD83D\\uDE00\"", // Surrogate pair U+1F600 (😀) - grinning face
+        "\"\\uD83C\\uDF0A\"", // Surrogate pair U+1F30A (🌊) - wave
+        "\"\\uD83D\\uDC4D\"", // Surrogate pair U+1F44D (👍) - thumbs up
+        "\"\\uD83C\\uDFB4\"", // Surrogate pair U+1F3B4 (🎴) - flower playing cards
+        "\"\\uD83D\\uDCB0\"", // Surrogate pair U+1F4B0 (💰) - money bag
+        "\"\\uD83D\\uDC7B\"", // Surrogate pair U+1F47B (👻) - ghost
 
         // Mixed scripts
         "\"English 中文 日本語 한국어 العربية\"",
