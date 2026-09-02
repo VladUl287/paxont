@@ -41,10 +41,7 @@
     (local.set $i)
 
     (if (i32.eq (local.get $i) (i32.const -1))
-      (then
-        (global.set $ascii_only (i32.eq (local.get $target_temp) (local.get $target)))
-        (return (i32.const -1))
-      )
+      (then (return (i32.const -1)))
     )
 
     (if (i32.eq (local.get $i) (local.get $end))

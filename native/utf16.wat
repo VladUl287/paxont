@@ -71,7 +71,10 @@
             )
 
             (if (i32.eq (local.get $i) (local.get $end))
-              (then (return (local.get $i)))
+              (then
+                (global.set $target (local.get $target))
+                (return (local.get $i))
+              )
             )
 
             (if (i32.eq (i32.load8_u (local.get $i)) (i32.const 34))
