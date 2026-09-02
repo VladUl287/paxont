@@ -11,16 +11,12 @@
     (global.get $has_escaped))
 
   (func (export "utf8_scan_ascii") (param $i i32) (param $len i32) (result i32)
-    (local $start i32)
     (local $temp i32)
-    (local $temp_mask i32)
     (local $data_vec v128)
     (local $quote_vec v128)
     (local $backslash_vec v128)
 
     (global.set $has_escaped (i32.const 0))
-
-    (local.set $start (local.get $i))
 
     (local.set $quote_vec (i8x16.splat (i32.const 34)))
     (local.set $backslash_vec (i8x16.splat (i32.const 92)))
@@ -31,14 +27,18 @@
 
         (local.set $data_vec (v128.load (local.get $i)))
 
-        (if (local.tee $temp_mask (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec))))
+        (if (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $backslash_vec)))
           (then
             (global.set $has_escaped (i32.const 1))
             (return (local.get $i))
           )
         )
 
-        (br_if $scan_block (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec))))
+        (if (local.tee $temp (i8x16.bitmask (i8x16.eq (local.get $data_vec) (local.get $quote_vec))))
+          (then
+            (return (i32.add (local.get $i) (i32.ctz (local.get $temp))))
+          )
+        )
 
         (local.set $i (i32.add (local.get $i) (i32.const 16)))
         (br $scan_loop)
@@ -63,7 +63,8 @@
 
         (local.set $i (i32.add (local.get $i) (i32.const 1)))
         (br $scan_loop)
-      ))
+      )
+    )
     
     (return (i32.const -1))
   )
