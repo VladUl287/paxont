@@ -7,7 +7,8 @@ export type JsonOptions = {
 export const defaultOptions: JsonOptions = Object.freeze({
     encoder: new TextEncoder(),
     decoder: new TextDecoder('utf-8', {
-        fatal: true
+        fatal: true,
+        ignoreBOM: true
     }),
     maxDepth: 64
 })
