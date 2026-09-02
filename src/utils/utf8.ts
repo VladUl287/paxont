@@ -22,7 +22,7 @@ export function utf8DecoderForBuffer(bytes: Uint8Array): (start: number, end: nu
 }
 
 export function utf8Decoder(bytes: Uint8Array): (start: number, end: number, ascii_only: boolean) => string {
-    const unsafeDecoder8 = new TextDecoder('utf-8', { fatal: false })
+    const unsafeDecoder8 = new TextDecoder('utf-8', { fatal: false, ignoreBOM: true })
     return (start, end, ascii_only = false) => {
         const length = end - start
         return ascii_only && length <= 32 ?
