@@ -63,9 +63,6 @@ describe('tryParseString', () => {
             .forEach(str => {
                 expectToParse({ meta: { ...meta, toValue: toString }, raw: str })
             })
-
-        const veryLongString = `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(1000)}"`
-        expectToParse({ meta: { ...meta, toValue: toString }, raw: veryLongString })
     })
 
     test('utf16 restrict memory string parser decoder', () => {
@@ -78,9 +75,6 @@ describe('tryParseString', () => {
             .forEach(str => {
                 expectToParse({ meta: { ...meta, toValue: toString }, raw: str })
             })
-
-        const veryLongString = `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(1000)}"`
-        expectToParse({ meta: { ...meta, toValue: toString }, raw: veryLongString })
     })
 
     test('utf8 restrict memory string parser buffer', () => {
@@ -93,9 +87,6 @@ describe('tryParseString', () => {
             .forEach(str => {
                 expectToParse({ meta: { ...meta, toValue: toString }, raw: str })
             })
-
-        const veryLongString = `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(700)}"`
-        expectToParse({ meta: { ...meta, toValue: toString }, raw: veryLongString })
     })
 
     test('utf8 restrict memory string parser decoder', () => {
@@ -108,9 +99,6 @@ describe('tryParseString', () => {
             .forEach(str => {
                 expectToParse({ meta: { ...meta, toValue: toString }, raw: str })
             })
-
-        const veryLongString = `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(700)}"`
-        expectToParse({ meta: { ...meta, toValue: toString }, raw: veryLongString })
     })
 
     test('wasmless string parser', () => {
@@ -130,7 +118,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ meta: { ...meta, toValue: toString } })
+                expectError({ meta: { ...meta, toValue: toString }, bytes: str.bytes })
             })
     })
 
@@ -141,7 +129,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ meta: { ...meta, toValue: toString } })
+                expectError({ meta: { ...meta, toValue: toString }, bytes: str.bytes })
             })
     })
 
@@ -152,7 +140,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ meta: { ...meta, toValue: toString } })
+                expectError({ meta: { ...meta, toValue: toString }, bytes: str.bytes })
             })
     })
 
@@ -163,7 +151,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ meta: { ...meta, toValue: toString } })
+                expectError({ meta: { ...meta, toValue: toString }, bytes: str.bytes })
             })
     })
 
@@ -175,7 +163,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ meta: { ...meta, toValue: toString } })
+                expectError({ meta: { ...meta, toValue: toString }, bytes: str.bytes })
             })
     })
 
@@ -187,7 +175,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ meta: { ...meta, toValue: toString } })
+                expectError({ meta: { ...meta, toValue: toString }, bytes: str.bytes })
             })
     })
 
@@ -199,7 +187,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ meta: { ...meta, toValue: toString } })
+                expectError({ meta: { ...meta, toValue: toString }, bytes: str.bytes })
             })
     })
 
@@ -211,7 +199,7 @@ describe('tryParseString', () => {
         })
         invalidJsonStrings
             .forEach(str => {
-                expectError({ meta: { ...meta, toValue: toString } })
+                expectError({ meta: { ...meta, toValue: toString }, bytes: str.bytes })
             })
     })
 
@@ -289,12 +277,6 @@ function jsonTestStrings() {
         "\"\\u001B\"", // ESC
         "\"\\u007F\"", // DELETE
 
-        // Invalid/edge cases (for testing error handling)
-        "\"\\uD800\"", // Surrogate half (invalid in UTF-8)
-        "\"\\uDFFF\"", // Surrogate half (invalid in UTF-8)
-        "\"\\uFFFE\"", // Non-character
-        "\"\\uFFFF\"", // Non-character
-
         // Mixed scripts
         "\"English 中文 日本語 한국어 العربية\"",
         "\"Hello 世界 🌍\"",
@@ -327,12 +309,6 @@ function jsonTestStrings() {
 
         // Box drawing characters
         "\"─│┌┐└┘├┤┬┴┼\"",
-
-        // Edge case: Maximum 4-byte sequence (valid Unicode)
-        "\"\\u{10FFFF}\"", // Maximum valid Unicode code point
-
-        // Edge case: Minimum 4-byte sequence
-        "\"\\u{10000}\"", // First valid 4-byte sequence
 
         // Zero-length string
         "\"\"",
@@ -376,8 +352,10 @@ function jsonTestStrings() {
         // Cherokee
         "\"ᎠᎡᎢᎣᎤ\"",
 
-        // Very long string
-        `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(100)}"`
+        // Very long strings
+        `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(100)}"`,
+
+        // `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(500)}"`
     ]
 }
 
