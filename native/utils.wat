@@ -110,6 +110,30 @@
     (return (i32.const 0))
   )
 
+  (func $find_backslash (param $pos i32) (param $start i32) (result i32)
+    (local $byte i32)
+
+    (if (i32.gt_s (i32.sub (local.get $pos) (i32.const 6)) (local.get $start))
+      (then (local.set $start (i32.sub (local.get $pos) (i32.const 6))))
+    )
+
+    (block $done
+      (loop $loop
+        (br_if $done (i32.lt_s (local.get $pos) (local.get $start)))
+
+        (local.set $byte (i32.load8_u (local.get $pos)))
+        
+        (if (i32.eq (local.get $byte) (i32.const 92))  ;; '\'
+          (then (return (i32.const 1)))
+        )
+        
+        (local.set $pos (i32.sub (local.get $pos) (i32.const 1)))
+        (br $loop)
+      )
+    )
+    (return (i32.const 0))
+  )
+
   (func (export "trim_to_last_char") (param $start i32) (param $end i32) (result i32)
     (local $pos i32)
     (local $seq_len i32)
@@ -159,6 +183,13 @@
                 (br $loop)
               )
               (else
+                (if (call $find_backslash (local.get $pos) (local.get $start))
+                  (then
+                    (local.set $pos (i32.sub (local.get $pos) (i32.const 1)))
+                    (br $loop)
+                  )
+                )
+
                 (local.set $seq_len (call $utf8_sequence_length (local.get $pos)))
                 
                 (if (i32.le_s (i32.add (local.get $pos) (local.get $seq_len)) (local.get $end))
