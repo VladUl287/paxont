@@ -1,5 +1,7 @@
 (module
   (import "env" "memory" (memory 1 128))
+  (import "utils" "hex_to_value" (func $hex_to_value (param $char i32) (result i32)))
+  (import "utils" "parse_unicode_escape" (func $parse_unicode_escape (param $pos i32) (param $end i32) (result i32 i32)))
   (import "ascii_utils" "store_32" (func $store_32 (param $byte i32) (param $target i32) (result i32)))
   (import "ascii_utils" "store_128_unsafe" (func $store_128_unsafe (param $data v128) (param $byte_count i32) (param $target i32) (result i32)))
   (import "ascii_utils" "store_code_point" (func $store_code_point (param $offset i32) (param $code_point i32) (result i32)))
@@ -368,67 +370,5 @@
       )
     )
     (return (local.get $i) (local.get $j))
-  )
-
-  (func $parse_unicode_escape (param $pos i32) (param $end i32) (result i32 i32)
-    (local $hex_value i32)
-    (local $hex_digit i32)
-    (local $i i32)
-
-    (local.set $i (local.get $pos))
-    (local.set $hex_value (i32.const 0))
-    
-    (if (i32.gt_u (i32.add (local.get $i) (i32.const 4)) (local.get $end))
-      (then
-        (return (local.get $i) (i32.const -1))
-      )
-    )
-
-    (block $parse_digits
-      (loop $digit_loop
-        (local.set $hex_digit (i32.load8_u (local.get $i)))
-
-        (if (i32.eq (call $hex_to_value (local.get $hex_digit)) (i32.const -1))
-          (then
-            (return (local.get $i) (i32.const -1))
-          )
-        )
-
-        (local.set $hex_value 
-          (i32.or 
-            (i32.shl (local.get $hex_value) (i32.const 4))
-            (call $hex_to_value (local.get $hex_digit))
-          )
-        )
-
-        (local.set $i (i32.add (local.get $i) (i32.const 1)))
-
-        (br_if $digit_loop
-          (i32.lt_u 
-            (i32.sub (local.get $i) (local.get $pos))
-            (i32.const 4)
-          )
-        )
-      )
-    )
-
-    (return (local.get $i) (local.get $hex_value))
-  )
-
-  (func $hex_to_value (param $char i32) (result i32)
-    (local $value i32)
-    (local.set $value (i32.const -1))
-
-    (if (i32.and (i32.ge_u (local.get $char) (i32.const 0x30)) (i32.le_u (local.get $char) (i32.const 0x39)))
-      (then (local.set $value (i32.sub (local.get $char) (i32.const 0x30))))
-    )
-    (if (i32.and (i32.ge_u (local.get $char) (i32.const 0x41)) (i32.le_u (local.get $char) (i32.const 0x46)))
-      (then (local.set $value (i32.add (i32.sub (local.get $char) (i32.const 0x41)) (i32.const 10))))
-    )
-    (if (i32.and (i32.ge_u (local.get $char) (i32.const 0x61)) (i32.le_u (local.get $char) (i32.const 0x66)))
-      (then (local.set $value (i32.add (i32.sub (local.get $char) (i32.const 0x61)) (i32.const 10))))
-    )
-
-    (return (local.get $value))
   )
 )
