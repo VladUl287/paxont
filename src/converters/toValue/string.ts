@@ -1,6 +1,6 @@
 import { JsonParsingContext, PrimitiveMeta } from "../../metadata/types"
 import { IS_BUN, IS_NODE } from "../../utils/platform"
-import { BACKSLASH, DOUBLE_QUOTE, DOUBLE_QUOTE as DQ } from "../../utils/ascii_symbols"
+import { BACKSLASH, DOUBLE_QUOTE, DOUBLE_QUOTE as DQ, N, R, T, U } from "../../utils/ascii_symbols"
 import { JSONParseError } from "../../utils/error"
 import { wasmInstance } from "../../utils/wasm"
 import { asciiModule, asciiUtilsModule, StringParseOptions, utf16Module, utf8Module, utf8ScanModule, utilsModule } from "../types/string"
@@ -687,17 +687,40 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             return escaped
         }
 
-        function findLastChar(b: Uint8Array, start: number, len: number): number {
+        function trimToLastChar(b: Uint8Array, start: number, len: number): number {
             function isContinuationByte(b: number) {
                 return ((b - 128) >>> 0) < 64
             }
 
             let i = len - 1
+
+            const checkRange = Math.max(start, len - Math.min(len - start, 6))
+            while (i >= checkRange) {
+                if (b[i] === BACKSLASH) {
+                    if (i + 1 < len) {
+                        const next = b[i + 1]
+                        if (next === DOUBLE_QUOTE || next === BACKSLASH || next === 0x2F ||
+                            next === 0x62 || next === 0x66 || next === N ||
+                            next === R || next === T) {
+                            if (i + 2 <= len) {
+                                return i + 2
+                            }
+                        }
+                        else if (next === U) {
+                            if (i + 6 <= len) {
+                                return i + 6
+                            }
+                        }
+                    }
+                }
+                i--
+            }
+
             if (i <= start) { return start }
             while (i > start && isContinuationByte(b[i])) { i-- }
 
             let byte = b[i]
-            if (byte < 128) { return i }
+            if (byte < 128) { return i + 1 }
 
             byte = (b[i] - 194) >>> 0
             if (byte < 30) {
@@ -724,39 +747,169 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             return start
         }
 
+        function replaceEscapedChars(data: Uint8Array, len: number): number {
+            let writeIndex = 0;
+
+            for (let readIndex = 0; readIndex < len; readIndex++) {
+                const byte = data[readIndex]
+
+                if (byte === BACKSLASH) {
+                    if (readIndex + 1 >= len) {
+                        data[writeIndex++] = byte
+                        continue
+                    }
+
+                    const nextByte = data[readIndex + 1]
+                    let replacement: number | null = null
+                    let skipCount = 1
+
+                    switch (nextByte) {
+                        case DOUBLE_QUOTE:
+                            replacement = 0x22
+                            skipCount = 1
+                            break;
+                        case BACKSLASH:
+                            replacement = 0x5C
+                            skipCount = 1
+                            break;
+                        case 0x2F: // '/' - forward slash
+                            replacement = 0x2F
+                            skipCount = 1
+                            break;
+                        case 0x62: // 'b' - backspace
+                            replacement = 0x08
+                            skipCount = 1
+                            break;
+                        case 0x66: // 'f' - form feed
+                            replacement = 0x0C
+                            skipCount = 1
+                            break;
+                        case N:
+                            replacement = 0x0A
+                            skipCount = 1
+                            break;
+                        case R:
+                            replacement = 0x0D
+                            skipCount = 1
+                            break;
+                        case T:
+                            replacement = 0x09
+                            skipCount = 1
+                            break;
+                        case 0x75: { // 'u' - Unicode escape (4 hex digits)
+                            if (readIndex + 5 >= len) {
+                                data[writeIndex++] = byte
+                                continue
+                            }
+
+                            const hexStr = String.fromCharCode(
+                                data[readIndex + 2],
+                                data[readIndex + 3],
+                                data[readIndex + 4],
+                                data[readIndex + 5]
+                            )
+
+                            const codePoint = parseInt(hexStr, 16)
+                            if (!isNaN(codePoint) && codePoint >= 0 && codePoint <= 0xFFFF) {
+                                const utf8Bytes = unicodeToUtf8(codePoint)
+                                for (const utf8Byte of utf8Bytes) {
+                                    data[writeIndex++] = utf8Byte
+                                }
+                                skipCount = 5
+                                replacement = null
+                            }
+                            else {
+                                data[writeIndex++] = byte
+                                continue
+                            }
+
+                            break
+                        }
+                        default:
+                            data[writeIndex++] = byte
+                            continue
+                    }
+
+                    if (replacement !== null) {
+                        data[writeIndex++] = replacement
+                        readIndex += skipCount
+                    }
+                    else {
+                        readIndex += skipCount
+                    }
+                }
+                else {
+                    data[writeIndex++] = byte
+                }
+            }
+
+            return writeIndex
+        }
+
+        function unicodeToUtf8(codePoint: number): number[] {
+            const bytes: number[] = []
+
+            if (codePoint <= 0x7F) {
+                // 1-byte sequence
+                bytes.push(codePoint);
+            } else if (codePoint <= 0x7FF) {
+                // 2-byte sequence
+                bytes.push(0xC0 | (codePoint >> 6))
+                bytes.push(0x80 | (codePoint & 0x3F))
+            } else if (codePoint <= 0xFFFF) {
+                // 3-byte sequence
+                bytes.push(0xE0 | (codePoint >> 12))
+                bytes.push(0x80 | ((codePoint >> 6) & 0x3F))
+                bytes.push(0x80 | (codePoint & 0x3F))
+            } else {
+                // 4-byte sequence
+                bytes.push(0xF0 | (codePoint >> 18));
+                bytes.push(0x80 | ((codePoint >> 12) & 0x3F))
+                bytes.push(0x80 | ((codePoint >> 6) & 0x3F))
+                bytes.push(0x80 | (codePoint & 0x3F))
+            }
+
+            return bytes
+        }
+
+        let tempBuffer: Uint8Array | undefined = undefined
+
         function decodeBytes(base: string, ctx: JsonParsingContext, i: number): ReadResult<string> {
             const { reader: { bytes: b, bytesLength, writable }, stack, options } = ctx
 
             const utf8 = options.decoder
 
             let end_index = b.indexOf(DOUBLE_QUOTE, i)
-            let has_escaped = false
-            if (end_index > -1 && isEscaped(b, i)) {
-                has_escaped = true
+            if (end_index > -1 && isEscaped(b, end_index - 1)) {
                 while (true) {
                     end_index = b.indexOf(DOUBLE_QUOTE, i)
-                    if (end_index > -1 && isEscaped(b, i)) {
-                        has_escaped = true
+                    if (end_index > -1 && isEscaped(b, end_index - 1)) {
+                        i = end_index
                         continue
                     }
                     break
                 }
             }
 
-            if (end_index < 0) {
-                if (writable) {
-                    const end_index = findLastChar(b, i, bytesLength)
+            if (writable) {
+                const end_index = trimToLastChar(b, i, bytesLength)
 
-                    try {
-                        const segment = new Uint8Array(b.buffer, i, end_index - i)
-                        base = base.length > 0 ? base.concat(utf8.decode(segment)) : utf8.decode(segment)
-                    }
-                    catch (error) {
-                        return {
-                            type: ERROR,
-                            error: new JSONParseError('Decode error', { cause: error, index: i })
+                try {
+                    let segment = new Uint8Array(b.buffer, i, end_index - i)
+
+                    const backslash_index = segment.indexOf(BACKSLASH)
+                    if (backslash_index > -1) {
+                        if (!tempBuffer || tempBuffer.length < segment.length) {
+                            tempBuffer = new Uint8Array(segment.length)
                         }
+                        tempBuffer.set(segment)
+                        const newLength = replaceEscapedChars(tempBuffer, segment.length)
+                        segment = tempBuffer.subarray(0, newLength)
                     }
+
+                    base = base.length > 0 ?
+                        base.concat(utf8.decode(segment)) :
+                        utf8.decode(segment)
 
                     stack.push({ isContinued: true, base })
                     return {
@@ -764,34 +917,49 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         nextIndex: end_index
                     }
                 }
-
-                return {
-                    type: ERROR,
-                    error: new JSONParseError('')
+                catch (error) {
+                    return {
+                        type: ERROR,
+                        error: new JSONParseError('Decode error', { cause: error, index: i })
+                    }
                 }
             }
 
             try {
-                const segment = new Uint8Array(b.buffer, i, end_index - i)
+                if (end_index < 0) {
+                    return {
+                        type: ERROR,
+                        error: new JSONParseError('Decode error')
+                    }
+                }
+
+                let segment = new Uint8Array(b.buffer, i, end_index - i)
 
                 const backslash_index = segment.indexOf(BACKSLASH)
                 if (backslash_index > -1) {
-                    // mutate in place?
+                    if (!tempBuffer || tempBuffer.length < segment.length) {
+                        tempBuffer = new Uint8Array(segment.length)
+                    }
+                    tempBuffer.set(segment)
+                    const newLength = replaceEscapedChars(tempBuffer, segment.length)
+                    segment = tempBuffer.subarray(0, newLength)
                 }
 
-                base = base.length > 0 ? base.concat(utf8.decode(segment)) : utf8.decode(segment)
+                base = base.length > 0 ?
+                    base.concat(utf8.decode(segment)) :
+                    utf8.decode(segment)
+
+                return {
+                    type: COMPLETE,
+                    value: base,
+                    nextIndex: end_index + 1
+                }
             }
             catch (error) {
                 return {
                     type: ERROR,
                     error: new JSONParseError('Decode error', { cause: error, index: i })
                 }
-            }
-
-            return {
-                type: COMPLETE,
-                value: base,
-                nextIndex: end_index + 1
             }
         }
 
