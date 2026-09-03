@@ -61,9 +61,13 @@ const bufferInt = new ArrayBuffer(8)
 const conversionU32 = new Uint32Array(bufferInt)
 const conversionU64 = new BigUint64Array(bufferInt)
 
+const POW10 = [1]
+for (let i = 1; i <= 10; i++)
+    POW10[i] = POW10[i - 1] * 10
+
 export function parseInt64(reader: JsonReader, minValue: bigint, maxValue: bigint, signed: boolean): ReadResult<bigint> {
-    const MAX_DIGITS = 19
-    const MAX_SAFE_INT_DIGITS = 16
+    const MAX_DIGITS = signed ? 19 : 20
+    const MAX_SAFE_INT_DIGITS = 16 - 1
 
     const { bytes: b, bytesLength: bytesLen, writable, position } = reader
     const start = position
@@ -74,6 +78,9 @@ export function parseInt64(reader: JsonReader, minValue: bigint, maxValue: bigin
 
     const len = Math.min(bytesLen, i + MAX_DIGITS)
 
+    conversionU32[0] = 0
+    conversionU32[1] = 0
+
     let temp = 0
     let dc = 0
     while (i < len && isDigitU(b[i])) {
@@ -83,24 +90,22 @@ export function parseInt64(reader: JsonReader, minValue: bigint, maxValue: bigin
             temp = temp * 10 + d
         }
         else if (dc === MAX_SAFE_INT_DIGITS) {
-            const high = Math.floor(temp / 0x100000000)
-            const low = (temp) * 10 + temp
-            conversionU32[0] = low >>> 0
-            conversionU32[1] = high * 10 + Math.floor(low / 0x100000000)
-            temp = 0
+            conversionU32[0] = temp >>> 0
+            conversionU32[1] = Math.floor(temp / 0x100000000)
+            temp = d
+            dc = 0
         }
-        else {
-            const low = conversionU32[0] * 10 + d
-            conversionU32[0] = low >>> 0
-            conversionU32[1] = conversionU32[1] * 10 + Math.floor(low / 0x100000000)
-        }
+
         dc++
         i++
     }
 
     if (temp > 0) {
-        conversionU32[0] = temp >>> 0
-        conversionU32[1] = Math.floor(temp / 0x100000000)
+        const pow = POW10[dc]
+        const low = conversionU32[0] * pow + temp
+        const carry = Math.floor(low / 0x100000000)
+        conversionU32[0] = low >>> 0
+        conversionU32[1] = (conversionU32[1] * pow + carry) >>> 0
     }
 
     if (i >= len && writable) {
