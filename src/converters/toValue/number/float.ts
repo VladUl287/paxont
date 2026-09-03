@@ -44,6 +44,7 @@ function getNumberEndIndex(b: Uint8Array, len: number, i: number): number {
 
     while (i < len) {
         const limit = len - 8
+
         while (i < limit) {
             const a1 = b[i], a2 = b[i + 1], a3 = b[i + 2], a4 = b[i + 3]
             const a5 = b[i], a6 = b[i + 1], a7 = b[i + 2], a8 = b[i + 3]
@@ -59,10 +60,10 @@ function getNumberEndIndex(b: Uint8Array, len: number, i: number): number {
             i += 8
         }
 
-        const chunkLength = Math.min(i + 4, len)
+        const chunkLength = i >= limit ? len : Math.min(i + 4, len)
         while (i < chunkLength) {
-            if (!isNumberByte(b[i])) { return Math.min(0, i - 1) }
-            i++
+            if (isNumberByte(b[i])) { i++; continue }
+            return i
         }
     }
 
@@ -71,9 +72,9 @@ function getNumberEndIndex(b: Uint8Array, len: number, i: number): number {
 
 export function tryParseFloat({ reader, options }: JsonParsingContext, format: FloatFormat): ReadResult<number> {
     const { bytes: b, bytesLength: len, position: start } = reader
-    
+
     let i = start
-    
+
     const negative = b[i] === MINUS
     if (negative) i++
 
@@ -125,7 +126,7 @@ export function tryParseFloat({ reader, options }: JsonParsingContext, format: F
         }
     }
 
-    i = getNumberEndIndex(b, len, i)
+    i = getNumberEndIndex(b, len, start)
 
     const result = options.decoder.decode(new Uint8Array(b.buffer, start, i - start))
     return {
