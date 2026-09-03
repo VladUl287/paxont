@@ -15,7 +15,7 @@ describe('parseNumberF64-files', () => {
         return new JsonParsingContext(reader, defaultOptions, new Stack())
     }
 
-    const files = fs.readdirSync('./tests/data')
+    const files = fs.readdirSync('./tests/data/double')
         .filter(file => file.endsWith('.txt'))
 
         files.forEach(file => {
