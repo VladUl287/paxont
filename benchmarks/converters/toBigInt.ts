@@ -1,25 +1,32 @@
 import { add, complete, cycle, suite } from 'benny'
-import { tryParseBigInt } from '../../src/converters/bigint'
-import { JsonReader } from '../../src/metadata/types'
+import { toUint64 } from '../../src/converters/toValue/number/bigint'
+import { JsonReader } from '../../src/utils/reader'
+import { JsonParsingContext } from '../../src/metadata/types'
 import { defaultOptions } from '../../src/options'
+import { deserialize } from '../../src'
+import { bigInt, i64, u64 } from '../../src/metadata/builder'
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
-const bytes = encoder.encode("'1123456789123456789123456789112345678912345678912345678911234567891234567891234567891123456789123456789123456789112345678912345678912345678911234567891234567891234567891123456789123456789123456789'")
+const int64Min = encoder.encode("-9223372036854775808")
+const int64Max = encoder.encode("9223372036854775807")
+const uint64Min = encoder.encode("0")
+const uint64Max = encoder.encode("18446744073709551615")
+const bigint = encoder.encode("18446744073709551615")
 
-const ctx: JsonReader = { bytes: bytes, options: defaultOptions }
-
-const metaMock: any = {}
+const int64Meta = i64()
+const uInt64Meta = u64()
+const bigIntMeta = bigInt()
 
 suite(
-    'decoding',
+    'bigint',
 
-    add('decode', () => ({
-        value: BigInt(decoder.decode(bytes.subarray(1, bytes.length - 1))),
-        nextIndex: bytes.length
-    })),
-    add('toBigInt', () => tryParseBigInt(ctx, metaMock, 1, 0)),
+    add('int64Min', () => deserialize(int64Min, int64Meta)),
+    add('int64Max', () => deserialize(int64Max, int64Meta)),
+    add('uInt64Min', () => deserialize(uint64Min, uInt64Meta)),
+    add('uInt64Max', () => deserialize(uint64Max, uInt64Meta)),
+    add('bigint', () => deserialize(bigint, bigIntMeta)),
 
     cycle((result) => {
         const nanoseconds = (1 / result.ops) * 1e9
