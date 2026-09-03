@@ -23,7 +23,6 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
         ...options
     }
 
-    const optionsMemo = memoize<Partial<JsonOptions>, JsonOptions>()
     const metadataMemo = memoize<any, BaseMeta<any>>()
 
     const stack: IStack<JsonParsingState> = Object.freeze({
@@ -38,12 +37,11 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
         type: T,
         options?: Partial<JsonOptions>
     ): MetaOrData<T> {
-        const fullOptions = options === undefined ?
-            defaultSerializeOptions :
-            optionsMemo.getOrAdd(options, (o) => ({ ...defaultSerializeOptions, ...o }))
+        const fullOptions = !options ?
+            defaultSerializeOptions : { ...options, ...defaultSerializeOptions }
+
         const metadataType = isMeta(type) ?
-            type :
-            metadataMemo.getOrAdd(type, (t) => metadata.from(t))
+            type : metadataMemo.getOrAdd(type, (t) => metadata.from(t))
 
         let bytes: Uint8Array<ArrayBuffer>
         let bytesLength: number = 0
@@ -96,9 +94,8 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
         type: T,
         options?: Partial<JsonOptions>
     ): Promise<MetaOrData<T>> {
-        const fullOptions = options === undefined ?
-            defaultSerializeOptions :
-            optionsMemo.getOrAdd(options, (o) => ({ ...defaultSerializeOptions, ...o }))
+        const fullOptions = !options ?
+            defaultSerializeOptions : { ...options, ...defaultSerializeOptions }
 
         const metadataType = isMeta(type) ?
             type :
@@ -154,9 +151,8 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
     }
 
     function serialize<V, T>(value: V, type: T, options?: Partial<JsonOptions>): string {
-        const fullOptions = options === undefined ?
-            defaultSerializeOptions :
-            optionsMemo.getOrAdd(options, (o) => ({ ...defaultSerializeOptions, ...o }))
+        const fullOptions = !options ?
+            defaultSerializeOptions : { ...options, ...defaultSerializeOptions }
 
         const metadataType = isMeta(type) ?
             type :
