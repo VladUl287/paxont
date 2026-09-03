@@ -4,5 +4,5 @@ export const stringToJson: PrimitiveMeta<string>['toJson'] = (meta, value, optio
     if (typeof value !== 'string') {
         throw new TypeError(`Expected string, got ${typeof value}`)
     }
-    return `"${value}"`
+    return JSON.stringify(value)
 }
