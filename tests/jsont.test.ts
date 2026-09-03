@@ -1,8 +1,9 @@
 import { metadata } from '../src/metadata'
 import { deserialize, serialize } from '../src'
-import { array, bool, nullable, number, object, string } from '../src/metadata/builder'
+import { array, bigInt, bool, date, i16, i32, i64, i8, map, nullable, number, object, set, string, u16, u32, u64, u8 } from '../src/metadata/builder'
 import { BaseMeta } from '../src/metadata/types'
 import { toBytes } from './converters/utils'
+import dayjs from 'dayjs'
 
 describe('jsont', () => {
     const cases = testCases()
@@ -34,6 +35,91 @@ describe('jsont', () => {
                 const customFromBytes = deserialize(toBytes(text), type)
                 expect(customFromBytes).toEqual(expected)
             })
+        })
+
+        test('custom-types', () => {
+            const meta = object({
+                id: i32(),
+                name: string(),
+                active: bool(),
+                score: number(),
+                codes: map(bool()),
+                order: i64(),
+                budget: u64(),
+                created_at: date(),
+                version: i8(),
+                state: u8(),
+                tags: set(string()),
+                currency: u16(),
+                symbol: i16(),
+                last_audit: date(),
+                user: nullable(object({
+                    id: u32(),
+                })),
+                target: bigInt()
+            })
+
+            const json = `{
+                    "id": 1,
+                    "name": "Project Alpha",
+                    "active": true,
+                    "score": 99.5,
+                    "codes": {
+                        "ALPHA-001": true,
+                        "ALPHA-002": false
+                    },
+                    "order": 9223372036854775800,
+                    "budget": 9223372036854775807,
+                    "created_at": "2025-01-15T10:30:00Z",
+                    "version": 3,
+                    "state": 233,
+                    "tags": [
+                        "new",
+                        "changed",
+                        "failed"
+                    ],
+                    "currency": 36,
+                    "symbol": 32445,
+                    "last_audit": "2025-03-20",
+                    "user": {
+                        "id": 12
+                    },
+                    "target": 534565745675968795435234375685678579546547564535342
+                }`
+
+            const expected = {
+                "id": 1,
+                "name": "Project Alpha",
+                "active": true,
+                "score": 99.5,
+                "codes": new Map([
+                    ["ALPHA-001", true],
+                    ["ALPHA-002", false]
+                ]),
+                "order": 9223372036854775800n,
+                "budget": 9223372036854775807n,
+                "created_at": new Date("2025-01-15T10:30:00Z"),
+                "version": 3,
+                "state": 233,
+                "tags": new Set([
+                    "new",
+                    "changed",
+                    "failed"
+                ]),
+                "currency": 36,
+                "symbol": 32445,
+                "last_audit": dayjs("2025-03-20").toDate(),
+                "user": {
+                    "id": 12
+                },
+                "target": 534565745675968795435234375685678579546547564535342n
+            }
+
+            const res = deserialize(json, meta)
+            expect(res).toEqual(expected)
+
+            const resFromBytes = deserialize(toBytes(json), meta)
+            expect(resFromBytes).toEqual(expected)
         })
     })
 
