@@ -105,7 +105,14 @@ export function parseInt64(reader: JsonReader, minValue: bigint, maxValue: bigin
         const low = conversionU32[0] * pow + temp
         const carry = Math.floor(low / 0x100000000)
         conversionU32[0] = low >>> 0
-        conversionU32[1] = (conversionU32[1] * pow + carry) >>> 0
+        const newHigh = conversionU32[1] * pow + carry
+        if (newHigh > 0xFFFFFFFF) {
+            return {
+                type: ERROR,
+                error: new JSONParseError(`overflow`)
+            }
+        }
+        conversionU32[1] = newHigh >>> 0
     }
 
     if (i >= len && writable) {
