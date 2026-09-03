@@ -6,7 +6,7 @@ import { isNeedsMoreData, ReadResult, ReadResultType } from "../../src/utils/res
 import { Stack } from "../../src/utils/stack"
 
 const encoder = new TextEncoder()
-export function toBytes(str: string): Uint8Array {
+export function toBytes(str: string): Uint8Array<ArrayBuffer> {
     return encoder.encode(str)
 }
 
