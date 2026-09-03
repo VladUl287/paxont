@@ -117,8 +117,12 @@ export function parseInt64(reader: JsonReader, minValue: bigint, maxValue: bigin
 
     const value = negative ? -conversionU64[0] : conversionU64[0]
 
-    if (dc === 0 || value < minValue || value > maxValue)
-        throw new Error(`invalid i64 value ${value}, at index ${i}. valid range ${minValue}-${maxValue}`)
+    if (dc === 0 || value < minValue || value > maxValue) {
+        return {
+            type: ERROR,
+            error: new JSONParseError(`invalid i64 value ${value}, at index ${i}. valid range ${minValue}-${maxValue}`)
+        }
+    }
 
     return {
         type: COMPLETE,
