@@ -1,5 +1,5 @@
 import { metadata } from '../src/metadata'
-import { deserialize } from '../src'
+import { deserialize, serialize } from '../src'
 import { array, bool, nullable, number, object, string } from '../src/metadata/builder'
 import { BaseMeta } from '../src/metadata/types'
 import { toBytes } from './converters/utils'
@@ -8,30 +8,53 @@ describe('jsont', () => {
     const cases = testCases()
     const meta = metadata()
 
-    cases.forEach((cs) => {
-        test(cs.filename, () => {
-            const text = JSON.stringify(cs.data)
+    describe('deserializer', () => {
+        cases.forEach((cs) => {
+            test(cs.filename, () => {
+                const text = JSON.stringify(cs.data)
 
-            const expected = JSON.parse(text)
+                const expected = JSON.parse(text)
 
-            if (cs.shouldFail) {
-                expect(() => {
-                    const type = meta.from(expected)
-                    deserialize(text, type)
-                }).toThrow()
-                expect(() => {
-                    const type = meta.from(expected)
-                    deserialize(toBytes(text), type)
-                }).toThrow()
-                return
-            }
+                if (cs.shouldFail) {
+                    expect(() => {
+                        const type = meta.from(expected)
+                        deserialize(text, type)
+                    }).toThrow()
+                    expect(() => {
+                        const type = meta.from(expected)
+                        deserialize(toBytes(text), type)
+                    }).toThrow()
+                    return
+                }
 
-            const type = cs.meta ?? meta.from(expected)
-            const custom = deserialize(text, type)
-            expect(custom).toEqual(expected)
+                const type = cs.meta ?? meta.from(expected)
+                const custom = deserialize(text, type)
+                expect(custom).toEqual(expected)
 
-            const customFromBytes = deserialize(toBytes(text), type)
-            expect(customFromBytes).toEqual(expected)
+                const customFromBytes = deserialize(toBytes(text), type)
+                expect(customFromBytes).toEqual(expected)
+            })
+        })
+    })
+
+    describe('serializer', () => {
+        cases.forEach((cs) => {
+            test(cs.filename, () => {
+                const json = JSON.stringify(cs.data)
+                const value = JSON.parse(json)
+
+                if (cs.shouldFail) {
+                    expect(() => {
+                        const type = meta.from(value)
+                        serialize(value, type)
+                    }).toThrow()
+                    return
+                }
+
+                const type = cs.meta ?? meta.from(value)
+                const custom = serialize(value, type)
+                expect(custom).toEqual(json)
+            })
         })
     })
 })
