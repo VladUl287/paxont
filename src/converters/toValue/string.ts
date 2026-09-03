@@ -687,6 +687,20 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             return escaped
         }
 
+        function findBackslash(data: Uint8Array, pos: number, start: number) {
+            if (pos - 6 > start) {
+                start = pos - 6
+            }
+            while (pos >= start) {
+                const byte = data[pos]
+                if (byte === BACKSLASH) {
+                    return true
+                }
+                pos--
+            }
+            return false
+        }
+
         function trimToLastChar(b: Uint8Array, start: number, len: number): number {
             function isContinuationByte(b: number) {
                 return ((b - 128) >>> 0) < 64
@@ -694,9 +708,13 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
             let i = len - 1
 
-            const checkRange = Math.max(start, len - Math.min(len - start, 6))
-            while (i >= checkRange) {
-                if (b[i] === BACKSLASH) {
+            while (true) {
+                if (i <= start) { return start }
+                while (i > start && isContinuationByte(b[i])) { i-- }
+
+                let byte = b[i]
+
+                if (byte === BACKSLASH) {
                     if (i + 1 < len) {
                         const next = b[i + 1]
                         if (next === DOUBLE_QUOTE || next === BACKSLASH || next === 0x2F ||
@@ -708,43 +726,50 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         }
                         else if (next === U) {
                             if (i + 6 <= len) {
+                                const hexStr = String.fromCharCode(b[i + 2], b[i + 3], b[i + 4], b[i + 5])
+                                const codePoint = parseInt(hexStr, 16)
+                                if (isNaN(codePoint) || (codePoint >= 0xD800 && codePoint <= 0xDBFF)) {
+                                    i--
+                                    continue
+                                }
                                 return i + 6
                             }
                         }
                     }
                 }
-                i--
-            }
 
-            if (i <= start) { return start }
-            while (i > start && isContinuationByte(b[i])) { i-- }
-
-            let byte = b[i]
-            if (byte < 128) { return i + 1 }
-
-            byte = (b[i] - 194) >>> 0
-            if (byte < 30) {
-                if (i + 1 < len) {
-                    return i + 2
+                if (byte < 128) {
+                    if (findBackslash(b, i, start)) {
+                        i--
+                        continue
+                    }
+                    return i + 1
                 }
-                return Math.max(i, start)
-            }
 
-            if (byte < 46) {
-                if (i + 2 < len) {
-                    return i + 3
+                byte = (b[i] - 194) >>> 0
+                if (byte < 30) {
+                    if (i + 1 < len) {
+                        return i + 2
+                    }
+                    return Math.max(i, start)
                 }
-                return Math.max(i, start)
-            }
 
-            if (byte < 50) {
-                if (i + 3 < len) {
-                    return i + 4
+                if (byte < 46) {
+                    if (i + 2 < len) {
+                        return i + 3
+                    }
+                    return Math.max(i, start)
                 }
-                return Math.max(i, start)
-            }
 
-            return start
+                if (byte < 50) {
+                    if (i + 3 < len) {
+                        return i + 4
+                    }
+                    return Math.max(i, start)
+                }
+
+                return start
+            }
         }
 
         function replaceEscapedChars(data: Uint8Array, len: number): number {
@@ -811,14 +836,52 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
 
                             const codePoint = parseInt(hexStr, 16)
                             if (!isNaN(codePoint) && codePoint >= 0 && codePoint <= 0xFFFF) {
+                                if (codePoint >= 0xD800 && codePoint <= 0xDBFF) {
+                                    if (readIndex + 11 >= len) {
+                                        data[writeIndex++] = byte
+                                        continue
+                                    }
+
+                                    if (data[readIndex + 6] !== 0x5C || data[readIndex + 7] !== 0x75) { // '\' and 'u'
+                                        data[writeIndex++] = byte
+                                        continue
+                                    }
+
+                                    const lowSurrogateHex = String.fromCharCode(
+                                        data[readIndex + 8],
+                                        data[readIndex + 9],
+                                        data[readIndex + 10],
+                                        data[readIndex + 11]
+                                    )
+                                    const lowSurrogateCodePoint = parseInt(lowSurrogateHex, 16)
+
+                                    if (isNaN(lowSurrogateCodePoint)) {
+                                        data[writeIndex++] = byte
+                                        continue
+                                    }
+
+                                    if (lowSurrogateCodePoint >= 0xDC00 && lowSurrogateCodePoint <= 0xDFFF) {
+                                        const combinedCodePoint = 0x10000 + ((codePoint - 0xD800) << 10) + (lowSurrogateCodePoint - 0xDC00)
+
+                                        const utf8Bytes = unicodeToUtf8(combinedCodePoint)
+                                        for (const utf8Byte of utf8Bytes) {
+                                            data[writeIndex++] = utf8Byte
+                                        }
+                                        skipCount = 11
+                                        replacement = null
+                                        break
+                                    } else {
+                                        data[writeIndex++] = byte
+                                        continue
+                                    }
+                                }
                                 const utf8Bytes = unicodeToUtf8(codePoint)
                                 for (const utf8Byte of utf8Bytes) {
                                     data[writeIndex++] = utf8Byte
                                 }
                                 skipCount = 5
                                 replacement = null
-                            }
-                            else {
+                            } else {
                                 data[writeIndex++] = byte
                                 continue
                             }
