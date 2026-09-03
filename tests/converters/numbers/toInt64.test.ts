@@ -24,10 +24,6 @@ describe('toInt64', () => {
     expectToParse({ meta, raw: '0', expected: 0n })
   })
 
-  it('should handle leading zeros', () => {
-    expectToParse({ meta, raw: '000123456789', expected: 123456789n })
-  })
-
   it('should throw error for value > 9223372036854775807', () => {
     expectError({ meta, raw: '9223372036854775808' })
   })

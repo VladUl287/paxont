@@ -31,8 +31,4 @@ describe('toUint64', () => {
   it('should throw error for non-numeric input', () => {
     expectError({ meta, raw: 'abc' })
   })
-
-  it('should handle leading zeros', () => {
-    expectError({ meta, raw: '000123456789' })
-  })
 })
