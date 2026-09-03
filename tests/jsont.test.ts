@@ -2,6 +2,7 @@ import { metadata } from '../src/metadata'
 import { deserialize } from '../src'
 import { array, bool, nullable, number, object, string } from '../src/metadata/builder'
 import { BaseMeta } from '../src/metadata/types'
+import { toBytes } from './converters/utils'
 
 describe('jsont', () => {
     const cases = testCases()
@@ -18,12 +19,19 @@ describe('jsont', () => {
                     const type = meta.from(expected)
                     deserialize(text, type)
                 }).toThrow()
+                expect(() => {
+                    const type = meta.from(expected)
+                    deserialize(toBytes(text), type)
+                }).toThrow()
                 return
             }
 
             const type = cs.meta ?? meta.from(expected)
             const custom = deserialize(text, type)
             expect(custom).toEqual(expected)
+
+            const customFromBytes = deserialize(toBytes(text), type)
+            expect(customFromBytes).toEqual(expected)
         })
     })
 })
