@@ -62,7 +62,7 @@ const conversionU32 = new Uint32Array(bufferInt)
 const conversionU64 = new BigUint64Array(bufferInt)
 
 const POW10 = [1]
-for (let i = 1; i <= 10; i++)
+for (let i = 1; i <= 20; i++)
     POW10[i] = POW10[i - 1] * 10
 
 export function parseInt64(reader: JsonReader, minValue: bigint, maxValue: bigint, signed: boolean): ReadResult<bigint> {
