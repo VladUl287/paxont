@@ -86,6 +86,7 @@
   (func (export "trim_to_last_char") (param $start i32) (param $len i32) (result i32)
     (local $i i32)
     (local $j i32)
+    (local $t i32)
     (local $byte i32)
     (local $seq_len i32)
     (local $esc_len i32)
@@ -161,17 +162,18 @@
                         (if (i32.eq (i32.load8_u (local.get $j)) (i32.const 92)) 
                           (then
                             (local.set $is_escaped (i32.const 0))
+                            (local.set $t (local.get $j))
 
                             (block $backslash_block
                               (loop $backslash_loop
-                                (local.set $j (i32.sub (local.get $j) (i32.const 1)))
+                                (local.set $t (i32.sub (local.get $t) (i32.const 1)))
 
                                 (br_if $backslash_block
-                                  (i32.lt_s (local.get $j) (local.get $start))
+                                  (i32.lt_s (local.get $t) (local.get $start))
                                 )
 
                                 (br_if $backslash_block
-                                  (i32.ne (i32.load8_u (local.get $j)) (i32.const 92))
+                                  (i32.ne (i32.load8_u (local.get $t)) (i32.const 92))
                                 )
 
                                 (local.set $is_escaped (i32.eqz (local.get $is_escaped)))
@@ -184,7 +186,7 @@
                             (local.set $esc_len (call $escape_sequence_length (local.get $j) (local.get $i)))
 
                             (if (i32.gt_s (local.get $esc_len) (i32.const 0))
-                              (then (return (i32.add (local.get $i) (local.get $esc_len))))
+                              (then (return (i32.add (local.get $j) (local.get $esc_len))))
                             )
                             
                             (local.set $i (i32.sub (local.get $j) (i32.const 1)))
