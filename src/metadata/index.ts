@@ -1,7 +1,7 @@
 import {
-    ARRAY, BIGINT, BOOL, DATE, F64_ARRAY, I16, I16_ARRAY, I32, I32_ARRAY,
-    I64, I64_ARRAY, I8, I8_ARRAY, MAP, NULLABLE, NUMBER, OBJECT, SET, STRING,
-    U16, U16_ARRAY, U32, U32_ARRAY, U64, U64_ARRAY, U8, U8_ARRAY
+    ARRAY, BIGINT, BOOL, DATE, F64_ARRAY, I16_ARRAY, I32_ARRAY,
+    I64_ARRAY, I8_ARRAY, MAP, NUMBER, OBJECT, SET, STRING,
+    U16_ARRAY, U32_ARRAY, U64_ARRAY, U8_ARRAY
 } from "./baseTypes"
 import { BaseMeta, MetaValue, TypeName } from "./types"
 import {
@@ -10,7 +10,7 @@ import {
     u16Array, u32Array, u64Array, u8Array
 } from "./builder"
 import { isPlainObject } from "../utils/object"
-import { isMapMeta, isMeta, isMetaContainer, isObjectMeta } from "./utils"
+import { isMeta } from "./utils"
 
 type HasMeta<T> =
     T extends BaseMeta<any> ? true :
@@ -91,66 +91,37 @@ export function metadata(options: Partial<MetadataOptions> = defaultOptions): Me
     return withDefaults(instance)
 }
 
-export function withDefaults(m: Metadata): Metadata {
-    function withNative(meta: Metadata): Metadata {
-        meta.addMany(
-            { name: STRING, is: (v) => typeof v === 'string', from: () => string(), order: 50 },
-            { name: NUMBER, is: (v) => typeof v === 'number', from: () => number(), order: 50 },
-            { name: BIGINT, is: (v) => typeof v === 'bigint', from: () => bigInt(), order: 50 },
-            { name: BOOL, is: (v) => typeof v === 'boolean', from: () => bool(), order: 50 },
-            { name: DATE, is: (v) => v instanceof Date, from: () => date(), order: 50 },
-            { name: I8_ARRAY, is: (v) => v instanceof Int8Array, from: () => i8Array(), order: 50 },
-            { name: I16_ARRAY, is: (v) => v instanceof Int16Array, from: () => i16Array(), order: 50 },
-            { name: I32_ARRAY, is: (v) => v instanceof Int32Array, from: () => i32Array(), order: 50 },
-            { name: I64_ARRAY, is: (v) => v instanceof BigInt64Array, from: () => i64Array(), order: 50 },
-            { name: U8_ARRAY, is: (v) => v instanceof Uint8Array, from: () => u8Array(), order: 50 },
-            { name: U16_ARRAY, is: (v) => v instanceof Uint16Array, from: () => u16Array(), order: 50 },
-            { name: U32_ARRAY, is: (v) => v instanceof Uint32Array, from: () => u32Array(), order: 50 },
-            { name: U64_ARRAY, is: (v) => v instanceof BigUint64Array, from: () => u64Array(), order: 50 },
-            { name: F64_ARRAY, is: (v) => v instanceof Float64Array, from: () => f64Array(), order: 50 },
-            { name: ARRAY, is: (v) => Array.isArray(v), from: (a, m) => array(m.from(a[0])), order: 50 },
-            { name: SET, is: (v) => v instanceof Set, from: (s, m) => set(m.from([...s.values()][0])), order: 50 },
-            { name: MAP, is: (v) => v instanceof Map, from: (ma, m) => map(m.from([...ma.values()][0])), order: 50 },
-            {
-                name: OBJECT,
-                is: (v) => isPlainObject(v) && !isMeta(v),
-                from: (o, m) => {
-                    const structure = Object.entries(o).reduce((acc, [key, value]) => {
-                        acc[key] = m.from(value)
-                        return acc
-                    }, <Record<string, BaseMeta<any>>>{})
-                    return object(structure)
-                },
-                order: 50
-            })
-        return meta
-    }
-
-    function withMetadata(meta: Metadata): Metadata {
-        const isMetaType = (type: TypeName) =>
-            (v: any): boolean => isMeta(v) && v.type === type
-        const create = (name: TypeName, is = isMetaType(name)): JType<any> =>
-            ({ name, is, from: (m) => m, order: 50 })
-
-        meta.addMany(
-            create(STRING), create(NUMBER), create(BIGINT), create(BOOL),
-            create(DATE), create(I8), create(I16), create(I32),
-            create(I64), create(U8), create(U16), create(U32), create(U64),
-            create(NULLABLE, (v) => isMetaContainer(v) && v.type === NULLABLE),
-            create(ARRAY, (v) => isMetaContainer(v) && v.type === ARRAY),
-            create(I8_ARRAY, (v) => isMetaContainer(v) && v.type === I8_ARRAY),
-            create(I16_ARRAY, (v) => isMetaContainer(v) && v.type === I16_ARRAY),
-            create(I32_ARRAY, (v) => isMetaContainer(v) && v.type === I32_ARRAY),
-            create(I64_ARRAY, (v) => isMetaContainer(v) && v.type === I64_ARRAY),
-            create(U8_ARRAY, (v) => isMetaContainer(v) && v.type === U8_ARRAY),
-            create(U16_ARRAY, (v) => isMetaContainer(v) && v.type === U16_ARRAY),
-            create(U32_ARRAY, (v) => isMetaContainer(v) && v.type === U32_ARRAY),
-            create(U64_ARRAY, (v) => isMetaContainer(v) && v.type === U64_ARRAY),
-            create(SET, (v) => isMetaContainer(v) && v.type === SET),
-            create(MAP, (v) => isMapMeta(v)),
-            create(OBJECT, (v) => isObjectMeta(v)))
-        return meta
-    }
-
-    return withMetadata(withNative(m))
+export function withDefaults(meta: Metadata): Metadata {
+    meta.addMany(
+        { name: 'metadata', is: isMeta, from: (m) => m, order: 50 },
+        { name: STRING, is: (v) => typeof v === 'string', from: () => string(), order: 50 },
+        { name: NUMBER, is: (v) => typeof v === 'number', from: () => number(), order: 50 },
+        { name: BIGINT, is: (v) => typeof v === 'bigint', from: () => bigInt(), order: 50 },
+        { name: BOOL, is: (v) => typeof v === 'boolean', from: () => bool(), order: 50 },
+        { name: DATE, is: (v) => v instanceof Date, from: () => date(), order: 50 },
+        { name: I8_ARRAY, is: (v) => v instanceof Int8Array, from: () => i8Array(), order: 50 },
+        { name: I16_ARRAY, is: (v) => v instanceof Int16Array, from: () => i16Array(), order: 50 },
+        { name: I32_ARRAY, is: (v) => v instanceof Int32Array, from: () => i32Array(), order: 50 },
+        { name: I64_ARRAY, is: (v) => v instanceof BigInt64Array, from: () => i64Array(), order: 50 },
+        { name: U8_ARRAY, is: (v) => v instanceof Uint8Array, from: () => u8Array(), order: 50 },
+        { name: U16_ARRAY, is: (v) => v instanceof Uint16Array, from: () => u16Array(), order: 50 },
+        { name: U32_ARRAY, is: (v) => v instanceof Uint32Array, from: () => u32Array(), order: 50 },
+        { name: U64_ARRAY, is: (v) => v instanceof BigUint64Array, from: () => u64Array(), order: 50 },
+        { name: F64_ARRAY, is: (v) => v instanceof Float64Array, from: () => f64Array(), order: 50 },
+        { name: ARRAY, is: (v) => Array.isArray(v), from: (a, m) => array(m.from(a[0])), order: 50 },
+        { name: SET, is: (v) => v instanceof Set, from: (s, m) => set(m.from([...s.values()][0])), order: 50 },
+        { name: MAP, is: (v) => v instanceof Map, from: (ma, m) => map(m.from([...ma.values()][0])), order: 50 },
+        {
+            name: OBJECT,
+            is: (v) => isPlainObject(v) && !isMeta(v),
+            from: (o, m) => {
+                const structure = Object.entries(o).reduce((acc, [key, value]) => {
+                    acc[key] = m.from(value)
+                    return acc
+                }, <Record<string, BaseMeta<any>>>{})
+                return object(structure)
+            },
+            order: 50
+        })
+    return meta
 }
