@@ -375,6 +375,9 @@ function jsonTestStrings() {
         // Cherokee
         "\"ᎠᎡᎢᎣᎤ\"",
 
+        '"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n"',
+        JSON.stringify('{\"key\":\"value with \\\"quotes\\\" and \\\\backslashes and \\u00A9 copyright\"}'),
+
         // Very long strings
         `"${"This is a longer string with multiple characters: 你好世界 こんにちは 안녕하세요 🌟✨⭐".repeat(100)}"`,
 
