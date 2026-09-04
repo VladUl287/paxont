@@ -109,10 +109,11 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
         let position = 0
         try {
             while (true) {
-                const { value } = await binaryReader.read(tempBuffer.subarray(position))
+                const { value } = await binaryReader.read(tempBuffer)
                 if (value === undefined) { break }
+                tempBuffer = new Uint8Array(value.buffer)
 
-                const reader = new JsonReader(tempBuffer, value.length, true)
+                const reader = new JsonReader(value, value.length, true)
                 try {
                     const context = new JsonParsingContext(reader, fullOptions, stack)
                     const result = metadataType.toValue(metadataType, context)
@@ -126,15 +127,12 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
 
                         if (((tempBuffer.length - position) * 100 / tempBuffer.length) >= 70) {
                             const newBuffer = bufferPool.rent(tempBuffer.length * 2)
-                            let j = position
-                            let i = 0
-                            while (j < value.length) {
-                                newBuffer[i++] = tempBuffer[j++]
-                            }
+                            newBuffer.set(tempBuffer.subarray(position))
                             bufferPool.release(tempBuffer)
                             tempBuffer = newBuffer
                             continue
                         }
+
                         tempBuffer.copyWithin(0, position, value.length)
                         continue
                     }
