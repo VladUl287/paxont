@@ -106,14 +106,17 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
         const binaryReader = json.getReader({ mode: 'byob' })
 
         let tempBuffer = bufferPool.rent(65536)
+        let dataBuffer = bufferPool.rent(65536 * 2)
         let position = 0
         try {
             while (true) {
-                const { value } = await binaryReader.read(tempBuffer)
+                const { value, done } = await binaryReader.read(tempBuffer)
                 if (value === undefined) { break }
                 tempBuffer = new Uint8Array(value.buffer)
-
-                const reader = new JsonReader(value, value.length, true)
+                
+                dataBuffer.set(value, position)
+                
+                const reader = new JsonReader(dataBuffer, position + value.length, !done)
                 try {
                     const context = new JsonParsingContext(reader, fullOptions, stack)
                     const result = metadataType.toValue(metadataType, context)
@@ -123,17 +126,8 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
                     }
 
                     if (isNeedsMoreData(result)) {
-                        position = result.nextIndex
-
-                        if (((tempBuffer.length - position) * 100 / tempBuffer.length) >= 70) {
-                            const newBuffer = bufferPool.rent(tempBuffer.length * 2)
-                            newBuffer.set(tempBuffer.subarray(position))
-                            bufferPool.release(tempBuffer)
-                            tempBuffer = newBuffer
-                            continue
-                        }
-
-                        tempBuffer.copyWithin(0, position, value.length)
+                        position = value.length - result.nextIndex
+                        dataBuffer.copyWithin(0, result.nextIndex, value.length)
                         continue
                     }
 
@@ -144,6 +138,7 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
             }
             throw new Error()
         } finally {
+            bufferPool.release(dataBuffer)
             bufferPool.release(tempBuffer)
         }
     }
