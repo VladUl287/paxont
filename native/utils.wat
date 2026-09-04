@@ -29,16 +29,12 @@
     (return (i32.const 1))
   )
   
-  (func $is_backslash (param $ptr i32) (result i32)
-    (i32.eq (i32.load8_u (local.get $ptr)) (i32.const 0x5C))  ;; '\'
-  )
-
-  (func $escape_sequence_length (param $start i32) (param $end i32) (result i32)
+  (func $escape_sequence_length (param $start i32) (param $len i32) (result i32)
     (local $pos i32)
     (local $byte i32)
     (local $hex_value i32)
     
-    (if (i32.lt_u (i32.sub (local.get $end) (local.get $start)) (i32.const 2))
+    (if (i32.le_u (i32.sub (local.get $len) (local.get $start)) (i32.const 2))
       (then (return (i32.const 0)))
     )
     
@@ -61,11 +57,11 @@
 
     (if (i32.eq (local.get $byte) (i32.const 0x75))  ;; \uXXXX
       (then
-        (if (i32.lt_u (i32.sub (local.get $end) (local.get $start)) (i32.const 6))
+        (if (i32.le_u (i32.sub (local.get $len) (local.get $start)) (i32.const 6))
           (then (return (i32.const 0)))
         )
         
-        (call $parse_unicode_escape (local.get $pos) (local.get $end))
+        (call $parse_unicode_escape (local.get $pos) (local.get $len))
         (local.set $hex_value)
         (local.set $pos)
 
@@ -87,159 +83,130 @@
     (return (i32.const 0))
   )
 
-  (func $find_backslash (param $pos i32) (param $start i32) (result i32)
-    (local $byte i32)
-
-    (if (i32.gt_s (i32.sub (local.get $pos) (i32.const 6)) (local.get $start))
-      (then (local.set $start (i32.sub (local.get $pos) (i32.const 6))))
-    )
-
-    (block $done
-      (loop $loop
-        (br_if $done (i32.lt_s (local.get $pos) (local.get $start)))
-
-        (local.set $byte (i32.load8_u (local.get $pos)))
-        
-        (if (i32.eq (local.get $byte) (i32.const 92))  ;; '\'
-          (then (return (i32.const 1)))
-        )
-        
-        (local.set $pos (i32.sub (local.get $pos) (i32.const 1)))
-        (br $loop)
-      )
-    )
-    (return (i32.const 0))
-  )
-
-  (func $hex_to_value (export "hex_to_value") (param $char i32) (result i32)
-    (local $value i32)
-    (local.set $value (i32.const -1))
-
-    (if (i32.and (i32.ge_u (local.get $char) (i32.const 0x30)) (i32.le_u (local.get $char) (i32.const 0x39)))
-      (then (local.set $value (i32.sub (local.get $char) (i32.const 0x30))))
-    )
-    (if (i32.and (i32.ge_u (local.get $char) (i32.const 0x41)) (i32.le_u (local.get $char) (i32.const 0x46)))
-      (then (local.set $value (i32.add (i32.sub (local.get $char) (i32.const 0x41)) (i32.const 10))))
-    )
-    (if (i32.and (i32.ge_u (local.get $char) (i32.const 0x61)) (i32.le_u (local.get $char) (i32.const 0x66)))
-      (then (local.set $value (i32.add (i32.sub (local.get $char) (i32.const 0x61)) (i32.const 10))))
-    )
-
-    (return (local.get $value))
-  )
-
-  (func $parse_unicode_escape (export "parse_unicode_escape") (param $pos i32) (param $end i32) (result i32 i32)
-    (local $hex_value i32)
-    (local $hex_digit i32)
+  (func (export "trim_to_last_char") (param $start i32) (param $len i32) (result i32)
     (local $i i32)
-
-    (local.set $i (local.get $pos))
-    (local.set $hex_value (i32.const 0))
-    
-    (if (i32.gt_u (i32.add (local.get $i) (i32.const 4)) (local.get $end))
-      (then
-        (return (local.get $i) (i32.const -1))
-      )
-    )
-
-    (block $parse_digits
-      (loop $digit_loop
-        (local.set $hex_digit (i32.load8_u (local.get $i)))
-
-        (if (i32.eq (call $hex_to_value (local.get $hex_digit)) (i32.const -1))
-          (then
-            (return (local.get $i) (i32.const -1))
-          )
-        )
-
-        (local.set $hex_value 
-          (i32.or 
-            (i32.shl (local.get $hex_value) (i32.const 4))
-            (call $hex_to_value (local.get $hex_digit))
-          )
-        )
-
-        (local.set $i (i32.add (local.get $i) (i32.const 1)))
-
-        (br_if $digit_loop
-          (i32.lt_u 
-            (i32.sub (local.get $i) (local.get $pos))
-            (i32.const 4)
-          )
-        )
-      )
-    )
-
-    (return (local.get $i) (local.get $hex_value))
-  )
-
-  (func (export "trim_to_last_char") (param $start i32) (param $end i32) (result i32)
-    (local $pos i32)
-    (local $seq_len i32)
+    (local $j i32)
     (local $byte i32)
+    (local $seq_len i32)
     (local $esc_len i32)
-    
-    (if (i32.ge_u (local.get $start) (local.get $end))
-      (then (return (local.get $end)))
-    )
+    (local $is_escaped i32)
+    (local $temp i32)
 
-    (local.set $pos (local.get $end))
+    (local.set $i (i32.sub (local.get $len) (i32.const 1)))
 
     (block $done
       (loop $loop
-        (if (i32.lt_s (local.get $pos) (local.get $start))
+        (if (i32.lt_s (local.get $i) (local.get $start))
           (then (return (i32.const -1)))
         )
         
-        (local.set $byte (i32.load8_u (local.get $pos)))
+        (local.set $byte (i32.load8_u (local.get $i)))
         
         (if (i32.eq (local.get $byte) (i32.const 92))  ;; '\'
           (then
-            (local.set $esc_len (call $escape_sequence_length (local.get $pos) (local.get $end)))
-            
-            (if (i32.gt_s (local.get $esc_len) (i32.const 0))
-              (then
-                (if (i32.le_s (i32.add (local.get $pos) (local.get $esc_len)) (local.get $end))
-                  (then
-                    (return (i32.add (local.get $pos) (local.get $esc_len)))
-                  )
-                  (else 
-                    (local.set $pos (i32.sub (local.get $pos) (i32.const 1)))
-                    (br $loop)
-                  )
+            (local.set $esc_len (call $escape_sequence_length (local.get $i) (local.get $len)))
+
+            (local.set $j (local.get $i))
+            (local.set $is_escaped (i32.const 0))
+
+            (block $backslash_block
+              (loop $backslash_loop
+                (local.set $j (i32.sub (local.get $j) (i32.const 1)))
+
+                (br_if $backslash_block
+                  (i32.lt_s (local.get $j) (local.get $start))
                 )
-              )
-              (else
-                (local.set $pos (i32.sub (local.get $pos) (i32.const 1)))
-                (br $loop)
+
+                (br_if $backslash_block
+                  (i32.ne (i32.load8_u (local.get $j)) (i32.const 92))
+                )
+
+                (local.set $is_escaped (i32.eqz (local.get $is_escaped)))
+                (br $backslash_loop)
               )
             )
+
+            (if (local.get $is_escaped) (then (return (i32.add (local.get $i) (i32.const 1)))))
+            
+            (if (i32.gt_s (local.get $esc_len) (i32.const 0))
+              (then (return (i32.add (local.get $i) (local.get $esc_len))))
+            )
+
+            (local.set $i (i32.sub (local.get $i) (i32.const 1)))
+            (br $loop)
           )
           (else
             (if (i32.eq (i32.and (local.get $byte) (i32.const 0xC0)) (i32.const 0x80)) ;; is continuation byte
               (then
-                (local.set $pos (i32.sub (local.get $pos) (i32.const 1)))
+                (local.set $i (i32.sub (local.get $i) (i32.const 1)))
                 (br $loop)
               )
               (else
-                (if (call $find_backslash (local.get $pos) (local.get $start))
+                (local.set $seq_len (call $utf8_sequence_length (local.get $i)))
+                
+                (if (i32.eq (local.get $seq_len) (i32.const 1))
                   (then
-                    (local.set $pos (i32.sub (local.get $pos) (i32.const 1)))
-                    (br $loop)
+                    (local.set $j (local.get $i))
+                    (local.set $temp (i32.sub (local.get $i) (i32.const 6)))
+                    (if (i32.lt_s (local.get $temp) (local.get $start)) 
+                      (then (local.set $temp (local.get $start)))
+                    )
+
+                    (block $back_done
+                      (loop $back_loop
+                        (if (i32.lt_s (local.get $j) (local.get $temp))
+                          (then (return (i32.add (local.get $i) (local.get $seq_len))))
+                        )
+
+                        (if (i32.eq (i32.load8_u (local.get $j)) (i32.const 92)) 
+                          (then
+                            (local.set $is_escaped (i32.const 0))
+
+                            (block $backslash_block
+                              (loop $backslash_loop
+                                (local.set $j (i32.sub (local.get $j) (i32.const 1)))
+
+                                (br_if $backslash_block
+                                  (i32.lt_s (local.get $j) (local.get $start))
+                                )
+
+                                (br_if $backslash_block
+                                  (i32.ne (i32.load8_u (local.get $j)) (i32.const 92))
+                                )
+
+                                (local.set $is_escaped (i32.eqz (local.get $is_escaped)))
+                                (br $backslash_loop)
+                              )
+                            )
+
+                            (if (local.get $is_escaped) (then (return (i32.add (local.get $i) (i32.const 1)))))
+
+                            (local.set $esc_len (call $escape_sequence_length (local.get $j) (local.get $i)))
+
+                            (if (i32.gt_s (local.get $esc_len) (i32.const 0))
+                              (then (return (i32.add (local.get $i) (local.get $esc_len))))
+                            )
+                            
+                            (local.set $i (i32.sub (local.get $j) (i32.const 1)))
+                            (br $loop)
+                          )
+                        )
+
+                        (local.set $j (i32.sub (local.get $j) (i32.const 1)))
+                        (br $back_loop)
+                      )
+                    )
+
+                    (return (i32.add (local.get $i) (local.get $esc_len)))
                   )
                 )
 
-                (local.set $seq_len (call $utf8_sequence_length (local.get $pos)))
-                
-                (if (i32.le_s (i32.add (local.get $pos) (local.get $seq_len)) (local.get $end))
-                  (then
-                    (return (i32.add (local.get $pos) (local.get $seq_len)))
-                  )
-                  (else
-                    (local.set $pos (i32.sub (local.get $pos) (i32.const 1)))
-                    (br $loop)
-                  )
+                (if (i32.lt_s (i32.add (local.get $i) (local.get $seq_len)) (local.get $len))
+                  (then (return (i32.add (local.get $i) (local.get $seq_len))))
                 )
+
+                (local.set $i (i32.sub (local.get $i) (i32.const 1)))
+                (br $loop)
               )
             )
           )
@@ -304,5 +271,67 @@
     )
     
     (return (i32.const -1))
+  )
+
+  (func $hex_to_value (export "hex_to_value") (param $char i32) (result i32)
+    (local $value i32)
+    (local.set $value (i32.const -1))
+
+    (if (i32.and (i32.ge_u (local.get $char) (i32.const 0x30)) (i32.le_u (local.get $char) (i32.const 0x39)))
+      (then (local.set $value (i32.sub (local.get $char) (i32.const 0x30))))
+    )
+    (if (i32.and (i32.ge_u (local.get $char) (i32.const 0x41)) (i32.le_u (local.get $char) (i32.const 0x46)))
+      (then (local.set $value (i32.add (i32.sub (local.get $char) (i32.const 0x41)) (i32.const 10))))
+    )
+    (if (i32.and (i32.ge_u (local.get $char) (i32.const 0x61)) (i32.le_u (local.get $char) (i32.const 0x66)))
+      (then (local.set $value (i32.add (i32.sub (local.get $char) (i32.const 0x61)) (i32.const 10))))
+    )
+
+    (return (local.get $value))
+  )
+
+  (func $parse_unicode_escape (export "parse_unicode_escape") (param $pos i32) (param $len i32) (result i32 i32)
+    (local $hex_value i32)
+    (local $hex_digit i32)
+    (local $i i32)
+
+    (local.set $i (local.get $pos))
+    (local.set $hex_value (i32.const 0))
+    
+    (if (i32.ge_u (i32.add (local.get $i) (i32.const 4)) (local.get $len))
+      (then
+        (return (local.get $i) (i32.const -1))
+      )
+    )
+
+    (block $parse_digits
+      (loop $digit_loop
+        (local.set $hex_digit (i32.load8_u (local.get $i)))
+
+        (if (i32.eq (call $hex_to_value (local.get $hex_digit)) (i32.const -1))
+          (then
+            (return (local.get $i) (i32.const -1))
+          )
+        )
+
+        (local.set $hex_value 
+          (i32.or 
+            (i32.shl (local.get $hex_value) (i32.const 4))
+            (call $hex_to_value (local.get $hex_digit))
+          )
+        )
+
+        (local.set $i (i32.add (local.get $i) (i32.const 1)))
+
+        (br_if $digit_loop
+          (i32.lt_u 
+            (i32.sub (local.get $i) (local.get $pos))
+            (i32.const 4)
+          )
+        )
+      )
+    )
+
+    (return (local.get $i) (local.get $hex_value))
   )
 )
