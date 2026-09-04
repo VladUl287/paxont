@@ -69,7 +69,7 @@ export function toObject<T extends { [k: string]: BaseMeta<any> }>(
 
             const start = i
 
-            if (b[i] !== DOUBLE_QUOTE) {
+            if (i >= len || b[i] !== DOUBLE_QUOTE) {
                 if (i >= len && writable) {
                     stack.push({ isContinued: true, buffer, bufferIndex })
                     return {
@@ -102,7 +102,7 @@ export function toObject<T extends { [k: string]: BaseMeta<any> }>(
             field = fields[fieldIndex]
             i += field.name.bytes.length + 1
 
-            if (b[i] !== COLON) {
+            if (i >= len || b[i] !== COLON) {
                 if (i >= len && writable) {
                     stack.push({ isContinued: true, buffer, bufferIndex })
                     return {
@@ -158,7 +158,7 @@ export function toObject<T extends { [k: string]: BaseMeta<any> }>(
 
     i = reader.skipWhitespace(i)
 
-    if (b[i] !== CURLY_CLOSE) {
+    if (b[i] !== CURLY_CLOSE || i >= len) {
         if (i >= len && writable) {
             stack.push({ isContinued: true, buffer, bufferIndex })
             return {
@@ -177,6 +177,6 @@ export function toObject<T extends { [k: string]: BaseMeta<any> }>(
     return {
         type: COMPLETE,
         value: meta.build(buffer),
-        nextIndex: ++i
+        nextIndex: Math.min(++i, len)
     }
 }
