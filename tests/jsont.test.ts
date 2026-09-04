@@ -1,5 +1,5 @@
 import { metadata } from '../src/metadata'
-import { deserialize, serialize } from '../src'
+import { deserialize, deserializeAsync, serialize } from '../src'
 import { array, bigInt, bool, date, i16, i32, i64, i8, map, nullable, number, object, set, string, u16, u32, u64, u8 } from '../src/metadata/builder'
 import { BaseMeta } from '../src/metadata/types'
 import { toBytes } from './converters/utils'
@@ -123,6 +123,59 @@ describe('jsont', () => {
         })
     })
 
+    describe('async-deserializer', () => {
+        cases.forEach((cs) => {
+            test(cs.filename, async () => {
+                const text = JSON.stringify(cs.data)
+                const expected = JSON.parse(text)
+
+                if (cs.shouldFail) {
+                    const stream = createStream([toBytes(text)])
+                    await expect(async () => {
+                        const type = meta.from(expected)
+                        await deserializeAsync(stream, type)
+                    }).rejects.toThrow()
+
+                    const bytes = toBytes(text)
+                    for (let i = 1; i < bytes.length; i++) {
+                        try {
+                            const chunks = [bytes.slice(0, i), bytes.slice(i, bytes.length)]
+                            const stream = createStream(chunks)
+
+                            await expect(async () => {
+                                await deserializeAsync(stream, type)
+                            }).rejects.toThrow()
+                        } catch (error) {
+                            console.log('error on: ', i, expected, error)
+                            throw error
+                        }
+                    }
+                    return
+                }
+
+                const bytes = toBytes(text)
+                const type = cs.meta ?? meta.from(expected)
+                const stream = createStream([bytes])
+                const custom = await deserializeAsync(stream, type)
+                expect(custom).toEqual(expected)
+
+                for (let i = 1; i < bytes.length; i++) {
+                    try {
+                        const chunks = [bytes.slice(0, i), bytes.slice(i, bytes.length)]
+                        const stream = createStream(chunks)
+
+                        const custom = await deserializeAsync(stream, type)
+
+                        expect(custom).toEqual(expected)
+                    } catch (error) {
+                        console.log('error on: ', i, expected, error)
+                        throw error
+                    }
+                }
+            })
+        })
+    })
+
     describe('serializer', () => {
         cases.forEach((cs) => {
             test(cs.filename, () => {
@@ -144,6 +197,56 @@ describe('jsont', () => {
         })
     })
 })
+
+function createStream(chunks: Uint8Array<ArrayBuffer>[]) {
+    let chunkIndex = 0
+    let offsetInChunk = 0
+
+    return new ReadableStream({
+        type: 'bytes',
+
+        pull(controller) {
+            const byobRequest = controller.byobRequest
+
+            if (!byobRequest) {
+                if (chunkIndex < chunks.length) {
+                    controller.enqueue(chunks[chunkIndex])
+                    chunkIndex++
+                }
+                if (chunkIndex >= chunks.length) {
+                    controller.close()
+                }
+                return
+            }
+
+            if (chunkIndex >= chunks.length) {
+                byobRequest.respond(0)
+                controller.close()
+                return
+            }
+
+            const view = byobRequest.view
+            const currentChunk = chunks[chunkIndex]
+            const remainingInChunk = currentChunk.length - offsetInChunk
+            const toCopy = Math.min(view!.byteLength, remainingInChunk)
+
+            const sourceData = currentChunk.slice(offsetInChunk, offsetInChunk + toCopy)
+            new Uint8Array(view!.buffer).set(sourceData)
+            offsetInChunk += toCopy
+
+            if (offsetInChunk >= currentChunk.length) {
+                chunkIndex++
+                offsetInChunk = 0
+            }
+
+            byobRequest.respond(toCopy)
+
+            if (chunkIndex >= chunks.length && offsetInChunk === 0) {
+                controller.close()
+            }
+        }
+    })
+}
 
 type TestCase = {
     filename: string,
