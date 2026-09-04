@@ -1,11 +1,12 @@
-import { toObject } from "../../src/converters/object"
+import { toObject } from "../../src/converters/toValue/object"
 import { metadata } from "../../src/metadata"
 import { OBJECT } from "../../src/metadata/baseTypes"
-import { field, object, i16, i32, i64, i8, number, u16, u32, u64, u8, string } from "../../src/metadata/builder"
+import { object, i16, i32, i64, i8, number, u16, u32, u64, u8, string } from "../../src/metadata/builder"
 import { BaseMeta, ObjectMeta, JsonParsingContext, TypeName } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
+import { JsonReader } from "../../src/utils/reader"
+import { ReadResultType } from "../../src/utils/result"
 import { Stack } from "../../src/utils/stack"
-import { ReadResultType } from "../../src/utils/types"
 
 describe('metadata', () => {
     const metaBuilder = metadata()
@@ -16,7 +17,7 @@ describe('metadata', () => {
         expect(meta).toHaveProperty('toJson')
 
         expect(typeof meta.toValue).toBe('function')
-        expect(meta.toValue.length).toBe(4)
+        expect(meta.toValue.length).toBe(2)
         expect(typeof meta.toJson).toBe('function')
         expect(meta.toJson.length).toBe(3)
     }
@@ -67,15 +68,9 @@ describe('metadata', () => {
         expect(meta.getFieldIndex(toBytes("coordinates"), 0)).toBe(5)
 
         expect(meta.toValue).toBe(toObject)
-        const ctx: JsonParsingContext = {
-            reader: {
-                bytes: toBytes(JSON.stringify(object)),
-                writable: false
-            },
-            options: defaultOptions,
-            stack: new Stack()
-        }
-        const value = meta.toValue(meta, ctx, 0, 0)
+        const bytes = toBytes(JSON.stringify(object))
+        const ctx = new JsonParsingContext(new JsonReader(bytes, bytes.length, false), defaultOptions, new Stack())
+        const value = meta.toValue(meta, ctx)
         expect(value).toStrictEqual({ type: ReadResultType.COMPLETE, value: object, nextIndex: ctx.reader.bytes.length })
     })
 
@@ -111,10 +106,10 @@ describe('metadata', () => {
 
             sequence: 1n,
 
-            addresses: new Array(object(
-                field('index', number()),
-                field('name', string())
-            )),
+            addresses: new Array(object({
+                index: number(),
+                name: string()
+            })),
             coordinates: [
                 { x: 1.23, y: 35.4 },
                 { x: 1.23, y: 65.2 },
@@ -188,15 +183,10 @@ describe('metadata', () => {
 
         // expect(meta.toJson(meta, object, defaultOptions)).toBe(JSON.stringify(object))
 
-        const ctx: JsonParsingContext = {
-            reader: {
-                bytes: toBytes(meta.toJson(meta, obj, defaultOptions)),
-                writable: false
-            },
-            options: defaultOptions,
-            stack: new Stack()
-        }
-        expect(meta.toValue(meta, ctx, 0, 0)).toStrictEqual({
+        const bytes = toBytes(meta.toJson(meta, obj, defaultOptions))
+        const ctx = new JsonParsingContext(new JsonReader(bytes, bytes.length, false), defaultOptions, new Stack())
+
+        expect(meta.toValue(meta, ctx)).toStrictEqual({
             type: ReadResultType.COMPLETE,
             value: obj,
             nextIndex: ctx.reader.bytes.length
