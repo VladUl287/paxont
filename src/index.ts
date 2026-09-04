@@ -112,11 +112,12 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
             while (true) {
                 const { value, done } = await binaryReader.read(tempBuffer)
                 if (value === undefined) { break }
-                tempBuffer = new Uint8Array(value.buffer)
-                
+
                 dataBuffer.set(value, position)
-                
-                const reader = new JsonReader(dataBuffer, position + value.length, !done)
+                tempBuffer = new Uint8Array(value.buffer)
+
+                const view = new Uint8Array(dataBuffer.buffer, 0, position + value.length)
+                const reader = new JsonReader(view, view.length, !done)
                 try {
                     const context = new JsonParsingContext(reader, fullOptions, stack)
                     const result = metadataType.toValue(metadataType, context)
@@ -126,8 +127,8 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
                     }
 
                     if (isNeedsMoreData(result)) {
-                        position = value.length - result.nextIndex
-                        dataBuffer.copyWithin(0, result.nextIndex, value.length)
+                        position = view.length - result.nextIndex
+                        dataBuffer.copyWithin(0, result.nextIndex, view.length)
                         continue
                     }
 
