@@ -169,3 +169,37 @@ export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: U
 
     throw new Error('chunks not presented')
 }
+
+export function splitBytes(bytes: Uint8Array<ArrayBuffer>, numChunks: number) {
+    const results: Uint8Array<ArrayBuffer>[] = []
+    const n = bytes.length
+    const positions: number[] = []
+
+    function generateCombinations(start: number, depth: number) {
+        if (depth === numChunks - 1) {
+            for (let pos = start; pos < n; pos++) {
+                const splits = [...positions, pos]
+                const chunks = []
+                let prev = 0
+
+                for (const split of splits) {
+                    chunks.push(bytes.slice(prev, split))
+                    prev = split
+                }
+                chunks.push(bytes.slice(prev, n))
+
+                results.push(...chunks)
+            }
+            return
+        }
+
+        for (let pos = start; pos < n - (numChunks - depth - 1); pos++) {
+            positions.push(pos)
+            generateCombinations(pos + 1, depth + 1)
+            positions.pop()
+        }
+    }
+
+    generateCombinations(1, 1)
+    return results
+}
