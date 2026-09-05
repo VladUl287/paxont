@@ -130,7 +130,7 @@ function tryParseISO8601(b: Uint8Array, len: number, i: number): Extract<ReadRes
         return
 
     const YYYY = ((b[i - 4] & 0x0F) * 1000) + ((b[i - 3] & 0x0F) * 100) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
-    if (i >= len || b[i++] !== MINUS) {
+    if (b[i++] !== MINUS) {
         return {
             type: COMPLETE,
             value: new Date(YYYY, 0),
@@ -145,7 +145,7 @@ function tryParseISO8601(b: Uint8Array, len: number, i: number): Extract<ReadRes
     if (MM < 0 || MM > 11)
         return
 
-    if (i >= len || b[i++] !== MINUS) {
+    if (b[i++] !== MINUS) {
         return {
             type: COMPLETE,
             value: new Date(YYYY, MM),
@@ -160,7 +160,7 @@ function tryParseISO8601(b: Uint8Array, len: number, i: number): Extract<ReadRes
     if (DD < 1 || DD > 31)
         return
 
-    if (i >= len || b[i++] !== T_UPPER) {
+    if (b[i++] !== T_UPPER) {
         return {
             type: COMPLETE,
             value: new Date(YYYY, MM, DD),
@@ -179,40 +179,39 @@ function tryParseISO8601(b: Uint8Array, len: number, i: number): Extract<ReadRes
     if (mm < 0 || mm > 59)
         return
 
-    if (i >= len || b[i++] !== COLON) {
-        return {
-            type: COMPLETE,
-            value: new Date(YYYY, MM, DD, HH, mm),
-            nextIndex: i
+    let ss = 0
+    let sss = 0
+    if (b[i] === COLON) {
+        i++
+
+        if ((i = expectTwoDigits(b, len, i)) < 0) //ss
+            return
+
+        ss = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
+        if (ss < 0 || ss > 59)
+            return
+
+        if (b[i] === DOT) {
+            i++
+
+            if ((i = expectThreeDigits(b, len, i)) < 0) //sss
+                return
+
+            sss = ((b[i - 3] & 0x0F) * 100) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
+            if (sss < 0 || ss > 999)
+                return
         }
     }
 
-    if ((i = expectTwoDigits(b, len, i)) < 0) //ss
-        return
-
-    const ss = ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
-    if (ss < 0 || ss > 59)
-        return
-
-    let sss = 0
-    if (i <= len && b[i] === DOT) {
-        if ((i = expectThreeDigits(b, len, i + 1)) < 0) //sss
-            return
-
-        sss = ((b[i - 3] & 0x0F) * 100) + ((b[i - 2] & 0x0F) * 10) + (b[i - 1] & 0x0F)
-        if (sss < 0 || ss > 999)
-            return
-    }
-
-    if (i < len && b[i] === Z) { //Z
+    if (b[i] === Z) { //Z
         return {
             type: COMPLETE,
             value: new Date(utc(YYYY, MM, DD, HH, mm, ss, sss)),
-            nextIndex: i + 1
+            nextIndex: i + 2
         }
     }
 
-    if (i >= len && b[i] !== MINUS && b[i] !== PLUS) { //not ±
+    if (b[i] !== MINUS && b[i] !== PLUS) { //not ±
         return {
             type: COMPLETE,
             value: new Date(YYYY, MM, DD, HH, mm, ss, sss),
