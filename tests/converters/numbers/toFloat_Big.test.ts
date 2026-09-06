@@ -20,7 +20,7 @@ describe('parseNumberF64-files', () => {
 
         files.forEach(file => {
         test(file, () => {
-            const fileContent = fs.readFileSync('./tests/data/' + file)
+            const fileContent = fs.readFileSync('./tests/data/double/' + file)
             const text = new TextDecoder().decode(fileContent)
 
             const numbers = text.split('\n').map(l => {
