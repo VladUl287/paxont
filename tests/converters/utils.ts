@@ -57,6 +57,17 @@ export function expectError<M extends BaseMeta<any>>(options: {
             error: expect.any(JSONParseError)
         })
     }
+
+    const threeChunks = splitBytes(bytes as any, 3)
+    for (let i = 0; i < threeChunks.length; i++) {
+        const chunks = threeChunks[i]
+        const result = deserializePartially(meta, chunks.reverse(), index, depth)
+
+        expect(result).toStrictEqual({
+            type: ReadResultType.ERROR,
+            error: expect.any(JSONParseError)
+        })
+    }
 }
 
 export const expectToParse = <M extends BaseMeta<any>>(
@@ -127,6 +138,25 @@ export const expectToParse = <M extends BaseMeta<any>>(
             throw error
         }
     }
+
+    const threeChunks = splitBytes(bytes as any, 3)
+    for (let i = 0; i < threeChunks.length; i++) {
+        try {
+            const chunks = threeChunks[i]
+            const result = deserializePartially(meta, chunks.reverse(), start, depth)
+
+            expect(result).toStrictEqual({
+                type: ReadResultType.COMPLETE,
+                value: expectedResult,
+                nextIndex: chunks[0].length
+            })
+
+            alsoExpect && alsoExpect(result as any)
+        } catch (error) {
+            console.log('error on 3: ', i, expectedResult)
+            throw error
+        }
+    }
 }
 
 export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: Uint8Array[], index = 0, depth = 0) => {
@@ -144,6 +174,9 @@ export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: U
     while ((currentChunk = chunks.pop()) !== undefined) {
         const ch = new Uint8Array([...prevChunk, ...currentChunk])
         ch.forEach((v, i) => bytes[i] = v)
+        if (bytes.length > ch.length) {
+            bytes[ch.length] = 0
+        }
 
         const reader = new JsonReader(bytes, ch.length, chunks.length !== 0)
         reader.setPosition(i)
@@ -154,7 +187,7 @@ export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: U
             result = meta.toValue(meta, context)
 
             if (isNeedsMoreData(result)) {
-                prevChunk = [...currentChunk.slice(result.nextIndex)]
+                prevChunk = [...bytes.slice(result.nextIndex, ch.length)]
                 i = 0
                 continue
             }
@@ -171,7 +204,7 @@ export const deserializePartially = <M extends BaseMeta<any>>(meta: M, chunks: U
 }
 
 export function splitBytes(bytes: Uint8Array<ArrayBuffer>, numChunks: number) {
-    const results: Uint8Array<ArrayBuffer>[] = []
+    const results: Uint8Array<ArrayBuffer>[][] = []
     const n = bytes.length
     const positions: number[] = []
 
@@ -188,7 +221,7 @@ export function splitBytes(bytes: Uint8Array<ArrayBuffer>, numChunks: number) {
                 }
                 chunks.push(bytes.slice(prev, n))
 
-                results.push(...chunks)
+                results.push(chunks)
             }
             return
         }
