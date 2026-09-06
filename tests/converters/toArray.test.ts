@@ -23,9 +23,27 @@ describe('toArray', () => {
         test('converts array with single element', () => {
             expectToParse({ meta, raw: '[42]' })
         })
+
+        test('handles large arrays', () => {
+            const largeArray = Array.from({ length: 1000 }, (_, i) => i)
+            const arrayString = '[' + largeArray.join(', ') + ']'
+            expectToParse({ meta, raw: arrayString })
+        })
+
+        test('handles spaces around elements', () => {
+            expectToParse({ meta, raw: '[1, 2, 3]' })
+        })
+
+        test('handles spaces between brackets and elements', () => {
+            expectToParse({ meta, raw: '[ 1, 2, 3 ]' })
+        })
+
+        test('handles newlines and tabs and spaces', () => {
+            expectToParse({ meta, raw: '[\n     1,\n     2,\n     3\n]' })
+        })
     })
 
-    describe('invalid array', () => {
+    describe('invalid', () => {
         test('depth exceed', () => {
             expectError({ meta, raw: '[1, 2, 3]', depth: 128 })
         })
@@ -49,31 +67,7 @@ describe('toArray', () => {
         test('not array at all', () => {
             expectError({ meta, raw: 'not an array' })
         })
-    })
 
-    describe('edge cases and error handling', () => {
-        test('handles large arrays', () => {
-            const largeArray = Array.from({ length: 1000 }, (_, i) => i)
-            const arrayString = '[' + largeArray.join(', ') + ']'
-            expectToParse({ meta, raw: arrayString })
-        })
-    })
-
-    describe('whitespace handling', () => {
-        test('handles spaces around elements', () => {
-            expectToParse({ meta, raw: '[1, 2, 3]' })
-        })
-
-        test('handles spaces between brackets and elements', () => {
-            expectToParse({ meta, raw: '[ 1, 2, 3 ]' })
-        })
-
-        test('handles newlines and tabs and spaces', () => {
-            expectToParse({ meta, raw: '[\n     1,\n     2,\n     3\n]' })
-        })
-    })
-
-    describe('invalid input', () => {
         test('throws error for invalid JSON', () => {
             expectError({ meta, raw: '[1, 2, 3' })
         })
