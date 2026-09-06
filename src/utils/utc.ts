@@ -10,7 +10,7 @@ export function precomputeUTC(options: { minYear: number, maxYear: number }) {
 
     const daysYearsNew = new Int32Array(MAX_YEAR)
     for (let y = 1969; y >= MIN_YEAR; y--) {
-        daysYearsNew[y] = daysYearsNew[y + 1] - (isLeap(y + 1) ? 366 : 365)
+        daysYearsNew[y] = daysYearsNew[y + 1] - (isLeap(y) ? 366 : 365)
     }
 
     for (let y = 1971; y <= MAX_YEAR; y++) {
