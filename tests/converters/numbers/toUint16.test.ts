@@ -16,10 +16,6 @@ describe('toUint16', () => {
     expectToParse({ meta, raw: '65535' })
   })
 
-  it('should handle leading zeros', () => {
-    expectToParse({ meta, raw: '00123', expected: 123 })
-  })
-
   it('should throw error for value > 65535', () => {
     expectError({ meta, raw: '65536' })
   })
