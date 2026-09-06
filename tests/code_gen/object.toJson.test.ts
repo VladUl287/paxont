@@ -1,12 +1,15 @@
 import { genObjectToJsonFactory } from "../../src/code_gen/object"
-import { field, number, object, string } from "../../src/metadata/builder"
+import { number, object, string } from "../../src/metadata/builder"
 import { defaultOptions } from "../../src/options"
 
 describe('genObjectToJsonFactory', () => {
     describe('basic functionality', () => {
         it('should generate a function that converts object to JSON string', () => {
             const toJson = genObjectToJsonFactory(['name', 'age'])
-            const metadata = object(field("name", string()), field("age", number()))
+            const metadata = object({
+                name: string(),
+                age: number()
+            })
             const value = { name: 'John', age: 30 }
 
             const result = toJson(metadata, value, defaultOptions)
@@ -16,7 +19,7 @@ describe('genObjectToJsonFactory', () => {
 
         it('should handle empty fields array', () => {
             const toJson = genObjectToJsonFactory([])
-            const metadata = object()
+            const metadata = object({})
             const result = toJson(metadata, {}, defaultOptions)
 
             expect(result).toBe(JSON.stringify({}))
@@ -24,7 +27,7 @@ describe('genObjectToJsonFactory', () => {
 
         it('should handle single field', () => {
             const toJson = genObjectToJsonFactory(['name'])
-            const metadata = object(field("name", string()))
+            const metadata = object({ name: string() })
             const result = toJson(metadata, { name: 'John' }, defaultOptions)
 
             expect(result).toBe(JSON.stringify({ name: 'John' }))
@@ -41,10 +44,10 @@ describe('genObjectToJsonFactory', () => {
                 password: 'secret'
             }
 
-            const metadata = object(
-                field("name", string()),
-                field("email", string())
-            )
+            const metadata = object({
+                name: string(),
+                email: string()
+            })
 
             const result = toJson(metadata, value, defaultOptions)
             const parsed = JSON.parse(result)
@@ -68,31 +71,18 @@ describe('genObjectToJsonFactory', () => {
 
             const value = { name: 'John' }
 
-            const metadata = object(
-                field("name", string()),
-                field("age", number()),
-            )
+            const metadata = object({
+                name: string(),
+                age: number()
+            })
 
             expect(() => toJson(metadata, value, defaultOptions)).toThrow(TypeError)
         })
 
-        // it('should handle circular references', () => {
-        //     const toJson = genObjectToJsonFactory(['name', 'self'])
-        //     const obj: any = { name: 'John' }
-        //     obj.self = obj
-
-        //     const metadata = object(field("name", string()))
-
-        //     const result = toJson(metadata, obj, defaultOptions)
-        //     const parsed = JSON.parse(result)
-
-        //     expect(parsed.name).toBe('John')
-        // })
-
         it('should handle null/undefined value object', () => {
             const toJson = genObjectToJsonFactory(['name'])
 
-            const metadata = object(field("name", string()))
+            const metadata = object({ name: string() })
 
             expect(() => toJson(metadata, null as any, defaultOptions)).toThrow()
             expect(() => toJson(metadata, undefined as any, defaultOptions)).toThrow()
@@ -105,7 +95,7 @@ describe('genObjectToJsonFactory', () => {
             const value = { name: 'John', age: 30 }
             const valueCopy = { ...value }
 
-            const metadata = object(field("name", string()))
+            const metadata = object({ "name": string() })
 
             toJson(metadata, value, defaultOptions)
 
@@ -115,7 +105,7 @@ describe('genObjectToJsonFactory', () => {
         it('should return a string', () => {
             const toJson = genObjectToJsonFactory(['name'])
 
-            const metadata = object(field("name", string()))
+            const metadata = object({ name: string() })
 
             const result = toJson(metadata, { name: 'John' }, defaultOptions)
 
@@ -131,11 +121,11 @@ describe('genObjectToJsonFactory', () => {
                 data: {}
             }
 
-            const metadata = object(
-                field("name", string()),
-                field("age", number()),
-                field("data", object())
-            )
+            const metadata = object({
+                name: string(),
+                age: number(),
+                data: object({})
+            })
 
             const result = toJson(metadata, value, defaultOptions)
 

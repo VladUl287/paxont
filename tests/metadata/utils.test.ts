@@ -1,6 +1,6 @@
-import { isMetadata } from "../../src/metadata/utils"
+import { isMeta } from "../../src/metadata/utils"
 
-describe('isMetadata', () => {
+describe('isMeta', () => {
     describe('should return true for valid metadata objects', () => {
         test('with all required properties', () => {
             const validMetadata = {
@@ -9,7 +9,7 @@ describe('isMetadata', () => {
                 type: 'string'
             }
 
-            expect(isMetadata(validMetadata)).toBe(true)
+            expect(isMeta(validMetadata)).toBe(true)
         })
 
         test('with different toValue return types', () => {
@@ -18,14 +18,14 @@ describe('isMetadata', () => {
                 toJson: () => ({ value: 42 }),
                 type: 'number'
             }
-            expect(isMetadata(metadataWithNumber)).toBe(true)
+            expect(isMeta(metadataWithNumber)).toBe(true)
 
             const metadataWithObject = {
                 toValue: () => ({ nested: 'value' }),
                 toJson: () => ({ nested: 'value' }),
                 type: 'object'
             }
-            expect(isMetadata(metadataWithObject)).toBe(true)
+            expect(isMeta(metadataWithObject)).toBe(true)
         })
 
         test('with different type strings', () => {
@@ -36,23 +36,23 @@ describe('isMetadata', () => {
                     toJson: () => ({}),
                     type
                 }
-                expect(isMetadata(metadata)).toBe(true)
+                expect(isMeta(metadata)).toBe(true)
             })
         })
     })
 
     describe('should return false for invalid values', () => {
         test('null and undefined', () => {
-            expect(isMetadata(null)).toBe(false)
-            expect(isMetadata(undefined)).toBe(false)
+            expect(isMeta(null)).toBe(false)
+            expect(isMeta(undefined)).toBe(false)
         })
 
         test('non-object values', () => {
-            expect(isMetadata('string')).toBe(false)
-            expect(isMetadata(123)).toBe(false)
-            expect(isMetadata(true)).toBe(false)
-            expect(isMetadata(Symbol('test'))).toBe(false)
-            expect(isMetadata(() => { })).toBe(false)
+            expect(isMeta('string')).toBe(false)
+            expect(isMeta(123)).toBe(false)
+            expect(isMeta(true)).toBe(false)
+            expect(isMeta(Symbol('test'))).toBe(false)
+            expect(isMeta(() => { })).toBe(false)
         })
 
         test('objects missing toValue function', () => {
@@ -60,7 +60,7 @@ describe('isMetadata', () => {
                 toJson: () => ({}),
                 type: 'string'
             }
-            expect(isMetadata(missingToValue)).toBe(false)
+            expect(isMeta(missingToValue)).toBe(false)
         })
 
         test('objects missing toJson function', () => {
@@ -68,7 +68,7 @@ describe('isMetadata', () => {
                 toValue: () => 'value',
                 type: 'string'
             }
-            expect(isMetadata(missingToJson)).toBe(false)
+            expect(isMeta(missingToJson)).toBe(false)
         })
 
         test('objects missing type property', () => {
@@ -76,7 +76,7 @@ describe('isMetadata', () => {
                 toValue: () => 'value',
                 toJson: () => ({})
             }
-            expect(isMetadata(missingType)).toBe(false)
+            expect(isMeta(missingType)).toBe(false)
         })
 
         test('objects where toValue is not a function', () => {
@@ -85,7 +85,7 @@ describe('isMetadata', () => {
                 toJson: () => ({}),
                 type: 'string'
             }
-            expect(isMetadata(invalidToValue)).toBe(false)
+            expect(isMeta(invalidToValue)).toBe(false)
         })
 
         test('objects where toJson is not a function', () => {
@@ -94,7 +94,7 @@ describe('isMetadata', () => {
                 toJson: 'not a function',
                 type: 'string'
             }
-            expect(isMetadata(invalidToJson)).toBe(false)
+            expect(isMeta(invalidToJson)).toBe(false)
         })
 
         test('objects where type is not a string', () => {
@@ -103,13 +103,13 @@ describe('isMetadata', () => {
                 toJson: () => ({}),
                 type: 123
             }
-            expect(isMetadata(invalidType)).toBe(false)
+            expect(isMeta(invalidType)).toBe(false)
         })
     })
 
     describe('edge cases', () => {
         test('empty object', () => {
-            expect(isMetadata({})).toBe(false)
+            expect(isMeta({})).toBe(false)
         })
 
         test('object with extra properties', () => {
@@ -119,7 +119,7 @@ describe('isMetadata', () => {
                 type: 'string',
                 extraProperty: 'should not matter'
             }
-            expect(isMetadata(metadataWithExtra)).toBe(true)
+            expect(isMeta(metadataWithExtra)).toBe(true)
         })
 
         test('object with methods that throw', () => {
@@ -128,18 +128,18 @@ describe('isMetadata', () => {
                 toJson: () => { throw new Error('toJson error') },
                 type: 'string'
             }
-            expect(isMetadata(throwingMetadata)).toBe(true)
+            expect(isMeta(throwingMetadata)).toBe(true)
         })
 
         test('array objects', () => {
-            expect(isMetadata([])).toBe(false)
+            expect(isMeta([])).toBe(false)
 
             const arrayWithProps = {
                 toValue: () => 'value',
                 toJson: () => ({}),
                 type: 'array'
             }
-            expect(isMetadata(arrayWithProps)).toBe(true)
+            expect(isMeta(arrayWithProps)).toBe(true)
         })
 
         test('objects with property descriptors', () => {
@@ -148,7 +148,7 @@ describe('isMetadata', () => {
                 toJson: { value: () => ({}), enumerable: true },
                 type: { value: 'string', enumerable: true }
             })
-            expect(isMetadata(metadata)).toBe(true)
+            expect(isMeta(metadata)).toBe(true)
         })
     })
 })

@@ -1,16 +1,16 @@
-import { toArray } from "../../src/converters/array"
-import { toBoolean } from "../../src/converters/boolean"
-import { toDate } from "../../src/converters/date"
-import { toMap } from "../../src/converters/map"
-import { toNullable } from "../../src/converters/nullable"
-import { toBigInt, toInt64, toUint64 } from "../../src/converters/number/bigint"
-import { toFloat } from "../../src/converters/number/float"
-import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../../src/converters/number/int"
-import { toObject } from "../../src/converters/object"
-import { toSet } from "../../src/converters/set"
-import { toString } from "../../src/converters/string"
+import { toArray } from "../../src/converters/toValue/array"
+import { toBoolean } from "../../src/converters/toValue/boolean"
+import { toDate } from "../../src/converters/toValue/date"
+import { toMap } from "../../src/converters/toValue/map"
+import { toNullable } from "../../src/converters/toValue/nullable"
+import { toBigInt, toInt64, toUint64 } from "../../src/converters/toValue/number/bigint"
+import { toFloat } from "../../src/converters/toValue/number/float"
+import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../../src/converters/toValue/number/int"
+import { toObject } from "../../src/converters/toValue/object"
+import { toSet } from "../../src/converters/toValue/set"
 import { ARRAY, BIGINT, BOOL, DATE, F64_ARRAY, I16, I16_ARRAY, I32, I32_ARRAY, I64, I64_ARRAY, I8, I8_ARRAY, MAP, NULLABLE, NUMBER, OBJECT, SET, STRING, U16, U16_ARRAY, U32, U32_ARRAY, U64, U64_ARRAY, U8, U8_ARRAY, } from "../../src/metadata/baseTypes"
-import { array, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array, u32Array, u64Array, i8Array, i16Array, i32Array, i64Array, f64Array, map, set, object, field, usePool } from "../../src/metadata/builder"
+import { array, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array, u32Array, u64Array, i8Array, i16Array, i32Array, i64Array, f64Array, map, set, object } from "../../src/metadata/builder"
+import { pool } from "../../src/metadata/modifiers"
 import { BaseMeta, TypeName } from "../../src/metadata/types"
 import { defaultOptions } from "../../src/options"
 import { arrayPool } from "../../src/utils/array"
@@ -137,9 +137,8 @@ describe('metadata builders', () => {
 
     test('array', () => {
         const num = number()
-        const pool = arrayPool<Array<number>>(Array)
-        const addPool = usePool(pool)
-        const meta = array(num, addPool)
+        const arrPool = arrayPool<Array<number>>({ ctor: Array })
+        const meta = array(num, pool(arrPool))
 
         expectBaseStructure(meta, ARRAY)
         expect(meta).toHaveProperty('value', num)
@@ -311,23 +310,14 @@ describe('metadata builders', () => {
         expect(meta.toJson(meta, new Set([1, 1, 2]), defaultOptions)).toBe('[1,2]')
     })
 
-    test('field', () => {
-        const meta = field('id', number())
-
-        expectBaseStructure(meta.value, NUMBER)
-        expect(meta).toHaveProperty('name', {
-            value: 'id',
-            bytes: new TextEncoder().encode('id'),
-        })
-    })
-
     test('object', () => {
-        const fields = [field('id', number()), field('name', string())]
-        const meta = object(...fields)
+        const meta = object({
+            id: number(),
+            name: string()
+        })
 
         expectBaseStructure(meta, OBJECT)
         expect(meta).toHaveProperty('fields')
-        expect(meta.fields).toStrictEqual(fields)
         expect(meta.toValue).toBe(toObject)
         expect(meta.toJson(meta, { id: 1, name: 'test' } as any, defaultOptions)).toBe('{"id":1,"name":"test"}')
         expect(meta).toHaveProperty('build')
