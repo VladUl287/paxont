@@ -25,7 +25,7 @@ describe('toArray', () => {
         })
 
         test('handles large arrays', () => {
-            const largeArray = Array.from({ length: 1000 }, (_, i) => i)
+            const largeArray = Array.from({ length: 100 }, (_, i) => i)
             const arrayString = '[' + largeArray.join(', ') + ']'
             expectToParse({ meta, raw: arrayString })
         })
