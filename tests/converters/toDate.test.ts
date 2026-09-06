@@ -1,5 +1,6 @@
 import { date } from "../../src/metadata/builder"
 import { isComplete } from "../../src/utils/result"
+import { precomputeUTC } from "../../src/utils/utc"
 import { expectToParse } from "./utils"
 import dayjs from 'dayjs'
 
@@ -77,6 +78,16 @@ describe('toDate', () => {
             })
         })
 
+        test('should parse later then 1970 - UTC', () => {
+            const value = '1971-01-01T00:00:00.000Z'
+            expectToParse({
+                meta,
+                raw: `"${value}"`,
+                expected: expect.any(Date),
+                alsoExpect: (result) => { isComplete(result) && expect(result.value.toISOString()).toEqual(dayjs(value).toISOString()) }
+            })
+        })
+
         test('should parse earlier then 1970 - UTC', () => {
             const value = '1969-01-01T00:00:00.000Z'
             expectToParse({
@@ -87,8 +98,18 @@ describe('toDate', () => {
             })
         })
 
-        test('should parse earliest ISO date - UTC', () => {
+        test('should parse early ISO date - UTC', () => {
             const value = '0001-01-01T00:00:00Z'
+            expectToParse({
+                meta,
+                raw: `"${value}"`,
+                expected: expect.any(Date),
+                alsoExpect: (result) => { isComplete(result) && expect(result.value.toISOString()).toEqual(dayjs(value).toISOString()) }
+            })
+        })
+
+        test('should parse earliest ISO date - UTC', () => {
+            const value = '0000-01-01T00:00:00Z'
             expectToParse({
                 meta,
                 raw: `"${value}"`,
@@ -165,6 +186,29 @@ describe('toDate', () => {
                 expected: expect.any(Date),
                 alsoExpect: (result) => { isComplete(result) && expect(result.value.toISOString()).toEqual(dayjs(value).toISOString()) }
             })
+        })
+
+        test('should handle date sub 1970 - UTC', () => {
+            const value = '1600-01-01T00:00Z'
+            expectToParse({
+                meta,
+                raw: `"${value}"`,
+                expected: expect.any(Date),
+                alsoExpect: (result) => {
+                    if (isComplete(result)) {
+                        const a = dayjs(value).toISOString()
+                        const b = result.value.toISOString()
+                        expect(b).toEqual(a)
+                    }
+                }
+            })
+        })
+
+        test('should handle date outside of precomputed range', () => {
+            const utc = precomputeUTC({ minYear: 0, maxYear: 2029 })
+
+            expect(utc(2030, 0)).toEqual(Date.UTC(2030, 0))
+            expect(utc(-1, 0)).toEqual(Date.UTC(-1, 0))
         })
     })
 
