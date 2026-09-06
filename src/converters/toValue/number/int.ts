@@ -71,7 +71,7 @@ export function tryParseInt(
 
     if (negative) m = -m
 
-    if (m < minValue || m > maxValue) {
+    if (i - start === 0 || m < minValue || m > maxValue) {
         return {
             type: ERROR,
             error: new JSONParseError(``)
