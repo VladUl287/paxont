@@ -349,7 +349,8 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         }
 
                         let len = bytesLength - cacheViewStart
-
+                        
+                        const target = len + 1
                         if (writable) {
                             len = trim_to_last_char(start, len)
                             if (start === len || len < 0) {
@@ -361,7 +362,6 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                             }
                         }
 
-                        const target = len + 1
                         const end_index = utf8_to_utf16(start, len, target)
                         if (end_index < 0) {
                             return {
@@ -423,6 +423,8 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         memoryView.set(new Uint8Array(b.buffer, i, length))
 
                         let len = length
+                        const target = len + 1
+
                         if (writable || !lastChunk) {
                             len = trim_to_last_char(0, len)
                             if (len < 0) {
@@ -433,7 +435,6 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                             }
                         }
 
-                        const target = len + 1
                         const end_index = utf8_to_utf16(0, len, target)
                         if (end_index < 0) {
                             return {
@@ -538,10 +539,12 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         start = i - cacheViewStart
                     }
 
-                    let end = bytesLength - cacheViewStart
+                    let len = bytesLength - cacheViewStart
+                    const target = len + 1
+
                     if (writable) {
-                        end = trim_to_last_char(start, end)
-                        if (start === end || end < 0) {
+                        len = trim_to_last_char(start, len)
+                        if (start === len || len < 0) {
                             stack.push({ isContinued: true, base })
                             return {
                                 type: NEEDS_MORE_DATA,
@@ -550,8 +553,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         }
                     }
 
-                    const target = end + 1
-                    const end_index = utf8_to_utf8(start, end, target)
+                    const end_index = utf8_to_utf8(start, len, target)
                     if (end_index < 0) {
                         return {
                             type: ERROR,
@@ -623,6 +625,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     memoryView.set(new Uint8Array(b.buffer, i, length))
 
                     let len = length
+                    const target = len + 1
                     if (writable) {
                         len = trim_to_last_char(0, length)
                         if (len < 0) {
@@ -633,7 +636,6 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         }
                     }
 
-                    const target = len + 1
                     const end_index = utf8_to_utf8(0, len, target)
                     if (end_index < 0) {
                         return {
