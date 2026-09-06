@@ -261,8 +261,8 @@ export function builder(options: Partial<BuilderOptions> = defaultBuilderOptions
             type: OBJECT,
             toValue: toObject,
             fields: fields,
-            toJson: genObjectToJsonFactory(fields),
-            build: genObjectFactory<ObjectMeta<M>>(fields),
+            toJson: genObjectToJsonFactory(fields.map(c => c.name.value)),
+            build: genObjectFactory<ObjectMeta<M>>(fields.map(c => c.name.value)),
             getFieldIndex: generateTrie(fields.map(c => c.name.bytes))
         }
 
