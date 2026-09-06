@@ -189,7 +189,7 @@ describe('toDate', () => {
         })
 
         test('should handle date sub 1970 - UTC', () => {
-            const value = '1600-01-01T00:00Z'
+            const value = '1600-07-24T12:32Z'
             expectToParse({
                 meta,
                 raw: `"${value}"`,
