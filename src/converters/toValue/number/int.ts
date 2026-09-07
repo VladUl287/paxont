@@ -43,9 +43,11 @@ export function tryParseInt(
     const negative = b[i] === MINUS
     if (negative) {
         if (signed) { i++ }
-        return {
-            type: ERROR,
-            error: new JSONParseError(``)
+        else {
+            return {
+                type: ERROR,
+                error: new JSONParseError(``)
+            }
         }
     }
 
