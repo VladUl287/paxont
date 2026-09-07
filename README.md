@@ -98,7 +98,7 @@ Supported Types
 | Collections | Set, Map(string as key type only for now) |
 | Nullable | can be used for any type |
 
-Type with all supported types.
+All supported types example.
 
 ```javascript
 const type = {
@@ -140,6 +140,7 @@ const type = {
 ```
 
 Add custom types
+
 ```javascript
 import { metadata } from 'json-t/src/metadata'
 import { Guid } from "guid-typescript"
@@ -218,10 +219,21 @@ const type = {
 deserialize(buffer, type)
 ```
 
-Pass custom options
 ## Roadmap
 
-- Additional browser support
-
-- Add more integrations
+- [ ] DeserializeArray generator and iterator
+- [ ] Float16 and Float32 support
+- [ ] Custom date formats with configurable specifiers
+- [ ] Extended JSON serialization/deserialization options:
+  - Allow duplicate properties
+  - Case-insensitive field matching
+  - Trailing comma support
+  - Formatted serializer
+- [ ] Optional type support
+- [ ] Any type implementation
+- [ ] Circular reference detection
+- [ ] Make string decoder accept fatal flag
+- [ ] Allow meta builders to accept objects
+- [ ] Reduce memory usage
+- [ ] Optimize speed performance
 
