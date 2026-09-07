@@ -25,6 +25,7 @@ export function toMap<M extends BaseMeta<any>>(meta: MapMeta<M>, context: JsonPa
     const state = stack.pop()
     const isContinued: boolean = state?.isContinued ?? false
     const value: Map<string, MetaValue<M>> = state?.value ?? new Map()
+    let hasComma = state?.hasComma ?? false
 
     if (!isContinued) {
         if (b[i] !== CURLY_OPEN) {
@@ -51,9 +52,9 @@ export function toMap<M extends BaseMeta<any>>(meta: MapMeta<M>, context: JsonPa
     }
     else {
         i = reader.skipWhitespace(i)
-        if (b[i] === COMMA) { i++ }
+        if (b[i] === COMMA) { i++; hasComma = true }
         else if (b[i] === CURLY_CLOSE) {
-            if (state?.hasComma) {
+            if (hasComma) {
                 return {
                     type: ERROR,
                     error: new JSONParseError(`Trailing comman`)
@@ -72,7 +73,6 @@ export function toMap<M extends BaseMeta<any>>(meta: MapMeta<M>, context: JsonPa
     const valueMeta = meta.value
     const parseValue = valueMeta.toValue
 
-    let hasComma = false
     let key: string | undefined = state?.key ?? undefined
     let colon: number | undefined = state?.colon ?? undefined
     while (true) {
