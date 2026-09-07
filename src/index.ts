@@ -90,7 +90,7 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
     }
 
     async function deserializeAsync<T>(
-        json: ReadableStream<Uint8Array>,
+        json: ReadableStream<Uint8Array<ArrayBuffer>>,
         type: T,
         options?: Partial<JsonOptions>
     ): Promise<MetaOrData<T>> {
