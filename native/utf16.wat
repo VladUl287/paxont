@@ -22,6 +22,7 @@
     (local $trailing i32)
     (local $partialChar i32)
     (local $start i32)
+    (local $first i32)
     
     (local.set $start (local.get $i))
 
@@ -93,6 +94,7 @@
         ;; two byte value
         (i32.lt_u (local.tee $temp (i32.load8_u (local.get $i))) (i32.const 224))
         if
+          (local.set $first (i32.const 1))
           (block $two_byte_block
             (loop $two_byte_loop 
               (i32.lt_u
@@ -114,7 +116,8 @@
   
                     (local.set $i (i32.add (local.get $i) (i32.const 16)))
                     (local.set $target (i32.add (local.get $target) (i32.const 16)))
-  
+
+                    (local.set $first (i32.const 0))
                     (br $two_byte_loop)
                   ))
 
@@ -145,8 +148,13 @@
                   (i32.const 0)
                 )
               )
-              (br_if $two_byte_block)
-  
+              (if 
+                (then
+                  (br_if $two_byte_block (local.get $first))
+                  (br $non_ascii_loop)
+                )
+              )
+              
               (call $in_range_inclusive
                 (i32.and (local.get $mask) (i32.const 0xC0FF0000))
                 (i32.const 2160197632)
@@ -165,7 +173,10 @@
                   (i32.gt_u
                     (i32.add (local.get $i) (i32.const 4))
                     (local.get $end)
-                  ))
+                  )
+                )
+                
+                (local.set $first (i32.const 0))
                 (br $two_byte_loop)
               end
   
@@ -176,7 +187,8 @@
               (local.set $target (i32.add (local.get $target) (i32.const 2)))
               (local.set $i (i32.add (local.get $i) (i32.const 2)))
               (br $non_ascii_loop)
-            ))
+            )
+          )
         end
 
         ;; i + 4 < length
