@@ -53,7 +53,7 @@ You can build your types flexible way.
 ```javascript
 import { deserialize } from 'json-t'
 
-// use object
+// use object itself
 const type = {
     id: 1,
     name: "name",
@@ -84,7 +84,6 @@ const type = object({
 deserialize(json, type)
 ```
 
-
 ## Advanced Features
 
 Supported Types
@@ -95,7 +94,7 @@ Supported Types
 | Numbers | int8, uint8, int16, uint16, int32, uint32, int64, uint64, bigint |
 | Date | date object |
 | Typed Arrays | Int8Array, Int16Array, Int32Array, BigInt64Array, Uint8Array, Uint16Array, Uint32Array, BigUint64Array, Float64Array |
-| Collections | Set, Map(string as key type only for now) |
+| Collections | Set, Map |
 | Nullable | can be used for any type |
 
 All supported types example.
@@ -139,7 +138,7 @@ const type = {
 }
 ```
 
-Add custom types
+Add custom types support.
 
 ```javascript
 import { metadata } from 'json-t/src/metadata'
@@ -202,7 +201,7 @@ const buffer = await response.arrayBuffer()
 deserialize(buffer, type)
 ```
 
-Use updated metadata builder with deserialize and serialize function itself
+Use updated metadata builder with deserialize and serialize function itself.
 
 ```javascript
 import { jsont } from 'json-t'
@@ -273,8 +272,8 @@ deserialize(buffer, type)
 
 ## Roadmap
 
-- [ ] DeserializeArray generator and iterator
 - [ ] Float16 and Float32 support
+- [ ] DeserializeArray generator and iterator
 - [ ] Custom date formats with configurable specifiers
 - [ ] Extended JSON serialization/deserialization options:
   - Allow duplicate properties
