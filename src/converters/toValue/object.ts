@@ -100,7 +100,22 @@ export function toObject<T extends { [k: string]: BaseMeta<any> }>(
             }
 
             field = fields[fieldIndex]
-            i += field.name.bytes.length + 1
+            i += field.name.bytes.length
+
+            if (b[i] !== DOUBLE_QUOTE) {
+                if (i >= len && writable) {
+                    stack.push({ isContinued: true, buffer, bufferIndex })
+                    return {
+                        type: NEEDS_MORE_DATA,
+                        nextIndex: start
+                    }
+                }
+                return {
+                    type: ERROR,
+                    error: new JSONParseError('Maximum depth exceeded', { metadata: meta, index: i, depth: d })
+                }
+            }
+            i++
 
             if (b[i] !== COLON) {
                 if (i >= len && writable) {
