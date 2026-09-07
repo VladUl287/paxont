@@ -8,6 +8,14 @@
     "type-safe"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/VladUl287/JSONT"
+  },
+  "files": [
+    "src/",
+    "README.md"
+  ],
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "benny": "^3.7.1",
