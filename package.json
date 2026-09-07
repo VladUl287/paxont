@@ -1,4 +1,13 @@
 {
+  "name": "json-t",
+  "version": "1.0.0",
+  "description": "Type-safe JSON parsing",
+  "main": "src/index.js",
+  "keywords": [
+    "json",
+    "type-safe"
+  ],
+  "license": "MIT",
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "benny": "^3.7.1",
