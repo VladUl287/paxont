@@ -219,6 +219,58 @@ const type = {
 deserialize(buffer, type)
 ```
 
+## API Reference
+
+#### deserialize
+
+```javascript
+    function deserialize<T>(value: ArrayBuffer | Uint8Array | string, type: T, options?: Partial<JsonOptions>)
+```
+
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `id`      | `string` | **Required**. Id of item to fetch |
+
+#### deserializeAsync
+
+```javascript
+    async function deserializeAsync<T>(json: ReadableStream<Uint8Array>, type: T, options?: Partial<JsonOptions>): Promise<T>
+```
+
+| Parameter | Type     | Description                       |
+| :-------- | :------- | :-------------------------------- |
+| `id`      | `string` | **Required**. Id of item to fetch |
+
+#### serialize
+
+```javascript
+    function serialize<V, T>(value: V, type: T, options?: Partial<JsonOptions>): string
+```
+
+| Parameter | Type     | Description                       |
+| :-------- | :------- | :-------------------------------- |
+| `id`      | `string` | **Required**. Id of item to fetch |
+
+#### jsont
+
+```javascript
+    const defaultJsontOptions: JsontOptions = Object.freeze({
+        metadata: metadata(),
+        bufferPool: arrayPool({ ctor: Uint8Array }),
+        defaultSerializeOptions: defaultOptions,
+        memoize: memoize,
+    })
+    function jsont(options: Partial<JsontOptions> = defaultJsontOptions): {
+        deserialize: <T>(value: ArrayBuffer | Uint8Array | string, type: T, options?: Partial<JsonOptions>) => T
+        deserializeAsync: <T>(json: ReadableStream<Uint8Array>, type: T, options?: Partial<JsonOptions>) => Promise<T>
+        serialize: <V, T>(value: V, type: T, options?: Partial<JsonOptions>) => string
+    }
+```
+
+| Parameter | Type     | Description                       |
+| :-------- | :------- | :-------------------------------- |
+| `id`      | `string` | **Required**. Id of item to fetch |
+
 ## Roadmap
 
 - [ ] DeserializeArray generator and iterator
