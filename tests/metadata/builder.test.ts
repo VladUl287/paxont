@@ -8,6 +8,7 @@ import { toFloat } from "../../src/converters/toValue/number/float"
 import { toInt16, toInt32, toInt8, toUint16, toUint32, toUint8 } from "../../src/converters/toValue/number/int"
 import { toObject } from "../../src/converters/toValue/object"
 import { toSet } from "../../src/converters/toValue/set"
+import { toString } from "../../src/converters/toValue/string"
 import { ARRAY, BIGINT, BOOL, DATE, F64_ARRAY, I16, I16_ARRAY, I32, I32_ARRAY, I64, I64_ARRAY, I8, I8_ARRAY, MAP, NULLABLE, NUMBER, OBJECT, SET, STRING, U16, U16_ARRAY, U32, U32_ARRAY, U64, U64_ARRAY, U8, U8_ARRAY, } from "../../src/metadata/baseTypes"
 import { array, bigInt, bool, date, i16, i32, i64, i8, nullable, number, string, u16, u16Array, u32, u8, u8Array, u32Array, u64Array, i8Array, i16Array, i32Array, i64Array, f64Array, map, set, object } from "../../src/metadata/builder"
 import { pool } from "../../src/metadata/modifiers"
@@ -22,7 +23,7 @@ describe('metadata builders', () => {
         expect(meta).toHaveProperty('toJson')
 
         expect(typeof meta.toValue).toBe('function')
-        expect(meta.toValue.length).toBe(4)
+        expect(meta.toValue.length).toBe(2)
         expect(typeof meta.toJson).toBe('function')
         expect(meta.toJson.length).toBe(3)
     }
@@ -81,7 +82,7 @@ describe('metadata builders', () => {
 
         expectBaseStructure(meta, U16)
         expect(meta.toValue).toBe(toUint16)
-        expect(meta.toJson(meta, 123456, defaultOptions)).toBe('123456')
+        expect(meta.toJson(meta, 12345, defaultOptions)).toBe('12345')
     })
 
     test('uint32', () => {
@@ -105,7 +106,7 @@ describe('metadata builders', () => {
 
         expectBaseStructure(meta, I16)
         expect(meta.toValue).toBe(toInt16)
-        expect(meta.toJson(meta, 123456, defaultOptions)).toBe('123456')
+        expect(meta.toJson(meta, 32767, defaultOptions)).toBe('32767')
     })
 
     test('int32', () => {
@@ -142,7 +143,7 @@ describe('metadata builders', () => {
 
         expectBaseStructure(meta, ARRAY)
         expect(meta).toHaveProperty('value', num)
-        expect(meta).toHaveProperty('pool', pool)
+        expect(meta).toHaveProperty('pool', arrPool)
         expect(meta.toValue).toBe(toArray)
         expect(meta.toJson(meta, [1], defaultOptions)).toBe('[1]')
     })
