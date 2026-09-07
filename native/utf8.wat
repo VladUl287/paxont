@@ -27,6 +27,7 @@
     (local $byte_mask i32)
     (local $trailing i32)
     (local $partialChar i32)
+    (local $first i32)
 
     (local.set $start (local.get $i))
 
@@ -116,6 +117,7 @@
         ;; two byte value
         (if (i32.lt_u (local.tee $temp (i32.load8_u (local.get $i))) (i32.const 224))
           (then
+            (local.set $first (i32.const 1))
             (block $two_byte_block
               (loop $two_byte_loop 
                 ;; i + 16 < len
@@ -142,6 +144,7 @@
                           )
                         )
                         (local.set $i (i32.add (local.get $i) (i32.const 16)))
+                        (local.set $first (i32.const 0))
                         (br $two_byte_loop)
                       )
                     )
@@ -162,10 +165,14 @@
                   (then 
                     (local.set $mask (i32.load offset=0 align=1 (local.get $i)))
 
-                    (br_if $two_byte_block
-                      (i32.ne 
-                        (i32.and (i32.sub (local.get $mask) (i32.const 32960)) (i32.const 49376))
-                        (i32.const 0)
+                    (i32.ne 
+                      (i32.and (i32.sub (local.get $mask) (i32.const 32960)) (i32.const 49376))
+                      (i32.const 0)
+                    )
+                    (if 
+                      (then
+                        (br_if $two_byte_block (local.get $first))
+                        (br $loop)
                       )
                     )
 
@@ -181,6 +188,7 @@
                           )
                         )
                         (local.set $i (i32.add (local.get $i) (i32.const 4)))
+                        (local.set $first (i32.const 0))
                         (br $two_byte_loop)
                       )
                     )
