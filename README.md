@@ -14,7 +14,64 @@ A type safe, high-performance, extendable JSON library with zero external depend
 
 ## Usage/Examples
 
-Just pass object filled with data as type and thats it.
+#### Metadata
+
+As type for serialization and deserialization used metadata. You can build it many ways.
+
+```javascript
+import { bool, date, number, object, string } from 'json-t/src/metadata/builder'
+import { deserialize } from 'json-t'
+const meta = object({
+    id: number(),
+    name: string(),
+    createdAt: date(),
+    isActive: bool()
+})
+deserialize(json, meta)
+```
+
+```javascript
+import { metadata } from 'json-t/src/metadata'
+import { deserialize } from 'json-t'
+const { from } = metadata()
+const meta = from({
+    id: 1,
+    name: "name",
+    createdAt: new Date(),
+    isActive: false,
+})
+deserialize(json, meta)
+```
+
+or just use object as type itself, it will use ```metadata()``` instance also.
+
+```javascript
+import { deserialize } from 'json-t'
+const type = {
+    id: 1,
+    name: "name",
+    createdAt: new Date(),
+    isActive: false,
+}
+deserialize(json, type)
+```
+
+you can use metadata itself with usual values
+
+```javascript
+import { deserialize } from 'json-t'
+const type = {
+    id: i32(),
+    name: "name",
+    createdAt: date(),
+    isActive: false,
+}
+deserialize(json, type)
+```
+
+#### Deserialization
+
+You can deserialize string, bytes or stream
 
 ```javascript
 import { serialize, deserialize, deserializeAsync } from "json-t"
@@ -22,71 +79,52 @@ import { serialize, deserialize, deserializeAsync } from "json-t"
 const type = {
     id: 1,
     name: "name",
-    isActive: false,
-    code_points: [65537, 32224]
+    isActive: false
 }
 const response = await fetch('url')
 
-//deserialize from bytes buffer directly
-const buffer = await (response.clone()).arrayBuffer()
+//from bytes buffer
+const buffer = await response.arrayBuffer()
 const value = deserialize(buffer, type)
-serialize(value, type)
 
-//deserialize from bytes directly
-const bytes = await (response.clone()).bytes()
+//from bytes
+const bytes = await response.bytes()
 const value = deserialize(bytes, type)
-serialize(value, type)
 
-//deserialize from string directly
-const json = await (response.clone()).json()
+//from string
+const json = await response.json()
 const value = deserialize(json, type)
-serialize(value, type)
 
-//deserialize asynchronously from stream 
+//from stream 
 const reader = response.body
 await deserializeAsync(reader, type)
-serialize(value, type)
 ```
 
-You can build your types flexible way.
+#### Serialization
 
 ```javascript
-import { deserialize } from 'json-t'
+import { serialize } from 'json-t'
 
-// use object itself
-const type = {
-    id: 1,
-    name: "name",
-    createdAt: new Date(),
-    isActive: false,
-}
-deserialize(json, type)
-
-// use metadata
-import { metadata } from 'json-t/src/metadata'
-const { from } = metadata()
-const type = from({
-    id: 1,
-    name: "name",
-    createdAt: new Date(),
-    isActive: false,
-})
-deserialize(json, type)
-
-// use manually builded meta
-import { bool, date, number, object, string } from 'json-t/src/metadata/builder'
 const type = object({
     id: number(),
     name: string(),
     createdAt: date(),
     isActive: bool()
 })
-deserialize(json, type)
+
+const value = {
+    id: 1,
+    name: "name",
+    createdAt: new Date(),
+    isActive: false
+}
+
+serialize(value, type)
 ```
 
 ## Advanced Features
 
-Supported Types
+Supported types.
 
 | Category | Types |
 |----------|-------|
@@ -96,8 +134,6 @@ Supported Types
 | Typed Arrays | Int8Array, Int16Array, Int32Array, BigInt64Array, Uint8Array, Uint16Array, Uint32Array, BigUint64Array, Float64Array |
 | Collections | Set, Map |
 | Nullable | can be used for any type |
-
-All supported types example.
 
 ```javascript
 const type = {
@@ -138,49 +174,85 @@ const type = {
 }
 ```
 
-Add custom types support.
+### Modifiers
+
+Modifiers change metadata behaviour.
+
+```javascript
+import { toJson, toValue } from "./metadata/modifiers"
+const num = number(
+    toJson((meta, value, options) => {
+        throw new Error('number type not supported anymore')
+    }),
+    toValue((meta, context) => {
+        return {
+            type: ReadResultType.ERROR,
+            error: new Error('number type not supported anymore')
+        }
+    })
+)
+```
+
+Use Set keySelector for complex values.
+
+```javascript
+import { number, object, set } from "./metadata/builder"
+import { keySelector } from "./metadata/modifiers"
+
+const setMeta = set(
+    object({ id: number() }), 
+    keySelector((value) => value.id)
+)
+```
+
+You can pass your own array pool which will be used only for that meta value.
+Pool used as temp storage for deserialized values.
+
+```javascript
+import { pool } from "./metadata/modifiers"
+const arrPool = arrayPool<Array<number>>({ ctor: Array })
+const arr = array(number(), pool(arrPool))
+```
+
+### Custom types
 
 ```javascript
 import { metadata } from 'json-t/src/metadata'
 import { Guid } from "guid-typescript"
 import { ReadResultType } from 'json-t/src/utils/result'
+
+const guid = (): PrimitiveMeta<Guid> => {
+    type: 'guid',
+    toValue: (_meta, context) => {
+        const { bytes, position, raw } = context.reader
+        const start = position
+        if (raw) { //if parsing from ascii string
+            const end = raw.indexOf('""', position)
+            const guid_string = raw.substring(start, end)
+            return {
+                type: ReadResultType.COMPLETE,
+                value: Guid.parse(guid_string),
+                nextIndex: end + 1
+            }
+        }
+        const end = bytes.indexOf(34, position) //34 - double quote(") in utf8
+        const decoder = new TextDecoder()
+        const guid_bytes = bytes.subarray(start, end)
+        const guid_string = decoder.decode(guid_bytes)
+        return {
+            type: ReadResultType.COMPLETE,
+            value: Guid.parse(guid_string),
+            nextIndex: end + 1
+        }
+    },
+    toJson: (_meta, value, _options) => value.toJSON()
+}
+
 const modifiedMetadata = metadata()
 modifiedMetadata.add({
     name: 'guid',
     is: (value) => Guid.isGuid(value),
-    from: (_v, _m) => {
-        return {
-            type: 'guid',
-            toValue: (_meta, context) => {
-                const { bytes, position, raw } = context.reader
-
-                const start = position
-
-                if (raw) { //if parsing from ascii string
-                    const end = raw.indexOf('""', position)
-                    const guid_string = raw.substring(start, end)
-                    return {
-                        type: ReadResultType.COMPLETE,
-                        value: Guid.parse(guid_string),
-                        nextIndex: end + 1
-                    }
-                }
-
-                const end = bytes.indexOf(34, position) //34 - double quote(") in utf8
-
-                const decoder = new TextDecoder()
-                const guid_bytes = bytes.subarray(start, end)
-                const guid_string = decoder.decode(guid_bytes)
-
-                return {
-                    type: ReadResultType.COMPLETE,
-                    value: Guid.parse(guid_string),
-                    nextIndex: end + 1
-                }
-            },
-            toJson: (_meta, value, _options) => value.toJSON()
-        }
-    },
+    from: (_v, _m) => guid(),
     order: 50
 })
 ```
@@ -188,20 +260,22 @@ modifiedMetadata.add({
 Then you can use modified metadata builder.
 
 ```javascript
-import { deserialize } from 'json-t'
-
 const type = modifiedMetadata.from({
     id: Guid.create(),
     isActive: false,
 })
-
-const response = await fetch('url')
-const buffer = await response.arrayBuffer()
-
-deserialize(buffer, type)
 ```
 
-Use updated metadata builder with deserialize and serialize function itself.
+or as meta builder itself
+
+```javascript
+const type = modifiedMetadata.from({
+    id: guid(),
+    isActive: false,
+})
+```
+
+or use updated metadata builder with deserialize and serialize function itself.
 
 ```javascript
 import { jsont } from 'json-t'
@@ -220,55 +294,75 @@ deserialize(buffer, type)
 
 ## API Reference
 
-#### deserialize
+#### `deserialize(value, type, options?)`
 
-```javascript
-    function deserialize<T>(value: ArrayBuffer | Uint8Array | string, type: T, options?: Partial<JsonOptions>)
+Synchronously parses JSON data from various input formats into a typed object using the provided schema.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| `value` | `ArrayBuffer` \| `Uint8Array` \| `string` | **Required.** The raw JSON data to parse |
+| `type` | `T` | **Required.** The schema or type definition for parsing and validation |
+| `options` | `Partial<JsonOptions>` | Optional. Override default serialization options |
+
+**Returns:** `T` - The parsed object with the specified type
+
+---
+
+#### `deserializeAsync(value, type, options?)`
+
+Asynchronously parses streaming JSON data into a typed object, enabling memory-efficient processing of large payloads.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| `json` | `ReadableStream<Uint8Array>` | **Required.** The readable stream of JSON data chunks |
+| `type` | `T` | **Required.** The schema or type definition for parsing and validation |
+| `options` | `Partial<JsonOptions>` | Optional. Override default serialization options |
+
+**Returns:** `Promise<T>` - A promise that resolves to the parsed object with the specified type
+
+---
+
+#### `serialize(value, type, options?)`
+
+Serializes a typed object into a JSON string.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| `value` | `V` | **Required.** The object value to serialize |
+| `type` | `T` | **Required.** The schema or type definition that describes the object structure |
+| `options` | `Partial<JsonOptions>` | Optional. Override default serialization options |
+
+**Returns:** `string` - The JSON string representation of the object
+
+#### `jsont(options?)`
+
+Creates a JSON serializer/deserializer instance with customizable behavior.
+
+**Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `options` | `Partial<JsontOptions>` | `defaultJsontOptions` | Configuration options for serialization behavior |
+
+**Returns:**
+| Property | Type | Description |
+|----------|------|-------------|
+| `deserialize` | `<T>(value: ArrayBuffer \| Uint8Array \| string, type: T, options?) => T` | Synchronously parses JSON into typed objects |
+| `deserializeAsync` | `<T>(json: ReadableStream<Uint8Array>, type: T, options?) => Promise<T>` | Asynchronously parses streaming JSON data |
+| `serialize` | `<V, T>(value: V, type: T, options?) => string` | Serializes typed objects to JSON strings |
+
+**Example:**
+```typescript
+const json = json({
+  metadata: customMetadata,
+  bufferPool: customPool
+})
 ```
-
-| Parameter | Type     | Description                |
-| :-------- | :------- | :------------------------- |
-| `id`      | `string` | **Required**. Id of item to fetch |
-
-#### deserializeAsync
-
-```javascript
-    async function deserializeAsync<T>(json: ReadableStream<Uint8Array>, type: T, options?: Partial<JsonOptions>): Promise<T>
-```
-
-| Parameter | Type     | Description                       |
-| :-------- | :------- | :-------------------------------- |
-| `id`      | `string` | **Required**. Id of item to fetch |
-
-#### serialize
-
-```javascript
-    function serialize<V, T>(value: V, type: T, options?: Partial<JsonOptions>): string
-```
-
-| Parameter | Type     | Description                       |
-| :-------- | :------- | :-------------------------------- |
-| `id`      | `string` | **Required**. Id of item to fetch |
-
-#### jsont
-
-```javascript
-    const defaultJsontOptions: JsontOptions = Object.freeze({
-        metadata: metadata(),
-        bufferPool: arrayPool({ ctor: Uint8Array }),
-        defaultSerializeOptions: defaultOptions,
-        memoize: memoize,
-    })
-    function jsont(options: Partial<JsontOptions> = defaultJsontOptions): {
-        deserialize: <T>(value: ArrayBuffer | Uint8Array | string, type: T, options?: Partial<JsonOptions>) => T
-        deserializeAsync: <T>(json: ReadableStream<Uint8Array>, type: T, options?: Partial<JsonOptions>) => Promise<T>
-        serialize: <V, T>(value: V, type: T, options?: Partial<JsonOptions>) => string
-    }
-```
-
-| Parameter | Type     | Description                       |
-| :-------- | :------- | :-------------------------------- |
-| `id`      | `string` | **Required**. Id of item to fetch |
 
 ## Roadmap
 
@@ -284,6 +378,7 @@ deserialize(buffer, type)
 - [ ] Any type implementation
 - [ ] Circular reference detection
 - [ ] Make string decoder accept fatal flag
+- [ ] Make string decoder accept encodings
 - [ ] Allow meta builders to accept objects
 - [ ] Reduce memory usage
 - [ ] Optimize speed performance
