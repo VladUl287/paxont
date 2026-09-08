@@ -1,5 +1,5 @@
 
-# JSONT Library
+# JSON Library
 
 Type-safe, high-performance, extensible JSON library with streaming support and zero dependencies.
 
