@@ -385,6 +385,194 @@ const json = json({
 })
 ```
 
+### `builder(options?)`
+
+Creates a builder instance with configurable options for constructing metadata schemas.
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+| :-------- | :--- | :------ | :---------- |
+| `options` | `Partial<BuilderOptions>` | `defaultBuilderOptions` | Configuration options for the builder |
+
+**Returns:** `Builder` - An object containing all metadata builder functions
+
+**Example:**
+```typescript
+import { builder } from 'json-t/src/metadata/builder'
+
+const { object, string, number, date } = builder()
+
+const userMeta = object({
+  id: number(),
+  name: string(),
+  createdAt: date()
+})
+```
+
+---
+
+### BuilderOptions
+
+Configuration for builder behavior.
+
+```typescript
+type BuilderOptions = {
+  encoder: TextEncoder
+  globalPools: Record<TypeName, ArrayPool<any>>
+  arrayPool: typeof arrayPool
+}
+```
+
+| Property | Type | Description |
+| :------- | :--- | :---------- |
+| `encoder` | `TextEncoder` | Text encoder for string serialization |
+| `globalPools` | `Record<TypeName, ArrayPool<any>>` | Global array pools for each type, used as default pools for arrays |
+| `arrayPool` | `typeof arrayPool` | Array pool factory function |
+
+---
+
+### Modifier
+
+Transform metadata with custom modifiers.
+
+```typescript
+type Modifier<M extends BaseMeta<any>> = (metadata: M) => M
+```
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| `metadata` | `M` | The metadata to modify |
+
+**Returns:** `M` - The modified metadata
+
+---
+
+### Builder Methods
+
+The builder returns the following metadata creation functions:
+
+#### Primitives
+
+| Method | Description |
+| :----- | :---------- |
+| `string(modifiers?)` | string type |
+| `number(modifiers?)` | 64-bit floating point number |
+| `bigInt(modifiers?)` | big integer type |
+| `bool(modifiers?)` | boolean type |
+| `date(modifiers?)` | date object |
+
+#### Integers
+
+| Method | Description |
+| :----- | :---------- |
+| `i8(modifiers?)` | 8-bit signed integer |
+| `i16(modifiers?)` | 16-bit signed integer |
+| `i32(modifiers?)` | 32-bit signed integer |
+| `i64(modifiers?)` | 64-bit signed integer |
+| `u8(modifiers?)` | 8-bit unsigned integer |
+| `u16(modifiers?)` | 16-bit unsigned integer |
+| `u32(modifiers?)` | 32-bit unsigned integer |
+| `u64(modifiers?)` | 64-bit unsigned integer |
+
+#### Arrays
+
+| Method | Description |
+| :----- | :---------- |
+| `array(type, modifiers?)` | Array of specified type |
+| `i8Array(modifiers?)` | 8-bit signed integer array |
+| `i16Array(modifiers?)` | 16-bit signed integer array |
+| `i32Array(modifiers?)` | 32-bit signed integer array |
+| `i64Array(modifiers?)` | 64-bit signed integer array |
+| `u8Array(modifiers?)` | 8-bit unsigned integer array |
+| `u16Array(modifiers?)` | 16-bit unsigned integer array |
+| `u32Array(modifiers?)` | 32-bit unsigned integer array |
+| `u64Array(modifiers?)` | 64-bit unsigned integer array |
+| `f64Array(modifiers?)` | 64-bit float array |
+
+#### Collections
+
+| Method | Description |
+| :----- | :---------- |
+| `map(valueType, modifiers?)` | Map collection |
+| `set(type, modifiers?)` | Set collection |
+| `object(shape, modifiers?)` | Object with defined properties |
+
+#### Nullable
+
+| Method | Description |
+| :----- | :---------- |
+| `nullable(type)` | Makes a type nullable |
+
+---
+
+### Usage Examples
+
+**Basic schema:**
+```typescript
+import { builder } from 'json-t/src/metadata/builder'
+
+const { object, string, number, bool, date, array } = builder()
+
+const userMeta = object({
+  id: number(),
+  name: string(),
+  email: string(),
+  age: number(),
+  isActive: bool(),
+  createdAt: date(),
+  tags: array(string())
+})
+```
+
+**With modifiers:**
+```typescript
+import { builder } from 'json-t/src/metadata/builder'
+import { pool, keySelector } from 'json-t/src/metadata/modifiers'
+
+const { array, set, object, number } = builder()
+
+// Custom array pool
+const arrPool = arrayPool({ ctor: Array })
+const taggedArray = array(string(), pool(arrPool))
+
+// Set with key selector
+const userSet = set(
+  object({ id: number(), name: string() }),
+  keySelector((user) => user.id)
+)
+```
+
+**Nested objects:**
+```typescript
+const { object, string, number, array } = builder()
+
+const postMeta = object({
+  id: number(),
+  title: string(),
+  content: string(),
+  comments: array(
+    object({
+      id: number(),
+      text: string(),
+      author: string()
+    })
+  )
+})
+```
+
+**Nullable types:**
+```typescript
+const { nullable, string, number } = builder()
+
+const userMeta = object({
+  id: number(),
+  name: string(),
+  nickname: nullable(string()),
+  age: nullable(number())
+})
+```
+
 #### `metadata(options?)`
 
 Creates a new metadata registry instance for type definitions.
