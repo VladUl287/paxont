@@ -21,7 +21,7 @@ You can define schemas for serialization/deserialization in multiple ways:
 **1. Builder pattern**
 
 ```javascript
-import { bool, date, number, object, string } from 'json-t/src/metadata/builder'
+import { bool, date, number, object, string } from 'json-t/metadata/builder'
 import { deserialize } from 'json-t'
 
 const meta = object({
@@ -37,7 +37,7 @@ deserialize(json, meta)
 **2. From value inference**
 
 ```javascript
-import { metadata } from 'json-t/src/metadata'
+import { metadata } from 'json-t/metadata'
 import { deserialize } from 'json-t'
 
 const { from } = metadata()
@@ -70,7 +70,7 @@ deserialize(json, type)
 
 ```javascript
 import { deserialize } from 'json-t'
-import { i32, date } from 'json-t/src/metadata/builder'
+import { i32, date } from 'json-t/metadata/builder'
 
 const type = {
   id: i32(),
@@ -119,7 +119,7 @@ Convert typed objects to JSON strings:
 
 ```javascript
 import { serialize } from 'json-t'
-import { bool, number, object, string } from 'json-t/src/metadata/builder'
+import { bool, number, object, string } from 'json-t/metadata/builder'
 
 const type = object({
   id: number(),
@@ -199,7 +199,7 @@ Modifiers change metadata behavior.
 Custom serialization/deserialization logic:
 
 ```javascript
-import { toJson, toValue } from "./metadata/modifiers"
+import { toJson, toValue } from "json-t/metadata/modifiers"
 const num = number(
     toJson((meta, value, options) => {
         throw new Error('number type not supported anymore')
@@ -216,8 +216,8 @@ const num = number(
 Key selector for complex sets:
 
 ```javascript
-import { number, object, set } from "./metadata/builder"
-import { keySelector } from "./metadata/modifiers"
+import { number, object, set } from "json-t/metadata/builder"
+import { keySelector } from "json-t/metadata/modifiers"
 
 const setMeta = set(
     object({ id: number() }), 
@@ -228,7 +228,7 @@ const setMeta = set(
 Custom array pool (temp storage for deserialized values):
 
 ```javascript
-import { pool } from "./metadata/modifiers"
+import { pool } from "json-t/metadata/modifiers"
 const arrPool = arrayPool<Array<number>>({ ctor: Array })
 const arr = array(number(), pool(arrPool))
 ```
@@ -240,9 +240,9 @@ Extend the library with your own types:
 **1. Define the custom type:**
 
 ```javascript
-import { metadata } from 'json-t/src/metadata'
+import { metadata } from 'json-t/metadata'
 import { Guid } from "guid-typescript"
-import { ReadResultType } from 'json-t/src/utils/result'
+import { ReadResultType } from 'json-t/utils/result'
 
 const guid = (): PrimitiveMeta<Guid> => {
     type: 'guid',
@@ -399,7 +399,7 @@ Creates a builder instance with configurable options for constructing metadata s
 
 **Example:**
 ```typescript
-import { builder } from 'json-t/src/metadata/builder'
+import { builder } from 'json-t/metadata/builder'
 
 const { object, string, number, date } = builder()
 
@@ -508,7 +508,7 @@ The builder returns the following metadata creation functions:
 
 **Basic schema:**
 ```typescript
-import { builder } from 'json-t/src/metadata/builder'
+import { builder } from 'json-t/metadata/builder'
 
 const { object, string, number, bool, date, array } = builder()
 
@@ -525,8 +525,8 @@ const userMeta = object({
 
 **With modifiers:**
 ```typescript
-import { builder } from 'json-t/src/metadata/builder'
-import { pool, keySelector } from 'json-t/src/metadata/modifiers'
+import { builder } from 'json-t/metadata/builder'
+import { pool, keySelector } from 'json-t/metadata/modifiers'
 
 const { array, set, object, number } = builder()
 
@@ -585,7 +585,7 @@ Creates a new metadata registry instance for type definitions.
 
 **Example:**
 ```typescript
-import { metadata } from 'json-t/src/metadata'
+import { metadata } from 'json-t/metadata'
 
 const meta = metadata()
 const type = meta.from({ id: 1, name: "John" })
