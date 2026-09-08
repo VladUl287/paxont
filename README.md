@@ -1,5 +1,5 @@
 
-# JSON Library
+# JSONT Library
 
 Type-safe, high-performance, extensible JSON library with streaming support and zero dependencies.
 
@@ -412,7 +412,7 @@ const userMeta = object({
 
 ---
 
-### BuilderOptions
+#### BuilderOptions
 
 Configuration for builder behavior.
 
@@ -432,7 +432,7 @@ type BuilderOptions = {
 
 ---
 
-### Modifier
+#### Modifier
 
 Transform metadata with custom modifiers.
 
@@ -448,7 +448,7 @@ type Modifier<M extends BaseMeta<any>> = (metadata: M) => M
 
 ---
 
-### Builder Methods
+#### Builder Methods
 
 The builder returns the following metadata creation functions:
 
@@ -503,8 +503,6 @@ The builder returns the following metadata creation functions:
 | Method | Description |
 | :----- | :---------- |
 | `nullable(type)` | Makes a type nullable |
-
----
 
 ### Usage Examples
 
@@ -702,6 +700,7 @@ meta.add({
 - [ ] Make string decoder accept fatal flag
 - [ ] Make string decoder accept encodings
 - [ ] Allow meta builders to accept objects
+- [ ] More modifiers for all types
 - [ ] Reduce memory usage
 - [ ] Optimize speed performance
 
