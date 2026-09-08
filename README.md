@@ -1,7 +1,7 @@
 
 # JSON Library
 
-A type safe, high-performance, extendable JSON library with zero external dependencies.
+Type-safe, high-performance, extensible JSON library with streaming support and zero dependencies.
 
 ## Features
 
@@ -14,64 +14,77 @@ A type safe, high-performance, extendable JSON library with zero external depend
 
 ## Usage/Examples
 
-#### Metadata
+#### Defining Types with Metadata
 
-As type for serialization and deserialization used metadata. You can build it many ways.
+You can define schemas for serialization/deserialization in multiple ways:
+
+**1. Builder pattern**
 
 ```javascript
 import { bool, date, number, object, string } from 'json-t/src/metadata/builder'
 import { deserialize } from 'json-t'
+
 const meta = object({
-    id: number(),
-    name: string(),
-    createdAt: date(),
-    isActive: bool()
+  id: number(),
+  name: string(),
+  createdAt: date(),
+  isActive: bool()
 })
+
 deserialize(json, meta)
 ```
+
+**2. From value inference**
 
 ```javascript
 import { metadata } from 'json-t/src/metadata'
 import { deserialize } from 'json-t'
+
 const { from } = metadata()
 const meta = from({
-    id: 1,
-    name: "name",
-    createdAt: new Date(),
-    isActive: false,
+  id: 1,
+  name: "name",
+  createdAt: new Date(),
+  isActive: false
 })
+
 deserialize(json, meta)
 ```
 
-or just use object as type itself, it will use ```metadata()``` instance also.
+**3. Plain object (uses default metadata())**
 
 ```javascript
 import { deserialize } from 'json-t'
+
 const type = {
-    id: 1,
-    name: "name",
-    createdAt: new Date(),
-    isActive: false,
+  id: 1,
+  name: "name",
+  createdAt: new Date(),
+  isActive: false
 }
+
 deserialize(json, type)
 ```
 
-you can use metadata itself with usual values
+**4. Mixed with metadata primitives**
 
 ```javascript
 import { deserialize } from 'json-t'
+import { i32, date } from 'json-t/src/metadata/builder'
+
 const type = {
-    id: i32(),
-    name: "name",
-    createdAt: date(),
-    isActive: false,
+  id: i32(),
+  name: "name",
+  createdAt: date(),
+  isActive: false
 }
+
 deserialize(json, type)
 ```
 
 #### Deserialization
 
-You can deserialize string, bytes or stream
+Parse JSON from strings, buffers, or streams:
 
 ```javascript
 import { serialize, deserialize, deserializeAsync } from "json-t"
@@ -102,24 +115,27 @@ await deserializeAsync(reader, type)
 
 #### Serialization
 
+Convert typed objects to JSON strings:
+
 ```javascript
 import { serialize } from 'json-t'
+import { bool, number, object, string } from 'json-t/src/metadata/builder'
 
 const type = object({
-    id: number(),
-    name: string(),
-    createdAt: date(),
-    isActive: bool()
+  id: number(),
+  name: string(),
+  createdAt: date(),
+  isActive: bool()
 })
 
 const value = {
-    id: 1,
-    name: "name",
-    createdAt: new Date(),
-    isActive: false
+  id: 1,
+  name: "name",
+  createdAt: new Date(),
+  isActive: false
 }
 
-serialize(value, type)
+const json = serialize(value, type)
 ```
 
 ## Advanced Features
@@ -134,6 +150,8 @@ Supported types.
 | Typed Arrays | Int8Array, Int16Array, Int32Array, BigInt64Array, Uint8Array, Uint16Array, Uint32Array, BigUint64Array, Float64Array |
 | Collections | Set, Map |
 | Nullable | can be used for any type |
+
+Scheme with all supported types:
 
 ```javascript
 const type = {
@@ -176,7 +194,9 @@ const type = {
 
 ### Modifiers
 
-Modifiers change metadata behaviour.
+Modifiers change metadata behavior.
+
+Custom serialization/deserialization logic:
 
 ```javascript
 import { toJson, toValue } from "./metadata/modifiers"
@@ -193,7 +213,7 @@ const num = number(
 )
 ```
 
-Use Set keySelector for complex values.
+Key selector for complex sets:
 
 ```javascript
 import { number, object, set } from "./metadata/builder"
@@ -205,8 +225,7 @@ const setMeta = set(
 )
 ```
 
-You can pass your own array pool which will be used only for that meta value.
-Pool used as temp storage for deserialized values.
+Custom array pool (temp storage for deserialized values):
 
 ```javascript
 import { pool } from "./metadata/modifiers"
@@ -215,6 +234,10 @@ const arr = array(number(), pool(arrPool))
 ```
 
 ### Custom types
+
+Extend the library with your own types:
+
+**1. Define the custom type:**
 
 ```javascript
 import { metadata } from 'json-t/src/metadata'
@@ -247,9 +270,12 @@ const guid = (): PrimitiveMeta<Guid> => {
     },
     toJson: (_meta, value, _options) => value.toJSON()
 }
+```
 
-const modifiedMetadata = metadata()
-modifiedMetadata.add({
+**2. Register the type(optional):**
+```javascript
+const customMetadata = metadata()
+customMetadata.add({
     name: 'guid',
     is: (value) => Guid.isGuid(value),
     from: (_v, _m) => guid(),
@@ -257,36 +283,31 @@ modifiedMetadata.add({
 })
 ```
 
-Then you can use modified metadata builder.
+**3. Use it:**
 
 ```javascript
-const type = modifiedMetadata.from({
-    id: Guid.create(),
-    isActive: false,
+// from type inference
+const type = customMetadata.from({
+  id: Guid.create(),
+  isActive: false
 })
-```
 
-or as meta builder itself
-
-```javascript
-const type = modifiedMetadata.from({
-    id: guid(),
-    isActive: false,
+// or from builder
+const type = customMetadata.from({
+  id: guid(),
+  isActive: false
 })
-```
 
-or use updated metadata builder with deserialize and serialize function itself.
-
-```javascript
+// or with jsont instance
 import { jsont } from 'json-t'
 
 const { deserialize } = jsont({
-    metadata: modifiedMetadata
+  metadata: customMetadata
 })
 
 const type = {
-    id: Guid.create(),
-    isActive: false,
+  id: Guid.create(),
+  isActive: false
 }
 
 deserialize(buffer, type)
