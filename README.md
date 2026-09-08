@@ -385,6 +385,119 @@ const json = json({
 })
 ```
 
+#### `metadata(options?)`
+
+Creates a new metadata registry instance for type definitions.
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+| :-------- | :--- | :------ | :---------- |
+| `options` | `Partial<MetadataOptions>` | `{ withDefaults }` | Configuration options for the metadata registry |
+
+**Returns:** `Metadata` - A metadata registry instance
+
+**Example:**
+```typescript
+import { metadata } from 'json-t/src/metadata'
+
+const meta = metadata()
+const type = meta.from({ id: 1, name: "John" })
+```
+
+---
+
+### MetadataOptions
+
+Configuration for metadata registry behavior.
+
+```typescript
+type MetadataOptions = {
+  withDefaults: (m: Metadata) => Metadata
+}
+```
+
+| Property | Type | Description |
+| :------- | :--- | :---------- |
+| `withDefaults` | `(m: Metadata) => Metadata` | Function that adds default type handlers to the registry |
+
+---
+
+### Metadata
+
+The metadata registry interface.
+
+```typescript
+type Metadata = {
+  add: <M extends BaseMeta<any>>(type: JType<M>) => void
+  addMany: (...types: JType<BaseMeta<any>>[]) => void
+  remove: (type: TypeName | JType<any>) => boolean
+  clear: () => void
+  from: <T, R extends BaseMeta<any> = BaseMeta<Unwrap<T>>>(data: T) => R
+}
+```
+
+#### Methods
+
+**`add<M>(type: JType<M>): void`**
+
+Registers a single custom type handler.
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| `type` | `JType<M>` | The type definition to register |
+
+**`addMany(...types: JType<BaseMeta<any>>[]): void`**
+
+Registers multiple type handlers at once.
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| `types` | `JType<BaseMeta<any>>[]` | Type definitions to register |
+
+**`remove(type: TypeName | JType<any>): boolean`**
+
+Removes a registered type handler.
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| `type` | `TypeName` \| `JType<any>` | Type name or definition to remove |
+
+**Returns:** `boolean` - `true` if removed successfully, `false` otherwise
+
+**`clear(): void`**
+
+Removes all registered type handlers.
+
+**`from<T, R>(data: T): R`**
+
+Infers or builds metadata from the provided data.
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| `data` | `T` | Value, object, or schema to infer metadata from |
+
+**Returns:** `R` - The metadata definition
+
+**Examples:**
+```typescript
+// Infer from value
+const meta = metadata()
+const type = meta.from({
+  id: 1,
+  name: "John",
+  createdAt: new Date()
+})
+
+// Register custom type
+meta.add({
+  name: 'guid',
+  is: (v) => Guid.isGuid(v),
+  from: (v, m) => guid(),
+  order: 50
+})
+```
+
 ## Roadmap
 
 - [ ] Float16 and Float32 support
