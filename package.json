@@ -5,7 +5,11 @@
   "main": "src/index.js",
   "keywords": [
     "json",
-    "type-safe"
+    "type-safe",
+    "streaming",
+    "binary",
+    "bytes",
+    "parser"
   ],
   "license": "MIT",
   "repository": {
