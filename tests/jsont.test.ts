@@ -2,7 +2,7 @@ import { metadata } from '../src/metadata'
 import { deserialize, deserializeAsync, serialize } from '../src'
 import { array, bigInt, bool, date, i16, i32, i64, i8, map, nullable, number, object, set, string, u16, u32, u64, u8 } from '../src/metadata/builder'
 import { BaseMeta } from '../src/metadata/types'
-import { toBytes } from './converters/utils'
+import { splitBytes, toBytes } from './converters/utils'
 import dayjs from 'dayjs'
 
 describe('jsont', () => {
@@ -150,6 +150,21 @@ describe('jsont', () => {
                             throw error
                         }
                     }
+
+                    const threeBytes = splitBytes(toBytes(text), 3)
+                    for (let i = 1; i < threeBytes.length; i++) {
+                        try {
+                            const chunks = threeBytes[i]
+                            const stream = createStream(chunks)
+
+                            await expect(async () => {
+                                await deserializeAsync(stream, type)
+                            }).rejects.toThrow()
+                        } catch (error) {
+                            console.log('error on: ', i, expected, error)
+                            throw error
+                        }
+                    }
                     return
                 }
 
@@ -162,6 +177,21 @@ describe('jsont', () => {
                 for (let i = 1; i < bytes.length; i++) {
                     try {
                         const chunks = [bytes.slice(0, i), bytes.slice(i, bytes.length)]
+                        const stream = createStream(chunks)
+
+                        const custom = await deserializeAsync(stream, type)
+
+                        expect(custom).toEqual(expected)
+                    } catch (error) {
+                        console.log('error on: ', i, expected, error)
+                        throw error
+                    }
+                }
+
+                const threeBytes = splitBytes(toBytes(text), 3)
+                for (let i = 1; i < threeBytes.length; i++) {
+                    try {
+                        const chunks = threeBytes[i]
                         const stream = createStream(chunks)
 
                         const custom = await deserializeAsync(stream, type)
