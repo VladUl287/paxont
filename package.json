@@ -16,6 +16,16 @@
     "src/",
     "README.md"
   ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./options": "./src/options.ts",
+    "./types": "./src/types.ts",
+    "./metadata": "./src/metadata/index.ts",
+    "./metadata/*": "./src/metadata/*.ts",
+    "./utils/*": "./src/utils/*.ts",
+    "./code_gen/*": "./src/code_gen/*.ts",
+    "./converters/*": "./src/converters/*.ts"
+  },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "benny": "^3.7.1",
