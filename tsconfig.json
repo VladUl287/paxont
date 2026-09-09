@@ -3,6 +3,8 @@
     "module": "CommonJS",
     "target": "ES2021",
     "esModuleInterop": true,
+    "outDir": "./dist",
+    "rootDir": "./",
     "types": [
       "jest",
       "node"
