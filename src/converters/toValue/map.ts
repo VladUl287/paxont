@@ -37,7 +37,7 @@ export function toMap<M extends BaseMeta<any>>(meta: MapMeta<M>, context: JsonPa
             }
             return {
                 type: ERROR,
-                error: new JSONParseError(`Unexpected end of input at index ${i} while parsing object`)
+                error: new JSONParseError('Unexpected end of input', { metadata: meta, index: i, depth: d })
             }
         }
         i++
@@ -57,7 +57,7 @@ export function toMap<M extends BaseMeta<any>>(meta: MapMeta<M>, context: JsonPa
             if (hasComma) {
                 return {
                     type: ERROR,
-                    error: new JSONParseError(`Trailing comman`)
+                    error: new JSONParseError('Trailing comma', { metadata: meta, index: i, depth: d })
                 }
             }
             return {
@@ -104,7 +104,7 @@ export function toMap<M extends BaseMeta<any>>(meta: MapMeta<M>, context: JsonPa
                 }
                 return {
                     type: ERROR,
-                    error: new JSONParseError('')
+                    error: new JSONParseError(`Expected ':' but found '${String.fromCharCode(b[i])}'`, { metadata: meta, index: i, depth: d })
                 }
             }
             colon = i
@@ -150,10 +150,9 @@ export function toMap<M extends BaseMeta<any>>(meta: MapMeta<M>, context: JsonPa
                 nextIndex: i
             }
         }
-
         return {
             type: ERROR,
-            error: new JSONParseError('')
+            error: new JSONParseError(`Expected '}' or ',' but found '${String.fromCharCode(b[i])}'`, { metadata: meta, index: i, depth: d })
         }
     }
 
