@@ -3,9 +3,12 @@ import { nameof } from "../utils/types"
 
 export function genObjectFactory<M extends ObjectMeta<any>>(fields: string[]): M['build'] {
     const assignments = fields
-        .map((field, i) => `'${field}': v[${i}]`)
-        .join(',')
-    return new Function("v", `return{${assignments}}`) as M['build']
+        .map((field, i) => `this.${field} = v[${i}]`)
+        .join(';')
+
+    const ctor = new Function('v', `${assignments}`) as any
+
+    return (v: any[]) => new ctor(v)
 }
 
 export function genObjectToJsonFactory<M extends ObjectMeta<any>>(fields: string[]): M['toJson'] {
