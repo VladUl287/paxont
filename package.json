@@ -1,6 +1,6 @@
 {
   "name": "paxont",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Type-safe, high-performance, extensible JSON library with streaming support and zero dependencies.",
   "main": "src/index.js",
   "keywords": [
