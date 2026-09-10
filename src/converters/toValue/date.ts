@@ -12,7 +12,7 @@ const ERROR = ReadResultType.ERROR
 const NEEDS_MORE_DATA = ReadResultType.NEEDS_MORE_DATA
 
 export function toDate(metadata: PrimitiveMeta<Date>, context: JsonParsingContext): ReadResult<Date> {
-    const { reader: { bytes: b, bytesLength: len, writable, position } } = context
+    const { reader: { bytes: b, bytesLength: len, writable, position }, depth } = context
 
     let i = position
     if (i < len) {
@@ -31,7 +31,7 @@ export function toDate(metadata: PrimitiveMeta<Date>, context: JsonParsingContex
 
     return {
         type: ERROR,
-        error: new JSONParseError(`Expected date value, but found '${String.fromCharCode(b[i])}'`)
+        error: new JSONParseError('Invalid date value', { metadata, index: i, depth })
     }
 }
 
@@ -39,7 +39,7 @@ function fromString(context: JsonParsingContext): ReadResult<Date> {
     const { reader: { bytes: b, bytesLength: bytesLen, writable, position }, options } = context
 
     const start = position
-    
+
     let i = start
     if (b[i] !== DOUBLE_QUOTE) {
         if (i >= bytesLen && writable) {
@@ -50,7 +50,7 @@ function fromString(context: JsonParsingContext): ReadResult<Date> {
         }
         return {
             type: ERROR,
-            error: new JSONParseError('')
+            error: new JSONParseError(`Expected '"' but found '${String.fromCharCode(b[i])}'`, { index: i })
         }
     }
     i++
@@ -94,7 +94,7 @@ function fromString(context: JsonParsingContext): ReadResult<Date> {
     if (isNaN(value.getTime())) {
         return {
             type: ERROR,
-            error: new JSONParseError('')
+            error: new JSONParseError('Invalid date value', { index: i })
         }
     }
 
@@ -260,7 +260,7 @@ function fromTimestamp(context: JsonParsingContext): ReadResult<Date> {
         if (isNaN(date.getTime())) {
             return {
                 type: ERROR,
-                error: new JSONParseError('')
+                error: new JSONParseError('Invalid date value', { index: result.nextIndex })
             }
         }
 
