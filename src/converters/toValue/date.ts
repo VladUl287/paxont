@@ -75,7 +75,7 @@ function fromString(context: JsonParsingContext): ReadResult<Date> {
         }
         return {
             type: ERROR,
-            error: new JSONParseError('')
+            error: new JSONParseError(`Expected '"' but found '${String.fromCharCode(b[i])}'`, { index: i })
         }
     }
 
@@ -251,7 +251,7 @@ function fromTimestamp(context: JsonParsingContext): ReadResult<Date> {
         if (value < minValue || value > maxValue) {
             return {
                 type: ERROR,
-                error: new JSONParseError('')
+                error: new JSONParseError(`Invalid timestamp value (must be between ${minValue} and ${maxValue})`, { index: result.nextIndex })
             }
         }
 
