@@ -146,7 +146,7 @@ Supported types.
 |----------|-------|
 | Default | number, string, array, object, boolean |
 | Numbers | int8, uint8, int16, uint16, int32, uint32, int64, uint64, bigint |
-| Date | date object |
+| Date | date object(can be parsed from string or timestamp) |
 | Typed Arrays | Int8Array, Int16Array, Int32Array, BigInt64Array, Uint8Array, Uint16Array, Uint32Array, BigUint64Array, Float64Array |
 | Collections | Set, Map |
 | Nullable | can be used for any type |
