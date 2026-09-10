@@ -99,7 +99,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             if (raw === undefined) {
                 return {
                     type: ERROR,
-                    error: new JSONParseError("")
+                    error: new JSONParseError('Cannot use raw decoder if string not presented', { index: i })
                 }
             }
 
@@ -136,7 +136,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                 if (end_index < 0) {
                     return {
                         type: ERROR,
-                        error: new JSONParseError('Invalid data')
+                        error: new JSONParseError('Invalid string value', { index: i })
                     }
                 }
 
@@ -276,7 +276,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             if (end_index < 0) {
                 return {
                     type: ERROR,
-                    error: new JSONParseError('')
+                    error: new JSONParseError('Invalid string value', { index: i })
                 }
             }
 
@@ -349,7 +349,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         }
 
                         let len = bytesLength - cacheViewStart
-                        
+
                         const target = len + 1
                         if (writable) {
                             len = trim_to_last_char(start, len)
@@ -366,7 +366,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         if (end_index < 0) {
                             return {
                                 type: ERROR,
-                                error: new JSONParseError('Invalid data')
+                                error: new JSONParseError('Invalid string value', { index: i })
                             }
                         }
                         i = end_index + cacheViewStart
@@ -390,7 +390,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                             }
                             return {
                                 type: ERROR,
-                                error: new JSONParseError('')
+                                error: new JSONParseError('Missing closing double quote', { index: i })
                             }
                         }
 
@@ -430,7 +430,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                             if (len < 0) {
                                 return {
                                     type: ERROR,
-                                    error: new JSONParseError('Invalid data')
+                                    error: new JSONParseError('Invalid string value, no valid chars detected', { index: i })
                                 }
                             }
                         }
@@ -439,7 +439,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         if (end_index < 0) {
                             return {
                                 type: ERROR,
-                                error: new JSONParseError('Invalid data')
+                                error: new JSONParseError('Invalid string value', { index: i })
                             }
                         }
                         i += end_index
@@ -469,7 +469,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                             }
                             return {
                                 type: ERROR,
-                                error: new JSONParseError('')
+                                error: new JSONParseError('Missing closing double quote', { index: i })
                             }
                         }
 
@@ -557,7 +557,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     if (end_index < 0) {
                         return {
                             type: ERROR,
-                            error: new JSONParseError('Invalid data')
+                            error: new JSONParseError('Invalid string value', { index: i })
                         }
                     }
                     i = end_index + cacheViewStart
@@ -592,7 +592,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         }
                         return {
                             type: ERROR,
-                            error: new JSONParseError('')
+                            error: new JSONParseError('Missing closing double quote', { index: i })
                         }
                     }
 
@@ -631,7 +631,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         if (len < 0) {
                             return {
                                 type: ERROR,
-                                error: new JSONParseError('Invalid data')
+                                error: new JSONParseError('Invalid string value, no valid chars detected', { index: i })
                             }
                         }
                     }
@@ -640,7 +640,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                     if (end_index < 0) {
                         return {
                             type: ERROR,
-                            error: new JSONParseError('Invalid data')
+                            error: new JSONParseError('Invalid string value', { index: i })
                         }
                     }
                     i += end_index
@@ -668,7 +668,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                         }
                         return {
                             type: ERROR,
-                            error: new JSONParseError('')
+                            error: new JSONParseError('Missing closing double quote', { index: i })
                         }
                     }
 
@@ -884,7 +884,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
                 }
                 return {
                     type: ERROR,
-                    error: new JSONParseError('Decode error')
+                    error: new JSONParseError('Invalid string value', { index: i })
                 }
             }
 
@@ -915,7 +915,7 @@ export function stringParser(opt: Partial<StringParseOptions> = defaultOptions) 
             catch (error) {
                 return {
                     type: ERROR,
-                    error: new JSONParseError('Decode error', { cause: error, index: i })
+                    error: new JSONParseError('Unexpected error', { cause: error, index: i })
                 }
             }
         }
