@@ -137,7 +137,8 @@ export function jsont(options: Partial<JsontOptions> = defaultJsontOptions) {
                     reader.release()
                 }
             }
-            throw new Error()
+
+            throw new Error(`Incomplete JSON: chunk not present any data.`)
         } finally {
             bufferPool.release(dataBuffer)
             bufferPool.release(tempBuffer)
