@@ -5,7 +5,7 @@ export function genObjectFactory<M extends ObjectMeta<any>>(fields: string[]): M
     const assignments = fields
         .map((field, i) => `'${field}': v[${i}]`)
         .join(',')
-    return new Function("v", `((v)=>{return{${assignments}}})(v)`) as M['build']
+    return new Function("v", `return ((v)=>{return{${assignments}}})(v)`) as M['build']
 }
 
 export function genObjectToJsonFactory<M extends ObjectMeta<any>>(fields: string[]): M['toJson'] {
