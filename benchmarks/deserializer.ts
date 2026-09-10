@@ -1,6 +1,12 @@
 import { add, complete, cycle, suite } from 'benny'
 import { deserialize } from '../src'
 import { metadata } from '../src/metadata'
+import { performance } from 'perf_hooks';
+import v8 from 'v8'
+
+v8.setFlagsFromString('--trace-gc')
+v8.setFlagsFromString('--trace-gc-verbose')
+v8.setFlagsFromString('--no-allocation-site-pretenuring')
 
 const obj = {
     "id": 1,
