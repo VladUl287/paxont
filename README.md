@@ -315,6 +315,7 @@ deserialize(buffer, type)
 
 ## Roadmap
 
+- Fix v8 pre-tenuring memory problem on many literal objects allocation
 - Float16 and Float32 support
 - DeserializeArray generator and iterator
 - Custom date formats with configurable specifiers
