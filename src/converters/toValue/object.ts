@@ -44,7 +44,7 @@ export function toObject<T extends { [k: string]: BaseMeta<any> }>(
             }
             return {
                 type: ERROR,
-                error: new JSONParseError(`Unexpected end of input at index ${i} while parsing object`)
+                error: new JSONParseError('Unexpected end of input', { metadata: meta, index: i, depth: d })
             }
         }
         i++
@@ -54,7 +54,7 @@ export function toObject<T extends { [k: string]: BaseMeta<any> }>(
             if (bufferIndex === fields.length) {
                 return {
                     type: ERROR,
-                    error: new JSONParseError('trailing comma')
+                    error: new JSONParseError('Trailing comma', { metadata: meta, index: i, depth: d })
                 }
             }
             i++
@@ -79,7 +79,7 @@ export function toObject<T extends { [k: string]: BaseMeta<any> }>(
                 }
                 return {
                     type: ERROR,
-                    error: new JSONParseError('Maximum depth exceeded', { metadata: meta, index: i, depth: d })
+                    error: new JSONParseError(`Expected '"' but found '${String.fromCharCode(b[i])}' as field open`, { metadata: meta, index: i, depth: d })
                 }
             }
             i++
@@ -95,7 +95,7 @@ export function toObject<T extends { [k: string]: BaseMeta<any> }>(
                 }
                 return {
                     type: ERROR,
-                    error: new JSONParseError('Maximum depth exceeded')
+                    error: new JSONParseError(`Unable to resolve field`, { metadata: meta, index: i, depth: d })
                 }
             }
 
@@ -112,7 +112,7 @@ export function toObject<T extends { [k: string]: BaseMeta<any> }>(
                 }
                 return {
                     type: ERROR,
-                    error: new JSONParseError('Maximum depth exceeded', { metadata: meta, index: i, depth: d })
+                    error: new JSONParseError(`Expected '"' but found '${String.fromCharCode(b[i])}' as field close`, { metadata: meta, index: i, depth: d })
                 }
             }
             i++
@@ -127,7 +127,7 @@ export function toObject<T extends { [k: string]: BaseMeta<any> }>(
                 }
                 return {
                     type: ERROR,
-                    error: new JSONParseError(`Maximum depth of ${options.maxDepth} exceeded at index ${i}`)
+                    error: new JSONParseError(`Expected ':' but found '${String.fromCharCode(b[i])}'`, { metadata: meta, index: i, depth: d })
                 }
             }
             i = reader.skipWhitespace(++i)
@@ -160,7 +160,7 @@ export function toObject<T extends { [k: string]: BaseMeta<any> }>(
             if (bufferIndex === fields.length - 1) {
                 return {
                     type: ERROR,
-                    error: new JSONParseError('trailing comma')
+                    error: new JSONParseError('Trailing comma', { metadata: meta, index: i, depth: d })
                 }
             }
             i++
@@ -183,7 +183,7 @@ export function toObject<T extends { [k: string]: BaseMeta<any> }>(
         }
         return {
             type: ERROR,
-            error: new JSONParseError(``)
+            error: new JSONParseError(`Expected '}' but found '${String.fromCharCode(b[i])}'`, { metadata: meta, index: i, depth: d })
         }
     }
 
