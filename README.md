@@ -14,6 +14,62 @@ Type-safe, high-performance, extensible JSON library with streaming support and 
 
 ## Usage/Examples
 
+#### Deserialization
+
+Parse JSON from strings, buffers, or streams:
+
+```javascript
+import { serialize, deserialize, deserializeAsync } from "paxont"
+
+const type = {
+    id: 1,
+    name: "name",
+    isActive: false
+}
+const response = await fetch('url')
+
+//from bytes buffer
+const buffer = await response.arrayBuffer()
+const value = deserialize(buffer, type)
+
+//from bytes
+const bytes = await response.bytes()
+const value = deserialize(bytes, type)
+
+//from string
+const json = await response.text()
+const value = deserialize(json, type)
+
+//from stream 
+const reader = response.body
+await deserializeAsync(reader, type)
+```
+
+#### Serialization
+
+Convert typed objects to JSON strings:
+
+```javascript
+import { serialize } from 'paxont'
+import { bool, number, object, string } from 'paxont/metadata/builder'
+
+const type = object({
+  id: number(),
+  name: string(),
+  createdAt: date(),
+  isActive: bool()
+})
+
+const value = {
+  id: 1,
+  name: "name",
+  createdAt: new Date(),
+  isActive: false
+}
+
+const json = serialize(value, type)
+```
+
 #### Defining Types with Metadata
 
 You can define schemas for serialization/deserialization in multiple ways:
@@ -80,62 +136,6 @@ const type = {
 }
 
 deserialize(json, type)
-```
-
-#### Deserialization
-
-Parse JSON from strings, buffers, or streams:
-
-```javascript
-import { serialize, deserialize, deserializeAsync } from "paxont"
-
-const type = {
-    id: 1,
-    name: "name",
-    isActive: false
-}
-const response = await fetch('url')
-
-//from bytes buffer
-const buffer = await response.arrayBuffer()
-const value = deserialize(buffer, type)
-
-//from bytes
-const bytes = await response.bytes()
-const value = deserialize(bytes, type)
-
-//from string
-const json = await response.text()
-const value = deserialize(json, type)
-
-//from stream 
-const reader = response.body
-await deserializeAsync(reader, type)
-```
-
-#### Serialization
-
-Convert typed objects to JSON strings:
-
-```javascript
-import { serialize } from 'paxont'
-import { bool, number, object, string } from 'paxont/metadata/builder'
-
-const type = object({
-  id: number(),
-  name: string(),
-  createdAt: date(),
-  isActive: bool()
-})
-
-const value = {
-  id: 1,
-  name: "name",
-  createdAt: new Date(),
-  isActive: false
-}
-
-const json = serialize(value, type)
 ```
 
 ## Advanced Features
