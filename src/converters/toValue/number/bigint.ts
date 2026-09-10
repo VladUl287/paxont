@@ -109,7 +109,7 @@ export function parseInt64(reader: JsonReader, minValue: bigint, maxValue: bigin
         if (newHigh > 0xFFFFFFFF) {
             return {
                 type: ERROR,
-                error: new JSONParseError(`overflow`)
+                error: new JSONParseError(`Invalid int value (must be between ${minValue} and ${maxValue})`, { index: i })
             }
         }
         conversionU32[1] = newHigh >>> 0
@@ -127,7 +127,7 @@ export function parseInt64(reader: JsonReader, minValue: bigint, maxValue: bigin
     if (dc === 0 || value < minValue || value > maxValue) {
         return {
             type: ERROR,
-            error: new JSONParseError(`invalid i64 value ${value}, at index ${i}. valid range ${minValue}-${maxValue}`)
+            error: new JSONParseError(`Expected at least one digit`, { index: i })
         }
     }
 

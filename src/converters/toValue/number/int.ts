@@ -46,7 +46,7 @@ export function tryParseInt(
         else {
             return {
                 type: ERROR,
-                error: new JSONParseError(``)
+                error: new JSONParseError(`Not expected sign for unsigned int`, { index: i })
             }
         }
     }
@@ -60,7 +60,7 @@ export function tryParseInt(
     if (i < len && isDigitU(b[i])) {
         return {
             type: ERROR,
-            error: new JSONParseError(``)
+            error: new JSONParseError(`Invalid int value (must be between ${minValue} and ${maxValue})`, { index: i })
         }
     }
 
@@ -76,7 +76,7 @@ export function tryParseInt(
     if (i - start === 0 || m < minValue || m > maxValue) {
         return {
             type: ERROR,
-            error: new JSONParseError(``)
+            error: new JSONParseError(`Expected at least one digit`, { index: i })
         }
     }
 
