@@ -105,7 +105,7 @@ const bytes = await response.bytes()
 const value = deserialize(bytes, type)
 
 //from string
-const json = await response.json()
+const json = await response.text()
 const value = deserialize(json, type)
 
 //from stream 
