@@ -25,7 +25,7 @@ export function toSet<M extends BaseMeta<any>>(metadata: SetMeta<M>, context: Js
     const isContinued = state?.isContinued ?? false
     const set: Set<MetaValue<M>> = state?.set ?? new Set<MetaValue<M>>()
 
-    let hasComma = state?.hasComma ?? false    
+    let hasComma = state?.hasComma ?? false
     if (!isContinued) {
         if (b[i] !== SQUARE_OPEN) {
             if (i >= len && writable) {
@@ -55,7 +55,7 @@ export function toSet<M extends BaseMeta<any>>(metadata: SetMeta<M>, context: Js
             if (hasComma) {
                 return {
                     type: ERROR,
-                    error: new JSONParseError(`Trailing comma`)
+                    error: new JSONParseError('Trailing comma', { metadata, index: i, depth: d })
                 }
             }
             return {
