@@ -133,7 +133,6 @@ namespace
 
   StoreSeqResult store_sequentially_impl(u8 *mem, i32 start, i32 end, i32 len, i32 target)
   {
-
     i32 i = start, j = target;
 
     while ((u32)i < (u32)end)
@@ -258,9 +257,8 @@ namespace
     i32 target;
   };
 
-  ParseAsciiResult parse_ascii_impl(u8 *mem, i32 start, i32 end, i32 target, int extend)
+  ParseAsciiResult parse_ascii_impl(u8 *mem, i32 start, i32 end, i32 target)
   {
-
     i32 i = start;
 
 #if HAVE_SSE2
@@ -270,37 +268,27 @@ namespace
 
       /* count leading ASCII bytes */
       u32 non_ascii_mask = (u32)_mm_movemask_epi8(data);
-      i32 byte_count = (non_ascii_mask == 0)
-                           ? 16
-                           : __builtin_ctz(non_ascii_mask);
+      i32 byte_count = (non_ascii_mask == 0) ? 16 : __builtin_ctz(non_ascii_mask);
 
       /* backslash anywhere in chunk? */
-      u32 bs_mask = (u32)_mm_movemask_epi8(
-          _mm_cmpeq_epi8(data, _mm_set1_epi8(92)));
+      u32 bs_mask = (u32)_mm_movemask_epi8(_mm_cmpeq_epi8(data, _mm_set1_epi8(92)));
       if (bs_mask)
       {
-        if (extend)
-          goto scalar_loop;
-        i = start;
-        extend = 1;
-        continue;
+        goto scalar_loop;
       }
 
       /* quote anywhere in chunk? */
-      u32 q_mask = (u32)_mm_movemask_epi8(
-          _mm_cmpeq_epi8(data, _mm_set1_epi8(34)));
+      u32 q_mask = (u32)_mm_movemask_epi8(_mm_cmpeq_epi8(data, _mm_set1_epi8(34)));
       if (q_mask)
       {
         i32 qpos = __builtin_ctz(q_mask);
         if ((u32)qpos <= (u32)byte_count)
           byte_count = qpos;
-        if (extend)
-          target = store_128_unsafe(mem, data, byte_count, target);
+        target = store_128_unsafe(mem, data, byte_count, target);
         return {i + byte_count, target};
       }
 
-      if (extend)
-        target = store_128_unsafe(mem, data, byte_count, target);
+      target = store_128_unsafe(mem, data, byte_count, target);
       i += byte_count;
       if (byte_count == 16)
         continue;
@@ -319,20 +307,15 @@ namespace
 
       if (byte == 0x5C)
       {
-        if (extend)
-        {
-          auto r = store_sequentially_impl(mem, i, i + 1, end, target);
-          i = r.i;
-          target = r.target;
-          if (i == -1)
-            return {-1, -1};
-          continue;
-        }
-        return parse_ascii_impl(mem, start, end, target, 1);
+        auto r = store_sequentially_impl(mem, i, i + 1, end, target);
+        i = r.i;
+        target = r.target;
+        if (i == -1)
+          return {-1, -1};
+        continue;
       }
 
-      if (extend)
-        target = store_32(mem, byte, target);
+      target = store_32(mem, byte, target);
       ++i;
     }
     return {i, target};
@@ -671,14 +654,13 @@ namespace
       continue;
     }
   }
-
 }
 
 static Napi::Value n_utf8_to_utf16(const Napi::CallbackInfo &info)
 {
   Napi::Env env = info.Env();
-  auto buf = info[0].As<Napi::Buffer<u8>>();
-  u8 *mem = buf.Data();
+  auto arr = info[0].As<Napi::Uint8Array>();
+  uint8_t *mem = arr.Data();
   i32 i = info[1].As<Napi::Number>().Int32Value();
   i32 end = info[2].As<Napi::Number>().Int32Value();
   i32 target = info[3].As<Napi::Number>().Int32Value();
