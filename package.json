@@ -36,7 +36,12 @@
     "benny": "^3.7.1",
     "dayjs": "^1.11.23",
     "jest": "^30.3.0",
+    "node-addon-api": "^8.9.2",
+    "node-gyp": "^12.4.0",
     "ts-jest": "^29.4.6",
     "wabt": "^1.0.39"
+  },
+  "dependencies": {
+    "bindings": "^1.5.0"
   }
 }
