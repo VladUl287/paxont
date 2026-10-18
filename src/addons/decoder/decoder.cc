@@ -320,17 +320,17 @@ namespace
     return {i, target};
   }
 
-  ParseAsciiResult utf8_to_utf16_impl(uint8_t *src, uint8_t *target, i32 start, i32 end)
+  ParseAsciiResult utf8_to_utf16_impl(uint8_t *src, uint8_t *target, uint32_t start, uint32_t end)
   {
-    i32 i = start;
+    uint32_t i = start;
     g_dq_index = -1;
 
-    while ((u32)i < (u32)end)
+    while (i < end)
     {
       /* ASCII fast path */
       if (src[i] < 0x80)
       {
-        auto r = parse_ascii_impl(src, i, end, target);
+        auto r = parse_ascii_impl(src, target, i, end);
         i = r.i;
         target = r.target;
         if (i == -1)
@@ -339,7 +339,7 @@ namespace
           return {i, target};
         if (src[i] == 34)
         {
-          i32 q = find_quote_impl(src, i, start, i);
+          uint32_t q = find_quote_impl(src, i, start, i);
           if (q >= 0)
           {
             g_dq_index = q;
@@ -390,10 +390,10 @@ namespace
         }
 #endif
         /* scalar fallback for the remaining 2-byte pairs */
-        if ((u32)(i + 4) > (u32)end)
+        if ((i + 4) > end)
           break;
 
-        u32 mask;
+        uint32_t mask;
         std::memcpy(&mask, src + i, 4);
 
         if (((mask - 0x80C0) & 0xC0E0) != 0)
@@ -404,7 +404,7 @@ namespace
 
         if (in_range_inclusive(mask & 0xC0FF0000, 0x80C00000, 0x80E00000))
         {
-          u32 out = ((mask & 0x3F003F00) >> 8) | ((mask & 0x001F001F) << 6);
+          uint32_t out = ((mask & 0x3F003F00) >> 8) | ((mask & 0x001F001F) << 6);
           std::memcpy(src + target, &out, 4);
           i += 4;
           target += 4;
@@ -412,8 +412,8 @@ namespace
         }
 
         {
-          u32 v = ((mask >> 8) & 0xFF) + ((mask & 0xFF) << 6) - 12288 - 128;
-          u16 v16 = (u16)v;
+          uint32_t v = ((mask >> 8) & 0xFF) + ((mask & 0xFF) << 6) - 12288 - 128;
+          uint16_t v16 = (uint16_t)v;
           std::memcpy(src + target, &v16, 2);
           i += 2;
           target += 2;
@@ -423,10 +423,10 @@ namespace
 
     check_3_4:
       /* -------- 3-byte sequences -------- */
-      if ((u32)(i + 4) > (u32)end)
+      if ((i + 4) > end)
         break;
       {
-        u32 mask;
+        uint32_t mask;
         std::memcpy(&mask, src + i, 4);
 
         if (((mask - 0x8080E0) & 0xC0C0F0) == 0)
@@ -434,8 +434,8 @@ namespace
           bool valid = ((mask & 0x200F) != 0) && (((mask - 8205) & 0x200F) != 0);
           if (valid)
           {
-            u32 out = ((mask & 0x3F0000) >> 16) | ((mask & 0x3F00) >> 2) | ((mask & 0xF) << 12);
-            u16 v16 = (u16)out;
+            uint32_t out = ((mask & 0x3F0000) >> 16) | ((mask & 0x3F00) >> 2) | ((mask & 0xF) << 12);
+            uint16_t v16 = (uint16_t)out;
             std::memcpy(src + target, &v16, 2);
             target += 2;
             i += 3;
@@ -446,11 +446,9 @@ namespace
         /* -------- 4-byte sequences -------- */
         if (((mask - 0x808080F0) & 0xC0C0C0F8) == 0)
         {
-          if (in_range_inclusive(
-                  rotate_r(mask & 0xFFFF, 8),
-                  0xF00000F0u, 0xF401F4CFu))
+          if (in_range_inclusive(rotate_r(mask & 0xFFFF, 8), 0xF00000F0u, 0xF401F4CFu))
           {
-            u32 out = ((mask & 0xFF) << 8) | ((mask & 0x3F00) >> 6) | ((mask & 0x300000) >> 20) | ((mask & 0x3F000000) >> 8) | ((mask & 0xF0000) << 6);
+            uint32_t out = ((mask & 0xFF) << 8) | ((mask & 0x3F00) >> 6) | ((mask & 0x300000) >> 20) | ((mask & 0x3F000000) >> 8) | ((mask & 0xF0000) << 6);
             out = out - 64 - 8192 + 2048 + 0xDC000000u;
             std::memcpy(src + target, &out, 4);
             target += 4;
@@ -466,32 +464,32 @@ namespace
       continue;
     }
 
-    while ((u32)(i + 1) <= (u32)end)
+    while ((i + 1) <= end)
     {
-      u8 temp = src[i];
+      uint8_t temp = src[i];
       if (temp < 0x80)
       {
         if (temp == 34)
         {
-          i32 q = find_quote_impl(src, i, start, i);
+          uint32_t q = find_quote_impl(src, i, start, i);
           if (q >= 0)
           {
             g_dq_index = q;
             return {q, target};
           }
         }
-        u16 v = temp;
+        uint16_t v = temp;
         std::memcpy(target, &v, 2);
         target += 2;
         ++i;
         continue;
       }
 
-      u32 start_byte = (u32)temp - 194;
+      uint32_t start_byte = (uint32_t)temp - 194;
 
       if (start_byte < 30)
       { /* 2-byte tail */
-        if ((u32)(i + 1) >= (u32)end)
+        if ((i + 1) >= end)
           return {i, target};
         if ((u32)((u32)src[i + 1] - 128) >= 64)
           return {-1, -1};
@@ -662,8 +660,8 @@ static Napi::Value n_utf8_to_utf16(const Napi::CallbackInfo &info)
   uint8_t *mem_source = src.Data();
   auto target = info[1].As<Napi::Uint8Array>();
   uint8_t *mem_target = src.Data();
-  int32_t start = info[2].As<Napi::Number>().Int32Value();
-  int32_t end = info[3].As<Napi::Number>().Int32Value();
+  uint32_t start = info[2].As<Napi::Number>().Uint32Value();
+  uint32_t end = info[3].As<Napi::Number>().Uint32Value();
 
   auto r = utf8_to_utf16_impl(mem_source, mem_target, start, end);
   Napi::Object o = Napi::Object::New(env);
