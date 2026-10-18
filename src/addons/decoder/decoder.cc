@@ -320,7 +320,7 @@ namespace
     return {i, target};
   }
 
-  ParseAsciiResult utf8_to_utf16_impl(uint8_t *src, uint8_t *target, uint32_t start, uint32_t end)
+  uint8_t *utf8_to_utf16_impl(uint8_t *src, uint8_t *target, uint32_t start, uint32_t end)
   {
     uint32_t i = start;
     g_dq_index = -1;
@@ -659,15 +659,17 @@ static Napi::Value n_utf8_to_utf16(const Napi::CallbackInfo &info)
   auto src = info[0].As<Napi::Uint8Array>();
   uint8_t *mem_source = src.Data();
   auto target = info[1].As<Napi::Uint8Array>();
-  uint8_t *mem_target = src.Data();
+  uint8_t *mem_target = target.Data();
   uint32_t start = info[2].As<Napi::Number>().Uint32Value();
   uint32_t end = info[3].As<Napi::Number>().Uint32Value();
 
-  auto r = utf8_to_utf16_impl(mem_source, mem_target, start, end);
-  Napi::Object o = Napi::Object::New(env);
-  o.Set("start", Napi::Number::New(env, r.start));
-  o.Set("end", Napi::Number::New(env, r.end));
-  return o;
+  uint8_t *result_target = utf8_to_utf16_impl(mem_source, mem_target, start, end);
+
+  const char16_t *u16 = reinterpret_cast<const char16_t *>(mem_target);
+  size_t bytes = static_cast<size_t>(result_target - mem_target);
+  size_t units = bytes / sizeof(char16_t);
+
+  return Napi::String::New(env, u16, units);
 }
 
 static Napi::Object Init(Napi::Env env, Napi::Object exports)
